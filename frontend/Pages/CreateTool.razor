@@ -1,0 +1,342 @@
+@page "/tools/create"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IToolService ToolService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@attribute [Authorize]
+
+<PageTitle>Add Tool - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudPaper Elevation="8" Class="pa-8" Style="border-radius: 16px;">
+        <!-- Header -->
+        <div class="d-flex flex-column align-center mb-6">
+            <MudIcon Icon="Icons.Material.Filled.Add" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
+            <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
+                Add Your Tool
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                Share your tools with neighbors and start earning money today!
+            </MudText>
+        </div>
+
+        <EditForm Model="createToolRequest" OnValidSubmit="HandleCreateTool">
+            <DataAnnotationsValidator />
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="(() => errorMessage = string.Empty)">
+                    @errorMessage
+                </MudAlert>
+            }
+
+            <MudTabs Elevation="4" Rounded="true" Color="Color.Primary">
+                <!-- Basic Information Tab -->
+                <MudTabPanel Text="Basic Info" Icon="Icons.Material.Filled.Info">
+                    <div class="pa-4">
+                        <MudGrid>
+                            <MudItem xs="12" md="8">
+                                <MudTextField @bind-Value="createToolRequest.Name"
+                                              Label="Tool Name"
+                                              Variant="Variant.Outlined"
+                                              FullWidth="true"
+                                              Required="true"
+                                              RequiredError="Tool name is required"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="Icons.Material.Filled.Build"
+                                              Class="mb-4" />
+
+                                <MudTextField @bind-Value="createToolRequest.Description"
+                                              Label="Description"
+                                              Variant="Variant.Outlined"
+                                              Lines="4"
+                                              FullWidth="true"
+                                              Required="true"
+                                              RequiredError="Description is required"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="Icons.Material.Filled.Description"
+                                              Class="mb-4" />
+
+                                <MudGrid>
+                                    <MudItem xs="12" sm="6">
+                                        <MudSelect @bind-Value="createToolRequest.Category" 
+                                                   Label="Category" 
+                                                   Variant="Variant.Outlined" 
+                                                   Required="true"
+                                                   RequiredError="Category is required">
+                                            <MudSelectItem T="string" Value="@("Power Tools")">Power Tools</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("Hand Tools")">Hand Tools</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("Garden Tools")">Garden Tools</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("Automotive")">Automotive</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("Construction")">Construction</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("Home Improvement")">Home Improvement</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("Cleaning")">Cleaning</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("Other")">Other</MudSelectItem>
+                                        </MudSelect>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="6">
+                                        <MudSelect @bind-Value="createToolRequest.Condition" 
+                                                   Label="Condition" 
+                                                   Variant="Variant.Outlined" 
+                                                   Required="true"
+                                                   RequiredError="Condition is required">
+                                            <MudSelectItem T="string" Value="@("Excellent")">Excellent</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("Very Good")">Very Good</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("Good")">Good</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("Fair")">Fair</MudSelectItem>
+                                            <MudSelectItem T="string" Value="@("Poor")">Poor</MudSelectItem>
+                                        </MudSelect>
+                                    </MudItem>
+                                </MudGrid>
+                            </MudItem>
+                            
+                            <MudItem xs="12" md="4">
+                                <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; background: var(--mud-palette-surface-variant);">
+                                    <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
+                                        <MudIcon Icon="Icons.Material.Filled.Tips" Class="mr-2" />
+                                        Tips for Success
+                                    </MudText>
+                                    <MudList T="string" Dense="true">
+                                        <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
+                                            Use a clear, descriptive name
+                                        </MudListItem>
+                                        <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
+                                            Include detailed description
+                                        </MudListItem>
+                                        <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
+                                            Be honest about condition
+                                        </MudListItem>
+                                        <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
+                                            Add high-quality photos
+                                        </MudListItem>
+                                    </MudList>
+                                </MudPaper>
+                            </MudItem>
+                        </MudGrid>
+                    </div>
+                </MudTabPanel>
+
+                <!-- Details Tab -->
+                <MudTabPanel Text="Details" Icon="Icons.Material.Filled.Settings">
+                    <div class="pa-4">
+                        <MudGrid>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="createToolRequest.Brand"
+                                              Label="Brand"
+                                              Variant="Variant.Outlined"
+                                              FullWidth="true"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="Icons.Material.Filled.Business"
+                                              Class="mb-4" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="createToolRequest.Model"
+                                              Label="Model"
+                                              Variant="Variant.Outlined"
+                                              FullWidth="true"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="Icons.Material.Filled.ModelTraining"
+                                              Class="mb-4" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="createToolRequest.Location"
+                                              Label="Location"
+                                              Variant="Variant.Outlined"
+                                              FullWidth="true"
+                                              Required="true"
+                                              RequiredError="Location is required"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="Icons.Material.Filled.LocationOn"
+                                              HelperText="Enter your city, neighborhood, or general area"
+                                              Class="mb-4" />
+                            </MudItem>
+                        </MudGrid>
+                    </div>
+                </MudTabPanel>
+
+                <!-- Pricing Tab -->
+                <MudTabPanel Text="Pricing" Icon="Icons.Material.Filled.AttachMoney">
+                    <div class="pa-4">
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudAlert Severity="Severity.Info" Icon="Icons.Material.Filled.Lightbulb" Class="mb-4">
+                                    Set competitive prices to attract more renters. You can always adjust these later.
+                                </MudAlert>
+                            </MudItem>
+                            
+                            <MudItem xs="12" sm="4">
+                                <MudNumericField @bind-Value="createToolRequest.DailyRate"
+                                                 Label="Daily Rate"
+                                                 Variant="Variant.Outlined"
+                                                 FullWidth="true"
+                                                 Required="true"
+                                                 RequiredError="Daily rate is required"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentText="$"
+                                                 Min="0.01m"
+                                                 Step="0.01m"
+                                                 Format="F2"
+                                                 Class="mb-4" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" sm="4">
+                                <MudNumericField @bind-Value="createToolRequest.WeeklyRate"
+                                                 Label="Weekly Rate (Optional)"
+                                                 Variant="Variant.Outlined"
+                                                 FullWidth="true"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentText="$"
+                                                 Min="0m"
+                                                 Step="0.01m"
+                                                 Format="F2"
+                                                 Class="mb-4" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" sm="4">
+                                <MudNumericField @bind-Value="createToolRequest.MonthlyRate"
+                                                 Label="Monthly Rate (Optional)"
+                                                 Variant="Variant.Outlined"
+                                                 FullWidth="true"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentText="$"
+                                                 Min="0m"
+                                                 Step="0.01m"
+                                                 Format="F2"
+                                                 Class="mb-4" />
+                            </MudItem>
+                            
+                            <MudItem xs="12" sm="6">
+                                <MudNumericField @bind-Value="createToolRequest.DepositRequired"
+                                                 Label="Security Deposit"
+                                                 Variant="Variant.Outlined"
+                                                 FullWidth="true"
+                                                 Required="true"
+                                                 RequiredError="Deposit amount is required"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentText="$"
+                                                 Min="0m"
+                                                 Step="0.01m"
+                                                 Format="F2"
+                                                 HelperText="Refundable deposit to cover potential damages"
+                                                 Class="mb-4" />
+                            </MudItem>
+                        </MudGrid>
+                    </div>
+                </MudTabPanel>
+
+                <!-- Images Tab -->
+                <MudTabPanel Text="Photos" Icon="Icons.Material.Filled.PhotoCamera">
+                    <div class="pa-4">
+                        <MudAlert Severity="Severity.Info" Icon="Icons.Material.Filled.PhotoCamera" Class="mb-4">
+                            High-quality photos increase your rental chances by up to 80%! Add up to 5 photos.
+                        </MudAlert>
+                        
+                        <!-- Image Upload Area -->
+                        <MudPaper Class="pa-8 text-center mb-4" Elevation="2" Style="border: 2px dashed var(--mud-palette-primary); border-radius: 12px;">
+                            <MudIcon Icon="Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                            <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">Upload Photos</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                                Drag and drop images here, or click to browse
+                            </MudText>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="Icons.Material.Filled.Add">
+                                Choose Files
+                            </MudButton>
+                        </MudPaper>
+                        
+                        <!-- Image Preview Area -->
+                        <div class="d-flex flex-wrap gap-4">
+                            @for (int i = 0; i < 5; i++)
+                            {
+                                <MudPaper Class="pa-4 text-center" Style="width: 150px; height: 150px; border-radius: 12px; border: 2px dashed var(--mud-palette-surface-variant);">
+                                    <MudIcon Icon="Icons.Material.Filled.Add" Color="Color.Secondary" Size="Size.Large" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Photo @(i + 1)</MudText>
+                                </MudPaper>
+                            }
+                        </div>
+                    </div>
+                </MudTabPanel>
+            </MudTabs>
+
+            <!-- Action Buttons -->
+            <div class="d-flex justify-end gap-4 mt-6">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Secondary" 
+                           Size="Size.Large"
+                           OnClick="Cancel"
+                           StartIcon="Icons.Material.Filled.Cancel">
+                    Cancel
+                </MudButton>
+                
+                <MudButton ButtonType="ButtonType.Submit"
+                           Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           Size="Size.Large"
+                           Disabled="isLoading"
+                           StartIcon="@(isLoading ? null : Icons.Material.Filled.Save)">
+                    @if (isLoading)
+                    {
+                        <MudProgressCircular Color="Color.Secondary" Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ml-2">Creating Tool...</MudText>
+                    }
+                    else
+                    {
+                        <MudText>Create Tool</MudText>
+                    }
+                </MudButton>
+            </div>
+        </EditForm>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private CreateToolRequest createToolRequest = new();
+    private string errorMessage = string.Empty;
+    private bool isLoading = false;
+
+    public class CreateToolRequest
+    {
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+        public string Category { get; set; } = string.Empty;
+        public string Brand { get; set; } = string.Empty;
+        public string Model { get; set; } = string.Empty;
+        public decimal DailyRate { get; set; }
+        public decimal? WeeklyRate { get; set; }
+        public decimal? MonthlyRate { get; set; }
+        public decimal DepositRequired { get; set; }
+        public string Condition { get; set; } = string.Empty;
+        public string Location { get; set; } = string.Empty;
+        public List<string> ImageUrls { get; set; } = new();
+    }
+
+    private async Task HandleCreateTool()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            // TODO: Implement actual tool creation
+            await Task.Delay(2000); // Simulate API call
+            
+            Snackbar.Add("Tool created successfully! It will be available for rent once approved.", Severity.Success);
+            Navigation.NavigateTo("/my-tools");
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo("/my-tools");
+    }
+}

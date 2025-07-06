@@ -1,0 +1,228 @@
+using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using ToolsSharing.Core.Common.Interfaces;
+using ToolsSharing.Core.Common.Models;
+using ToolsSharing.Core.Entities;
+using ToolsSharing.Core.Features.Auth;
+
+namespace ToolsSharing.Infrastructure.Features.Auth;
+
+public class AuthService : IAuthService
+{
+    private readonly UserManager<User> _userManager;
+    private readonly IJwtTokenService _jwtTokenService;
+    private readonly IEmailService _emailService;
+    private readonly ILogger<AuthService> _logger;
+
+    public AuthService(
+        UserManager<User> userManager, 
+        IJwtTokenService jwtTokenService, 
+        IEmailService emailService,
+        ILogger<AuthService> logger)
+    {
+        _userManager = userManager;
+        _jwtTokenService = jwtTokenService;
+        _emailService = emailService;
+        _logger = logger;
+    }
+
+    public async Task<ApiResponse<AuthResult>> RegisterAsync(RegisterCommand command)
+    {
+        try
+        {
+            // Check if user already exists
+            var existingUser = await _userManager.FindByEmailAsync(command.Email);
+            if (existingUser != null)
+            {
+                return ApiResponse<AuthResult>.CreateFailure("User with this email already exists");
+            }
+
+            // Create new user
+            var user = new User
+            {
+                UserName = command.Email,
+                Email = command.Email,
+                FirstName = command.FirstName,
+                LastName = command.LastName,
+                PhoneNumber = command.PhoneNumber,
+                DateOfBirth = command.DateOfBirth,
+                Address = command.Address,
+                City = command.City,
+                PostalCode = command.PostalCode,
+                Country = command.Country,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            var result = await _userManager.CreateAsync(user, command.Password);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                return ApiResponse<AuthResult>.CreateFailure($"Failed to create user: {errors}");
+            }
+
+            // Generate tokens
+            var accessToken = await _jwtTokenService.GenerateAccessTokenAsync(user);
+            var refreshToken = _jwtTokenService.GenerateRefreshToken();
+
+            var authResult = new AuthResult(
+                user.Id,
+                user.Email!,
+                user.FirstName,
+                user.LastName,
+                accessToken,
+                refreshToken,
+                DateTime.UtcNow.AddMinutes(60) // Should match JWT expiration
+            );
+
+            return ApiResponse<AuthResult>.CreateSuccess(authResult, "User registered successfully");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<AuthResult>.CreateFailure($"Registration failed: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<AuthResult>> LoginAsync(LoginCommand command)
+    {
+        try
+        {
+            // Find user by email
+            var user = await _userManager.FindByEmailAsync(command.Email);
+            if (user == null)
+            {
+                return ApiResponse<AuthResult>.CreateFailure("Invalid email or password");
+            }
+
+            // Check password
+            var isPasswordValid = await _userManager.CheckPasswordAsync(user, command.Password);
+            if (!isPasswordValid)
+            {
+                return ApiResponse<AuthResult>.CreateFailure("Invalid email or password");
+            }
+
+            // Generate tokens
+            var accessToken = await _jwtTokenService.GenerateAccessTokenAsync(user);
+            var refreshToken = _jwtTokenService.GenerateRefreshToken();
+
+            var authResult = new AuthResult(
+                user.Id,
+                user.Email!,
+                user.FirstName,
+                user.LastName,
+                accessToken,
+                refreshToken,
+                DateTime.UtcNow.AddMinutes(60) // Should match JWT expiration
+            );
+
+            return ApiResponse<AuthResult>.CreateSuccess(authResult, "Login successful");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<AuthResult>.CreateFailure($"Login failed: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<AuthResult>> RefreshTokenAsync(RefreshTokenCommand command)
+    {
+        try
+        {
+            // Validate refresh token
+            var principal = _jwtTokenService.GetPrincipalFromExpiredToken(command.RefreshToken);
+            if (principal == null)
+            {
+                return ApiResponse<AuthResult>.CreateFailure("Invalid refresh token");
+            }
+
+            var userId = principal.FindFirst("sub")?.Value ?? principal.FindFirst("nameidentifier")?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return ApiResponse<AuthResult>.CreateFailure("Invalid token claims");
+            }
+
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return ApiResponse<AuthResult>.CreateFailure("User not found");
+            }
+
+            // Generate new tokens
+            var newAccessToken = await _jwtTokenService.GenerateAccessTokenAsync(user);
+            var newRefreshToken = _jwtTokenService.GenerateRefreshToken();
+
+            var authResult = new AuthResult(
+                user.Id,
+                user.Email!,
+                user.FirstName,
+                user.LastName,
+                newAccessToken,
+                newRefreshToken,
+                DateTime.UtcNow.AddMinutes(60)
+            );
+
+            return ApiResponse<AuthResult>.CreateSuccess(authResult, "Token refreshed successfully");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<AuthResult>.CreateFailure($"Token refresh failed: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ForgotPasswordAsync(ForgotPasswordCommand command)
+    {
+        try
+        {
+            var user = await _userManager.FindByEmailAsync(command.Email);
+            if (user == null)
+            {
+                // For security, always return success even if user doesn't exist
+                return ApiResponse<bool>.CreateSuccess(true, "If the email exists, a reset link has been sent");
+            }
+
+            var token = await _userManager.GeneratePasswordResetTokenAsync(user);
+            
+            // Send email with reset token
+            try
+            {
+                await _emailService.SendPasswordResetEmailAsync(user.Email, token, $"{user.FirstName} {user.LastName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send password reset email to {Email}", user.Email);
+                // Continue execution - don't fail the request if email fails
+            }
+            
+            return ApiResponse<bool>.CreateSuccess(true, "If the email exists, a reset link has been sent");
+        }
+        catch (Exception)
+        {
+            return ApiResponse<bool>.CreateSuccess(true, "If the email exists, a reset link has been sent");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ResetPasswordAsync(ResetPasswordCommand command)
+    {
+        try
+        {
+            var user = await _userManager.FindByEmailAsync(command.Email);
+            if (user == null)
+            {
+                return ApiResponse<bool>.CreateFailure("Invalid reset request");
+            }
+
+            var result = await _userManager.ResetPasswordAsync(user, command.Token, command.NewPassword);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                return ApiResponse<bool>.CreateFailure($"Password reset failed: {errors}");
+            }
+
+            return ApiResponse<bool>.CreateSuccess(true, "Password reset successfully");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<bool>.CreateFailure($"Password reset failed: {ex.Message}");
+        }
+    }
+}

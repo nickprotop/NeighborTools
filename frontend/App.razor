@@ -1,0 +1,43 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using MudBlazor
+@using frontend.Shared
+
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<CascadingAuthenticationState>
+    <Router AppAssembly="@typeof(App).Assembly">
+        <Found Context="routeData">
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+            </AuthorizeRouteView>
+            <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+        </Found>
+        <NotFound>
+            <PageTitle>Not found</PageTitle>
+            <LayoutView Layout="@typeof(MainLayout)">
+                <AuthorizeView>
+                    <Authorized>
+                        <NotFoundPage />
+                    </Authorized>
+                    <NotAuthorized>
+                        <MudContainer>
+                            <MudAlert Severity="Severity.Error" Icon="Icons.Material.Filled.Error">
+                                <MudText Typo="Typo.h6">Page Not Found</MudText>
+                                <MudText>Sorry, there's nothing at this address.</MudText>
+                                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/login" Class="mt-3">
+                                    Go to Login
+                                </MudButton>
+                            </MudAlert>
+                        </MudContainer>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </LayoutView>
+        </NotFound>
+    </Router>
+</CascadingAuthenticationState>

@@ -1,0 +1,6 @@
+@ToolsSharing.API_HostAddress = http://localhost:5184
+
+GET {{ToolsSharing.API_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

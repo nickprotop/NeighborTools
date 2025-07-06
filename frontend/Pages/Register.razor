@@ -1,0 +1,209 @@
+@page "/register"
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ISnackbar Snackbar
+
+<PageTitle>Register - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    <MudPaper Elevation="8" Class="pa-8" Style="border-radius: 16px;">
+        <div class="d-flex flex-column align-center mb-6">
+            <MudIcon Icon="Icons.Material.Filled.PersonAdd" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
+            <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
+                Join NeighborTools
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                Create your account and start sharing tools with your community
+            </MudText>
+        </div>
+
+        <EditForm Model="registerRequest" OnValidSubmit="HandleRegister">
+            <DataAnnotationsValidator />
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="(() => errorMessage = string.Empty)">
+                    @errorMessage
+                </MudAlert>
+            }
+
+            <MudGrid>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="registerRequest.FirstName"
+                                  Label="First Name"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Required="true"
+                                  RequiredError="First name is required"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="Icons.Material.Filled.Person" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="registerRequest.LastName"
+                                  Label="Last Name"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Required="true"
+                                  RequiredError="Last name is required"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="Icons.Material.Filled.Person" />
+                </MudItem>
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="registerRequest.Email"
+                                  Label="Email Address"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Email"
+                                  FullWidth="true"
+                                  Required="true"
+                                  RequiredError="Email is required"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="Icons.Material.Filled.Email" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="registerRequest.PhoneNumber"
+                                  Label="Phone Number"
+                                  Variant="Variant.Outlined"
+                                  InputType="InputType.Telephone"
+                                  FullWidth="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="Icons.Material.Filled.Phone" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="registerRequest.Address"
+                                  Label="Address"
+                                  Variant="Variant.Outlined"
+                                  FullWidth="true"
+                                  Adornment="Adornment.Start"
+                                  AdornmentIcon="Icons.Material.Filled.Home" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="registerRequest.Password"
+                                  Label="Password"
+                                  Variant="Variant.Outlined"
+                                  InputType="@passwordInputType"
+                                  FullWidth="true"
+                                  Required="true"
+                                  RequiredError="Password is required"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@passwordAdornmentIcon"
+                                  OnAdornmentClick="TogglePasswordVisibility" />
+                </MudItem>
+                <MudItem xs="12" sm="6">
+                    <MudTextField @bind-Value="registerRequest.ConfirmPassword"
+                                  Label="Confirm Password"
+                                  Variant="Variant.Outlined"
+                                  InputType="@confirmPasswordInputType"
+                                  FullWidth="true"
+                                  Required="true"
+                                  RequiredError="Please confirm your password"
+                                  Adornment="Adornment.End"
+                                  AdornmentIcon="@confirmPasswordAdornmentIcon"
+                                  OnAdornmentClick="ToggleConfirmPasswordVisibility" />
+                </MudItem>
+            </MudGrid>
+
+            <MudButton ButtonType="ButtonType.Submit"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Large"
+                       FullWidth="true"
+                       Class="mt-6 mb-4"
+                       Disabled="isLoading"
+                       StartIcon="@(isLoading ? null : Icons.Material.Filled.PersonAdd)">
+                @if (isLoading)
+                {
+                    <MudProgressCircular Color="Color.Secondary" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ml-2">Creating Account...</MudText>
+                }
+                else
+                {
+                    <MudText>Create Account</MudText>
+                }
+            </MudButton>
+        </EditForm>
+
+        <MudDivider Class="my-4" />
+
+        <div class="d-flex justify-center">
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Already have an account?
+                <MudLink Href="/login" Color="Color.Primary" Class="ml-1">
+                    Sign in here
+                </MudLink>
+            </MudText>
+        </div>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private RegisterRequest registerRequest = new();
+    private string errorMessage = string.Empty;
+    private bool isLoading = false;
+
+    // Password visibility toggles
+    private bool passwordVisible = false;
+    private bool confirmPasswordVisible = false;
+    private InputType passwordInputType => passwordVisible ? InputType.Text : InputType.Password;
+    private InputType confirmPasswordInputType => confirmPasswordVisible ? InputType.Text : InputType.Password;
+    private string passwordAdornmentIcon => passwordVisible ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+    private string confirmPasswordAdornmentIcon => confirmPasswordVisible ? Icons.Material.Filled.Visibility : Icons.Material.Filled.VisibilityOff;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private void TogglePasswordVisibility()
+    {
+        passwordVisible = !passwordVisible;
+    }
+
+    private void ToggleConfirmPasswordVisibility()
+    {
+        confirmPasswordVisible = !confirmPasswordVisible;
+    }
+
+    private async Task HandleRegister()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            if (registerRequest.Password != registerRequest.ConfirmPassword)
+            {
+                errorMessage = "Passwords do not match.";
+                return;
+            }
+
+            var result = await AuthService.RegisterAsync(registerRequest);
+            
+            if (result.Success)
+            {
+                Snackbar.Add("Account created successfully! Welcome to NeighborTools.", Severity.Success);
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Registration failed. Please check your information and try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

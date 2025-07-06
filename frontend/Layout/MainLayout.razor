@@ -1,0 +1,63 @@
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@inherits LayoutComponentBase
+
+<MudLayout>
+    <MudAppBar Elevation="1" Color="Color.Primary">
+        <MudIconButton Icon="Icons.Material.Filled.Menu" Color="Color.Inherit" Edge="Edge.Start" OnClick="@((e) => DrawerToggle())" />
+        <MudSpacer />
+        <MudText Typo="Typo.h5" Class="ml-3">NeighborTools</MudText>
+        <MudSpacer />
+        
+        <AuthorizeView>
+            <Authorized>
+                <MudMenu Icon="Icons.Material.Filled.AccountCircle" Color="Color.Inherit" Direction="Direction.Bottom" OffsetY="true">
+                    <MudMenuItem>
+                        <MudText>Welcome, @context.User.Identity?.Name!</MudText>
+                    </MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem Icon="Icons.Material.Filled.Person" Href="/profile">Profile</MudMenuItem>
+                    <MudMenuItem Icon="Icons.Material.Filled.Settings" Href="/settings">Settings</MudMenuItem>
+                    <MudDivider />
+                    <MudMenuItem Icon="Icons.Material.Filled.Logout" OnClick="LogoutAsync">Logout</MudMenuItem>
+                </MudMenu>
+            </Authorized>
+            <NotAuthorized>
+                <MudButton Variant="Variant.Text" Color="Color.Inherit" Href="/login" StartIcon="Icons.Material.Filled.Login">
+                    Login
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" Color="Color.Inherit" Href="/register" StartIcon="Icons.Material.Filled.PersonAdd" Class="ml-2">
+                    Register
+                </MudButton>
+            </NotAuthorized>
+        </AuthorizeView>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="drawerOpen" Elevation="2" Variant="@DrawerVariant.Responsive" Breakpoint="Breakpoint.Md">
+        <NavMenu />
+    </MudDrawer>
+
+    <MudMainContent>
+        <MudContainer MaxWidth="MaxWidth.Large" Class="my-4">
+            @Body
+        </MudContainer>
+    </MudMainContent>
+</MudLayout>
+
+@code {
+    [Inject] private frontend.Services.IAuthService AuthService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    bool drawerOpen = false;
+
+    void DrawerToggle()
+    {
+        drawerOpen = !drawerOpen;
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/login");
+    }
+}

@@ -1,0 +1,76 @@
+@using Microsoft.AspNetCore.Components
+@using MudBlazor
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<MudContainer>
+    <MudPaper Class="pa-8 text-center" Elevation="4" Style="border-radius: 16px;">
+        <MudIcon Icon="Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Warning" Style="font-size: 5rem;" Class="mb-4" />
+        
+        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
+            Page Not Found
+        </MudText>
+        
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-6">
+            The page you're looking for doesn't exist or has been moved.
+            Don't worry, let's get you back on track!
+        </MudText>
+        
+        <div class="d-flex justify-center gap-4">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       Size="Size.Large"
+                       StartIcon="Icons.Material.Filled.Home"
+                       OnClick="GoToDashboard">
+                Go to Dashboard
+            </MudButton>
+            
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Primary" 
+                       Size="Size.Large"
+                       StartIcon="Icons.Material.Filled.ArrowBack"
+                       OnClick="GoBack">
+                Go Back
+            </MudButton>
+        </div>
+        
+        <MudDivider Class="my-6" />
+        
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+            Quick navigation:
+        </MudText>
+        
+        <div class="d-flex justify-center flex-wrap gap-2">
+            <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="Icons.Material.Filled.Search" OnClick="@(() => Navigation.NavigateTo("/tools"))">
+                Browse Tools
+            </MudChip>
+            <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="Icons.Material.Filled.Inventory" OnClick="@(() => Navigation.NavigateTo("/my-tools"))">
+                My Tools
+            </MudChip>
+            <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="Icons.Material.Filled.CalendarToday" OnClick="@(() => Navigation.NavigateTo("/rentals"))">
+                My Rentals
+            </MudChip>
+            <MudChip T="string" Color="Color.Secondary" Size="Size.Small" Icon="Icons.Material.Filled.Person" OnClick="@(() => Navigation.NavigateTo("/profile"))">
+                Profile
+            </MudChip>
+        </div>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    protected override void OnInitialized()
+    {
+        // Show a notification that the page wasn't found
+        Snackbar.Add("The requested page could not be found. Redirecting you to a safe place!", Severity.Warning);
+    }
+
+    private void GoToDashboard()
+    {
+        Navigation.NavigateTo("/");
+    }
+
+    private void GoBack()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

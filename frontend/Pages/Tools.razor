@@ -1,0 +1,359 @@
+@page "/tools"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IToolService ToolService
+@inject ISnackbar Snackbar
+@attribute [Authorize]
+
+<PageTitle>Browse Tools - NeighborTools</PageTitle>
+
+<!-- Header Section -->
+<div class="d-flex flex-column flex-sm-row justify-space-between align-center mb-6 gap-4">
+    <div>
+        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
+            <MudIcon Icon="Icons.Material.Filled.Search" Class="mr-2" />
+            Browse Tools
+        </MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">
+            Find the perfect tool for your project
+        </MudText>
+    </div>
+    
+    <div class="d-flex align-center gap-2">
+        <MudTextField @bind-Value="searchQuery"
+                      @onkeypress="HandleKeyPress"
+                      Placeholder="Search tools..."
+                      Variant="Variant.Outlined"
+                      Adornment="Adornment.End"
+                      AdornmentIcon="Icons.Material.Filled.Search"
+                      OnAdornmentClick="SearchTools"
+                      Style="min-width: 300px;" />
+        
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="Icons.Material.Filled.Add"
+                   Href="/tools/create">
+            Add Tool
+        </MudButton>
+    </div>
+</div>
+
+<!-- Filters Section -->
+<MudExpansionPanels Elevation="2" Class="mb-4">
+    <MudExpansionPanel Text="Filters">
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="string" @bind-Value="selectedCategory" Label="Category" Variant="Variant.Outlined" Clearable="true">
+                    <MudSelectItem T="string" Value="@string.Empty">All Categories</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Power Tools")">Power Tools</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Hand Tools")">Hand Tools</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Garden Tools")">Garden Tools</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Automotive")">Automotive</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Construction")">Construction</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect T="bool?" @bind-Value="availableOnly" Label="Availability" Variant="Variant.Outlined" Clearable="true">
+                    <MudSelectItem T="bool?" Value="@((bool?)null)">All Tools</MudSelectItem>
+                    <MudSelectItem T="bool?" Value="@((bool?)true)">Available Only</MudSelectItem>
+                    <MudSelectItem T="bool?" Value="@((bool?)false)">Unavailable</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSlider @bind-Value="maxDailyRate" Min="0" Max="200" Step="5" Color="Color.Primary">
+                    Max Daily Rate: $@maxDailyRate
+                </MudSlider>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="ClearFilters" StartIcon="Icons.Material.Filled.Clear">
+                    Clear Filters
+                </MudButton>
+            </MudItem>
+        </MudGrid>
+    </MudExpansionPanel>
+</MudExpansionPanels>
+
+@if (isLoading)
+{
+    <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.h6" Class="mt-4">Loading tools...</MudText>
+    </MudPaper>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" ShowCloseIcon="true" CloseIconClicked="(() => errorMessage = string.Empty)">
+        @errorMessage
+    </MudAlert>
+}
+else if (filteredTools != null && filteredTools.Any())
+{
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.body1" Color="Color.Secondary">
+            Showing @(filteredTools?.Count ?? 0) tools
+        </MudText>
+        
+        <MudSelect T="string" @bind-Value="sortBy" Label="Sort by" Variant="Variant.Outlined" Dense="true" Style="min-width: 150px;">
+            <MudSelectItem T="string" Value="@("name")">Name</MudSelectItem>
+            <MudSelectItem T="string" Value="@("price-low")">Price: Low to High</MudSelectItem>
+            <MudSelectItem T="string" Value="@("price-high")">Price: High to Low</MudSelectItem>
+            <MudSelectItem T="string" Value="@("rating")">Rating</MudSelectItem>
+            <MudSelectItem T="string" Value="@("newest")">Newest First</MudSelectItem>
+        </MudSelect>
+    </div>
+    
+    <MudGrid>
+        @foreach (var tool in GetSortedTools())
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s;" Class="hover-card">
+                    @if (tool.ImageUrls.Any())
+                    {
+                        <MudCardMedia Image="@tool.ImageUrls.First()" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                    }
+                    else
+                    {
+                        <div class="d-flex align-center justify-center" style="height: 200px; background: var(--mud-palette-surface-variant); border-radius: 12px 12px 0 0;">
+                            <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem;" />
+                        </div>
+                    }
+                    
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6" GutterBottom="true">@tool.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3" Style="height: 3em; overflow: hidden;">
+                            @(tool.Description.Length > 80 ? tool.Description.Substring(0, 80) + "..." : tool.Description)
+                        </MudText>
+                        
+                        <div class="d-flex justify-space-between align-center mb-3">
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="Icons.Material.Filled.Category">
+                                @tool.Category
+                            </MudChip>
+                            <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Error)" 
+                                     Size="Size.Small" 
+                                     Icon="@(tool.IsAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)">
+                                @(tool.IsAvailable ? "Available" : "Unavailable")
+                            </MudChip>
+                        </div>
+                        
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.h6" Color="Color.Primary">
+                                $@tool.DailyRate.ToString("F2")
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                per day
+                            </MudText>
+                        </div>
+                        
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                            Condition: @tool.Condition
+                        </MudText>
+                        
+                        @if (tool.Rating.HasValue)
+                        {
+                            <div class="d-flex align-center gap-2 mb-3">
+                                <MudRating ReadOnly="true" SelectedValue="@((int)tool.Rating.Value)" MaxValue="5" Size="Size.Small" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    (@tool.ReviewCount)
+                                </MudText>
+                            </div>
+                        }
+                        
+                        <div class="d-flex align-center gap-2 mt-2">
+                            <MudAvatar Size="Size.Small" Color="Color.Secondary">
+                                @tool.Owner.FirstName.Substring(0, 1)@tool.Owner.LastName.Substring(0, 1)
+                            </MudAvatar>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @tool.Owner.FirstName @tool.Owner.LastName
+                            </MudText>
+                        </div>
+                    </MudCardContent>
+                    
+                    <MudCardActions Class="pa-4">
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="@(tool.IsAvailable ? Color.Primary : Color.Secondary)" 
+                                   FullWidth="true"
+                                   OnClick="() => ViewTool(tool.Id)"
+                                   Disabled="@(!tool.IsAvailable)"
+                                   StartIcon="@(tool.IsAvailable ? Icons.Material.Filled.Visibility : Icons.Material.Filled.Block)">
+                            @(tool.IsAvailable ? "View Details" : "Unavailable")
+                        </MudButton>
+                        
+                        @if (tool.IsAvailable)
+                        {
+                            <MudIconButton Icon="Icons.Material.Filled.FavoriteBorder" 
+                                           Color="Color.Secondary" 
+                                           Size="Size.Small"
+                                           OnClick="() => ToggleFavorite(tool.Id)" />
+                        }
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+else
+{
+    <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+        <MudIcon Icon="Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+        <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No tools found</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+            Try adjusting your search or filters, or be the first to share a tool!
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="Icons.Material.Filled.Add">
+            Add Your Tool
+        </MudButton>
+    </MudPaper>
+}
+
+<style>
+    .hover-card:hover {
+        transform: translateY(-4px);
+    }
+</style>
+
+@code {
+    private List<Tool>? tools;
+    private List<Tool>? filteredTools;
+    private string searchQuery = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isLoading = true;
+    
+    // Filter properties
+    private string selectedCategory = string.Empty;
+    private bool? availableOnly = null;
+    private double maxDailyRate = 200;
+    private string sortBy = "name";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTools();
+    }
+
+    private async Task LoadTools()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var result = await ToolService.GetToolsAsync();
+            
+            if (result.Success)
+            {
+                tools = result.Data;
+                ApplyFilters();
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to load tools.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SearchTools()
+    {
+        if (string.IsNullOrWhiteSpace(searchQuery))
+        {
+            await LoadTools();
+            return;
+        }
+
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var result = await ToolService.SearchToolsAsync(searchQuery);
+            
+            if (result.Success)
+            {
+                tools = result.Data;
+                ApplyFilters();
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Search failed.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        if (tools == null)
+        {
+            filteredTools = null;
+            return;
+        }
+
+        filteredTools = tools.Where(t =>
+            (string.IsNullOrEmpty(selectedCategory) || t.Category == selectedCategory) &&
+            (availableOnly == null || t.IsAvailable == availableOnly) &&
+            t.DailyRate <= (decimal)maxDailyRate
+        ).ToList();
+    }
+
+    private List<Tool> GetSortedTools()
+    {
+        if (filteredTools == null) return new List<Tool>();
+
+        return sortBy switch
+        {
+            "price-low" => filteredTools.OrderBy(t => t.DailyRate).ToList(),
+            "price-high" => filteredTools.OrderByDescending(t => t.DailyRate).ToList(),
+            "rating" => filteredTools.OrderByDescending(t => t.Rating ?? 0).ToList(),
+            "newest" => filteredTools.OrderByDescending(t => t.CreatedAt).ToList(),
+            _ => filteredTools.OrderBy(t => t.Name).ToList()
+        };
+    }
+
+    private void ClearFilters()
+    {
+        selectedCategory = string.Empty;
+        availableOnly = null;
+        maxDailyRate = 200;
+        ApplyFilters();
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchTools();
+        }
+    }
+
+    private void ViewTool(string toolId)
+    {
+        Snackbar.Add($"Tool details coming soon! Tool ID: {toolId}", Severity.Info);
+        // Navigation.NavigateTo($"/tools/{toolId}");
+    }
+
+    private void ToggleFavorite(string toolId)
+    {
+        Snackbar.Add("Favorites feature coming soon!", Severity.Info);
+    }
+
+    // Re-apply filters when filter values change
+    protected override void OnParametersSet()
+    {
+        ApplyFilters();
+    }
+}

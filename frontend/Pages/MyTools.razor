@@ -1,0 +1,247 @@
+@page "/my-tools"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IToolService ToolService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@attribute [Authorize]
+
+<PageTitle>My Tools - NeighborTools</PageTitle>
+
+<!-- Header Section -->
+<div class="d-flex flex-column flex-sm-row justify-space-between align-center mb-6 gap-4">
+    <div>
+        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
+            <MudIcon Icon="Icons.Material.Filled.Inventory" Class="mr-2" />
+            My Tools
+        </MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">
+            Manage your tool listings and track their performance
+        </MudText>
+    </div>
+    
+    <MudButton Variant="Variant.Filled" 
+               Color="Color.Primary" 
+               StartIcon="Icons.Material.Filled.Add"
+               Href="/tools/create"
+               Size="Size.Large">
+        Add New Tool
+    </MudButton>
+</div>
+
+<!-- Stats Cards -->
+<MudGrid Class="mb-6">
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="4" Style="border-radius: 12px;">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                <MudText Typo="Typo.h4" Color="Color.Primary">@(myTools?.Count ?? 0)</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Tools</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="4" Style="border-radius: 12px;">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-2" />
+                <MudText Typo="Typo.h4" Color="Color.Success">@(myTools?.Count(t => t.IsAvailable) ?? 0)</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Available</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="4" Style="border-radius: 12px;">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="Icons.Material.Filled.Schedule" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
+                <MudText Typo="Typo.h4" Color="Color.Warning">@(myTools?.Count(t => !t.IsAvailable) ?? 0)</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Rented Out</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="4" Style="border-radius: 12px;">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Info" Class="mb-2" />
+                <MudText Typo="Typo.h4" Color="Color.Info">$@((myTools?.Sum(t => t.DailyRate) ?? 0).ToString("F0"))</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Daily Potential</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+<!-- Loading State -->
+@if (isLoading)
+{
+    <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.h6" Class="mt-4">Loading your tools...</MudText>
+    </MudPaper>
+}
+<!-- Error State -->
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <MudAlert Severity="Severity.Error" ShowCloseIcon="true" CloseIconClicked="(() => errorMessage = string.Empty)">
+        @errorMessage
+    </MudAlert>
+}
+<!-- Tools Grid -->
+else if (myTools != null && myTools.Any())
+{
+    <MudGrid>
+        @foreach (var tool in myTools)
+        {
+            <MudItem xs="12" sm="6" md="4" lg="3">
+                <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s;" Class="hover-card">
+                    @if (tool.ImageUrls.Any())
+                    {
+                        <MudCardMedia Image="@tool.ImageUrls.First()" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                    }
+                    else
+                    {
+                        <div class="d-flex align-center justify-center" style="height: 200px; background: var(--mud-palette-surface-variant); border-radius: 12px 12px 0 0;">
+                            <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem;" />
+                        </div>
+                    }
+                    
+                    <MudCardContent>
+                        <MudText Typo="Typo.h6" GutterBottom="true">@tool.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3" Style="height: 3em; overflow: hidden;">
+                            @(tool.Description.Length > 80 ? tool.Description.Substring(0, 80) + "..." : tool.Description)
+                        </MudText>
+                        
+                        <div class="d-flex justify-space-between align-center mb-3">
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="Icons.Material.Filled.Category">
+                                @tool.Category
+                            </MudChip>
+                            <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Warning)" 
+                                     Size="Size.Small" 
+                                     Icon="@(tool.IsAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Schedule)">
+                                @(tool.IsAvailable ? "Available" : "Rented")
+                            </MudChip>
+                        </div>
+                        
+                        <div class="d-flex justify-space-between align-center mb-2">
+                            <MudText Typo="Typo.h6" Color="Color.Primary">
+                                $@tool.DailyRate.ToString("F2")
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                per day
+                            </MudText>
+                        </div>
+                        
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                            Condition: @tool.Condition
+                        </MudText>
+                        
+                        @if (tool.Rating.HasValue)
+                        {
+                            <div class="d-flex align-center gap-2 mb-3">
+                                <MudRating ReadOnly="true" SelectedValue="@((int)tool.Rating.Value)" MaxValue="5" Size="Size.Small" />
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    (@tool.ReviewCount)
+                                </MudText>
+                            </div>
+                        }
+                    </MudCardContent>
+                    
+                    <MudCardActions Class="pa-4">
+                        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true">
+                            <MudButton StartIcon="Icons.Material.Filled.Edit" OnClick="() => EditTool(tool.Id)">
+                                Edit
+                            </MudButton>
+                            <MudButton StartIcon="Icons.Material.Filled.Visibility" OnClick="() => ViewTool(tool.Id)">
+                                View
+                            </MudButton>
+                            <MudButton StartIcon="Icons.Material.Filled.Delete" 
+                                       Color="Color.Error" 
+                                       OnClick="() => DeleteTool(tool.Id, tool.Name)">
+                                Delete
+                            </MudButton>
+                        </MudButtonGroup>
+                    </MudCardActions>
+                </MudCard>
+            </MudItem>
+        }
+    </MudGrid>
+}
+<!-- Empty State -->
+else
+{
+    <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+        <MudIcon Icon="Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" Class="mb-4" Style="font-size: 4rem;" />
+        <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mb-2">No tools yet</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+            Start earning money by sharing your tools with neighbors!
+        </MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="Icons.Material.Filled.Add" Size="Size.Large">
+            Add Your First Tool
+        </MudButton>
+    </MudPaper>
+}
+
+<style>
+    .hover-card:hover {
+        transform: translateY(-4px);
+    }
+</style>
+
+@code {
+    private List<Tool>? myTools;
+    private string errorMessage = string.Empty;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMyTools();
+    }
+
+    private async Task LoadMyTools()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            // TODO: Implement actual user-specific tool loading
+            var result = await ToolService.GetToolsAsync();
+            
+            if (result.Success)
+            {
+                // For now, showing all tools. In real implementation, filter by current user
+                myTools = result.Data;
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to load your tools.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void EditTool(string toolId)
+    {
+        Navigation.NavigateTo($"/tools/edit/{toolId}");
+    }
+
+    private void ViewTool(string toolId)
+    {
+        Navigation.NavigateTo($"/tools/{toolId}");
+    }
+
+    private void DeleteTool(string toolId, string toolName)
+    {
+        // TODO: Add confirmation dialog
+        // For now, just show info message
+        Snackbar.Add("Tool deletion feature coming soon!", Severity.Info);
+    }
+}

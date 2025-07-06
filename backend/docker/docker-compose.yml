@@ -1,0 +1,46 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: tools-sharing-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: RootPassword123!
+      MYSQL_DATABASE: toolssharing
+      MYSQL_USER: toolsuser
+      MYSQL_PASSWORD: ToolsPassword123!
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./init-scripts:/docker-entrypoint-initdb.d
+    restart: unless-stopped
+    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+
+  redis:
+    image: redis:7-alpine
+    container_name: tools-sharing-redis
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+  api:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    container_name: tools-sharing-api
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    depends_on:
+      - mysql
+      - redis
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ASPNETCORE_URLS=https://+:5001;http://+:5000
+      - ConnectionStrings__DefaultConnection=server=mysql;port=3306;database=toolssharing;uid=toolsuser;pwd=ToolsPassword123!
+      - Redis__ConnectionString=redis:6379
+    restart: unless-stopped
+
+volumes:
+  mysql_data:

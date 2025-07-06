@@ -1,0 +1,132 @@
+@page "/login"
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ISnackbar Snackbar
+
+<PageTitle>Login - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
+    <MudPaper Elevation="8" Class="pa-8" Style="border-radius: 16px;">
+        <div class="d-flex flex-column align-center mb-6">
+            <MudIcon Icon="Icons.Material.Filled.Handyman" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
+            <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
+                Welcome Back
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Sign in to your NeighborTools account
+            </MudText>
+        </div>
+
+        <EditForm Model="loginRequest" OnValidSubmit="HandleLogin">
+            <DataAnnotationsValidator />
+
+            @if (!string.IsNullOrEmpty(errorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="(() => errorMessage = string.Empty)">
+                    @errorMessage
+                </MudAlert>
+            }
+
+            <MudTextField @bind-Value="loginRequest.Email"
+                          Label="Email Address"
+                          Variant="Variant.Outlined"
+                          InputType="InputType.Email"
+                          FullWidth="true"
+                          Class="mb-4"
+                          Required="true"
+                          RequiredError="Email is required"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="Icons.Material.Filled.Email" />
+
+            <MudTextField @bind-Value="loginRequest.Password"
+                          Label="Password"
+                          Variant="Variant.Outlined"
+                          InputType="InputType.Password"
+                          FullWidth="true"
+                          Class="mb-6"
+                          Required="true"
+                          RequiredError="Password is required"
+                          Adornment="Adornment.Start"
+                          AdornmentIcon="Icons.Material.Filled.Lock" />
+
+            <MudButton ButtonType="ButtonType.Submit"
+                       Variant="Variant.Filled"
+                       Color="Color.Primary"
+                       Size="Size.Large"
+                       FullWidth="true"
+                       Class="mb-4"
+                       Disabled="isLoading"
+                       StartIcon="@(isLoading ? null : Icons.Material.Filled.Login)">
+                @if (isLoading)
+                {
+                    <MudProgressCircular Color="Color.Secondary" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ml-2">Signing in...</MudText>
+                }
+                else
+                {
+                    <MudText>Sign In</MudText>
+                }
+            </MudButton>
+        </EditForm>
+
+        <MudDivider Class="my-4" />
+
+        <div class="d-flex justify-center">
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Don't have an account?
+                <MudLink Href="/register" Color="Color.Primary" Class="ml-1">
+                    Create one here
+                </MudLink>
+            </MudText>
+        </div>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private LoginRequest loginRequest = new();
+    private string errorMessage = string.Empty;
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            Navigation.NavigateTo("/");
+        }
+    }
+
+    private async Task HandleLogin()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var result = await AuthService.LoginAsync(loginRequest);
+            
+            if (result.Success)
+            {
+                Snackbar.Add("Welcome back! Login successful.", Severity.Success);
+                Navigation.NavigateTo("/");
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Login failed. Please check your credentials and try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+}

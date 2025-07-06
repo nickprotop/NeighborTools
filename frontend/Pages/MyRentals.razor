@@ -1,0 +1,220 @@
+@page "/rentals"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@attribute [Authorize]
+
+<PageTitle>My Rentals - NeighborTools</PageTitle>
+
+<!-- Header Section -->
+<div class="d-flex flex-column flex-sm-row justify-space-between align-center mb-6 gap-4">
+    <div>
+        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
+            <MudIcon Icon="Icons.Material.Filled.CalendarToday" Class="mr-2" />
+            My Rentals
+        </MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary">
+            Track your current rentals and rental requests
+        </MudText>
+    </div>
+    
+    <MudButton Variant="Variant.Filled" 
+               Color="Color.Primary" 
+               StartIcon="Icons.Material.Filled.Search"
+               Href="/tools"
+               Size="Size.Large">
+        Browse Tools
+    </MudButton>
+</div>
+
+<!-- Stats Cards -->
+<MudGrid Class="mb-6">
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="4" Style="border-radius: 12px;">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="Icons.Material.Filled.Schedule" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
+                <MudText Typo="Typo.h4" Color="Color.Warning">2</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Pending</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="4" Style="border-radius: 12px;">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-2" />
+                <MudText Typo="Typo.h4" Color="Color.Success">1</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Active</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="4" Style="border-radius: 12px;">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="Icons.Material.Filled.History" Size="Size.Large" Color="Color.Info" Class="mb-2" />
+                <MudText Typo="Typo.h4" Color="Color.Info">8</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Completed</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="4" Style="border-radius: 12px;">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                <MudText Typo="Typo.h4" Color="Color.Primary">$342</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Saved</MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+<!-- Filter Tabs -->
+<MudTabs Elevation="4" Rounded="true" Color="Color.Primary" Class="mb-6">
+    <MudTabPanel Text="All Rentals" Icon="Icons.Material.Filled.List">
+        <div class="pa-4">
+            <MudGrid>
+                <!-- Mock Rental Cards -->
+                @foreach (var rental in GetMockRentals())
+                {
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudCard Elevation="4" Style="height: 100%; border-radius: 12px;">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">@rental.ToolName</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        @(rental.IsOwner ? $"Rented to: {rental.RenterName}" : $"Rented from: {rental.OwnerName}")
+                                    </MudText>
+                                </CardHeaderContent>
+                                <CardHeaderActions>
+                                    <MudChip T="string" Color="@GetStatusColor(rental.Status)" Size="Size.Small">
+                                        @rental.Status
+                                    </MudChip>
+                                </CardHeaderActions>
+                            </MudCardHeader>
+                            
+                            <MudCardContent>
+                                <div class="d-flex justify-space-between align-center mb-3">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Start Date:</MudText>
+                                    <MudText Typo="Typo.body2">@rental.StartDate.ToString("MMM dd, yyyy")</MudText>
+                                </div>
+                                <div class="d-flex justify-space-between align-center mb-3">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">End Date:</MudText>
+                                    <MudText Typo="Typo.body2">@rental.EndDate.ToString("MMM dd, yyyy")</MudText>
+                                </div>
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.h6" Color="Color.Primary">$@rental.TotalCost.ToString("F2")</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Total Cost</MudText>
+                                </div>
+                            </MudCardContent>
+                            
+                            <MudCardActions Class="pa-4">
+                                @if (rental.Status == "Pending" && rental.IsOwner)
+                                {
+                                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" StartIcon="Icons.Material.Filled.Check">
+                                        Approve
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" StartIcon="Icons.Material.Filled.Close">
+                                        Reject
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" StartIcon="Icons.Material.Filled.Visibility">
+                                        View Details
+                                    </MudButton>
+                                }
+                            </MudCardActions>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        </div>
+    </MudTabPanel>
+    
+    <MudTabPanel Text="As Renter" Icon="Icons.Material.Filled.Person">
+        <div class="pa-4">
+            <MudAlert Severity="Severity.Info" Icon="Icons.Material.Filled.Info">
+                Rentals where you are borrowing tools from others.
+            </MudAlert>
+        </div>
+    </MudTabPanel>
+    
+    <MudTabPanel Text="As Owner" Icon="Icons.Material.Filled.Business">
+        <div class="pa-4">
+            <MudAlert Severity="Severity.Info" Icon="Icons.Material.Filled.Info">
+                Rentals where others are borrowing your tools.
+            </MudAlert>
+        </div>
+    </MudTabPanel>
+</MudTabs>
+
+@code {
+    private Color GetStatusColor(string status)
+    {
+        return status switch
+        {
+            "Pending" => Color.Warning,
+            "Active" => Color.Success,
+            "Completed" => Color.Info,
+            "Cancelled" => Color.Error,
+            _ => Color.Default
+        };
+    }
+    
+    private List<RentalInfo> GetMockRentals()
+    {
+        return new List<RentalInfo>
+        {
+            new RentalInfo
+            {
+                Id = Guid.NewGuid(),
+                ToolName = "Cordless Drill",
+                RenterName = "John Smith",
+                OwnerName = "Jane Doe",
+                StartDate = DateTime.Now.AddDays(1),
+                EndDate = DateTime.Now.AddDays(3),
+                TotalCost = 45.00m,
+                Status = "Pending",
+                IsOwner = false
+            },
+            new RentalInfo
+            {
+                Id = Guid.NewGuid(),
+                ToolName = "Lawn Mower",
+                RenterName = "Mike Johnson",
+                OwnerName = "Current User",
+                StartDate = DateTime.Now.AddDays(-2),
+                EndDate = DateTime.Now.AddDays(1),
+                TotalCost = 120.00m,
+                Status = "Active",
+                IsOwner = true
+            },
+            new RentalInfo
+            {
+                Id = Guid.NewGuid(),
+                ToolName = "Circular Saw",
+                RenterName = "Current User",
+                OwnerName = "Bob Wilson",
+                StartDate = DateTime.Now.AddDays(-7),
+                EndDate = DateTime.Now.AddDays(-5),
+                TotalCost = 75.00m,
+                Status = "Completed",
+                IsOwner = false
+            }
+        };
+    }
+    
+    public class RentalInfo
+    {
+        public Guid Id { get; set; }
+        public string ToolName { get; set; } = string.Empty;
+        public string RenterName { get; set; } = string.Empty;
+        public string OwnerName { get; set; } = string.Empty;
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public decimal TotalCost { get; set; }
+        public string Status { get; set; } = string.Empty;
+        public bool IsOwner { get; set; }
+    }
+}
