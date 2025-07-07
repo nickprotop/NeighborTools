@@ -11,9 +11,23 @@ public class MappingProfile : Profile
     {
         // Tool mappings
         CreateMap<Tool, ToolDto>()
-            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => $"{src.Owner.FirstName} {src.Owner.LastName}"))
+            .ForMember(dest => dest.Id, opt => opt.MapFrom(src => src.Id))
+            .ForMember(dest => dest.Name, opt => opt.MapFrom(src => src.Name ?? ""))
+            .ForMember(dest => dest.Description, opt => opt.MapFrom(src => src.Description ?? ""))
+            .ForMember(dest => dest.Category, opt => opt.MapFrom(src => src.Category ?? ""))
+            .ForMember(dest => dest.Brand, opt => opt.MapFrom(src => src.Brand ?? ""))
+            .ForMember(dest => dest.Model, opt => opt.MapFrom(src => src.Model ?? ""))
+            .ForMember(dest => dest.DailyRate, opt => opt.MapFrom(src => src.DailyRate))
+            .ForMember(dest => dest.WeeklyRate, opt => opt.MapFrom(src => src.WeeklyRate))
+            .ForMember(dest => dest.MonthlyRate, opt => opt.MapFrom(src => src.MonthlyRate))
+            .ForMember(dest => dest.DepositRequired, opt => opt.MapFrom(src => src.DepositRequired))
+            .ForMember(dest => dest.Condition, opt => opt.MapFrom(src => src.Condition ?? ""))
+            .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location ?? ""))
+            .ForMember(dest => dest.IsAvailable, opt => opt.MapFrom(src => src.IsAvailable))
+            .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => 
+                src.Owner != null ? $"{src.Owner.FirstName ?? ""} {src.Owner.LastName ?? ""}".Trim() : "Unknown Owner"))
             .ForMember(dest => dest.ImageUrls, opt => opt.MapFrom(src => 
-                src.Images != null ? src.Images.Select(img => img.ImageUrl).ToList() : new List<string>()));
+                src.Images != null ? src.Images.Select(img => img.ImageUrl ?? "").ToList() : new List<string>()));
 
         CreateMap<ToolDto, Tool>()
             .ForMember(dest => dest.Images, opt => opt.Ignore())

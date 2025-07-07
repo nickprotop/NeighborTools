@@ -86,7 +86,7 @@ public class ToolsService : IToolsService
         }
         catch (Exception ex)
         {
-            return ApiResponse<List<ToolDto>>.CreateFailure($"Error retrieving tools: {ex.Message}");
+            return ApiResponse<List<ToolDto>>.CreateFailure($"Error retrieving tools: {ex.Message}. Inner: {ex.InnerException?.Message}");
         }
     }
 

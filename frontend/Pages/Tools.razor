@@ -162,10 +162,10 @@ else if (filteredTools != null && filteredTools.Any())
                         
                         <div class="d-flex align-center gap-2 mt-2">
                             <MudAvatar Size="Size.Small" Color="Color.Secondary">
-                                @tool.Owner.FirstName.Substring(0, 1)@tool.Owner.LastName.Substring(0, 1)
+                                @GetOwnerInitials(tool.OwnerName)
                             </MudAvatar>
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @tool.Owner.FirstName @tool.Owner.LastName
+                                @tool.OwnerName
                             </MudText>
                         </div>
                     </MudCardContent>
@@ -355,5 +355,19 @@ else
     protected override void OnParametersSet()
     {
         ApplyFilters();
+    }
+    
+    private string GetOwnerInitials(string ownerName)
+    {
+        if (string.IsNullOrWhiteSpace(ownerName))
+            return "??";
+            
+        var parts = ownerName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            return "??";
+        if (parts.Length == 1)
+            return parts[0].Length > 0 ? parts[0].Substring(0, 1).ToUpper() : "?";
+        
+        return $"{parts[0].Substring(0, 1)}{parts[^1].Substring(0, 1)}".ToUpper();
     }
 }

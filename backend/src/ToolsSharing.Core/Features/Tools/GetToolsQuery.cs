@@ -15,19 +15,19 @@ public record GetToolsQuery(
 );
 
 public record ToolDto(
-    Guid Id,
-    string Name,
-    string Description,
-    string Category,
-    string Brand,
-    string Model,
-    decimal DailyRate,
-    decimal? WeeklyRate,
-    decimal? MonthlyRate,
-    decimal DepositRequired,
-    string Condition,
-    string Location,
-    bool IsAvailable,
-    string OwnerName,
-    List<string> ImageUrls
+    Guid Id = default,
+    string Name = "",
+    string Description = "",
+    string Category = "",
+    string Brand = "",
+    string Model = "",
+    decimal DailyRate = 0,
+    decimal? WeeklyRate = null,
+    decimal? MonthlyRate = null,
+    decimal DepositRequired = 0,
+    string Condition = "",
+    string Location = "",
+    bool IsAvailable = true,
+    string OwnerName = "",
+    List<string>? ImageUrls = null
 );
