@@ -1,0 +1,239 @@
+@using Microsoft.AspNetCore.Components
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IRentalService RentalService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Request Rental - @Tool?.Name</MudText>
+        
+        @if (Tool != null)
+        {
+            <MudGrid>
+                <MudItem xs="12" Class="mb-4">
+                    <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px;">
+                        <div class="d-flex align-center gap-3">
+                            @if (Tool.ImageUrls.Any())
+                            {
+                                <img src="@Tool.ImageUrls.First()" alt="@Tool.Name" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" />
+                            }
+                            else
+                            {
+                                <div class="d-flex align-center justify-center" style="width: 80px; height: 80px; background: var(--mud-palette-surface-variant); border-radius: 8px;">
+                                    <MudIcon Icon="Icons.Material.Filled.Build" Color="Color.Secondary" />
+                                </div>
+                            }
+                            <div>
+                                <MudText Typo="Typo.h6">@Tool.Name</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Owner: @Tool.OwnerName</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Location: @Tool.Location</MudText>
+                            </div>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <MudItem xs="12" md="6">
+                    <MudDatePicker @bind-Date="startDate" 
+                                   Label="Start Date" 
+                                   Variant="Variant.Outlined"
+                                   MinDate="DateTime.Today"
+                                   OnDateChanged="CalculateCost"
+                                   Required="true" />
+                </MudItem>
+                
+                <MudItem xs="12" md="6">
+                    <MudDatePicker @bind-Date="endDate" 
+                                   Label="End Date" 
+                                   Variant="Variant.Outlined"
+                                   MinDate="startDate ?? DateTime.Today.AddDays(1)"
+                                   OnDateChanged="CalculateCost"
+                                   Required="true" />
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="notes" 
+                                  Label="Notes (Optional)" 
+                                  Variant="Variant.Outlined"
+                                  Lines="3"
+                                  Placeholder="Any special requirements or notes..." />
+                </MudItem>
+
+                @if (totalCost > 0)
+                {
+                    <MudItem xs="12">
+                        <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px; background: var(--mud-palette-primary-lighten);">
+                            <MudText Typo="Typo.h6" Class="mb-2">Rental Summary</MudText>
+                            <MudGrid>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.body2">Duration:</MudText>
+                                    <MudText Typo="Typo.body1"><strong>@rentalDays days</strong></MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.body2">Rate:</MudText>
+                                    <MudText Typo="Typo.body1"><strong>$@selectedRate.ToString("F2") @rateType</strong></MudText>
+                                </MudItem>
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.body2">Total Cost:</MudText>
+                                    <MudText Typo="Typo.h6" Color="Color.Primary"><strong>$@totalCost.ToString("F2")</strong></MudText>
+                                </MudItem>
+                                @if (Tool.DepositRequired > 0)
+                                {
+                                    <MudItem xs="6">
+                                        <MudText Typo="Typo.body2">Deposit Required:</MudText>
+                                        <MudText Typo="Typo.h6" Color="Color.Secondary"><strong>$@Tool.DepositRequired.ToString("F2")</strong></MudText>
+                                    </MudItem>
+                                }
+                            </MudGrid>
+                        </MudPaper>
+                    </MudItem>
+                }
+
+                @if (!string.IsNullOrEmpty(errorMessage))
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Error">@errorMessage</MudAlert>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="SubmitRequest"
+                   Disabled="@(isSubmitting || !IsFormValid())"
+                   StartIcon="@(isSubmitting ? null : Icons.Material.Filled.Send)">
+            @if (isSubmitting)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Submitting...</MudText>
+            }
+            else
+            {
+                <MudText>Submit Request</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public Tool? Tool { get; set; }
+
+    private DateTime? startDate;
+    private DateTime? endDate;
+    private string notes = string.Empty;
+    private string errorMessage = string.Empty;
+    private bool isSubmitting = false;
+    
+    // Cost calculation
+    private decimal totalCost = 0;
+    private decimal selectedRate = 0;
+    private string rateType = "";
+    private int rentalDays = 0;
+
+    protected override void OnInitialized()
+    {
+        startDate = DateTime.Today.AddDays(1);
+        endDate = DateTime.Today.AddDays(2);
+        CalculateCost();
+    }
+
+    private void CalculateCost()
+    {
+        if (Tool == null || startDate == null || endDate == null || startDate >= endDate)
+        {
+            totalCost = 0;
+            return;
+        }
+
+        rentalDays = (int)(endDate.Value - startDate.Value).TotalDays;
+        
+        // Calculate best rate (similar to backend logic)
+        decimal dailyCost = Tool.DailyRate * rentalDays;
+        decimal weeklyCost = Tool.WeeklyRate.HasValue && rentalDays >= 7 ? 
+            Tool.WeeklyRate.Value * (rentalDays / 7) + Tool.DailyRate * (rentalDays % 7) : decimal.MaxValue;
+        decimal monthlyCost = Tool.MonthlyRate.HasValue && rentalDays >= 30 ? 
+            Tool.MonthlyRate.Value * (rentalDays / 30) + Tool.DailyRate * (rentalDays % 30) : decimal.MaxValue;
+
+        if (monthlyCost < dailyCost && monthlyCost < weeklyCost)
+        {
+            totalCost = monthlyCost;
+            selectedRate = Tool.MonthlyRate!.Value;
+            rateType = "per month";
+        }
+        else if (weeklyCost < dailyCost)
+        {
+            totalCost = weeklyCost;
+            selectedRate = Tool.WeeklyRate!.Value;
+            rateType = "per week";
+        }
+        else
+        {
+            totalCost = dailyCost;
+            selectedRate = Tool.DailyRate;
+            rateType = "per day";
+        }
+
+        StateHasChanged();
+    }
+
+    private bool IsFormValid()
+    {
+        return Tool != null && 
+               startDate.HasValue && 
+               endDate.HasValue && 
+               startDate < endDate && 
+               startDate >= DateTime.Today &&
+               totalCost > 0;
+    }
+
+    private async Task SubmitRequest()
+    {
+        if (!IsFormValid())
+            return;
+
+        isSubmitting = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var request = new CreateRentalRequest
+            {
+                ToolId = Tool!.Id,
+                StartDate = startDate!.Value,
+                EndDate = endDate!.Value,
+                Notes = string.IsNullOrWhiteSpace(notes) ? null : notes
+            };
+
+            var result = await RentalService.CreateRentalAsync(request);
+
+            if (result.Success)
+            {
+                Snackbar.Add("Rental request submitted successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(result.Data));
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to submit rental request.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

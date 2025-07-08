@@ -1,0 +1,319 @@
+@page "/tools/{id}"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IToolService ToolService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@attribute [Authorize]
+
+<PageTitle>@(tool?.Name ?? "Tool Details") - NeighborTools</PageTitle>
+
+@if (isLoading)
+{
+    <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.h6" Class="mt-4">Loading tool details...</MudText>
+    </MudPaper>
+}
+else if (!string.IsNullOrEmpty(errorMessage))
+{
+    <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+        <MudIcon Icon="Icons.Material.Filled.Error" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+        <MudText Typo="Typo.h6" Color="Color.Error" Class="mb-2">Error Loading Tool</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">@errorMessage</MudText>
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo("/tools"))" StartIcon="Icons.Material.Filled.ArrowBack">
+            Back to Tools
+        </MudButton>
+    </MudPaper>
+}
+else if (tool != null)
+{
+    <!-- Breadcrumb -->
+    <MudBreadcrumbs Items="_breadcrumbItems" Class="mb-4" />
+    
+    <!-- Main Content -->
+    <MudGrid>
+        <!-- Image Section -->
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="4" Style="border-radius: 12px; overflow: hidden;">
+                @if (tool.ImageUrls.Any())
+                {
+                    <MudCarousel TData="string" Class="mud-width-full" Style="height: 400px;" ShowArrows="@(tool.ImageUrls.Count > 1)" ShowBullets="@(tool.ImageUrls.Count > 1)">
+                        @foreach (var imageUrl in tool.ImageUrls)
+                        {
+                            <MudCarouselItem>
+                                <div class="d-flex align-center justify-center mud-width-full" style="height: 400px; background-image: url('@imageUrl'); background-size: cover; background-position: center;">
+                                </div>
+                            </MudCarouselItem>
+                        }
+                    </MudCarousel>
+                }
+                else
+                {
+                    <div class="d-flex align-center justify-center" style="height: 400px; background: var(--mud-palette-surface-variant);">
+                        <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 4rem;" />
+                    </div>
+                }
+            </MudPaper>
+        </MudItem>
+
+        <!-- Details Section -->
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="4" Class="pa-6" Style="border-radius: 12px; height: 100%;">
+                <!-- Title and Availability -->
+                <div class="d-flex justify-space-between align-center mb-4">
+                    <MudText Typo="Typo.h4" Color="Color.Primary">@tool.Name</MudText>
+                    <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Error)" 
+                             Size="Size.Medium" 
+                             Icon="@(tool.IsAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)">
+                        @(tool.IsAvailable ? "Available" : "Unavailable")
+                    </MudChip>
+                </div>
+
+                <!-- Description -->
+                <MudText Typo="Typo.body1" Class="mb-4">@tool.Description</MudText>
+
+                <!-- Key Info Grid -->
+                <MudGrid Class="mb-4">
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Category</MudText>
+                        <MudText Typo="Typo.body1">@tool.Category</MudText>
+                    </MudItem>
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Condition</MudText>
+                        <MudText Typo="Typo.body1">@tool.Condition</MudText>
+                    </MudItem>
+                    @if (!string.IsNullOrEmpty(tool.Brand))
+                    {
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Brand</MudText>
+                            <MudText Typo="Typo.body1">@tool.Brand</MudText>
+                        </MudItem>
+                    }
+                    @if (!string.IsNullOrEmpty(tool.Model))
+                    {
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Model</MudText>
+                            <MudText Typo="Typo.body1">@tool.Model</MudText>
+                        </MudItem>
+                    }
+                    <MudItem xs="6">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Location</MudText>
+                        <MudText Typo="Typo.body1">@tool.Location</MudText>
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Pricing -->
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Pricing</MudText>
+                <MudGrid Class="mb-4">
+                    <MudItem xs="4">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Daily Rate</MudText>
+                        <MudText Typo="Typo.h6" Color="Color.Primary">$@tool.DailyRate.ToString("F2")</MudText>
+                    </MudItem>
+                    @if (tool.WeeklyRate.HasValue)
+                    {
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Weekly Rate</MudText>
+                            <MudText Typo="Typo.h6" Color="Color.Primary">$@tool.WeeklyRate.Value.ToString("F2")</MudText>
+                        </MudItem>
+                    }
+                    @if (tool.MonthlyRate.HasValue)
+                    {
+                        <MudItem xs="4">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Monthly Rate</MudText>
+                            <MudText Typo="Typo.h6" Color="Color.Primary">$@tool.MonthlyRate.Value.ToString("F2")</MudText>
+                        </MudItem>
+                    }
+                </MudGrid>
+
+                @if (tool.DepositRequired > 0)
+                {
+                    <MudAlert Severity="Severity.Info" Class="mb-4">
+                        <MudText><strong>Deposit Required:</strong> $@tool.DepositRequired.ToString("F2")</MudText>
+                    </MudAlert>
+                }
+
+                <!-- Rating -->
+                @if (tool.Rating.HasValue)
+                {
+                    <MudDivider Class="my-4" />
+                    <div class="d-flex align-center gap-2 mb-4">
+                        <MudText Typo="Typo.h6" Color="Color.Primary">Rating</MudText>
+                        <MudRating ReadOnly="true" SelectedValue="@((int)tool.Rating.Value)" MaxValue="5" Size="Size.Medium" />
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">
+                            (@tool.ReviewCount reviews)
+                        </MudText>
+                    </div>
+                }
+
+                <!-- Owner Info -->
+                <MudDivider Class="my-4" />
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Owner</MudText>
+                <div class="d-flex align-center gap-3">
+                    <MudAvatar Size="Size.Medium" Color="Color.Secondary">
+                        @GetOwnerInitials(tool.OwnerName)
+                    </MudAvatar>
+                    <div>
+                        <MudText Typo="Typo.body1">@tool.OwnerName</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">Tool Owner</MudText>
+                    </div>
+                </div>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+
+    <!-- Action Buttons -->
+    <MudPaper Elevation="4" Class="pa-6 mt-6" Style="border-radius: 12px;">
+        <div class="d-flex justify-space-between align-center">
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Secondary" 
+                       StartIcon="Icons.Material.Filled.ArrowBack"
+                       OnClick="@(() => Navigation.NavigateTo("/tools"))">
+                Back to Tools
+            </MudButton>
+            
+            <div class="d-flex gap-3">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Secondary" 
+                           StartIcon="Icons.Material.Filled.FavoriteBorder"
+                           OnClick="ToggleFavorite">
+                    Add to Favorites
+                </MudButton>
+                
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Secondary" 
+                           StartIcon="Icons.Material.Filled.Share"
+                           OnClick="ShareTool">
+                    Share
+                </MudButton>
+                
+                <MudButton Variant="Variant.Filled" 
+                           Color="@(tool.IsAvailable ? Color.Primary : Color.Secondary)" 
+                           Size="Size.Large"
+                           StartIcon="@(tool.IsAvailable ? Icons.Material.Filled.ShoppingCart : Icons.Material.Filled.Block)"
+                           Disabled="@(!tool.IsAvailable)"
+                           OnClick="RequestRental">
+                    @(tool.IsAvailable ? "Request Rental" : "Unavailable")
+                </MudButton>
+            </div>
+        </div>
+    </MudPaper>
+}
+
+@code {
+    [Parameter] public string Id { get; set; } = string.Empty;
+    
+    private Tool? tool;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+    private List<BreadcrumbItem> _breadcrumbItems = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadTool();
+        SetupBreadcrumbs();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(Id))
+        {
+            await LoadTool();
+            SetupBreadcrumbs();
+        }
+    }
+
+    private async Task LoadTool()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var result = await ToolService.GetToolAsync(Id);
+            
+            if (result.Success && result.Data != null)
+            {
+                tool = result.Data;
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Tool not found.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void SetupBreadcrumbs()
+    {
+        _breadcrumbItems = new List<BreadcrumbItem>
+        {
+            new BreadcrumbItem("Home", href: "/"),
+            new BreadcrumbItem("Tools", href: "/tools"),
+            new BreadcrumbItem(tool?.Name ?? "Tool Details", href: null, disabled: true)
+        };
+    }
+
+    private string GetOwnerInitials(string ownerName)
+    {
+        if (string.IsNullOrWhiteSpace(ownerName))
+            return "??";
+            
+        var parts = ownerName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            return "??";
+        if (parts.Length == 1)
+            return parts[0].Length > 0 ? parts[0].Substring(0, 1).ToUpper() : "?";
+        
+        return $"{parts[0].Substring(0, 1)}{parts[^1].Substring(0, 1)}".ToUpper();
+    }
+
+    private void ToggleFavorite()
+    {
+        Snackbar.Add("Favorites feature coming soon!", Severity.Info);
+    }
+
+    private void ShareTool()
+    {
+        Snackbar.Add("Share feature coming soon!", Severity.Info);
+    }
+
+    private async Task RequestRental()
+    {
+        if (tool?.IsAvailable == true)
+        {
+            var parameters = new DialogParameters<frontend.Shared.RentalRequestDialog>
+            {
+                { x => x.Tool, tool }
+            };
+
+            var options = new DialogOptions()
+            {
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true,
+                CloseButton = true,
+                CloseOnEscapeKey = true
+            };
+
+            var dialog = await DialogService.ShowAsync<frontend.Shared.RentalRequestDialog>("Request Rental", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled)
+            {
+                // Rental request was successful, optionally navigate somewhere
+                Snackbar.Add("Your rental request has been submitted and is pending approval.", Severity.Success);
+            }
+        }
+    }
+}

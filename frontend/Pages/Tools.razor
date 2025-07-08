@@ -5,6 +5,7 @@
 @using frontend.Services
 @inject IToolService ToolService
 @inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 @attribute [Authorize]
 
 <PageTitle>Browse Tools - NeighborTools</PageTitle>
@@ -342,8 +343,7 @@ else
 
     private void ViewTool(string toolId)
     {
-        Snackbar.Add($"Tool details coming soon! Tool ID: {toolId}", Severity.Info);
-        // Navigation.NavigateTo($"/tools/{toolId}");
+        Navigation.NavigateTo($"/tools/{toolId}");
     }
 
     private void ToggleFavorite(string toolId)

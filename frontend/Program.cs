@@ -36,5 +36,6 @@ builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStat
 builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IToolService, ToolService>();
+builder.Services.AddScoped<IRentalService, RentalService>();
 
 await builder.Build().RunAsync();
