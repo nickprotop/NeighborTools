@@ -11,20 +11,21 @@ public record CreateRentalCommand(
     string? Notes = null
 );
 
-public record RentalDto(
-    Guid Id,
-    Guid ToolId,
-    string ToolName,
-    string RenterId,
-    string RenterName,
-    string OwnerId,
-    string OwnerName,
-    DateTime StartDate,
-    DateTime EndDate,
-    decimal TotalCost,
-    decimal DepositAmount,
-    string Status,
-    string? Notes,
-    DateTime? PickupDate,
-    DateTime? ReturnDate
-);
+public class RentalDto
+{
+    public Guid Id { get; set; }
+    public Guid ToolId { get; set; }
+    public string ToolName { get; set; } = "";
+    public string RenterId { get; set; } = "";
+    public string RenterName { get; set; } = "";
+    public string OwnerId { get; set; } = "";
+    public string OwnerName { get; set; } = "";
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public decimal TotalCost { get; set; }
+    public decimal DepositAmount { get; set; }
+    public string Status { get; set; } = "";
+    public string? Notes { get; set; }
+    public DateTime? PickupDate { get; set; }
+    public DateTime? ReturnDate { get; set; }
+}

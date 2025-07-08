@@ -90,6 +90,74 @@ public class ToolsService : IToolsService
         }
     }
 
+    public async Task<ApiResponse<List<ToolDto>>> GetUserToolsAsync(GetToolsQuery query, string userId)
+    {
+        try
+        {
+            var toolsQuery = _context.Tools
+                .Include(t => t.Owner)
+                .Include(t => t.Images)
+                .Where(t => !t.IsDeleted && t.OwnerId == userId);
+
+            // Apply filters (same as GetToolsAsync but with user filter)
+            if (!string.IsNullOrEmpty(query.Category))
+            {
+                toolsQuery = toolsQuery.Where(t => t.Category.ToLower() == query.Category.ToLower());
+            }
+
+            if (!string.IsNullOrEmpty(query.Location))
+            {
+                toolsQuery = toolsQuery.Where(t => t.Location.ToLower().Contains(query.Location.ToLower()));
+            }
+
+            if (query.MaxDailyRate.HasValue)
+            {
+                toolsQuery = toolsQuery.Where(t => t.DailyRate <= query.MaxDailyRate.Value);
+            }
+
+            if (query.AvailableOnly)
+            {
+                toolsQuery = toolsQuery.Where(t => t.IsAvailable);
+            }
+
+            // Apply search
+            if (!string.IsNullOrEmpty(query.SearchTerm))
+            {
+                var searchTerm = query.SearchTerm.ToLower();
+                toolsQuery = toolsQuery.Where(t => 
+                    t.Name.ToLower().Contains(searchTerm) ||
+                    t.Description.ToLower().Contains(searchTerm) ||
+                    t.Brand.ToLower().Contains(searchTerm) ||
+                    t.Model.ToLower().Contains(searchTerm));
+            }
+
+            // Apply sorting
+            toolsQuery = query.SortBy?.ToLower() switch
+            {
+                "price" => toolsQuery.OrderBy(t => t.DailyRate),
+                "created" => toolsQuery.OrderByDescending(t => t.CreatedAt),
+                _ => toolsQuery.OrderBy(t => t.Name)
+            };
+
+            // Apply pagination
+            if (query.PageSize > 0)
+            {
+                toolsQuery = toolsQuery
+                    .Skip((query.PageNumber - 1) * query.PageSize)
+                    .Take(query.PageSize);
+            }
+
+            var tools = await toolsQuery.ToListAsync();
+            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+
+            return ApiResponse<List<ToolDto>>.CreateSuccess(toolDtos, "User tools retrieved successfully");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<List<ToolDto>>.CreateFailure($"Error retrieving user tools: {ex.Message}. Inner: {ex.InnerException?.Message}");
+        }
+    }
+
     public async Task<ApiResponse<ToolDto>> GetToolByIdAsync(GetToolByIdQuery query)
     {
         try

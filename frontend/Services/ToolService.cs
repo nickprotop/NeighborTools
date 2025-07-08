@@ -7,6 +7,7 @@ namespace frontend.Services;
 public interface IToolService
 {
     Task<ApiResponse<List<Tool>>> GetToolsAsync();
+    Task<ApiResponse<List<Tool>>> GetMyToolsAsync();
     Task<ApiResponse<Tool>> GetToolAsync(string id);
     Task<ApiResponse<Tool>> CreateToolAsync(CreateToolRequest request);
     Task<ApiResponse<Tool>> UpdateToolAsync(string id, CreateToolRequest request);
@@ -43,6 +44,48 @@ public class ToolService : IToolService
             { 
                 Success = false, 
                 Message = $"Failed to retrieve tools: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<List<Tool>>> GetMyToolsAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/api/tools/my-tools");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            if (!response.IsSuccessStatusCode)
+            {
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    return new ApiResponse<List<Tool>> 
+                    { 
+                        Success = false, 
+                        Message = "You must be logged in to view your tools. Please log in and try again." 
+                    };
+                }
+                
+                return new ApiResponse<List<Tool>> 
+                { 
+                    Success = false, 
+                    Message = $"HTTP {response.StatusCode}: {content}" 
+                };
+            }
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<List<Tool>>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<List<Tool>> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<Tool>> 
+            { 
+                Success = false, 
+                Message = $"Failed to retrieve my tools: {ex.Message}" 
             };
         }
     }

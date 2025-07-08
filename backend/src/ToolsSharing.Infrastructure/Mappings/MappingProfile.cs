@@ -25,11 +25,7 @@ public class MappingProfile : Profile
             .ForMember(dest => dest.Location, opt => opt.MapFrom(src => src.Location ?? ""))
             .ForMember(dest => dest.IsAvailable, opt => opt.MapFrom(src => src.IsAvailable))
             .ForMember(dest => dest.OwnerName, opt => opt.MapFrom(src => 
-                src.Owner != null ? 
-                    string.IsNullOrWhiteSpace($"{src.Owner.FirstName ?? ""} {src.Owner.LastName ?? ""}".Trim()) ? 
-                        "Unknown Owner" : 
-                        $"{src.Owner.FirstName ?? ""} {src.Owner.LastName ?? ""}".Trim() : 
-                    "Unknown Owner"))
+                src.Owner != null ? $"{src.Owner.FirstName ?? ""} {src.Owner.LastName ?? ""}".Trim() : "Unknown Owner"))
             .ForMember(dest => dest.ImageUrls, opt => opt.MapFrom(src => 
                 src.Images != null ? src.Images.Select(img => img.ImageUrl ?? "").ToList() : new List<string>()));
 

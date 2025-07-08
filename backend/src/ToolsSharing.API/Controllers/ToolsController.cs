@@ -24,6 +24,18 @@ public class ToolsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("my-tools")]
+    [Authorize]
+    public async Task<IActionResult> GetMyTools([FromQuery] GetToolsQuery query)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+            
+        var result = await _toolsService.GetUserToolsAsync(query, userId);
+        return Ok(result);
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetTool(Guid id)
     {

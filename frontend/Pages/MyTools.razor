@@ -219,12 +219,10 @@
 
         try
         {
-            // TODO: Implement actual user-specific tool loading
-            var result = await ToolService.GetToolsAsync();
+            var result = await ToolService.GetMyToolsAsync();
             
             if (result.Success)
             {
-                // For now, showing all tools. In real implementation, filter by current user
                 myTools = result.Data;
             }
             else

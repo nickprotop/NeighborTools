@@ -67,9 +67,6 @@ public class AuthService : IAuthService
                     await _localStorage.SetSessionItemAsync("user", userInfo);
                 }
                 
-                _httpClient.DefaultRequestHeaders.Authorization = 
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.Data.AccessToken);
-                
                 ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(userInfo);
             }
 
@@ -138,7 +135,6 @@ public class AuthService : IAuthService
         await _localStorage.RemoveSessionItemAsync("refreshToken");
         await _localStorage.RemoveSessionItemAsync("user");
         
-        _httpClient.DefaultRequestHeaders.Authorization = null;
         ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsLoggedOut();
     }
 
@@ -164,9 +160,6 @@ public class AuthService : IAuthService
 
         if (!string.IsNullOrEmpty(token) && user != null)
         {
-            _httpClient.DefaultRequestHeaders.Authorization = 
-                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
-            
             ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(user);
         }
     }

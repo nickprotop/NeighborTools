@@ -66,15 +66,16 @@ public class AuthService : IAuthService
             var accessToken = await _jwtTokenService.GenerateAccessTokenAsync(user);
             var refreshToken = _jwtTokenService.GenerateRefreshToken();
 
-            var authResult = new AuthResult(
-                user.Id,
-                user.Email!,
-                user.FirstName,
-                user.LastName,
-                accessToken,
-                refreshToken,
-                DateTime.UtcNow.AddMinutes(60) // Should match JWT expiration
-            );
+            var authResult = new AuthResult
+            {
+                UserId = user.Id,
+                Email = user.Email!,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(60) // Should match JWT expiration
+            };
 
             return ApiResponse<AuthResult>.CreateSuccess(authResult, "User registered successfully");
         }
@@ -106,15 +107,16 @@ public class AuthService : IAuthService
             var accessToken = await _jwtTokenService.GenerateAccessTokenAsync(user);
             var refreshToken = _jwtTokenService.GenerateRefreshToken();
 
-            var authResult = new AuthResult(
-                user.Id,
-                user.Email!,
-                user.FirstName,
-                user.LastName,
-                accessToken,
-                refreshToken,
-                DateTime.UtcNow.AddMinutes(60) // Should match JWT expiration
-            );
+            var authResult = new AuthResult
+            {
+                UserId = user.Id,
+                Email = user.Email!,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                AccessToken = accessToken,
+                RefreshToken = refreshToken,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(60) // Should match JWT expiration
+            };
 
             return ApiResponse<AuthResult>.CreateSuccess(authResult, "Login successful");
         }
@@ -151,15 +153,16 @@ public class AuthService : IAuthService
             var newAccessToken = await _jwtTokenService.GenerateAccessTokenAsync(user);
             var newRefreshToken = _jwtTokenService.GenerateRefreshToken();
 
-            var authResult = new AuthResult(
-                user.Id,
-                user.Email!,
-                user.FirstName,
-                user.LastName,
-                newAccessToken,
-                newRefreshToken,
-                DateTime.UtcNow.AddMinutes(60)
-            );
+            var authResult = new AuthResult
+            {
+                UserId = user.Id,
+                Email = user.Email!,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(60)
+            };
 
             return ApiResponse<AuthResult>.CreateSuccess(authResult, "Token refreshed successfully");
         }
