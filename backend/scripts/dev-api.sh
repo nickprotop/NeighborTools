@@ -21,8 +21,8 @@ fi
 echo "✅ Infrastructure is ready"
 echo ""
 echo "🚀 Starting API with dotnet run..."
-echo "🌐 API will be available at: http://localhost:5000"
-echo "📖 Swagger UI: http://localhost:5000/swagger"
+echo "🌐 API will be available at: http://localhost:5002"
+echo "📖 Swagger UI: http://localhost:5002/swagger"
 echo "🔄 Press Ctrl+C to stop"
 echo ""
 

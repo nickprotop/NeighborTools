@@ -81,8 +81,8 @@ case $mode in
     2)
         echo "dotnet" > .dev-mode
         echo "💻 Starting API with dotnet run..."
-        echo "🌐 API will be available at: http://localhost:5000"
-        echo "📖 Swagger: http://localhost:5000/swagger"
+        echo "🌐 API will be available at: http://localhost:5002"
+        echo "📖 Swagger: http://localhost:5002/swagger"
         echo ""
         cd src/ToolsSharing.API
         dotnet run
@@ -91,7 +91,7 @@ case $mode in
         echo "watch" > .dev-mode
         echo "🔥 Starting API with hot reload (dotnet watch)..."
         echo "🌐 API will be available at: http://localhost:5000"
-        echo "📖 Swagger: http://localhost:5000/swagger"
+        echo "📖 Swagger: http://localhost:5002/swagger"
         echo "🔄 Hot reload enabled - changes will auto-restart"
         echo ""
         cd src/ToolsSharing.API
