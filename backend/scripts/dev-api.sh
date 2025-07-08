@@ -14,7 +14,7 @@ cd "$(dirname "$0")/../src/ToolsSharing.API"
 # Check if infrastructure is running
 echo "🔍 Checking infrastructure..."
 if ! docker ps | grep -q "mysql.*Up" || ! docker ps | grep -q "redis.*Up"; then
-    echo "❌ Infrastructure is not running. Please run start-infrastructure-new.sh first"
+    echo "❌ Infrastructure is not running. Please run start-infrastructure.sh first"
     exit 1
 fi
 
