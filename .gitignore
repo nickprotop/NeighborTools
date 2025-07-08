@@ -134,7 +134,6 @@ $RECYCLE.BIN/
 **/bower_components/
 
 # Remove Claude-specific files (if any were present)
-claude.*
 .claude/
 context.db
 context.db-shm  
