@@ -38,7 +38,7 @@
         <MudCard Elevation="4" Style="border-radius: 12px;">
             <MudCardContent Class="text-center">
                 <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
-                <MudText Typo="Typo.h4" Color="Color.Primary">@(myTools?.Count ?? 0)</MudText>
+                <MudText Typo="Typo.h4" Color="Color.Primary">@GetTotalToolsCount()</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Total Tools</MudText>
             </MudCardContent>
         </MudCard>
@@ -47,7 +47,7 @@
         <MudCard Elevation="4" Style="border-radius: 12px;">
             <MudCardContent Class="text-center">
                 <MudIcon Icon="Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-2" />
-                <MudText Typo="Typo.h4" Color="Color.Success">@(myTools?.Count(t => t.IsAvailable) ?? 0)</MudText>
+                <MudText Typo="Typo.h4" Color="Color.Success">@GetAvailableToolsCount()</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Available</MudText>
             </MudCardContent>
         </MudCard>
@@ -56,7 +56,7 @@
         <MudCard Elevation="4" Style="border-radius: 12px;">
             <MudCardContent Class="text-center">
                 <MudIcon Icon="Icons.Material.Filled.Schedule" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
-                <MudText Typo="Typo.h4" Color="Color.Warning">@(myTools?.Count(t => !t.IsAvailable) ?? 0)</MudText>
+                <MudText Typo="Typo.h4" Color="Color.Warning">@GetRentedToolsCount()</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Rented Out</MudText>
             </MudCardContent>
         </MudCard>
@@ -65,7 +65,7 @@
         <MudCard Elevation="4" Style="border-radius: 12px;">
             <MudCardContent Class="text-center">
                 <MudIcon Icon="Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Info" Class="mb-2" />
-                <MudText Typo="Typo.h4" Color="Color.Info">$@((myTools?.Sum(t => t.DailyRate) ?? 0).ToString("F0"))</MudText>
+                <MudText Typo="Typo.h4" Color="Color.Info">@GetDailyPotential()</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Daily Potential</MudText>
             </MudCardContent>
         </MudCard>
@@ -109,18 +109,29 @@ else if (myTools != null && myTools.Any())
                     <MudCardContent>
                         <MudText Typo="Typo.h6" GutterBottom="true">@tool.Name</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3" Style="height: 3em; overflow: hidden;">
-                            @(tool.Description.Length > 80 ? tool.Description.Substring(0, 80) + "..." : tool.Description)
+                            @GetTruncatedDescription(tool.Description)
                         </MudText>
                         
                         <div class="d-flex justify-space-between align-center mb-3">
                             <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="Icons.Material.Filled.Category">
                                 @tool.Category
                             </MudChip>
-                            <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Warning)" 
-                                     Size="Size.Small" 
-                                     Icon="@(tool.IsAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Schedule)">
-                                @(tool.IsAvailable ? "Available" : "Rented")
-                            </MudChip>
+                            @if (tool.IsAvailable)
+                            {
+                                <MudChip T="string" Color="Color.Success" 
+                                         Size="Size.Small" 
+                                         Icon="Icons.Material.Filled.CheckCircle">
+                                    Available
+                                </MudChip>
+                            }
+                            @if (!tool.IsAvailable)
+                            {
+                                <MudChip T="string" Color="Color.Warning" 
+                                         Size="Size.Small" 
+                                         Icon="Icons.Material.Filled.Schedule">
+                                    Rented
+                                </MudChip>
+                            }
                         </div>
                         
                         <div class="d-flex justify-space-between align-center mb-2">
@@ -243,5 +254,39 @@ else
         // TODO: Add confirmation dialog
         // For now, just show info message
         Snackbar.Add("Tool deletion feature coming soon!", Severity.Info);
+    }
+
+    // Helper methods for display logic
+    private int GetTotalToolsCount()
+    {
+        return myTools?.Count ?? 0;
+    }
+
+    private int GetAvailableToolsCount()
+    {
+        return myTools?.Count(t => t.IsAvailable) ?? 0;
+    }
+
+    private int GetRentedToolsCount()
+    {
+        return myTools?.Count(t => !t.IsAvailable) ?? 0;
+    }
+
+    private string GetDailyPotential()
+    {
+        if (myTools == null || !myTools.Any())
+            return "$0";
+        
+        return "$" + myTools.Sum(t => t.DailyRate).ToString("F0");
+    }
+
+    private string GetTruncatedDescription(string description)
+    {
+        if (string.IsNullOrEmpty(description))
+            return "";
+        
+        return description.Length > 80 
+            ? description.Substring(0, 80) + "..." 
+            : description;
     }
 }

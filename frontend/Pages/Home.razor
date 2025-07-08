@@ -11,32 +11,30 @@
 
 <!-- Hero Section -->
 <MudPaper Elevation="0" Class="pa-8 mb-8" Style="background: linear-gradient(135deg, var(--mud-palette-primary) 0%, var(--mud-palette-secondary) 100%); border-radius: 16px;">
-    <MudContainer MaxWidth="MaxWidth.Large">
-        <div class="d-flex flex-column align-center text-center">
-            <MudIcon Icon="Icons.Material.Filled.Handyman" Size="Size.Large" Style="font-size: 5rem; color: white; margin-bottom: 1rem;" />
-            <MudText Typo="Typo.h2" Style="color: white; font-weight: bold;" GutterBottom="true">
-                Welcome to NeighborTools
-            </MudText>
-            <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.9); max-width: 600px; margin-bottom: 2rem;">
-                Share tools with your neighbors and borrow what you need. Building community one tool at a time.
-            </MudText>
-            <AuthorizeView>
-                <Authorized>
-                    <MudText Typo="Typo.h6" Style="color: white; margin-bottom: 1.5rem;">
-                        Welcome back, @context.User.Identity?.Name! 👋
-                    </MudText>
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Surface"
-                               Size="Size.Large"
-                               Href="/tools"
-                               StartIcon="Icons.Material.Filled.Search"
-                               Style="color: var(--mud-palette-primary); font-weight: bold;">
-                        Browse Tools
-                    </MudButton>
-                </Authorized>
-            </AuthorizeView>
-        </div>
-    </MudContainer>
+    <div class="d-flex flex-column align-center text-center">
+        <MudIcon Icon="Icons.Material.Filled.Handyman" Size="Size.Large" Style="font-size: 5rem; color: white; margin-bottom: 1rem;" />
+        <MudText Typo="Typo.h2" Style="color: white; font-weight: bold;" GutterBottom="true">
+            Welcome to NeighborTools
+        </MudText>
+        <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.9); max-width: 600px; margin-bottom: 2rem;">
+            Share tools with your neighbors and borrow what you need. Building community one tool at a time.
+        </MudText>
+        <AuthorizeView>
+            <Authorized>
+                <MudText Typo="Typo.h6" Style="color: white; margin-bottom: 1.5rem;">
+                    Welcome back, @context.User.Identity?.Name! 👋
+                </MudText>
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Surface"
+                           Size="Size.Large"
+                           Href="/tools"
+                           StartIcon="Icons.Material.Filled.Search"
+                           Style="color: var(--mud-palette-primary); font-weight: bold;">
+                    Browse Tools
+                </MudButton>
+            </Authorized>
+        </AuthorizeView>
+    </div>
 </MudPaper>
 
 <!-- Quick Actions -->
