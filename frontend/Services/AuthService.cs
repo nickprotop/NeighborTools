@@ -7,11 +7,12 @@ namespace frontend.Services;
 
 public interface IAuthService
 {
-    Task<ApiResponse<AuthResult>> LoginAsync(LoginRequest request);
+    Task<ApiResponse<AuthResult>> LoginAsync(LoginRequest request, bool rememberMe = false);
     Task<ApiResponse<AuthResult>> RegisterAsync(RegisterRequest request);
     Task LogoutAsync();
     Task<bool> IsAuthenticatedAsync();
     Task<UserInfo?> GetCurrentUserAsync();
+    Task RestoreAuthenticationAsync();
 }
 
 public class AuthService : IAuthService
@@ -30,7 +31,7 @@ public class AuthService : IAuthService
         _authenticationStateProvider = authenticationStateProvider;
     }
 
-    public async Task<ApiResponse<AuthResult>> LoginAsync(LoginRequest request)
+    public async Task<ApiResponse<AuthResult>> LoginAsync(LoginRequest request, bool rememberMe = false)
     {
         try
         {
@@ -44,14 +45,32 @@ public class AuthService : IAuthService
 
             if (result?.Success == true && result.Data != null)
             {
-                await _localStorage.SetItemAsync("authToken", result.Data.Token);
-                await _localStorage.SetItemAsync("refreshToken", result.Data.RefreshToken);
-                await _localStorage.SetItemAsync("user", result.Data.User);
+                
+                var userInfo = new UserInfo
+                {
+                    Id = result.Data.UserId,
+                    Email = result.Data.Email,
+                    FirstName = result.Data.FirstName,
+                    LastName = result.Data.LastName
+                };
+                
+                if (rememberMe)
+                {
+                    await _localStorage.SetItemAsync("authToken", result.Data.AccessToken);
+                    await _localStorage.SetItemAsync("refreshToken", result.Data.RefreshToken);
+                    await _localStorage.SetItemAsync("user", userInfo);
+                }
+                else
+                {
+                    await _localStorage.SetSessionItemAsync("authToken", result.Data.AccessToken);
+                    await _localStorage.SetSessionItemAsync("refreshToken", result.Data.RefreshToken);
+                    await _localStorage.SetSessionItemAsync("user", userInfo);
+                }
                 
                 _httpClient.DefaultRequestHeaders.Authorization = 
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.Data.Token);
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.Data.AccessToken);
                 
-                ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(result.Data.User);
+                ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(userInfo);
             }
 
             return result ?? new ApiResponse<AuthResult> { Success = false, Message = "Invalid response" };
@@ -80,14 +99,22 @@ public class AuthService : IAuthService
 
             if (result?.Success == true && result.Data != null)
             {
-                await _localStorage.SetItemAsync("authToken", result.Data.Token);
+                var userInfo = new UserInfo
+                {
+                    Id = result.Data.UserId,
+                    Email = result.Data.Email,
+                    FirstName = result.Data.FirstName,
+                    LastName = result.Data.LastName
+                };
+                
+                await _localStorage.SetItemAsync("authToken", result.Data.AccessToken);
                 await _localStorage.SetItemAsync("refreshToken", result.Data.RefreshToken);
-                await _localStorage.SetItemAsync("user", result.Data.User);
+                await _localStorage.SetItemAsync("user", userInfo);
                 
                 _httpClient.DefaultRequestHeaders.Authorization = 
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.Data.Token);
+                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.Data.AccessToken);
                 
-                ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(result.Data.User);
+                ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(userInfo);
             }
 
             return result ?? new ApiResponse<AuthResult> { Success = false, Message = "Invalid response" };
@@ -107,6 +134,9 @@ public class AuthService : IAuthService
         await _localStorage.RemoveItemAsync("authToken");
         await _localStorage.RemoveItemAsync("refreshToken");
         await _localStorage.RemoveItemAsync("user");
+        await _localStorage.RemoveSessionItemAsync("authToken");
+        await _localStorage.RemoveSessionItemAsync("refreshToken");
+        await _localStorage.RemoveSessionItemAsync("user");
         
         _httpClient.DefaultRequestHeaders.Authorization = null;
         ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsLoggedOut();
@@ -114,12 +144,30 @@ public class AuthService : IAuthService
 
     public async Task<bool> IsAuthenticatedAsync()
     {
-        var token = await _localStorage.GetItemAsync<string>("authToken");
+        var token = await _localStorage.GetItemAsync<string>("authToken") ?? 
+                   await _localStorage.GetSessionItemAsync<string>("authToken");
         return !string.IsNullOrEmpty(token);
     }
 
     public async Task<UserInfo?> GetCurrentUserAsync()
     {
-        return await _localStorage.GetItemAsync<UserInfo>("user");
+        return await _localStorage.GetItemAsync<UserInfo>("user") ?? 
+               await _localStorage.GetSessionItemAsync<UserInfo>("user");
+    }
+
+    public async Task RestoreAuthenticationAsync()
+    {
+        var token = await _localStorage.GetItemAsync<string>("authToken") ?? 
+                   await _localStorage.GetSessionItemAsync<string>("authToken");
+        var user = await _localStorage.GetItemAsync<UserInfo>("user") ?? 
+                  await _localStorage.GetSessionItemAsync<UserInfo>("user");
+
+        if (!string.IsNullOrEmpty(token) && user != null)
+        {
+            _httpClient.DefaultRequestHeaders.Authorization = 
+                new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", token);
+            
+            ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(user);
+        }
     }
 }

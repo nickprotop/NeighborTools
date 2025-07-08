@@ -38,4 +38,10 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IToolService, ToolService>();
 builder.Services.AddScoped<IRentalService, RentalService>();
 
-await builder.Build().RunAsync();
+var app = builder.Build();
+
+// Restore authentication state on app startup
+var authService = app.Services.GetRequiredService<IAuthService>();
+await authService.RestoreAuthenticationAsync();
+
+await app.RunAsync();

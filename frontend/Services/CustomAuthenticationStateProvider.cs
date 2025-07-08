@@ -18,8 +18,10 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
     {
         try
         {
-            var token = await _localStorage.GetItemAsync<string>("authToken");
-            var user = await _localStorage.GetItemAsync<UserInfo>("user");
+            var token = await _localStorage.GetItemAsync<string>("authToken") ?? 
+                       await _localStorage.GetSessionItemAsync<string>("authToken");
+            var user = await _localStorage.GetItemAsync<UserInfo>("user") ?? 
+                      await _localStorage.GetSessionItemAsync<UserInfo>("user");
 
             if (string.IsNullOrEmpty(token) || user == null)
                 return new AuthenticationState(_anonymous);

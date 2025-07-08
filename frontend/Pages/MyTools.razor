@@ -81,21 +81,23 @@
     </MudPaper>
 }
 <!-- Error State -->
-else if (!string.IsNullOrEmpty(errorMessage))
+@if (!string.IsNullOrEmpty(errorMessage))
 {
     <MudAlert Severity="Severity.Error" ShowCloseIcon="true" CloseIconClicked="(() => errorMessage = string.Empty)">
         @errorMessage
     </MudAlert>
 }
 <!-- Tools Grid -->
-else if (myTools != null && myTools.Any())
+@if (myTools != null && myTools.Any())
 {
     <MudGrid>
         @foreach (var tool in myTools)
         {
-            <MudItem xs="12" sm="6" md="4" lg="3">
-                <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s;" Class="hover-card">
-                    @if (tool.ImageUrls.Any())
+            @if (tool != null)
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s;" Class="hover-card">
+                        @if (tool.ImageUrls != null && tool.ImageUrls.Any())
                     {
                         <MudCardMedia Image="@tool.ImageUrls.First()" Height="200" Style="border-radius: 12px 12px 0 0;" />
                     }
@@ -107,14 +109,14 @@ else if (myTools != null && myTools.Any())
                     }
                     
                     <MudCardContent>
-                        <MudText Typo="Typo.h6" GutterBottom="true">@tool.Name</MudText>
+                        <MudText Typo="Typo.h6" GutterBottom="true">@GetToolName(tool)</MudText>
                         <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3" Style="height: 3em; overflow: hidden;">
-                            @GetTruncatedDescription(tool.Description)
+                            @GetToolDescription(tool)
                         </MudText>
                         
                         <div class="d-flex justify-space-between align-center mb-3">
                             <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="Icons.Material.Filled.Category">
-                                @tool.Category
+                                @(tool.Category ?? "Unknown")
                             </MudChip>
                             @if (tool.IsAvailable)
                             {
@@ -144,7 +146,7 @@ else if (myTools != null && myTools.Any())
                         </div>
                         
                         <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-                            Condition: @tool.Condition
+                            Condition: @(tool.Condition ?? "Unknown")
                         </MudText>
                         
                         @if (tool.Rating.HasValue)
@@ -160,26 +162,27 @@ else if (myTools != null && myTools.Any())
                     
                     <MudCardActions Class="pa-4">
                         <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true">
-                            <MudButton StartIcon="Icons.Material.Filled.Edit" OnClick="() => EditTool(tool.Id)">
+                            <MudButton StartIcon="Icons.Material.Filled.Edit" OnClick="() => EditTool(tool.Id ?? string.Empty)">
                                 Edit
                             </MudButton>
-                            <MudButton StartIcon="Icons.Material.Filled.Visibility" OnClick="() => ViewTool(tool.Id)">
+                            <MudButton StartIcon="Icons.Material.Filled.Visibility" OnClick="() => ViewTool(tool.Id ?? string.Empty)">
                                 View
                             </MudButton>
                             <MudButton StartIcon="Icons.Material.Filled.Delete" 
                                        Color="Color.Error" 
-                                       OnClick="() => DeleteTool(tool.Id, tool.Name)">
+                                       OnClick="() => DeleteTool(tool.Id ?? string.Empty, tool.Name ?? string.Empty)">
                                 Delete
                             </MudButton>
                         </MudButtonGroup>
                     </MudCardActions>
                 </MudCard>
             </MudItem>
+            }
         }
     </MudGrid>
 }
 <!-- Empty State -->
-else
+@if (myTools == null || !myTools.Any())
 {
     <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
         <MudIcon Icon="Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" Class="mb-4" Style="font-size: 4rem;" />
@@ -288,5 +291,15 @@ else
         return description.Length > 80 
             ? description.Substring(0, 80) + "..." 
             : description;
+    }
+
+    private string GetToolName(Tool tool)
+    {
+        return tool?.Name ?? "Unknown Tool";
+    }
+
+    private string GetToolDescription(Tool tool)
+    {
+        return GetTruncatedDescription(tool?.Description ?? "");
     }
 }
