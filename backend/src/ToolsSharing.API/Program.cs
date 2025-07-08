@@ -7,7 +7,7 @@ using ToolsSharing.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 // Configure URLs to bind to all interfaces
-builder.WebHost.UseUrls("https://0.0.0.0:5001", "http://0.0.0.0:5000");
+builder.WebHost.UseUrls("https://0.0.0.0:5003", "http://0.0.0.0:5002");
 
 // Configure Serilog
 Log.Logger = new LoggerConfiguration()
@@ -119,7 +119,9 @@ if (app.Environment.IsDevelopment())
 }
 
 app.UseCors("AllowFrontend");
-app.UseHttpsRedirection();
+// DEVELOPMENT ONLY: HTTPS redirection disabled for local development with self-signed certificates
+// PRODUCTION WARNING: Enable HTTPS redirection in production or when behind a proxy that handles SSL
+// app.UseHttpsRedirection();
 
 app.UseAuthentication();
 app.UseAuthorization();
