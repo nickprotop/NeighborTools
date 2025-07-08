@@ -152,6 +152,21 @@ app.UseExceptionHandler(errorApp =>
 
 try
 {
+    // Check for --seed-only argument
+    if (args.Contains("--seed-only"))
+    {
+        Log.Information("Running in seed-only mode");
+        
+        // Seed the database and exit
+        using (var scope = app.Services.CreateScope())
+        {
+            await ToolsSharing.Infrastructure.Data.DataSeeder.SeedAsync(scope.ServiceProvider);
+        }
+        
+        Log.Information("Database seeding completed. Exiting.");
+        return;
+    }
+    
     Log.Information("Starting Tools Sharing API");
     
     // Seed the database

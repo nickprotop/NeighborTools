@@ -1,44 +1,97 @@
 #!/bin/bash
 
-echo "=== Starting NeighborTools Services ==="
+# NeighborTools Development Environment Starter
+# Starts both backend and frontend services
+
+set -e  # Exit on any error
+
+echo "🚀 Starting NeighborTools Development Environment"
+echo "================================================"
 echo ""
 
-echo "1. Starting Backend API on ports 5002/5003..."
-echo "   Command: cd backend && ./run-all.sh"
+# Function to check if a command exists
+command_exists() {
+    command -v "$1" >/dev/null 2>&1
+}
+
+# Check prerequisites
+echo "🔍 Checking prerequisites..."
+if ! command_exists dotnet; then
+    echo "❌ .NET SDK is required but not installed."
+    echo "   Please install .NET 8 SDK from: https://dotnet.microsoft.com/download"
+    exit 1
+fi
+
+if ! command_exists docker; then
+    echo "❌ Docker is required but not installed."
+    echo "   Please install Docker from: https://docs.docker.com/get-docker/"
+    exit 1
+fi
+
+echo "✅ Prerequisites check passed"
 echo ""
 
-echo "2. Starting Frontend on ports 5000/5001..."
-echo "   Command: cd frontend && dotnet run"
+# Start backend
+echo "1️⃣ Starting Backend..."
+echo "======================"
 echo ""
 
-echo "=== Service URLs ==="
-echo "Backend API:"
-echo "  - HTTP:  http://0.0.0.0:5002"
-echo "  - HTTPS: https://0.0.0.0:5003"
-echo "  - Swagger: http://0.0.0.0:5002/swagger"
+if [ ! -d "backend" ]; then
+    echo "❌ Backend directory not found. Are you in the NeighborTools root directory?"
+    exit 1
+fi
+
+cd backend
+
+# Check if backend is already set up
+if [ ! -f ".backend-setup-complete" ]; then
+    echo "🔧 First time setup detected. Running installation..."
+    ./scripts/install.sh
+    touch .backend-setup-complete
+    echo ""
+fi
+
+echo "🔄 Starting backend services..."
+./scripts/start-all.sh &
+backend_pid=$!
+
+cd ..
+
+# Give backend time to start
+echo "⏳ Waiting for backend to initialize..."
+sleep 5
+
 echo ""
-echo "Frontend:"
-echo "  - HTTP:  http://0.0.0.0:5000"
-echo "  - HTTPS: https://0.0.0.0:5001"
+echo "2️⃣ Starting Frontend..."
+echo "======================"
 echo ""
 
-echo "=== Test Commands ==="
-echo "Test API directly:"
-echo "  curl -X POST http://0.0.0.0:5002/api/auth/login \\"
-echo "    -H \"Content-Type: application/json\" \\"
-echo "    -d '{\"email\":\"john.doe@email.com\",\"password\":\"Password123!\"}'"
+if [ ! -d "frontend" ]; then
+    echo "❌ Frontend directory not found. Are you in the NeighborTools root directory?"
+    exit 1
+fi
+
+cd frontend
+
+echo "🔄 Starting frontend..."
+echo "   This will start the Blazor WebAssembly application"
+echo "   Press Ctrl+C to stop both services"
 echo ""
 
-echo "=== Changes Made ==="
-echo "✅ Backend ports changed to 5002/5003"
-echo "✅ Both services bind to 0.0.0.0 (all network interfaces)"
-echo "✅ Frontend HttpClient configured to auto-detect API host"
-echo "✅ CORS enabled in backend for cross-origin requests"
-echo "✅ CORS middleware positioned correctly in pipeline"
-echo ""
+# Start frontend (this will run in foreground)
+dotnet run
 
-echo "If you're still getting 'Failed to fetch' errors:"
-echo "1. Check if both services are running"
-echo "2. Verify firewall allows ports 5000-5003"
-echo "3. Test API directly with curl command above"
-echo "4. Check browser developer console for detailed error"
+# If we get here, frontend was stopped
+echo ""
+echo "🛑 Frontend stopped. Stopping backend..."
+kill $backend_pid 2>/dev/null || true
+
+echo ""
+echo "✅ All services stopped"
+echo ""
+echo "Service URLs were:"
+echo "  🌐 Frontend: http://localhost:5000"
+echo "  🔧 Backend API: http://localhost:5000 or http://localhost:5002"
+echo "  📖 Swagger: http://localhost:5000/swagger or http://localhost:5002/swagger"
+echo ""
+echo "To restart: ./start-services.sh"

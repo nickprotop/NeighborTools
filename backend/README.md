@@ -50,58 +50,64 @@ This application follows Clean Architecture principles with the following layers
 1. **Clone the repository**
    ```bash
    git clone <repository-url>
-   cd backend
+   cd NeighborTools/backend
    ```
 
-2. **Install dependencies**
+2. **Complete setup (run once)**
    ```bash
    ./scripts/install.sh
    ```
 
-3. **Run the complete setup**
+3. **Daily development**
    ```bash
-   ./scripts/run-all.sh
+   ./scripts/start-all.sh
    ```
 
-4. **Start the API**
+4. **Access the application**
+   - API: http://localhost:5002 (Docker) or http://localhost:5000 (dotnet)
+   - Swagger UI: http://localhost:5002/swagger or http://localhost:5000/swagger
+   - Health Check: http://localhost:5002/health or http://localhost:5000/health
+
+## Development Scripts
+
+### Setup & Start Scripts
+- `install.sh` - Complete installation (infrastructure + migrations + seeding)
+- `start-all.sh` - Daily development with interactive API mode selection
+- `start-infrastructure.sh` - Start MySQL & Redis only (for manual API debugging)
+- `dev-api.sh` - Start API with `dotnet run`
+- `docker-api.sh` - Start API in Docker container
+
+### Stop & Cleanup Scripts
+- `stop-api.sh` - Stop API (handles both Docker and dotnet processes)
+- `stop-infrastructure.sh` - Stop MySQL & Redis only
+- `stop-all.sh` - Stop everything, preserve data volumes
+- `uninstall.sh` - Complete removal ⚠️ (deletes all data including database)
+
+### Manual Setup (Alternative to install.sh)
+
+1. **Infrastructure Setup**
    ```bash
-   ./scripts/start-api.sh
+   ./scripts/start-infrastructure.sh
    ```
 
-5. **Access the application**
-   - API: http://localhost:5000
-   - Swagger UI: http://localhost:5000/swagger
-   - Health Check: http://localhost:5000/health
+2. **Database Migration**
+   ```bash
+   dotnet ef database update --project src/ToolsSharing.API --verbose
+   ```
 
-## Manual Setup
+3. **Seed Database**
+   ```bash
+   dotnet run --project src/ToolsSharing.API --seed-only
+   ```
 
-### 1. Infrastructure Setup
-
-Start MySQL and Redis:
-```bash
-./scripts/start-infrastructure.sh
-```
-
-### 2. Database Migration
-
-Run Entity Framework migrations:
-```bash
-./scripts/run-migrations.sh
-```
-
-### 3. Seed Database
-
-Insert sample data:
-```bash
-./scripts/seed-data.sh
-```
-
-### 4. Start API
-
-Launch the API server:
-```bash
-./scripts/start-api.sh
-```
+4. **Start API**
+   ```bash
+   # Option 1: Development mode
+   ./scripts/dev-api.sh
+   
+   # Option 2: Docker mode
+   ./scripts/docker-api.sh
+   ```
 
 ## Configuration
 

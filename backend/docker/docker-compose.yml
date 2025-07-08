@@ -16,6 +16,9 @@ services:
       - ./init-scripts:/docker-entrypoint-initdb.d
     restart: unless-stopped
     command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
+    profiles:
+      - infrastructure
+      - full
 
   redis:
     image: redis:7-alpine
@@ -23,6 +26,9 @@ services:
     ports:
       - "6379:6379"
     restart: unless-stopped
+    profiles:
+      - infrastructure
+      - full
 
   api:
     build:
@@ -41,6 +47,9 @@ services:
       - ConnectionStrings__DefaultConnection=server=mysql;port=3306;database=toolssharing;uid=toolsuser;pwd=ToolsPassword123!
       - Redis__ConnectionString=redis:6379
     restart: unless-stopped
+    profiles:
+      - api
+      - full
 
 volumes:
   mysql_data:

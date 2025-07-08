@@ -1,83 +1,96 @@
 #!/bin/bash
 
-# Installation script for Tools Sharing Backend
+# NeighborTools Complete Installation Script
+# Run this once for initial project setup
 
-echo "===================================================="
-echo "Tools Sharing Backend Installation Script"
-echo "===================================================="
+set -e  # Exit on any error
 
-# Function to check if a command exists
-command_exists() {
-    command -v "$1" >/dev/null 2>&1
-}
+echo "🚀 Installing NeighborTools - Complete Setup"
+echo "============================================="
 
-# Check prerequisites
-echo "Checking prerequisites..."
-
-# Check for .NET SDK
-if ! command_exists dotnet; then
-    echo "Error: .NET SDK 9.0 is required but not installed."
-    echo "Please install .NET SDK 9.0 from: https://dotnet.microsoft.com/download"
+# Check if Docker and Docker Compose are installed
+if ! command -v docker &> /dev/null; then
+    echo "❌ Docker is not installed. Please install Docker first."
     exit 1
 fi
 
-# Check .NET version
-DOTNET_VERSION=$(dotnet --version)
-echo "Found .NET SDK version: $DOTNET_VERSION"
-
-# Check for Docker
-if ! command_exists docker; then
-    echo "Error: Docker is required but not installed."
-    echo "Please install Docker from: https://docs.docker.com/get-docker/"
+if ! command -v docker-compose &> /dev/null; then
+    echo "❌ Docker Compose is not installed. Please install Docker Compose first."
     exit 1
 fi
 
-# Check for Docker Compose
-if ! command_exists docker-compose; then
-    echo "Error: Docker Compose is required but not installed."
-    echo "Please install Docker Compose from: https://docs.docker.com/compose/install/"
+# Check if .NET SDK is installed
+if ! command -v dotnet &> /dev/null; then
+    echo "❌ .NET SDK is not installed. Please install .NET 8 SDK first."
     exit 1
 fi
 
-echo "All prerequisites satisfied!"
+echo "✅ Prerequisites check passed"
 
-# Navigate to backend directory
-cd "$(dirname "$0")/.."
+# Navigate to the docker directory
+cd "$(dirname "$0")/../docker"
 
-# Restore NuGet packages
-echo "Restoring NuGet packages..."
-dotnet restore ToolsSharing.sln
+# Stop any existing containers
+echo "🧹 Cleaning up existing containers..."
+docker-compose down --remove-orphans
 
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to restore NuGet packages"
-    exit 1
-fi
+# Install infrastructure (MySQL, Redis)
+echo "📦 Setting up infrastructure (MySQL, Redis)..."
+docker-compose --profile infrastructure up -d
 
-# Build the solution
-echo "Building the solution..."
-dotnet build ToolsSharing.sln --configuration Release
+# Wait for MySQL to be ready
+echo "⏳ Waiting for MySQL to be ready..."
+for i in {1..30}; do
+    if docker-compose exec -T mysql mysqladmin ping -h localhost --silent; then
+        echo "✅ MySQL is ready"
+        break
+    fi
+    if [ $i -eq 30 ]; then
+        echo "❌ MySQL failed to start within 30 seconds"
+        exit 1
+    fi
+    echo "   Waiting... ($i/30)"
+    sleep 1
+done
 
-if [ $? -ne 0 ]; then
-    echo "Error: Failed to build the solution"
-    exit 1
-fi
+# Wait for Redis to be ready
+echo "⏳ Waiting for Redis to be ready..."
+for i in {1..10}; do
+    if docker-compose exec -T redis redis-cli ping | grep -q "PONG"; then
+        echo "✅ Redis is ready"
+        break
+    fi
+    if [ $i -eq 10 ]; then
+        echo "❌ Redis failed to start within 10 seconds"
+        exit 1
+    fi
+    echo "   Waiting... ($i/10)"
+    sleep 1
+done
 
-# Install EF Core tools
-echo "Installing Entity Framework Core tools..."
-dotnet tool install --global dotnet-ef --version 9.0.6 || dotnet tool update --global dotnet-ef --version 9.0.6
+# Navigate back to backend root
+cd ..
 
-# Make scripts executable
-echo "Setting up script permissions..."
-chmod +x scripts/*.sh
+# Install .NET dependencies
+echo "📦 Installing .NET dependencies..."
+dotnet restore
 
-echo "===================================================="
-echo "Installation completed successfully!"
-echo "===================================================="
+# Run database migrations
+echo "🔄 Running database migrations..."
+dotnet ef database update --project src/ToolsSharing.API --verbose
+
+# Seed initial data
+echo "🌱 Seeding initial data..."
+dotnet run --project src/ToolsSharing.API --seed-only
+
 echo ""
+echo "🎉 Installation completed successfully!"
+echo "============================================="
 echo "Next steps:"
-echo "1. Start the infrastructure: ./scripts/start-infrastructure.sh"
-echo "2. Run database migrations: ./scripts/run-migrations.sh"
-echo "3. Seed the database: ./scripts/seed-data.sh"
-echo "4. Start the API: ./scripts/start-api.sh"
+echo "  • Run './start-all.sh' to start development environment"
+echo "  • Or run './start-infrastructure.sh' + 'dotnet run' for API debugging"
+echo "  • Access Swagger UI at: http://localhost:5002/swagger"
+echo "  • MySQL: localhost:3306 (user: toolsuser, password: ToolsPassword123!)"
+echo "  • Redis: localhost:6379"
 echo ""
-echo "Or run everything at once: ./scripts/run-all.sh"
+echo "Happy coding! 🚀"
