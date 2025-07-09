@@ -1,9 +1,9 @@
-FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS base
+FROM mcr.microsoft.com/dotnet/aspnet:9.0 AS base
 WORKDIR /app
 EXPOSE 5002
 EXPOSE 5003
 
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS build
 WORKDIR /src
 COPY ["src/ToolsSharing.API/ToolsSharing.API.csproj", "src/ToolsSharing.API/"]
 COPY ["src/ToolsSharing.Core/ToolsSharing.Core.csproj", "src/ToolsSharing.Core/"]

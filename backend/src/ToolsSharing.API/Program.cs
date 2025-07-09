@@ -31,10 +31,6 @@ builder.Services.AddIdentity<ToolsSharing.Core.Entities.User, Microsoft.AspNetCo
 })
 .AddEntityFrameworkStores<ToolsSharing.Infrastructure.Data.ApplicationDbContext>();
 
-
-// Add AutoMapper
-builder.Services.AddAutoMapper(typeof(ToolsSharing.Infrastructure.Mappings.MappingProfile));
-
 // Add Controllers
 builder.Services.AddControllers();
 

@@ -4,10 +4,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Architecture
 
-NeighborTools is a **community tool sharing platform** with a .NET 8 Web API backend and Blazor WebAssembly frontend. The backend follows **Clean Architecture** with three layers:
+NeighborTools is a **community tool sharing platform** with a .NET 9 Web API backend and Blazor WebAssembly frontend. The backend follows **Clean Architecture** with three layers:
 
 - **ToolsSharing.Core** - Domain entities, commands/queries, and interfaces
-- **ToolsSharing.Infrastructure** - Data access, AutoMapper, and external services  
+- **ToolsSharing.Infrastructure** - Data access, Mapster, and external services  
 - **ToolsSharing.API** - Controllers, JWT authentication, and API configuration
 
 ## Essential Development Commands
@@ -102,11 +102,11 @@ The application uses **JWT Bearer tokens** with a sophisticated flow:
 ### Data Access Pattern
 - **Repository Pattern**: Generic `IRepository<T>` with `Repository<T>` implementation
 - **Unit of Work**: `IUnitOfWork` for transaction management
-- **AutoMapper**: Object mapping between entities and DTOs (converted from records to classes to fix mapping issues)
+- **Mapster**: Object mapping between entities and DTOs (converted from records to classes to fix mapping issues)
 - **CQRS Pattern**: Commands for writes, Queries for reads using record types
 
 ### Important: DTO Architecture
-**All DTOs must be classes, not records** due to AutoMapper compatibility issues. When creating new DTOs:
+**All DTOs must be classes, not records** due to Mapster compatibility issues. When creating new DTOs:
 ```csharp
 // ✅ Correct - Class with properties
 public class ToolDto
@@ -157,7 +157,7 @@ public class ApiResponse<T>
 - **HttpClient Factory**: Named client with `AuthenticatedHttpClientHandler`
 - **Service Layer**: `AuthService`, `ToolService`, `RentalService` for API communication
 - **State Management**: Blazor authentication state with local storage persistence
-- **UI Framework**: MudBlazor for modern, responsive components
+- **UI Framework**: MudBlazor 8.9.0 for modern, responsive components
 - **Layout**: Mobile-responsive design with drawer navigation and modern header
 
 ## Database and Seeding
@@ -202,11 +202,48 @@ The project includes detailed TODO files with prioritized roadmap:
 - **`TODO_MONETIZATION_PLATFORM.md`** - Advanced monetization platform
 
 ### Current Development Priorities
-1. **High Priority**: .NET 9 upgrade, basic commission system
+1. **High Priority**: Basic commission system, advanced features
 2. **Medium Priority**: Cloud deployment automation, Redis implementation
 3. **Lower Priority**: Mobile app, advanced monetization features
 
+**Recently Completed**:
+- ✅ .NET 9 upgrade (completed January 2025)
+  - All projects upgraded from .NET 8 to .NET 9
+  - WSL compatibility issues resolved with Directory.Build.props
+  - Docker images updated to .NET 9
+  - All documentation and scripts updated
+- ✅ AutoMapper to Mapster migration
+  - Resolved commercial licensing concerns
+  - Improved performance and maintained functionality
+  - Updated service registrations and configurations
+- ✅ MudBlazor 8.9.0 upgrade  
+  - Updated from 7.15.0 to 8.9.0 for better .NET 9 compatibility
+  - Fixed breaking changes in DialogOptions and dialog API
+  - Updated date picker event handling to use @bind-Date:after
+- ✅ Authentication state consistency fixes
+  - Enhanced JWT token validation in CustomAuthenticationStateProvider
+  - Automatic cleanup of inconsistent auth data
+  - Improved 401 response handling with auto-logout
+- ✅ Dialog component fixes
+  - Fixed rental dialog close/cancel button functionality
+  - Updated DialogParameters to use non-generic approach for MudBlazor 8.x
+  - Resolved MissingMethodException in dialog creation
+
 See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
+
+## Important Development Notes
+
+### Recent Architecture Changes
+- **Mapster Configuration**: All object mapping now uses `TypeAdapterConfig` instead of AutoMapper profiles
+- **MudBlazor 8.x Compatibility**: Dialog creation uses simplified `DialogParameters` and `DialogOptions`
+- **WSL Development**: Universal compatibility via `Directory.Build.props` without hardcoded paths
+- **Authentication Robustness**: Enhanced token validation prevents inconsistent auth states
+
+### Known Working Patterns
+- **Dialog Creation**: Use `new DialogParameters()` and `.Add()` method instead of generic syntax
+- **Date Picker Events**: Use `@bind-Date:after="Method"` instead of `OnDateChanged`
+- **Authentication**: State automatically syncs between localStorage/sessionStorage and auth provider
+- **WSL Builds**: All .NET commands work universally without path modifications
 
 ## Common Troubleshooting
 

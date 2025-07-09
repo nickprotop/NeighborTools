@@ -21,7 +21,7 @@ fi
 
 # Check if .NET SDK is installed
 if ! command -v dotnet &> /dev/null; then
-    echo "❌ .NET SDK is not installed. Please install .NET 8 SDK first."
+    echo "❌ .NET SDK is not installed. Please install .NET 9 SDK first."
     exit 1
 fi
 

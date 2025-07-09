@@ -1,4 +1,4 @@
-using AutoMapper;
+using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
 using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.Common.Models;

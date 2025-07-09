@@ -104,12 +104,10 @@ public class AuthService : IAuthService
                     LastName = result.Data.LastName
                 };
                 
+                // Default to remember me for registration
                 await _localStorage.SetItemAsync("authToken", result.Data.AccessToken);
                 await _localStorage.SetItemAsync("refreshToken", result.Data.RefreshToken);
                 await _localStorage.SetItemAsync("user", userInfo);
-                
-                _httpClient.DefaultRequestHeaders.Authorization = 
-                    new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", result.Data.AccessToken);
                 
                 ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(userInfo);
             }

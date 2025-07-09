@@ -293,23 +293,15 @@ else if (tool != null)
     {
         if (tool?.IsAvailable == true)
         {
-            var parameters = new DialogParameters<frontend.Shared.RentalRequestDialog>
-            {
-                { x => x.Tool, tool }
-            };
+            var parameters = new DialogParameters();
+            parameters.Add("Tool", tool);
 
-            var options = new DialogOptions()
-            {
-                MaxWidth = MaxWidth.Medium,
-                FullWidth = true,
-                CloseButton = true,
-                CloseOnEscapeKey = true
-            };
+            var options = new DialogOptions();
 
             var dialog = await DialogService.ShowAsync<frontend.Shared.RentalRequestDialog>("Request Rental", parameters, options);
             var result = await dialog.Result;
 
-            if (!result.Canceled)
+            if (result is not null && !result.Canceled)
             {
                 // Rental request was successful, optionally navigate somewhere
                 Snackbar.Add("Your rental request has been submitted and is pending approval.", Severity.Success);

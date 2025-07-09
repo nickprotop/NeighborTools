@@ -18,7 +18,7 @@ command_exists() {
 echo "🔍 Checking prerequisites..."
 if ! command_exists dotnet; then
     echo "❌ .NET SDK is required but not installed."
-    echo "   Please install .NET 8 SDK from: https://dotnet.microsoft.com/download"
+    echo "   Please install .NET 9 SDK from: https://dotnet.microsoft.com/download"
     exit 1
 fi
 

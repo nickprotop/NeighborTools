@@ -32,7 +32,7 @@ This application follows Clean Architecture principles with the following layers
 - **MySQL 8.0** - Primary database
 - **Redis** - Caching and session storage
 - **YARP** - Reverse proxy and load balancing
-- **AutoMapper** - Object mapping
+- **Mapster** - Object mapping
 - **MediatR** - CQRS pattern implementation
 - **FluentValidation** - Input validation
 - **JWT Bearer** - Authentication

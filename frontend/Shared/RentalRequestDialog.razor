@@ -36,19 +36,19 @@
 
                 <MudItem xs="12" md="6">
                     <MudDatePicker @bind-Date="startDate" 
+                                   @bind-Date:after="CalculateCost"
                                    Label="Start Date" 
                                    Variant="Variant.Outlined"
                                    MinDate="DateTime.Today"
-                                   OnDateChanged="CalculateCost"
                                    Required="true" />
                 </MudItem>
                 
                 <MudItem xs="12" md="6">
                     <MudDatePicker @bind-Date="endDate" 
+                                   @bind-Date:after="CalculateCost"
                                    Label="End Date" 
                                    Variant="Variant.Outlined"
                                    MinDate="startDate ?? DateTime.Today.AddDays(1)"
-                                   OnDateChanged="CalculateCost"
                                    Required="true" />
                 </MudItem>
 
@@ -101,7 +101,7 @@
     </DialogContent>
     
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton OnClick="Cancel" Variant="Variant.Text">Cancel</MudButton>
         <MudButton Color="Color.Primary" 
                    Variant="Variant.Filled" 
                    OnClick="SubmitRequest"
@@ -121,7 +121,7 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] MudDialogInstance MudDialog { get; set; } = null!;
+    [CascadingParameter] IDialogReference? MudDialog { get; set; }
     [Parameter] public Tool? Tool { get; set; }
 
     private DateTime? startDate;
@@ -215,7 +215,7 @@
             if (result.Success)
             {
                 Snackbar.Add("Rental request submitted successfully!", Severity.Success);
-                MudDialog.Close(DialogResult.Ok(result.Data));
+                MudDialog?.Close(DialogResult.Ok(result.Data));
             }
             else
             {
@@ -234,6 +234,6 @@
 
     private void Cancel()
     {
-        MudDialog.Cancel();
+        MudDialog?.Close(DialogResult.Cancel());
     }
 }

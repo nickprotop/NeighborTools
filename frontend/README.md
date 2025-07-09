@@ -66,7 +66,7 @@ JWT tokens are automatically:
 ## 🛠️ Development
 
 ### Prerequisites
-- .NET 8 SDK
+- .NET 9 SDK
 - Backend API running (see backend/README.md)
 
 ### Running the Application
@@ -258,9 +258,10 @@ Update API base URL in `Program.cs` for production deployment.
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| Microsoft.AspNetCore.Components.WebAssembly | 8.0.x | Blazor WebAssembly framework |
-| Microsoft.AspNetCore.Components.Authorization | 8.0.x | Authentication state management |
-| System.Net.Http.Json | 8.0.x | HTTP JSON operations |
-| Microsoft.Extensions.Http | 8.0.x | HttpClient factory |
+| Microsoft.AspNetCore.Components.WebAssembly | 9.0.x | Blazor WebAssembly framework |
+| Microsoft.AspNetCore.Components.Authorization | 9.0.x | Authentication state management |
+| System.Net.Http.Json | 9.0.x | HTTP JSON operations |
+| Microsoft.Extensions.Http | 9.0.x | HttpClient factory |
+| MudBlazor | 8.9.x | Modern UI component library |
 
-All dependencies are included in the .NET 8 framework or explicitly defined in the project file.
+All dependencies are included in the .NET 9 framework or explicitly defined in the project file.
