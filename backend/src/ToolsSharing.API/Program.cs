@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using ToolsSharing.Infrastructure;
+using ToolsSharing.Infrastructure.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -18,6 +19,9 @@ builder.Host.UseSerilog();
 
 // Add services to the container
 builder.Services.AddInfrastructure(builder.Configuration);
+
+// Add GDPR services
+builder.Services.AddGDPRServices();
 
 // Add Identity
 builder.Services.AddIdentity<ToolsSharing.Core.Entities.User, Microsoft.AspNetCore.Identity.IdentityRole>(options =>

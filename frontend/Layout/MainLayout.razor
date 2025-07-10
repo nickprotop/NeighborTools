@@ -85,6 +85,9 @@
                                     <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="/settings">
                                         Settings
                                     </MudMenuItem>
+                                    <MudMenuItem Icon="@Icons.Material.Filled.PrivacyTip" Href="/privacy-dashboard">
+                                        Privacy Dashboard
+                                    </MudMenuItem>
                                     <MudDivider />
                                     <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
                                         Logout
@@ -204,6 +207,9 @@
         </div>
     </main>
 
+    <!-- GDPR Cookie Consent Banner -->
+    <Components.GDPR.CookieConsentBanner UserId="GetCurrentUserId()" />
+
     <!-- Footer -->
     <footer class="app-footer">
         <MudContainer MaxWidth="MaxWidth.ExtraLarge">
@@ -223,6 +229,12 @@
                     <MudText Typo="Typo.subtitle1" Class="mb-2">Support</MudText>
                     <MudLink Href="/help" Class="footer-link">Help Center</MudLink>
                     <MudLink Href="/contact" Class="footer-link">Contact</MudLink>
+                </div>
+                <div class="footer-section">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Privacy</MudText>
+                    <MudLink Href="/privacy-policy" Class="footer-link">Privacy Policy</MudLink>
+                    <MudLink Href="/privacy-dashboard" Class="footer-link">Privacy Dashboard</MudLink>
+                    <MudLink Href="/terms" Class="footer-link">Terms of Service</MudLink>
                 </div>
             </div>
             <MudDivider Class="my-4" />
@@ -465,6 +477,7 @@
 @code {
     [Inject] private frontend.Services.IAuthService AuthService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
 
     private bool mobileMenuOpen = false;
 
@@ -496,5 +509,18 @@
         
         var parts = name.Split(' ');
         return parts.Length > 0 ? parts[0] : name;
+    }
+
+    private int? GetCurrentUserId()
+    {
+        var authState = AuthStateProvider.GetAuthenticationStateAsync().Result;
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            var userIdClaim = authState.User.FindFirst("sub")?.Value 
+                            ?? authState.User.FindFirst("id")?.Value;
+            if (int.TryParse(userIdClaim, out var userId))
+                return userId;
+        }
+        return null;
     }
 }

@@ -2,6 +2,7 @@ using System.Linq.Expressions;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ToolsSharing.Core.Entities;
+using ToolsSharing.Core.Entities.GDPR;
 
 namespace ToolsSharing.Infrastructure.Data;
 
@@ -15,6 +16,13 @@ public class ApplicationDbContext : IdentityDbContext<User>
     public DbSet<ToolImage> ToolImages { get; set; }
     public DbSet<Rental> Rentals { get; set; }
     public DbSet<Review> Reviews { get; set; }
+    
+    // GDPR entities
+    public DbSet<UserConsent> UserConsents { get; set; }
+    public DbSet<DataProcessingLog> DataProcessingLogs { get; set; }
+    public DbSet<DataSubjectRequest> DataSubjectRequests { get; set; }
+    public DbSet<CookieConsent> CookieConsents { get; set; }
+    public DbSet<PrivacyPolicyVersion> PrivacyPolicyVersions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

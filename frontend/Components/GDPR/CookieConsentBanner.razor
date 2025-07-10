@@ -1,0 +1,278 @@
+@using MudBlazor
+@using System.Text.Json
+@inject IJSRuntime JSRuntime
+@inject HttpClient Http
+@inject ILogger<CookieConsentBanner> Logger
+
+<style>
+    .cookie-banner {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: var(--mud-palette-surface);
+        border-top: 1px solid var(--mud-palette-divider);
+        box-shadow: 0 -2px 10px rgba(0,0,0,0.1);
+        padding: 16px;
+        z-index: 9999;
+        animation: slideUp 0.3s ease-out;
+    }
+
+    @@keyframes slideUp {
+        from { transform: translateY(100%); }
+        to { transform: translateY(0); }
+    }
+
+    .cookie-content {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+</style>
+
+@if (ShowBanner)
+{
+    <div class="cookie-banner">
+        <div class="cookie-content">
+            <MudGrid Spacing="2" AlignItems="Center">
+                <MudItem xs="12" md="8">
+                    <MudText Typo="Typo.body1">
+                        We use cookies to enhance your experience, analyze site traffic, and for marketing purposes.
+                        By clicking "Accept All", you consent to our use of cookies.
+                        <MudLink Href="/privacy-policy" Color="Color.Primary">Learn more</MudLink>
+                    </MudText>
+                </MudItem>
+                <MudItem xs="12" md="4">
+                    <MudStack Row Spacing="2" Justify="Justify.FlexEnd">
+                        <MudButton Variant="Variant.Outlined" 
+                                  Color="Color.Primary" 
+                                  Size="Size.Small"
+                                  OnClick="ShowPreferences">
+                            Preferences
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" 
+                                  Color="Color.Success" 
+                                  Size="Size.Small"
+                                  OnClick="AcceptAll">
+                            Accept All
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" 
+                                  Color="Color.Default" 
+                                  Size="Size.Small"
+                                  OnClick="RejectAll">
+                            Reject All
+                        </MudButton>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+        </div>
+    </div>
+}
+
+<MudDialog @bind-IsVisible="ShowPreferencesDialog" Options="DialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Cookie Preferences</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body2" Class="mb-4">
+            Customize your cookie preferences. Essential cookies are required for the website to function and cannot be disabled.
+        </MudText>
+        
+        <MudStack Spacing="3">
+            <MudCard>
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="Center">
+                        <div>
+                            <MudText Typo="Typo.subtitle1" GutterBottom>Essential Cookies</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Default">
+                                Required for basic website functionality, authentication, and security.
+                            </MudText>
+                        </div>
+                        <MudSwitch @bind-Checked="@EssentialCookies" Disabled="true" Color="Color.Success" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+
+            <MudCard>
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="Center">
+                        <div>
+                            <MudText Typo="Typo.subtitle1" GutterBottom>Functional Cookies</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Default">
+                                Remember your preferences and settings to provide a personalized experience.
+                            </MudText>
+                        </div>
+                        <MudSwitch @bind-Checked="@FunctionalCookies" Color="Color.Primary" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+
+            <MudCard>
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="Center">
+                        <div>
+                            <MudText Typo="Typo.subtitle1" GutterBottom>Analytics Cookies</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Default">
+                                Help us understand how visitors interact with our website to improve performance.
+                            </MudText>
+                        </div>
+                        <MudSwitch @bind-Checked="@AnalyticsCookies" Color="Color.Info" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+
+            <MudCard>
+                <MudCardContent>
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="Center">
+                        <div>
+                            <MudText Typo="Typo.subtitle1" GutterBottom>Marketing Cookies</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Default">
+                                Used to track visitors across websites to display relevant advertisements.
+                            </MudText>
+                        </div>
+                        <MudSwitch @bind-Checked="@MarketingCookies" Color="Color.Warning" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CancelPreferences" Color="Color.Default">Cancel</MudButton>
+        <MudButton OnClick="SavePreferences" Color="Color.Primary" Variant="Variant.Filled">Save Preferences</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public int? UserId { get; set; }
+    
+    private bool ShowBanner = false;
+    private bool ShowPreferencesDialog = false;
+    
+    // Cookie preferences
+    private bool EssentialCookies = true; // Always true, cannot be disabled
+    private bool FunctionalCookies = false;
+    private bool AnalyticsCookies = false;
+    private bool MarketingCookies = false;
+    
+    private DialogOptions DialogOptions = new()
+    {
+        CloseOnEscapeKey = true,
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var hasConsent = await CheckExistingConsent();
+            ShowBanner = !hasConsent;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking existing consent");
+            ShowBanner = true; // Show banner if we can't determine consent status
+        }
+    }
+
+    private async Task<bool> CheckExistingConsent()
+    {
+        try
+        {
+            var sessionId = await JSRuntime.InvokeAsync<string>("getSessionId");
+            var response = await Http.GetAsync($"api/gdpr/cookies/session/{sessionId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var consentsJson = await response.Content.ReadAsStringAsync();
+                var consents = JsonSerializer.Deserialize<CookieConsentResponse[]>(consentsJson, new JsonSerializerOptions { PropertyNamePolicy = JsonNamingPolicy.CamelCase });
+                
+                return consents != null && consents.Any();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking cookie consent");
+        }
+        
+        return false;
+    }
+
+    private async Task AcceptAll()
+    {
+        await RecordConsent(true, true, true, true);
+        ShowBanner = false;
+        await JSRuntime.InvokeVoidAsync("enableAllCookies");
+    }
+
+    private async Task RejectAll()
+    {
+        await RecordConsent(true, false, false, false);
+        ShowBanner = false;
+        await JSRuntime.InvokeVoidAsync("disableNonEssentialCookies");
+    }
+
+    private void ShowPreferences()
+    {
+        ShowPreferencesDialog = true;
+    }
+
+    private void CancelPreferences()
+    {
+        ShowPreferencesDialog = false;
+        // Reset to default values
+        EssentialCookies = true;
+        FunctionalCookies = false;
+        AnalyticsCookies = false;
+        MarketingCookies = false;
+    }
+
+    private async Task SavePreferences()
+    {
+        await RecordConsent(EssentialCookies, FunctionalCookies, AnalyticsCookies, MarketingCookies);
+        ShowPreferencesDialog = false;
+        ShowBanner = false;
+        
+        // Apply cookie settings
+        await JSRuntime.InvokeVoidAsync("applyCookieSettings", new
+        {
+            functional = FunctionalCookies,
+            analytics = AnalyticsCookies,
+            marketing = MarketingCookies
+        });
+    }
+
+    private async Task RecordConsent(bool essential, bool functional, bool analytics, bool marketing)
+    {
+        var consentRequests = new[]
+        {
+            new { UserId = UserId, CookieCategory = 0, ConsentGiven = essential }, // Essential
+            new { UserId = UserId, CookieCategory = 1, ConsentGiven = functional }, // Functional
+            new { UserId = UserId, CookieCategory = 2, ConsentGiven = analytics }, // Analytics
+            new { UserId = UserId, CookieCategory = 3, ConsentGiven = marketing } // Marketing
+        };
+
+        foreach (var request in consentRequests)
+        {
+            try
+            {
+                var response = await Http.PostAsJsonAsync("api/gdpr/cookies", request);
+                if (!response.IsSuccessStatusCode)
+                {
+                    Logger.LogWarning("Failed to record cookie consent for category {Category}", request.CookieCategory);
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Error recording cookie consent for category {Category}", request.CookieCategory);
+            }
+        }
+    }
+
+    public class CookieConsentResponse
+    {
+        public int CookieCategory { get; set; }
+        public bool ConsentGiven { get; set; }
+        public DateTime ConsentDate { get; set; }
+        public DateTime ExpiryDate { get; set; }
+    }
+}

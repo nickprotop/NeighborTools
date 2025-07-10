@@ -1,0 +1,341 @@
+@page "/privacy-dashboard"
+@using MudBlazor
+@using System.Text.Json
+@inject HttpClient Http
+@inject ILogger<PrivacyDashboard> Logger
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+@attribute [Authorize]
+
+<PageTitle>Privacy Dashboard</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudText Typo="Typo.h4" GutterBottom>Privacy Dashboard</MudText>
+    <MudText Typo="Typo.body1" Class="mb-6">
+        Manage your data privacy settings and exercise your GDPR rights.
+    </MudText>
+
+    <MudGrid Spacing="4">
+        <!-- Current Consents -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Your Consent Status</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (UserConsents != null)
+                    {
+                        <MudStack Spacing="2">
+                            @foreach (var consent in UserConsents)
+                            {
+                                <MudPaper Class="pa-3" Elevation="1">
+                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="Center">
+                                        <div>
+                                            <MudText Typo="Typo.subtitle2">@GetConsentTypeDisplay(consent.ConsentType)</MudText>
+                                            <MudText Typo="Typo.caption">
+                                                Last updated: @consent.ConsentDate.ToString("MMM dd, yyyy")
+                                            </MudText>
+                                        </div>
+                                        <MudChip Color="@(consent.ConsentGiven ? Color.Success : Color.Default)" 
+                                                Size="Size.Small">
+                                            @(consent.ConsentGiven ? "Granted" : "Withdrawn")
+                                        </MudChip>
+                                    </MudStack>
+                                </MudPaper>
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="100px" />
+                    }
+                </MudCardContent>
+                <MudCardActions>
+                    <MudButton Color="Color.Primary" Variant="Variant.Outlined" OnClick="UpdateConsents">
+                        Update Consents
+                    </MudButton>
+                </MudCardActions>
+            </MudCard>
+        </MudItem>
+
+        <!-- Data Requests -->
+        <MudItem xs="12" md="6">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Data Subject Requests</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudText Typo="Typo.body2" Class="mb-3">
+                        Exercise your GDPR rights by requesting data export, deletion, or rectification.
+                    </MudText>
+                    
+                    <MudStack Spacing="2">
+                        <MudButton Color="Color.Info" 
+                                  Variant="Variant.Outlined" 
+                                  FullWidth
+                                  StartIcon="Icons.Material.Filled.Download"
+                                  OnClick="() => CreateDataRequest(0)">
+                            Export My Data
+                        </MudButton>
+                        
+                        <MudButton Color="Color.Warning" 
+                                  Variant="Variant.Outlined" 
+                                  FullWidth
+                                  StartIcon="Icons.Material.Filled.Edit"
+                                  OnClick="() => CreateDataRequest(2)">
+                            Request Data Correction
+                        </MudButton>
+                        
+                        <MudButton Color="Color.Error" 
+                                  Variant="Variant.Outlined" 
+                                  FullWidth
+                                  StartIcon="Icons.Material.Filled.Delete"
+                                  OnClick="() => CreateDataRequest(1)">
+                            Delete My Account
+                        </MudButton>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Recent Requests -->
+        <MudItem xs="12">
+            <MudCard>
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Recent Requests</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (DataRequests != null)
+                    {
+                        <MudTable Items="DataRequests" Hover="true" Breakpoint="Breakpoint.Sm">
+                            <HeaderContent>
+                                <MudTh>Request Type</MudTh>
+                                <MudTh>Status</MudTh>
+                                <MudTh>Requested</MudTh>
+                                <MudTh>Completed</MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd>@GetRequestTypeDisplay(context.RequestType)</MudTd>
+                                <MudTd>
+                                    <MudChip Color="@GetStatusColor(context.Status)" Size="Size.Small">
+                                        @context.Status
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd>@context.RequestDate.ToString("MMM dd, yyyy")</MudTd>
+                                <MudTd>@(context.CompletedDate?.ToString("MMM dd, yyyy") ?? "-")</MudTd>
+                                <MudTd>
+                                    @if (context.Status.ToString() == "Completed" && context.RequestType == 0)
+                                    {
+                                        <MudButton Size="Size.Small" 
+                                                  Color="Color.Primary" 
+                                                  Variant="Variant.Text"
+                                                  OnClick="() => DownloadData(context.Id)">
+                                            Download
+                                        </MudButton>
+                                    }
+                                </MudTd>
+                            </RowTemplate>
+                            <NoRecordsContent>
+                                <MudText Typo="Typo.body2" Align="Align.Center">No requests found</MudText>
+                            </NoRecordsContent>
+                        </MudTable>
+                    }
+                    else
+                    {
+                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="200px" />
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private List<ConsentResponse>? UserConsents;
+    private List<DataRequestResponse>? DataRequests;
+    private string? CurrentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            CurrentUserId = authState.User.FindFirst("sub")?.Value 
+                           ?? authState.User.FindFirst("id")?.Value;
+            
+            if (CurrentUserId != null)
+            {
+                await LoadUserConsents();
+                await LoadDataRequests();
+            }
+        }
+    }
+
+    private async Task LoadUserConsents()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/gdpr/consent/{CurrentUserId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                UserConsents = JsonSerializer.Deserialize<List<ConsentResponse>>(json, new JsonSerializerOptions { PropertyNamePolicy = JsonNamingPolicy.CamelCase });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading user consents");
+            Snackbar.Add("Error loading consent data", Severity.Error);
+        }
+    }
+
+    private async Task LoadDataRequests()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/gdpr/data-subject/requests/{CurrentUserId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var json = await response.Content.ReadAsStringAsync();
+                DataRequests = JsonSerializer.Deserialize<List<DataRequestResponse>>(json, new JsonSerializerOptions { PropertyNamePolicy = JsonNamingPolicy.CamelCase });
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading data requests");
+            Snackbar.Add("Error loading request data", Severity.Error);
+        }
+    }
+
+    private async Task CreateDataRequest(int requestType)
+    {
+        try
+        {
+            var request = new
+            {
+                UserId = int.Parse(CurrentUserId!),
+                RequestType = requestType,
+                Details = requestType switch
+                {
+                    0 => "Data export request from privacy dashboard",
+                    1 => "Account deletion request from privacy dashboard",
+                    2 => "Data rectification request from privacy dashboard",
+                    _ => "General data request"
+                }
+            };
+
+            var response = await Http.PostAsJsonAsync("api/gdpr/data-subject/request", request);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Request submitted successfully", Severity.Success);
+                await LoadDataRequests(); // Refresh the list
+            }
+            else
+            {
+                Snackbar.Add("Failed to submit request", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error creating data request");
+            Snackbar.Add("Error submitting request", Severity.Error);
+        }
+    }
+
+    private async Task DownloadData(int requestId)
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/gdpr/export/download/{requestId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsByteArrayAsync();
+                var fileName = $"my_data_export_{DateTime.Now:yyyyMMdd}.json";
+                
+                // Create download link
+                await JSRuntime.InvokeVoidAsync("downloadFile", fileName, Convert.ToBase64String(content), "application/json");
+                Snackbar.Add("Download started", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Failed to download data", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error downloading data");
+            Snackbar.Add("Error downloading data", Severity.Error);
+        }
+    }
+
+    private void UpdateConsents()
+    {
+        // Navigate to consent management page or show modal
+        Snackbar.Add("Consent update feature coming soon", Severity.Info);
+    }
+
+    private string GetConsentTypeDisplay(int consentType)
+    {
+        return consentType switch
+        {
+            0 => "Data Processing",
+            1 => "Marketing Communications",
+            2 => "Analytics & Performance",
+            3 => "Third-party Integrations",
+            _ => "Unknown"
+        };
+    }
+
+    private string GetRequestTypeDisplay(int requestType)
+    {
+        return requestType switch
+        {
+            0 => "Data Export",
+            1 => "Data Deletion",
+            2 => "Data Rectification",
+            3 => "Data Portability",
+            _ => "Unknown"
+        };
+    }
+
+    private Color GetStatusColor(object status)
+    {
+        return status.ToString() switch
+        {
+            "Pending" => Color.Warning,
+            "UnderReview" => Color.Info,
+            "Completed" => Color.Success,
+            "Rejected" => Color.Error,
+            "Failed" => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    // DTO classes
+    public class ConsentResponse
+    {
+        public int ConsentType { get; set; }
+        public bool ConsentGiven { get; set; }
+        public DateTime ConsentDate { get; set; }
+        public string ConsentVersion { get; set; } = string.Empty;
+        public DateTime? WithdrawnDate { get; set; }
+    }
+
+    public class DataRequestResponse
+    {
+        public int Id { get; set; }
+        public int RequestType { get; set; }
+        public object Status { get; set; } = null!;
+        public DateTime RequestDate { get; set; }
+        public DateTime? CompletedDate { get; set; }
+        public string Details { get; set; } = string.Empty;
+        public string? ResponseData { get; set; }
+    }
+}
