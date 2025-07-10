@@ -13,7 +13,7 @@
 <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
     <MudPaper Elevation="8" Class="pa-8" Style="border-radius: 16px;">
         <div class="d-flex flex-column align-center mb-6">
-            <MudIcon Icon="Icons.Material.Filled.PersonAdd" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
+            <MudIcon Icon="@Icons.Material.Filled.PersonAdd" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
             <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
                 Join NeighborTools
             </MudText>
@@ -41,7 +41,7 @@
                                   Required="true"
                                   RequiredError="First name is required"
                                   Adornment="Adornment.Start"
-                                  AdornmentIcon="Icons.Material.Filled.Person" />
+                                  AdornmentIcon="@Icons.Material.Filled.Person" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="registerRequest.LastName"
@@ -51,7 +51,7 @@
                                   Required="true"
                                   RequiredError="Last name is required"
                                   Adornment="Adornment.Start"
-                                  AdornmentIcon="Icons.Material.Filled.Person" />
+                                  AdornmentIcon="@Icons.Material.Filled.Person" />
                 </MudItem>
                 <MudItem xs="12">
                     <MudTextField @bind-Value="registerRequest.Email"
@@ -62,7 +62,7 @@
                                   Required="true"
                                   RequiredError="Email is required"
                                   Adornment="Adornment.Start"
-                                  AdornmentIcon="Icons.Material.Filled.Email" />
+                                  AdornmentIcon="@Icons.Material.Filled.Email" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="registerRequest.PhoneNumber"
@@ -71,7 +71,7 @@
                                   InputType="InputType.Telephone"
                                   FullWidth="true"
                                   Adornment="Adornment.Start"
-                                  AdornmentIcon="Icons.Material.Filled.Phone" />
+                                  AdornmentIcon="@Icons.Material.Filled.Phone" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="registerRequest.Address"
@@ -79,7 +79,7 @@
                                   Variant="Variant.Outlined"
                                   FullWidth="true"
                                   Adornment="Adornment.Start"
-                                  AdornmentIcon="Icons.Material.Filled.Home" />
+                                  AdornmentIcon="@Icons.Material.Filled.Home" />
                 </MudItem>
                 <MudItem xs="12" sm="6">
                     <MudTextField @bind-Value="registerRequest.Password"

@@ -13,7 +13,7 @@
 <MudContainer MaxWidth="MaxWidth.Small" Class="mt-8">
     <MudPaper Elevation="8" Class="pa-8" Style="border-radius: 16px;">
         <div class="d-flex flex-column align-center mb-6">
-            <MudIcon Icon="Icons.Material.Filled.Handyman" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
+            <MudIcon Icon="@Icons.Material.Filled.Handyman" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
             <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
                 Welcome Back
             </MudText>
@@ -41,7 +41,7 @@
                           Required="true"
                           RequiredError="Email is required"
                           Adornment="Adornment.Start"
-                          AdornmentIcon="Icons.Material.Filled.Email" />
+                          AdornmentIcon="@Icons.Material.Filled.Email" />
 
             <MudTextField @bind-Value="loginRequest.Password"
                           Label="Password"
@@ -52,7 +52,7 @@
                           Required="true"
                           RequiredError="Password is required"
                           Adornment="Adornment.Start"
-                          AdornmentIcon="Icons.Material.Filled.Lock" />
+                          AdornmentIcon="@Icons.Material.Filled.Lock" />
 
             <div class="d-flex justify-space-between align-center mb-4">
                 <MudCheckBox T="bool" @bind-Value="rememberMe" 

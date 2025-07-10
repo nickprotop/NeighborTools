@@ -27,7 +27,7 @@
         </MudText>
         
         <div class="d-flex align-center gap-2 mb-2">
-            <MudIcon Icon="Icons.Material.Filled.LocationOn" Color="Color.Secondary" Size="Size.Small" />
+            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Color="Color.Secondary" Size="Size.Small" />
             <MudText Typo="Typo.body1" Color="Color.Secondary">@userProfile.Location</MudText>
         </div>
         
@@ -48,7 +48,7 @@
 
     <MudTabs Elevation="4" Rounded="true" Color="Color.Primary">
         <!-- Personal Information Tab -->
-        <MudTabPanel Text="Personal Info" Icon="Icons.Material.Filled.Person">
+        <MudTabPanel Text="Personal Info" Icon="@Icons.Material.Filled.Person">
             <div class="pa-6">
                 <MudGrid>
                     <MudItem xs="12" md="8">
@@ -63,7 +63,7 @@
                                                   FullWidth="true"
                                                   Required="true"
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="Icons.Material.Filled.Person" />
+                                                  AdornmentIcon="@Icons.Material.Filled.Person" />
                                 </MudItem>
                                 <MudItem xs="12" sm="6">
                                     <MudTextField @bind-Value="userProfile.LastName"
@@ -72,7 +72,7 @@
                                                   FullWidth="true"
                                                   Required="true"
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="Icons.Material.Filled.Person" />
+                                                  AdornmentIcon="@Icons.Material.Filled.Person" />
                                 </MudItem>
                                 <MudItem xs="12">
                                     <MudTextField @bind-Value="userProfile.Email"
@@ -82,7 +82,7 @@
                                                   FullWidth="true"
                                                   Disabled="true"
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="Icons.Material.Filled.Email"
+                                                  AdornmentIcon="@Icons.Material.Filled.Email"
                                                   HelperText="Email cannot be changed. Contact support if needed." />
                                 </MudItem>
                                 <MudItem xs="12" sm="6">
@@ -92,7 +92,7 @@
                                                   InputType="InputType.Telephone"
                                                   FullWidth="true"
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="Icons.Material.Filled.Phone" />
+                                                  AdornmentIcon="@Icons.Material.Filled.Phone" />
                                 </MudItem>
                                 <MudItem xs="12" sm="6">
                                     <MudTextField @bind-Value="userProfile.Location"
@@ -101,7 +101,7 @@
                                                   FullWidth="true"
                                                   Required="true"
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="Icons.Material.Filled.LocationOn" />
+                                                  AdornmentIcon="@Icons.Material.Filled.LocationOn" />
                                 </MudItem>
                                 <MudItem xs="12">
                                     <MudTextField @bind-Value="userProfile.Bio"
@@ -110,13 +110,13 @@
                                                   Lines="4"
                                                   FullWidth="true"
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="Icons.Material.Filled.Description"
+                                                  AdornmentIcon="@Icons.Material.Filled.Description"
                                                   HelperText="Tell others about yourself and your tool-sharing philosophy" />
                                 </MudItem>
                             </MudGrid>
                             
                             <div class="d-flex justify-end gap-4 mt-6">
-                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetForm" StartIcon="Icons.Material.Filled.Refresh">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetForm" StartIcon="@Icons.Material.Filled.Refresh">
                                     Reset
                                 </MudButton>
                                 <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="isLoading" StartIcon="@(isLoading ? null : Icons.Material.Filled.Save)">
@@ -137,7 +137,7 @@
                     <MudItem xs="12" md="4">
                         <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
                             <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
-                                <MudIcon Icon="Icons.Material.Filled.PhotoCamera" Class="mr-2" />
+                                <MudIcon Icon="@Icons.Material.Filled.PhotoCamera" Class="mr-2" />
                                 Profile Picture
                             </MudText>
                             
@@ -154,13 +154,13 @@
                                 </MudAvatar>
                             </div>
                             
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" StartIcon="Icons.Material.Filled.Upload">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Filled.Upload">
                                 Upload New Photo
                             </MudButton>
                             
                             @if (!string.IsNullOrEmpty(userProfile.AvatarUrl))
                             {
-                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" StartIcon="Icons.Material.Filled.Delete" Class="mt-2">
+                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" StartIcon="@Icons.Material.Filled.Delete" Class="mt-2">
                                     Remove Photo
                                 </MudButton>
                             }
@@ -171,13 +171,13 @@
         </MudTabPanel>
 
         <!-- Statistics Tab -->
-        <MudTabPanel Text="Statistics" Icon="Icons.Material.Filled.Analytics">
+        <MudTabPanel Text="Statistics" Icon="@Icons.Material.Filled.Analytics">
             <div class="pa-6">
                 <MudGrid>
                     <MudItem xs="12" sm="6" md="3">
                         <MudCard Elevation="4" Style="border-radius: 12px;">
                             <MudCardContent Class="text-center">
-                                <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                                <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
                                 <MudText Typo="Typo.h4" Color="Color.Primary">12</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">Tools Shared</MudText>
                             </MudCardContent>
@@ -186,7 +186,7 @@
                     <MudItem xs="12" sm="6" md="3">
                         <MudCard Elevation="4" Style="border-radius: 12px;">
                             <MudCardContent Class="text-center">
-                                <MudIcon Icon="Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Success" Class="mb-2" />
+                                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Success" Class="mb-2" />
                                 <MudText Typo="Typo.h4" Color="Color.Success">28</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">Successful Rentals</MudText>
                             </MudCardContent>
@@ -195,7 +195,7 @@
                     <MudItem xs="12" sm="6" md="3">
                         <MudCard Elevation="4" Style="border-radius: 12px;">
                             <MudCardContent Class="text-center">
-                                <MudIcon Icon="Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Info" Class="mb-2" />
+                                <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Info" Class="mb-2" />
                                 <MudText Typo="Typo.h4" Color="Color.Info">$1,245</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">Total Earned</MudText>
                             </MudCardContent>
@@ -204,7 +204,7 @@
                     <MudItem xs="12" sm="6" md="3">
                         <MudCard Elevation="4" Style="border-radius: 12px;">
                             <MudCardContent Class="text-center">
-                                <MudIcon Icon="Icons.Material.Filled.Star" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
+                                <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
                                 <MudText Typo="Typo.h4" Color="Color.Warning">4.8</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">Average Rating</MudText>
                             </MudCardContent>
@@ -255,7 +255,7 @@
         </MudTabPanel>
 
         <!-- Reviews Tab -->
-        <MudTabPanel Text="Reviews" Icon="Icons.Material.Filled.Star">
+        <MudTabPanel Text="Reviews" Icon="@Icons.Material.Filled.Star">
             <div class="pa-6">
                 <div class="d-flex justify-space-between align-center mb-6">
                     <MudText Typo="Typo.h5" Color="Color.Primary">Reviews & Ratings</MudText>
