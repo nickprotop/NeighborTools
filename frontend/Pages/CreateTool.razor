@@ -66,7 +66,9 @@
                                                    Label="Category" 
                                                    Variant="Variant.Outlined" 
                                                    Required="true"
-                                                   RequiredError="Category is required">
+                                                   RequiredError="Category is required"
+                                                   AdornmentIcon="@Icons.Material.Filled.Category" 
+                                                   Adornment="Adornment.Start">
                                             <MudSelectItem T="string" Value="@("Power Tools")">Power Tools</MudSelectItem>
                                             <MudSelectItem T="string" Value="@("Hand Tools")">Hand Tools</MudSelectItem>
                                             <MudSelectItem T="string" Value="@("Garden Tools")">Garden Tools</MudSelectItem>
@@ -82,7 +84,9 @@
                                                    Label="Condition" 
                                                    Variant="Variant.Outlined" 
                                                    Required="true"
-                                                   RequiredError="Condition is required">
+                                                   RequiredError="Condition is required"
+                                                   AdornmentIcon="@Icons.Material.Filled.Assessment" 
+                                                   Adornment="Adornment.Start">
                                             <MudSelectItem T="string" Value="@("Excellent")">Excellent</MudSelectItem>
                                             <MudSelectItem T="string" Value="@("Very Good")">Very Good</MudSelectItem>
                                             <MudSelectItem T="string" Value="@("Good")">Good</MudSelectItem>
@@ -241,7 +245,7 @@
                             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
                                 Drag and drop images here, or click to browse
                             </MudText>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="Icons.Material.Filled.Add">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudUpload">
                                 Choose Files
                             </MudButton>
                         </MudPaper>
@@ -296,21 +300,6 @@
     private string errorMessage = string.Empty;
     private bool isLoading = false;
 
-    public class CreateToolRequest
-    {
-        public string Name { get; set; } = string.Empty;
-        public string Description { get; set; } = string.Empty;
-        public string Category { get; set; } = string.Empty;
-        public string Brand { get; set; } = string.Empty;
-        public string Model { get; set; } = string.Empty;
-        public decimal DailyRate { get; set; }
-        public decimal? WeeklyRate { get; set; }
-        public decimal? MonthlyRate { get; set; }
-        public decimal DepositRequired { get; set; }
-        public string Condition { get; set; } = string.Empty;
-        public string Location { get; set; } = string.Empty;
-        public List<string> ImageUrls { get; set; } = new();
-    }
 
     private async Task HandleCreateTool()
     {

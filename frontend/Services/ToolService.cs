@@ -10,7 +10,7 @@ public interface IToolService
     Task<ApiResponse<List<Tool>>> GetMyToolsAsync();
     Task<ApiResponse<Tool>> GetToolAsync(string id);
     Task<ApiResponse<Tool>> CreateToolAsync(CreateToolRequest request);
-    Task<ApiResponse<Tool>> UpdateToolAsync(string id, CreateToolRequest request);
+    Task<ApiResponse<Tool>> UpdateToolAsync(string id, UpdateToolRequest request);
     Task<ApiResponse> DeleteToolAsync(string id);
     Task<ApiResponse<List<Tool>>> SearchToolsAsync(string query);
 }
@@ -138,7 +138,7 @@ public class ToolService : IToolService
         }
     }
 
-    public async Task<ApiResponse<Tool>> UpdateToolAsync(string id, CreateToolRequest request)
+    public async Task<ApiResponse<Tool>> UpdateToolAsync(string id, UpdateToolRequest request)
     {
         try
         {

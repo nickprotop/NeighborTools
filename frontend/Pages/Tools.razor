@@ -14,7 +14,7 @@
 <div class="d-flex flex-column flex-sm-row justify-space-between align-center mb-6 gap-4">
     <div>
         <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
-            <MudIcon Icon="Icons.Material.Filled.Search" Class="mr-2" />
+            <MudIcon Icon="@Icons.Material.Filled.Search" Class="mr-2" />
             Browse Tools
         </MudText>
         <MudText Typo="Typo.body1" Color="Color.Secondary">
@@ -28,13 +28,13 @@
                       Placeholder="Search tools..."
                       Variant="Variant.Outlined"
                       Adornment="Adornment.End"
-                      AdornmentIcon="Icons.Material.Filled.Search"
+                      AdornmentIcon="@Icons.Material.Filled.Search"
                       OnAdornmentClick="SearchTools"
                       Style="min-width: 300px;" />
         
         <MudButton Variant="Variant.Filled" 
                    Color="Color.Primary" 
-                   StartIcon="Icons.Material.Filled.Add"
+                   StartIcon="@Icons.Material.Filled.Add"
                    Href="/tools/create">
             Add Tool
         </MudButton>
@@ -43,10 +43,10 @@
 
 <!-- Filters Section -->
 <MudExpansionPanels Elevation="2" Class="mb-4">
-    <MudExpansionPanel Text="Filters">
+    <MudExpansionPanel Text="Filters" Icon="@Icons.Material.Filled.FilterList">
         <MudGrid>
             <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="string" @bind-Value="selectedCategory" Label="Category" Variant="Variant.Outlined" Clearable="true">
+                <MudSelect T="string" @bind-Value="selectedCategory" Label="Category" Variant="Variant.Outlined" Clearable="true" AdornmentIcon="@Icons.Material.Filled.Category" Adornment="Adornment.Start" @bind-Value:after="ApplyFilters">
                     <MudSelectItem T="string" Value="@string.Empty">All Categories</MudSelectItem>
                     <MudSelectItem T="string" Value="@("Power Tools")">Power Tools</MudSelectItem>
                     <MudSelectItem T="string" Value="@("Hand Tools")">Hand Tools</MudSelectItem>
@@ -56,19 +56,19 @@
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="bool?" @bind-Value="availableOnly" Label="Availability" Variant="Variant.Outlined" Clearable="true">
+                <MudSelect T="bool?" @bind-Value="availableOnly" Label="Availability" Variant="Variant.Outlined" Clearable="true" AdornmentIcon="@Icons.Material.Filled.CheckCircle" Adornment="Adornment.Start" @bind-Value:after="ApplyFilters">
                     <MudSelectItem T="bool?" Value="@((bool?)null)">All Tools</MudSelectItem>
                     <MudSelectItem T="bool?" Value="@((bool?)true)">Available Only</MudSelectItem>
                     <MudSelectItem T="bool?" Value="@((bool?)false)">Unavailable</MudSelectItem>
                 </MudSelect>
             </MudItem>
             <MudItem xs="12" sm="6" md="3">
-                <MudSlider @bind-Value="maxDailyRate" Min="0" Max="200" Step="5" Color="Color.Primary">
+                <MudSlider @bind-Value="maxDailyRate" Min="0" Max="200" Step="5" Color="Color.Primary" @bind-Value:after="ApplyFilters">
                     Max Daily Rate: $@maxDailyRate
                 </MudSlider>
             </MudItem>
             <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
-                <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="ClearFilters" StartIcon="Icons.Material.Filled.Clear">
+                <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="ClearFilters" StartIcon="@Icons.Material.Filled.Clear">
                     Clear Filters
                 </MudButton>
             </MudItem>
@@ -96,7 +96,7 @@ else if (filteredTools != null && filteredTools.Any())
             Showing @(filteredTools?.Count ?? 0) tools
         </MudText>
         
-        <MudSelect T="string" @bind-Value="sortBy" Label="Sort by" Variant="Variant.Outlined" Dense="true" Style="min-width: 150px;">
+        <MudSelect T="string" @bind-Value="sortBy" Label="Sort by" Variant="Variant.Outlined" Dense="true" Style="min-width: 150px;" AdornmentIcon="@Icons.Material.Filled.Sort" Adornment="Adornment.Start" @bind-Value:after="StateHasChanged">
             <MudSelectItem T="string" Value="@("name")">Name</MudSelectItem>
             <MudSelectItem T="string" Value="@("price-low")">Price: Low to High</MudSelectItem>
             <MudSelectItem T="string" Value="@("price-high")">Price: High to Low</MudSelectItem>
@@ -117,7 +117,7 @@ else if (filteredTools != null && filteredTools.Any())
                     else
                     {
                         <div class="d-flex align-center justify-center" style="height: 200px; background: var(--mud-palette-surface-variant); border-radius: 12px 12px 0 0;">
-                            <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem;" />
+                            <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem;" />
                         </div>
                     }
                     
@@ -128,7 +128,7 @@ else if (filteredTools != null && filteredTools.Any())
                         </MudText>
                         
                         <div class="d-flex justify-space-between align-center mb-3">
-                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="Icons.Material.Filled.Category">
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.Category">
                                 @tool.Category
                             </MudChip>
                             <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Error)" 
@@ -183,7 +183,7 @@ else if (filteredTools != null && filteredTools.Any())
                         
                         @if (tool.IsAvailable)
                         {
-                            <MudIconButton Icon="Icons.Material.Filled.FavoriteBorder" 
+                            <MudIconButton Icon="@Icons.Material.Filled.FavoriteBorder" 
                                            Color="Color.Secondary" 
                                            Size="Size.Small"
                                            OnClick="() => ToggleFavorite(tool.Id)" />
@@ -197,12 +197,12 @@ else if (filteredTools != null && filteredTools.Any())
 else
 {
     <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
-        <MudIcon Icon="Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
         <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No tools found</MudText>
         <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
             Try adjusting your search or filters, or be the first to share a tool!
         </MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="Icons.Material.Filled.Add">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="@Icons.Material.Filled.Add">
             Add Your Tool
         </MudButton>
     </MudPaper>
@@ -351,11 +351,6 @@ else
         Snackbar.Add("Favorites feature coming soon!", Severity.Info);
     }
 
-    // Re-apply filters when filter values change
-    protected override void OnParametersSet()
-    {
-        ApplyFilters();
-    }
     
     private string GetOwnerInitials(string ownerName)
     {

@@ -15,7 +15,7 @@
 <div class="d-flex flex-column flex-sm-row justify-space-between align-center mb-6 gap-4">
     <div>
         <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
-            <MudIcon Icon="Icons.Material.Filled.Inventory" Class="mr-2" />
+            <MudIcon Icon="@Icons.Material.Filled.Inventory" Class="mr-2" />
             My Tools
         </MudText>
         <MudText Typo="Typo.body1" Color="Color.Secondary">
@@ -25,7 +25,7 @@
     
     <MudButton Variant="Variant.Filled" 
                Color="Color.Primary" 
-               StartIcon="Icons.Material.Filled.Add"
+               StartIcon="@Icons.Material.Filled.Add"
                Href="/tools/create"
                Size="Size.Large">
         Add New Tool
@@ -37,7 +37,7 @@
     <MudItem xs="12" sm="6" md="3">
         <MudCard Elevation="4" Style="border-radius: 12px;">
             <MudCardContent Class="text-center">
-                <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
                 <MudText Typo="Typo.h4" Color="Color.Primary">@GetTotalToolsCount()</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Total Tools</MudText>
             </MudCardContent>
@@ -46,7 +46,7 @@
     <MudItem xs="12" sm="6" md="3">
         <MudCard Elevation="4" Style="border-radius: 12px;">
             <MudCardContent Class="text-center">
-                <MudIcon Icon="Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-2" />
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-2" />
                 <MudText Typo="Typo.h4" Color="Color.Success">@GetAvailableToolsCount()</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Available</MudText>
             </MudCardContent>
@@ -55,7 +55,7 @@
     <MudItem xs="12" sm="6" md="3">
         <MudCard Elevation="4" Style="border-radius: 12px;">
             <MudCardContent Class="text-center">
-                <MudIcon Icon="Icons.Material.Filled.Schedule" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
+                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
                 <MudText Typo="Typo.h4" Color="Color.Warning">@GetRentedToolsCount()</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Rented Out</MudText>
             </MudCardContent>
@@ -64,7 +64,7 @@
     <MudItem xs="12" sm="6" md="3">
         <MudCard Elevation="4" Style="border-radius: 12px;">
             <MudCardContent Class="text-center">
-                <MudIcon Icon="Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Info" Class="mb-2" />
+                <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Info" Class="mb-2" />
                 <MudText Typo="Typo.h4" Color="Color.Info">@GetDailyPotential()</MudText>
                 <MudText Typo="Typo.body2" Color="Color.Secondary">Daily Potential</MudText>
             </MudCardContent>
@@ -104,7 +104,7 @@
                     else
                     {
                         <div class="d-flex align-center justify-center" style="height: 200px; background: var(--mud-palette-surface-variant); border-radius: 12px 12px 0 0;">
-                            <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem;" />
+                            <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem;" />
                         </div>
                     }
                     
@@ -115,14 +115,14 @@
                         </MudText>
                         
                         <div class="d-flex justify-space-between align-center mb-3">
-                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="Icons.Material.Filled.Category">
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.Category">
                                 @(tool.Category ?? "Unknown")
                             </MudChip>
                             @if (tool.IsAvailable)
                             {
                                 <MudChip T="string" Color="Color.Success" 
                                          Size="Size.Small" 
-                                         Icon="Icons.Material.Filled.CheckCircle">
+                                         Icon="@Icons.Material.Filled.CheckCircle">
                                     Available
                                 </MudChip>
                             }
@@ -130,7 +130,7 @@
                             {
                                 <MudChip T="string" Color="Color.Warning" 
                                          Size="Size.Small" 
-                                         Icon="Icons.Material.Filled.Schedule">
+                                         Icon="@Icons.Material.Filled.Schedule">
                                     Rented
                                 </MudChip>
                             }
@@ -162,13 +162,13 @@
                     
                     <MudCardActions Class="pa-4">
                         <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true">
-                            <MudButton StartIcon="Icons.Material.Filled.Edit" OnClick="() => EditTool(tool.Id ?? string.Empty)">
+                            <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="() => EditTool(tool.Id ?? string.Empty)">
                                 Edit
                             </MudButton>
-                            <MudButton StartIcon="Icons.Material.Filled.Visibility" OnClick="() => ViewTool(tool.Id ?? string.Empty)">
+                            <MudButton StartIcon="@Icons.Material.Filled.Visibility" OnClick="() => ViewTool(tool.Id ?? string.Empty)">
                                 View
                             </MudButton>
-                            <MudButton StartIcon="Icons.Material.Filled.Delete" 
+                            <MudButton StartIcon="@Icons.Material.Filled.Delete" 
                                        Color="Color.Error" 
                                        OnClick="() => DeleteTool(tool.Id ?? string.Empty, tool.Name ?? string.Empty)">
                                 Delete
@@ -185,12 +185,12 @@
 @if (myTools == null || !myTools.Any())
 {
     <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
-        <MudIcon Icon="Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" Class="mb-4" Style="font-size: 4rem;" />
+        <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" Class="mb-4" Style="font-size: 4rem;" />
         <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mb-2">No tools yet</MudText>
         <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
             Start earning money by sharing your tools with neighbors!
         </MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="Icons.Material.Filled.Add" Size="Size.Large">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="@Icons.Material.Filled.Add" Size="Size.Large">
             Add Your First Tool
         </MudButton>
     </MudPaper>
@@ -247,7 +247,7 @@
 
     private void ViewTool(string toolId)
     {
-        Navigation.NavigateTo($"/tools/{toolId}");
+        Navigation.NavigateTo($"/tools/{toolId}?from=my-tools");
     }
 
     private void DeleteTool(string toolId, string toolName)

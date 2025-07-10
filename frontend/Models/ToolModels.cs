@@ -24,13 +24,29 @@ public class Tool
     public DateTime CreatedAt { get; set; }
 }
 
-public class CreateToolRequest
+public class ToolRequestBase
 {
     public string Name { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public string Category { get; set; } = string.Empty;
+    public string Brand { get; set; } = string.Empty;
+    public string Model { get; set; } = string.Empty;
     public decimal DailyRate { get; set; }
+    public decimal? WeeklyRate { get; set; }
+    public decimal? MonthlyRate { get; set; }
+    public decimal DepositRequired { get; set; }
     public string Condition { get; set; } = string.Empty;
+    public string Location { get; set; } = string.Empty;
+    public List<string> ImageUrls { get; set; } = new();
+}
+
+public class CreateToolRequest : ToolRequestBase
+{
+}
+
+public class UpdateToolRequest : ToolRequestBase
+{
+    public bool IsAvailable { get; set; } = true;
 }
 
 public class Rental

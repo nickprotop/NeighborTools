@@ -15,7 +15,7 @@
 <div class="d-flex flex-column flex-sm-row justify-space-between align-center mb-6 gap-4">
     <div>
         <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
-            <MudIcon Icon="Icons.Material.Filled.Assignment" Class="mr-2" />
+            <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-2" />
             My Rentals
         </MudText>
         <MudText Typo="Typo.body1" Color="Color.Secondary">
@@ -26,7 +26,7 @@
 
 <!-- Tabs for different rental types -->
 <MudTabs Elevation="4" Rounded="true" PanelClass="pa-6" @bind-ActivePanelIndex="activeTab">
-    <MudTabPanel Text="My Requests" Icon="Icons.Material.Filled.ShoppingCart">
+    <MudTabPanel Text="My Requests" Icon="@Icons.Material.Filled.ShoppingCart">
         <div class="d-flex justify-space-between align-center mb-4">
             <MudText Typo="Typo.h6">Tools I'm Renting</MudText>
             <MudSelect T="string" @bind-Value="selectedRenterStatus" Label="Status Filter" Variant="Variant.Outlined" Dense="true" Style="min-width: 150px;">
@@ -61,7 +61,7 @@
                             else
                             {
                                 <div class="d-flex align-center justify-center" style="height: 200px; background: var(--mud-palette-surface-variant); border-radius: 12px 12px 0 0;">
-                                    <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" />
+                                    <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" />
                                 </div>
                             }
                             
@@ -105,12 +105,12 @@
                             </MudCardContent>
                             
                             <MudCardActions Class="pa-4">
-                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ViewRentalDetails(rental.Id)">
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ViewRentalDetails(rental.Id)" StartIcon="@Icons.Material.Filled.Visibility">
                                     View Details
                                 </MudButton>
                                 @if (rental.Status == "Pending")
                                 {
-                                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => CancelRental(rental.Id)">
+                                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => CancelRental(rental.Id)" StartIcon="@Icons.Material.Filled.Cancel">
                                         Cancel
                                     </MudButton>
                                 }
@@ -123,19 +123,19 @@
         else
         {
             <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
-                <MudIcon Icon="Icons.Material.Filled.ShoppingCartCheckout" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                <MudIcon Icon="@Icons.Material.Filled.ShoppingCartCheckout" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
                 <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No rental requests found</MudText>
                 <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
                     You haven't made any rental requests yet. Browse tools to get started!
                 </MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools" StartIcon="Icons.Material.Filled.Search">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools" StartIcon="@Icons.Material.Filled.Search">
                     Browse Tools
                 </MudButton>
             </MudPaper>
         }
     </MudTabPanel>
 
-    <MudTabPanel Text="Tool Rentals" Icon="Icons.Material.Filled.Build">
+    <MudTabPanel Text="Tool Rentals" Icon="@Icons.Material.Filled.Build">
         <div class="d-flex justify-space-between align-center mb-4">
             <MudText Typo="Typo.h6">My Tools Being Rented</MudText>
             <MudSelect T="string" @bind-Value="selectedOwnerStatus" Label="Status Filter" Variant="Variant.Outlined" Dense="true" Style="min-width: 150px;">
@@ -169,7 +169,7 @@
                             else
                             {
                                 <div class="d-flex align-center justify-center" style="height: 200px; background: var(--mud-palette-surface-variant); border-radius: 12px 12px 0 0;">
-                                    <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" />
+                                    <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" />
                                 </div>
                             }
                             
@@ -206,15 +206,15 @@
                             </MudCardContent>
                             
                             <MudCardActions Class="pa-4">
-                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ViewRentalDetails(rental.Id)">
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ViewRentalDetails(rental.Id)" StartIcon="@Icons.Material.Filled.Visibility">
                                     View Details
                                 </MudButton>
                                 @if (rental.Status == "Pending")
                                 {
-                                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="() => ApproveRental(rental.Id)">
+                                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="() => ApproveRental(rental.Id)" StartIcon="@Icons.Material.Filled.CheckCircle">
                                         Approve
                                     </MudButton>
-                                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="() => RejectRental(rental.Id)">
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="() => RejectRental(rental.Id)" StartIcon="@Icons.Material.Filled.Cancel">
                                         Reject
                                     </MudButton>
                                 }
@@ -227,12 +227,12 @@
         else
         {
             <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
-                <MudIcon Icon="Icons.Material.Filled.Assignment" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
                 <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No rental requests for your tools</MudText>
                 <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
                     Share your tools to start receiving rental requests!
                 </MudText>
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="Icons.Material.Filled.Add">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="@Icons.Material.Filled.Add">
                     Add Tool
                 </MudButton>
             </MudPaper>

@@ -3,6 +3,7 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using System.Web
 @inject IToolService ToolService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -24,7 +25,7 @@ else if (!string.IsNullOrEmpty(errorMessage))
         <MudIcon Icon="Icons.Material.Filled.Error" Size="Size.Large" Color="Color.Error" Class="mb-4" />
         <MudText Typo="Typo.h6" Color="Color.Error" Class="mb-2">Error Loading Tool</MudText>
         <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">@errorMessage</MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo("/tools"))" StartIcon="Icons.Material.Filled.ArrowBack">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo(GetBackUrl()))" StartIcon="Icons.Material.Filled.ArrowBack">
             Back to Tools
         </MudButton>
     </MudPaper>
@@ -172,7 +173,7 @@ else if (tool != null)
             <MudButton Variant="Variant.Outlined" 
                        Color="Color.Secondary" 
                        StartIcon="Icons.Material.Filled.ArrowBack"
-                       OnClick="@(() => Navigation.NavigateTo("/tools"))">
+                       OnClick="@(() => Navigation.NavigateTo(GetBackUrl()))">
                 Back to Tools
             </MudButton>
             
@@ -307,5 +308,21 @@ else if (tool != null)
                 Snackbar.Add("Your rental request has been submitted and is pending approval.", Severity.Success);
             }
         }
+    }
+
+    private string GetBackUrl()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        var referrer = query["from"];
+        
+        // If the referrer is "my-tools", go back to My Tools page
+        if (referrer == "my-tools")
+        {
+            return "/my-tools";
+        }
+        
+        // Default to Tools page
+        return "/tools";
     }
 }

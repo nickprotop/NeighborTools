@@ -15,7 +15,7 @@
                 <div class="brand-section">
                     <MudButton Variant="Variant.Text" 
                                Href="/" 
-                               StartIcon="Icons.Material.Filled.Handyman"
+                               StartIcon="@Icons.Material.Filled.Handyman"
                                Class="brand-button">
                         <MudText Typo="Typo.h5" Class="brand-text">NeighborTools</MudText>
                     </MudButton>
@@ -28,19 +28,19 @@
                             <MudButton Variant="Variant.Text" 
                                        Href="/tools" 
                                        Class="nav-button"
-                                       StartIcon="Icons.Material.Filled.Search">
+                                       StartIcon="@Icons.Material.Filled.Search">
                                 Browse Tools
                             </MudButton>
                             <MudButton Variant="Variant.Text" 
                                        Href="/my-tools" 
                                        Class="nav-button"
-                                       StartIcon="Icons.Material.Filled.Inventory">
+                                       StartIcon="@Icons.Material.Filled.Inventory">
                                 My Tools
                             </MudButton>
                             <MudButton Variant="Variant.Text" 
                                        Href="/my-rentals" 
                                        Class="nav-button"
-                                       StartIcon="Icons.Material.Filled.Assignment">
+                                       StartIcon="@Icons.Material.Filled.Assignment">
                                 My Rentals
                             </MudButton>
                         </Authorized>
@@ -55,7 +55,7 @@
                             <MudButton Variant="Variant.Text" 
                                        Href="/tools/create"
                                        Class="add-tool-button d-none d-sm-flex"
-                                       StartIcon="Icons.Material.Filled.Add">
+                                       StartIcon="@Icons.Material.Filled.Add">
                                 Share Tool
                             </MudButton>
 
@@ -65,28 +65,28 @@
                                      Class="user-menu">
                                 <ActivatorContent>
                                     <MudButton Variant="Variant.Text" 
-                                               StartIcon="Icons.Material.Filled.Menu"
-                                               EndIcon="Icons.Material.Filled.AccountCircle"
+                                               StartIcon="@Icons.Material.Filled.Menu"
+                                               EndIcon="@Icons.Material.Filled.AccountCircle"
                                                Class="user-menu-button">
                                         <span class="d-none d-sm-inline">@GetUserDisplayName(context)</span>
                                     </MudButton>
                                 </ActivatorContent>
                                 <ChildContent>
-                                    <MudMenuItem Icon="Icons.Material.Filled.Person" Href="/profile">
+                                    <MudMenuItem Icon="@Icons.Material.Filled.Person" Href="/profile">
                                         Profile
                                     </MudMenuItem>
-                                    <MudMenuItem Icon="Icons.Material.Filled.Assignment" Href="/my-rentals">
+                                    <MudMenuItem Icon="@Icons.Material.Filled.Assignment" Href="/my-rentals">
                                         My Rentals
                                     </MudMenuItem>
-                                    <MudMenuItem Icon="Icons.Material.Filled.Inventory" Href="/my-tools">
+                                    <MudMenuItem Icon="@Icons.Material.Filled.Inventory" Href="/my-tools">
                                         My Tools
                                     </MudMenuItem>
                                     <MudDivider />
-                                    <MudMenuItem Icon="Icons.Material.Filled.Settings" Href="/settings">
+                                    <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="/settings">
                                         Settings
                                     </MudMenuItem>
                                     <MudDivider />
-                                    <MudMenuItem Icon="Icons.Material.Filled.Logout" OnClick="LogoutAsync">
+                                    <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
                                         Logout
                                     </MudMenuItem>
                                 </ChildContent>
@@ -96,12 +96,14 @@
                             <div class="auth-buttons">
                                 <MudButton Variant="Variant.Text" 
                                            Href="/login" 
-                                           Class="login-button">
+                                           Class="login-button"
+                                           StartIcon="@Icons.Material.Filled.Login">
                                     Log in
                                 </MudButton>
                                 <MudButton Variant="Variant.Filled" 
                                            Href="/register" 
-                                           Class="signup-button">
+                                           Class="signup-button"
+                                           StartIcon="@Icons.Material.Filled.PersonAdd">
                                     Sign up
                                 </MudButton>
                             </div>
@@ -121,7 +123,7 @@
         <div class="mobile-menu-content">
             <div class="mobile-menu-header">
                 <MudText Typo="Typo.h6" Class="pa-4">Menu</MudText>
-                <MudIconButton Icon="Icons.Material.Filled.Close" 
+                <MudIconButton Icon="@Icons.Material.Filled.Close" 
                                OnClick="ToggleMobileMenu" 
                                Class="ma-2" />
             </div>
@@ -133,7 +135,7 @@
                         <MudButton Variant="Variant.Text" 
                                    Href="/tools" 
                                    FullWidth="true"
-                                   StartIcon="Icons.Material.Filled.Search"
+                                   StartIcon="@Icons.Material.Filled.Search"
                                    Class="mobile-nav-item"
                                    OnClick="CloseMobileMenu">
                             Browse Tools
@@ -141,7 +143,7 @@
                         <MudButton Variant="Variant.Text" 
                                    Href="/my-tools" 
                                    FullWidth="true"
-                                   StartIcon="Icons.Material.Filled.Inventory"
+                                   StartIcon="@Icons.Material.Filled.Inventory"
                                    Class="mobile-nav-item"
                                    OnClick="CloseMobileMenu">
                             My Tools
@@ -149,7 +151,7 @@
                         <MudButton Variant="Variant.Text" 
                                    Href="/my-rentals" 
                                    FullWidth="true"
-                                   StartIcon="Icons.Material.Filled.Assignment"
+                                   StartIcon="@Icons.Material.Filled.Assignment"
                                    Class="mobile-nav-item"
                                    OnClick="CloseMobileMenu">
                             My Rentals
@@ -157,7 +159,7 @@
                         <MudButton Variant="Variant.Filled" 
                                    Href="/tools/create" 
                                    FullWidth="true"
-                                   StartIcon="Icons.Material.Filled.Add"
+                                   StartIcon="@Icons.Material.Filled.Add"
                                    Class="mobile-add-button"
                                    OnClick="CloseMobileMenu">
                             Share Tool
@@ -169,7 +171,7 @@
                         <MudButton Variant="Variant.Text" 
                                    Href="/login" 
                                    FullWidth="true"
-                                   StartIcon="Icons.Material.Filled.Login"
+                                   StartIcon="@Icons.Material.Filled.Login"
                                    Class="mobile-nav-item"
                                    OnClick="CloseMobileMenu">
                             Log in
@@ -177,7 +179,7 @@
                         <MudButton Variant="Variant.Filled" 
                                    Href="/register" 
                                    FullWidth="true"
-                                   StartIcon="Icons.Material.Filled.PersonAdd"
+                                   StartIcon="@Icons.Material.Filled.PersonAdd"
                                    Class="mobile-add-button"
                                    OnClick="CloseMobileMenu">
                             Sign up
@@ -190,7 +192,7 @@
 
     <!-- Mobile Menu Toggle (visible only on mobile) -->
     <div class="mobile-menu-toggle d-md-none">
-        <MudIconButton Icon="Icons.Material.Filled.Menu" 
+        <MudIconButton Icon="@Icons.Material.Filled.Menu" 
                        OnClick="ToggleMobileMenu"
                        Class="mobile-toggle-button" />
     </div>

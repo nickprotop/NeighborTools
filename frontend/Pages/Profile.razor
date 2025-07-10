@@ -116,10 +116,10 @@
                             </MudGrid>
                             
                             <div class="d-flex justify-end gap-4 mt-6">
-                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetForm">
+                                <MudButton Variant="Variant.Outlined" Color="Color.Secondary" OnClick="ResetForm" StartIcon="Icons.Material.Filled.Refresh">
                                     Reset
                                 </MudButton>
-                                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="isLoading">
+                                <MudButton ButtonType="ButtonType.Submit" Variant="Variant.Filled" Color="Color.Primary" Disabled="isLoading" StartIcon="@(isLoading ? null : Icons.Material.Filled.Save)">
                                     @if (isLoading)
                                     {
                                         <MudProgressCircular Color="Color.Secondary" Size="Size.Small" Indeterminate="true" />
