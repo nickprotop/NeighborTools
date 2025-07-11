@@ -1,5 +1,6 @@
 using System.Text;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using ToolsSharing.Infrastructure;
@@ -101,6 +102,16 @@ builder.Services.AddCors(options =>
     });
 });
 
+// Add Sessions
+builder.Services.AddDistributedMemoryCache();
+builder.Services.AddSession(options =>
+{
+    options.IdleTimeout = TimeSpan.FromMinutes(30);
+    options.Cookie.HttpOnly = true;
+    options.Cookie.IsEssential = true;
+    options.Cookie.SecurePolicy = CookieSecurePolicy.SameAsRequest;
+});
+
 // Add Health Checks
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ToolsSharing.Infrastructure.Data.ApplicationDbContext>();
@@ -123,6 +134,7 @@ app.UseCors("AllowFrontend");
 // PRODUCTION WARNING: Enable HTTPS redirection in production or when behind a proxy that handles SSL
 // app.UseHttpsRedirection();
 
+app.UseSession();
 app.UseAuthentication();
 app.UseAuthorization();
 
@@ -157,9 +169,17 @@ try
     {
         Log.Information("Running in seed-only mode");
         
-        // Seed the database and exit
+        // Run migrations and seed the database, then exit
         using (var scope = app.Services.CreateScope())
         {
+            var context = scope.ServiceProvider.GetRequiredService<ToolsSharing.Infrastructure.Data.ApplicationDbContext>();
+            
+            // Apply any pending migrations
+            Log.Information("Applying database migrations...");
+            await context.Database.MigrateAsync();
+            Log.Information("Database migrations applied successfully");
+            
+            // Seed the database
             await ToolsSharing.Infrastructure.Data.DataSeeder.SeedAsync(scope.ServiceProvider);
         }
         
@@ -169,9 +189,17 @@ try
     
     Log.Information("Starting Tools Sharing API");
     
-    // Seed the database
+    // Run database migrations and seed the database
     using (var scope = app.Services.CreateScope())
     {
+        var context = scope.ServiceProvider.GetRequiredService<ToolsSharing.Infrastructure.Data.ApplicationDbContext>();
+        
+        // Apply any pending migrations
+        Log.Information("Applying database migrations...");
+        await context.Database.MigrateAsync();
+        Log.Information("Database migrations applied successfully");
+        
+        // Seed the database
         await ToolsSharing.Infrastructure.Data.DataSeeder.SeedAsync(scope.ServiceProvider);
     }
     

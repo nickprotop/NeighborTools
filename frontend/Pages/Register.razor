@@ -107,6 +107,51 @@
                 </MudItem>
             </MudGrid>
 
+            <!-- Terms and Privacy Acceptance -->
+            <div class="mt-6 mb-4">
+                <MudPaper Class="pa-4" Elevation="1" Style="background-color: var(--mud-palette-surface-variant);">
+                    <MudStack Spacing="3">
+                        <MudCheckBox T="bool" @bind-Value="registerRequest.AcceptTerms" 
+                                    Required="true"
+                                    Color="Color.Primary">
+                            <MudText Typo="Typo.body2">
+                                I agree to the <MudLink Href="/terms-of-service" Target="_blank" Color="Color.Primary">Terms of Service</MudLink>
+                            </MudText>
+                        </MudCheckBox>
+                        
+                        <MudCheckBox T="bool" @bind-Value="registerRequest.AcceptPrivacyPolicy" 
+                                    Required="true"
+                                    Color="Color.Primary">
+                            <MudText Typo="Typo.body2">
+                                I have read and understand the <MudLink Href="/privacy-policy" Target="_blank" Color="Color.Primary">Privacy Policy</MudLink>
+                            </MudText>
+                        </MudCheckBox>
+                        
+                        <MudCheckBox T="bool" @bind-Value="registerRequest.AcceptDataProcessing" 
+                                    Required="true"
+                                    Color="Color.Primary">
+                            <MudText Typo="Typo.body2">
+                                I consent to the processing of my personal data as described in the Privacy Policy
+                            </MudText>
+                        </MudCheckBox>
+                        
+                        <MudCheckBox T="bool" @bind-Value="registerRequest.AcceptMarketing" 
+                                    Color="Color.Primary">
+                            <MudText Typo="Typo.body2">
+                                I would like to receive marketing communications and updates about NeighborTools (optional)
+                            </MudText>
+                        </MudCheckBox>
+                    </MudStack>
+                </MudPaper>
+                
+                @if (!string.IsNullOrEmpty(termsValidationError))
+                {
+                    <MudAlert Severity="Severity.Error" Class="mt-2">
+                        @termsValidationError
+                    </MudAlert>
+                }
+            </div>
+
             <MudButton ButtonType="ButtonType.Submit"
                        Variant="Variant.Filled"
                        Color="Color.Primary"
@@ -143,6 +188,7 @@
 @code {
     private RegisterRequest registerRequest = new();
     private string errorMessage = string.Empty;
+    private string termsValidationError = string.Empty;
     private bool isLoading = false;
 
     // Password visibility toggles
@@ -176,12 +222,33 @@
     {
         isLoading = true;
         errorMessage = string.Empty;
+        termsValidationError = string.Empty;
 
         try
         {
+            // Validate passwords match
             if (registerRequest.Password != registerRequest.ConfirmPassword)
             {
                 errorMessage = "Passwords do not match.";
+                return;
+            }
+
+            // Validate required terms acceptance
+            if (!registerRequest.AcceptTerms)
+            {
+                termsValidationError = "You must accept the Terms of Service to create an account.";
+                return;
+            }
+
+            if (!registerRequest.AcceptPrivacyPolicy)
+            {
+                termsValidationError = "You must accept the Privacy Policy to create an account.";
+                return;
+            }
+
+            if (!registerRequest.AcceptDataProcessing)
+            {
+                termsValidationError = "You must consent to data processing to create an account.";
                 return;
             }
 

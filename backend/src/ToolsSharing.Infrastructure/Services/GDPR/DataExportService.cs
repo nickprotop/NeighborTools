@@ -42,7 +42,7 @@ public class DataExportService : IDataExportService
         return filePath;
     }
 
-    public async Task<UserDataExport> GenerateUserDataExportAsync(int userId)
+    public async Task<UserDataExport> GenerateUserDataExportAsync(string userId)
     {
         var user = await _context.Users
             .Include(u => u.OwnedTools)
@@ -54,7 +54,7 @@ public class DataExportService : IDataExportService
             .Include(u => u.ProcessingLogs)
             .Include(u => u.DataRequests)
             .Include(u => u.CookieConsents)
-            .FirstOrDefaultAsync(u => u.Id == userId.ToString());
+            .FirstOrDefaultAsync(u => u.Id == userId);
 
         if (user == null) throw new ArgumentException("User not found");
 
@@ -97,7 +97,7 @@ public class DataExportService : IDataExportService
             r.TotalCost,
             r.Status,
             r.CreatedAt,
-            Role = r.RenterId == userId.ToString() ? "Renter" : "Owner"
+            Role = r.RenterId == userId ? "Renter" : "Owner"
         });
 
         // Future: Financial data will be included when payment system is implemented

@@ -1,6 +1,10 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Authorization;
 using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.Features.Auth;
+using ToolsSharing.Core.Entities;
+using ToolsSharing.Core.Common.Constants;
 
 namespace ToolsSharing.API.Controllers;
 
@@ -9,10 +13,12 @@ namespace ToolsSharing.API.Controllers;
 public class AuthController : ControllerBase
 {
     private readonly IAuthService _authService;
+    private readonly UserManager<User> _userManager;
 
-    public AuthController(IAuthService authService)
+    public AuthController(IAuthService authService, UserManager<User> userManager)
     {
         _authService = authService;
+        _userManager = userManager;
     }
 
     [HttpPost("register")]
@@ -65,4 +71,104 @@ public class AuthController : ControllerBase
             
         return Ok(result);
     }
+
+    [HttpGet("user/{userId}")]
+    [Authorize]
+    public async Task<IActionResult> GetUser(string userId)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound(new { Error = "User not found" });
+            }
+
+            var userInfo = new UserInfoDto
+            {
+                Id = user.Id,
+                Email = user.Email!,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                TermsOfServiceAccepted = user.TermsOfServiceAccepted,
+                TermsVersion = user.TermsVersion,
+                TermsAcceptedDate = user.TermsAcceptedDate,
+                DataProcessingConsent = user.DataProcessingConsent,
+                MarketingConsent = user.MarketingConsent
+            };
+
+            return Ok(userInfo);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Error = "Failed to retrieve user information" });
+        }
+    }
+
+    [HttpPut("user/{userId}/terms")]
+    [Authorize]
+    public async Task<IActionResult> UpdateUserTermsAcceptance(string userId, [FromBody] UpdateTermsRequest request)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return NotFound(new { Error = "User not found" });
+            }
+
+            // Update terms acceptance
+            user.TermsOfServiceAccepted = request.TermsOfServiceAccepted;
+            user.TermsVersion = request.TermsVersion;
+            user.TermsAcceptedDate = request.TermsAcceptedDate;
+            user.DataProcessingConsent = request.DataProcessingConsent;
+            user.LastConsentUpdate = DateTime.UtcNow;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            var result = await _userManager.UpdateAsync(user);
+            if (!result.Succeeded)
+            {
+                return BadRequest(new { Error = "Failed to update user terms acceptance" });
+            }
+
+            return Ok(new { Success = true, Message = "Terms acceptance updated successfully" });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Error = "Failed to update terms acceptance" });
+        }
+    }
+
+    [HttpGet("terms-version")]
+    public IActionResult GetCurrentTermsVersion()
+    {
+        return Ok(new
+        {
+            TermsVersion = VersionConstants.GetCurrentTermsVersion(),
+            PrivacyVersion = VersionConstants.GetCurrentPrivacyVersion(),
+            ConsentVersion = VersionConstants.GetCurrentConsentVersion()
+        });
+    }
+}
+
+// DTOs
+public class UserInfoDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string Email { get; set; } = string.Empty;
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public bool TermsOfServiceAccepted { get; set; }
+    public string? TermsVersion { get; set; }
+    public DateTime? TermsAcceptedDate { get; set; }
+    public bool DataProcessingConsent { get; set; }
+    public bool MarketingConsent { get; set; }
+}
+
+public class UpdateTermsRequest
+{
+    public bool TermsOfServiceAccepted { get; set; }
+    public string TermsVersion { get; set; } = string.Empty;
+    public DateTime TermsAcceptedDate { get; set; }
+    public bool DataProcessingConsent { get; set; }
 }

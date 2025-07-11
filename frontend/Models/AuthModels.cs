@@ -15,6 +15,12 @@ public class RegisterRequest
     public string LastName { get; set; } = string.Empty;
     public string PhoneNumber { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
+    
+    // Terms and Privacy Acceptance
+    public bool AcceptTerms { get; set; } = false;
+    public bool AcceptPrivacyPolicy { get; set; } = false;
+    public bool AcceptDataProcessing { get; set; } = false;
+    public bool AcceptMarketing { get; set; } = false;
 }
 
 public class AuthResult

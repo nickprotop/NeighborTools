@@ -1,6 +1,7 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using MudBlazor
 @inherits LayoutComponentBase
+@implements IDisposable
 
 <MudThemeProvider IsDarkMode="false" />
 <MudDialogProvider />
@@ -208,7 +209,10 @@
     </main>
 
     <!-- GDPR Cookie Consent Banner -->
-    <Components.GDPR.CookieConsentBanner UserId="GetCurrentUserId()" />
+    <CookieConsentBanner UserId="@currentUserId" />
+    
+    <!-- Terms Compliance Check -->
+    <TermsComplianceCheck OnTermsAccepted="OnTermsAcceptedHandler" />
 
     <!-- Footer -->
     <footer class="app-footer">
@@ -480,6 +484,49 @@
     [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
 
     private bool mobileMenuOpen = false;
+    private string? currentUserId = null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCurrentUserIdAsync();
+        
+        // Subscribe to authentication state changes
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        await LoadCurrentUserIdAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task LoadCurrentUserIdAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                var userIdClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                                ?? authState.User.FindFirst("sub")?.Value 
+                                ?? authState.User.FindFirst("id")?.Value;
+                currentUserId = userIdClaim;
+            }
+            else
+            {
+                currentUserId = null;
+            }
+        }
+        catch
+        {
+            currentUserId = null;
+        }
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+    }
 
     private void ToggleMobileMenu()
     {
@@ -511,16 +558,11 @@
         return parts.Length > 0 ? parts[0] : name;
     }
 
-    private int? GetCurrentUserId()
+    private async Task OnTermsAcceptedHandler()
     {
-        var authState = AuthStateProvider.GetAuthenticationStateAsync().Result;
-        if (authState.User.Identity?.IsAuthenticated == true)
-        {
-            var userIdClaim = authState.User.FindFirst("sub")?.Value 
-                            ?? authState.User.FindFirst("id")?.Value;
-            if (int.TryParse(userIdClaim, out var userId))
-                return userId;
-        }
-        return null;
+        // Refresh user data after terms acceptance
+        await LoadCurrentUserIdAsync();
+        StateHasChanged();
     }
+
 }

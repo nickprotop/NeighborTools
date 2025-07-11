@@ -1,0 +1,189 @@
+@page "/privacy-policy"
+@using MudBlazor
+
+<PageTitle>Privacy Policy - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4 mb-8">
+    <MudPaper Class="pa-6" Elevation="2">
+        <MudText Typo="Typo.h4" GutterBottom Class="mb-6">Privacy Policy</MudText>
+        
+        <MudText Typo="Typo.caption" Class="mb-6">
+            <strong>Last Updated:</strong> @DateTime.Now.ToString("MMMM dd, yyyy")
+        </MudText>
+
+        <MudDivider Class="mb-6" />
+
+        <MudStack Spacing="4">
+            <!-- Introduction -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>1. Introduction</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    Welcome to NeighborTools ("we," "our," or "us"). We are committed to protecting your personal information and your right to privacy. 
+                    This Privacy Policy explains what information we collect, how we use it, and your rights regarding your personal data.
+                </MudText>
+                <MudText Typo="Typo.body1">
+                    This policy applies to all information collected through our website, mobile application, and any related services, sales, marketing, or events.
+                </MudText>
+            </div>
+
+            <!-- Information We Collect -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>2. Information We Collect</MudText>
+                
+                <MudText Typo="Typo.h6" GutterBottom Class="mt-4">Personal Information</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    We collect personal information that you provide to us when you:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Circle" IconSize="Size.Small">Register for an account</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Circle" IconSize="Size.Small">List tools for sharing</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Circle" IconSize="Size.Small">Rent tools from other users</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Circle" IconSize="Size.Small">Contact us for support</MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.h6" GutterBottom Class="mt-4">Technical Information</MudText>
+                <MudText Typo="Typo.body1">
+                    We automatically collect certain information when you visit our platform, including:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Circle" IconSize="Size.Small">IP address and device information</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Circle" IconSize="Size.Small">Browser type and version</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Circle" IconSize="Size.Small">Usage patterns and preferences</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Circle" IconSize="Size.Small">Location data (with your consent)</MudListItem>
+                </MudList>
+            </div>
+
+            <!-- How We Use Your Information -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>3. How We Use Your Information</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    We use your personal information for the following purposes:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.CheckCircle" IconSize="Size.Small">To provide and maintain our service</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.CheckCircle" IconSize="Size.Small">To facilitate tool sharing between users</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.CheckCircle" IconSize="Size.Small">To process payments and transactions</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.CheckCircle" IconSize="Size.Small">To communicate with you about your account</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.CheckCircle" IconSize="Size.Small">To improve our platform and user experience</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.CheckCircle" IconSize="Size.Small">To comply with legal obligations</MudListItem>
+                </MudList>
+            </div>
+
+            <!-- Information Sharing -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>4. Information Sharing and Disclosure</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    We do not sell, trade, or rent your personal information to third parties. We may share your information in the following circumstances:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Share" IconSize="Size.Small">With other users as necessary for tool sharing transactions</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Share" IconSize="Size.Small">With service providers who assist in our operations</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Share" IconSize="Size.Small">When required by law or to protect our rights</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Share" IconSize="Size.Small">In connection with a business transfer or acquisition</MudListItem>
+                </MudList>
+            </div>
+
+            <!-- Data Security -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>5. Data Security</MudText>
+                <MudText Typo="Typo.body1">
+                    We implement appropriate technical and organizational measures to protect your personal information against unauthorized access, 
+                    alteration, disclosure, or destruction. However, no method of transmission over the internet is 100% secure.
+                </MudText>
+            </div>
+
+            <!-- Your Rights (GDPR) -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>6. Your Rights Under GDPR</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    If you are a resident of the European Union, you have the following rights regarding your personal data:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Security" IconSize="Size.Small"><strong>Right to Access:</strong> Request copies of your personal data</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Security" IconSize="Size.Small"><strong>Right to Rectification:</strong> Request correction of inaccurate data</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Security" IconSize="Size.Small"><strong>Right to Erasure:</strong> Request deletion of your personal data</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Security" IconSize="Size.Small"><strong>Right to Restrict Processing:</strong> Request limitation of data processing</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Security" IconSize="Size.Small"><strong>Right to Data Portability:</strong> Receive your data in a portable format</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Security" IconSize="Size.Small"><strong>Right to Object:</strong> Object to certain types of processing</MudListItem>
+                </MudList>
+                
+                <MudAlert Severity="Severity.Info" Class="mt-4">
+                    To exercise any of these rights, please visit your <MudLink Href="/privacy-dashboard" Color="Color.Primary">Privacy Dashboard</MudLink> 
+                    or contact us using the information below.
+                </MudAlert>
+            </div>
+
+            <!-- Cookies -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>7. Cookies and Tracking Technologies</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    We use cookies and similar tracking technologies to enhance your experience on our platform. You can manage your cookie preferences 
+                    through your browser settings or our cookie consent banner.
+                </MudText>
+                <MudText Typo="Typo.body1">
+                    For more information about how we use cookies, please refer to our cookie policy accessible through the privacy settings.
+                </MudText>
+            </div>
+
+            <!-- Data Retention -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>8. Data Retention</MudText>
+                <MudText Typo="Typo.body1">
+                    We retain your personal information only for as long as necessary to fulfill the purposes outlined in this privacy policy, 
+                    unless a longer retention period is required or permitted by law. When you delete your account, we will delete your personal 
+                    information within 30 days, except where we are required to retain it for legal purposes.
+                </MudText>
+            </div>
+
+            <!-- Children's Privacy -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>9. Children's Privacy</MudText>
+                <MudText Typo="Typo.body1">
+                    Our service is not intended for children under the age of 13. We do not knowingly collect personal information from children under 13. 
+                    If you become aware that your child has provided us with personal information, please contact us so we can delete such information.
+                </MudText>
+            </div>
+
+            <!-- Changes to Policy -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>10. Changes to This Privacy Policy</MudText>
+                <MudText Typo="Typo.body1">
+                    We may update this privacy policy from time to time. We will notify you of any changes by posting the new privacy policy on this page 
+                    and updating the "Last Updated" date. You are advised to review this privacy policy periodically for any changes.
+                </MudText>
+            </div>
+
+            <!-- Contact Information -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>11. Contact Us</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    If you have any questions about this privacy policy or your personal data, please contact us:
+                </MudText>
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.body2"><strong>Email:</strong> privacy@neighbortools.com</MudText>
+                        <MudText Typo="Typo.body2"><strong>Address:</strong> 123 Community Street, Tech City, TC 12345</MudText>
+                        <MudText Typo="Typo.body2"><strong>Data Protection Officer:</strong> dpo@neighbortools.com</MudText>
+                    </MudStack>
+                </MudPaper>
+            </div>
+        </MudStack>
+
+        <MudDivider Class="my-6" />
+
+        <MudStack Row Spacing="3" Justify="Justify.Center" Class="mt-6">
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      Href="/privacy-dashboard"
+                      StartIcon="Icons.Material.Filled.Dashboard">
+                Privacy Dashboard
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" 
+                      Color="Color.Primary" 
+                      Href="/terms-of-service"
+                      StartIcon="Icons.Material.Filled.Article">
+                Terms of Service
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+</MudContainer>

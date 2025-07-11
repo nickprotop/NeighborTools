@@ -43,7 +43,7 @@ public interface IPrivacyPolicyService
 // DTOs
 public class DataProcessingActivity
 {
-    public string UserId { get; set; } = string.Empty;
+    public string? UserId { get; set; }
     public string ActivityType { get; set; } = string.Empty;
     public List<string> DataCategories { get; set; } = new();
     public string ProcessingPurpose { get; set; } = string.Empty;

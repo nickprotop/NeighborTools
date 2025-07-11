@@ -19,7 +19,7 @@ public class DataSubjectRightsService : IDataSubjectRightsService
         _dataExportService = dataExportService;
     }
 
-    public async Task<DataSubjectRequest> CreateDataRequestAsync(int userId, DataRequestType type, string? details)
+    public async Task<DataSubjectRequest> CreateDataRequestAsync(string userId, DataRequestType type, string? details)
     {
         var request = new DataSubjectRequest
         {
@@ -36,14 +36,14 @@ public class DataSubjectRightsService : IDataSubjectRightsService
         return request;
     }
 
-    public async Task<DataErasureValidation> ValidateErasureRequestAsync(int userId)
+    public async Task<DataErasureValidation> ValidateErasureRequestAsync(string userId)
     {
         var validation = new DataErasureValidation();
         var reasons = new List<string>();
 
         // Check for active rentals
         var activeRentals = await _context.Rentals
-            .Where(r => (r.RenterId == userId.ToString() || r.Tool.OwnerId == userId.ToString()) && 
+            .Where(r => (r.RenterId == userId || r.Tool.OwnerId == userId) && 
                        (r.Status == RentalStatus.PickedUp || r.Status == RentalStatus.Approved))
             .CountAsync();
 
@@ -124,7 +124,7 @@ public class DataSubjectRightsService : IDataSubjectRightsService
                throw new ArgumentException("Request not found", nameof(requestId));
     }
 
-    public async Task<List<DataSubjectRequest>> GetUserDataRequestsAsync(int userId)
+    public async Task<List<DataSubjectRequest>> GetUserDataRequestsAsync(string userId)
     {
         return await _context.DataSubjectRequests
             .Where(r => r.UserId == userId)
@@ -132,9 +132,9 @@ public class DataSubjectRightsService : IDataSubjectRightsService
             .ToListAsync();
     }
 
-    private async Task AnonymizeUserDataAsync(int userId)
+    private async Task AnonymizeUserDataAsync(string userId)
     {
-        var user = await _context.Users.FindAsync(userId.ToString());
+        var user = await _context.Users.FindAsync(userId);
         if (user == null) return;
 
         // Anonymize personal data

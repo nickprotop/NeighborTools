@@ -26,6 +26,11 @@ public class User : IdentityUser
     public bool DataPortabilityRequested { get; set; } = false;
     public DateTime? AnonymizationDate { get; set; }
     
+    // Terms and Policies
+    public bool TermsOfServiceAccepted { get; set; } = false;
+    public DateTime? TermsAcceptedDate { get; set; }
+    public string? TermsVersion { get; set; }
+    
     // Navigation properties
     public ICollection<Tool> OwnedTools { get; set; } = new List<Tool>();
     public ICollection<Rental> RentalsAsOwner { get; set; } = new List<Rental>();

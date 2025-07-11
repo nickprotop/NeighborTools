@@ -2,7 +2,7 @@ namespace ToolsSharing.Core.Entities.GDPR;
 
 public class DataProcessingLog : BaseEntity
 {
-    public string UserId { get; set; } = string.Empty;
+    public string? UserId { get; set; }
     public string ActivityType { get; set; } = string.Empty;
     public List<string> DataCategories { get; set; } = new();
     public string ProcessingPurpose { get; set; } = string.Empty;
@@ -15,7 +15,7 @@ public class DataProcessingLog : BaseEntity
     public string? UserAgent { get; set; }
 
     // Navigation properties
-    public User User { get; set; } = null!;
+    public User? User { get; set; }
 }
 
 public enum LegalBasis

@@ -5,6 +5,7 @@ using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Features.Auth;
+using ToolsSharing.Core.Common.Constants;
 
 namespace ToolsSharing.Infrastructure.Features.Auth;
 
@@ -31,6 +32,22 @@ public class AuthService : IAuthService
     {
         try
         {
+            // Validate required terms acceptance
+            if (!command.AcceptTerms)
+            {
+                return ApiResponse<AuthResult>.CreateFailure("You must accept the Terms of Service to create an account");
+            }
+
+            if (!command.AcceptPrivacyPolicy)
+            {
+                return ApiResponse<AuthResult>.CreateFailure("You must accept the Privacy Policy to create an account");
+            }
+
+            if (!command.AcceptDataProcessing)
+            {
+                return ApiResponse<AuthResult>.CreateFailure("You must consent to data processing to create an account");
+            }
+
             // Check if user already exists
             var existingUser = await _userManager.FindByEmailAsync(command.Email);
             if (existingUser != null)
@@ -38,6 +55,8 @@ public class AuthService : IAuthService
                 return ApiResponse<AuthResult>.CreateFailure("User with this email already exists");
             }
 
+            var currentTime = DateTime.UtcNow;
+            
             // Create new user
             var user = new User
             {
@@ -51,8 +70,16 @@ public class AuthService : IAuthService
                 City = command.City,
                 PostalCode = command.PostalCode,
                 Country = command.Country,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                CreatedAt = currentTime,
+                UpdatedAt = currentTime,
+                
+                // GDPR and Terms acceptance
+                TermsOfServiceAccepted = command.AcceptTerms,
+                TermsAcceptedDate = currentTime,
+                TermsVersion = VersionConstants.GetCurrentTermsVersion(),
+                DataProcessingConsent = command.AcceptDataProcessing,
+                MarketingConsent = command.AcceptMarketing,
+                LastConsentUpdate = currentTime
             };
 
             var result = await _userManager.CreateAsync(user, command.Password);

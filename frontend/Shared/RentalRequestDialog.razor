@@ -123,7 +123,7 @@
 </MudDialog>
 
 @code {
-    [CascadingParameter] IDialogReference? MudDialog { get; set; }
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
     [Parameter] public Tool? Tool { get; set; }
 
     private DateTime? startDate;
@@ -217,7 +217,7 @@
             if (result.Success)
             {
                 Snackbar.Add("Rental request submitted successfully!", Severity.Success);
-                MudDialog?.Close(DialogResult.Ok(result.Data));
+                MudDialog.Close(DialogResult.Ok(result.Data));
             }
             else
             {
@@ -236,6 +236,6 @@
 
     private void Cancel()
     {
-        MudDialog?.Close(DialogResult.Cancel());
+        MudDialog.Cancel();
     }
 }

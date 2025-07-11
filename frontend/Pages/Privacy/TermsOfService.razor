@@ -1,0 +1,243 @@
+@page "/terms-of-service"
+@using MudBlazor
+
+<PageTitle>Terms of Service - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4 mb-8">
+    <MudPaper Class="pa-6" Elevation="2">
+        <MudText Typo="Typo.h4" GutterBottom Class="mb-6">Terms of Service</MudText>
+        
+        <MudText Typo="Typo.caption" Class="mb-6">
+            <strong>Last Updated:</strong> @DateTime.Now.ToString("MMMM dd, yyyy")
+        </MudText>
+
+        <MudDivider Class="mb-6" />
+
+        <MudStack Spacing="4">
+            <!-- Introduction -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>1. Agreement to Terms</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    Welcome to NeighborTools! These Terms of Service ("Terms") govern your use of our platform, website, and services. 
+                    By accessing or using NeighborTools, you agree to be bound by these Terms.
+                </MudText>
+                <MudText Typo="Typo.body1">
+                    If you do not agree to these Terms, please do not use our service. We may modify these Terms at any time, 
+                    and your continued use constitutes acceptance of the modified Terms.
+                </MudText>
+            </div>
+
+            <!-- Description of Service -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>2. Description of Service</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    NeighborTools is a community platform that enables users to share, rent, and borrow tools and equipment from their neighbors. 
+                    Our service includes:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Build" IconSize="Size.Small">Tool listing and discovery</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Build" IconSize="Size.Small">Rental booking and management</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Build" IconSize="Size.Small">User profiles and reviews</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Build" IconSize="Size.Small">Payment processing</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Build" IconSize="Size.Small">Community messaging</MudListItem>
+                </MudList>
+            </div>
+
+            <!-- User Accounts -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>3. User Accounts</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    To use our service, you must create an account and provide accurate, complete information. You are responsible for:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.AccountCircle" IconSize="Size.Small">Maintaining the security of your account credentials</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.AccountCircle" IconSize="Size.Small">All activities that occur under your account</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.AccountCircle" IconSize="Size.Small">Keeping your profile information up to date</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.AccountCircle" IconSize="Size.Small">Notifying us immediately of any unauthorized use</MudListItem>
+                </MudList>
+                
+                <MudAlert Severity="Severity.Warning" Class="mt-3">
+                    You must be at least 18 years old to use our service. Users under 18 must have parental consent.
+                </MudAlert>
+            </div>
+
+            <!-- Tool Sharing Rules -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>4. Tool Sharing and Rental</MudText>
+                
+                <MudText Typo="Typo.h6" GutterBottom Class="mt-4">For Tool Owners</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">As a tool owner, you agree to:</MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Handshake" IconSize="Size.Small">Provide accurate descriptions and photos of your tools</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Handshake" IconSize="Size.Small">Ensure tools are in safe, working condition</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Handshake" IconSize="Size.Small">Set fair and reasonable rental prices</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Handshake" IconSize="Size.Small">Respond promptly to rental requests</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Handshake" IconSize="Size.Small">Provide proper instructions for tool use</MudListItem>
+                </MudList>
+
+                <MudText Typo="Typo.h6" GutterBottom Class="mt-4">For Tool Renters</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">As a tool renter, you agree to:</MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Schedule" IconSize="Size.Small">Use tools only for their intended purpose</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Schedule" IconSize="Size.Small">Return tools in the same condition as received</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Schedule" IconSize="Size.Small">Return tools on time as agreed</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Schedule" IconSize="Size.Small">Pay all rental fees promptly</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Schedule" IconSize="Size.Small">Report any damage immediately</MudListItem>
+                </MudList>
+            </div>
+
+            <!-- Payments and Fees -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>5. Payments and Fees</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    NeighborTools facilitates payments between users and charges a service fee for successful transactions. 
+                    Our payment terms include:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Payment" IconSize="Size.Small">Service fee of 5% per completed rental transaction</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Payment" IconSize="Size.Small">Payment processing fees as determined by our payment providers</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Payment" IconSize="Size.Small">Late return fees may apply as set by tool owners</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Payment" IconSize="Size.Small">Damage fees may be charged for tool repair or replacement</MudListItem>
+                </MudList>
+            </div>
+
+            <!-- Prohibited Uses -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>6. Prohibited Uses</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    You may not use our service for any unlawful purpose or in violation of these Terms. Prohibited activities include:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Block" IconSize="Size.Small">Listing stolen, counterfeit, or illegal items</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Block" IconSize="Size.Small">Fraudulent or deceptive practices</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Block" IconSize="Size.Small">Harassment or abusive behavior toward other users</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Block" IconSize="Size.Small">Attempting to circumvent our payment system</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Block" IconSize="Size.Small">Creating multiple accounts to manipulate reviews or ratings</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Block" IconSize="Size.Small">Violating intellectual property rights</MudListItem>
+                </MudList>
+            </div>
+
+            <!-- Liability and Insurance -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>7. Liability and Insurance</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    NeighborTools is a platform that connects users but is not responsible for the actual tool sharing transactions. 
+                    Important points regarding liability:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Shield" IconSize="Size.Small">Users are responsible for their own safety when using tools</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Shield" IconSize="Size.Small">Tool owners are responsible for the condition and safety of their tools</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Shield" IconSize="Size.Small">We recommend users maintain appropriate insurance coverage</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Shield" IconSize="Size.Small">NeighborTools provides limited liability protection for certain transactions</MudListItem>
+                </MudList>
+
+                <MudAlert Severity="Severity.Info" Class="mt-3">
+                    We strongly recommend that all users review their homeowner's or renter's insurance policies to understand coverage for tool sharing activities.
+                </MudAlert>
+            </div>
+
+            <!-- Intellectual Property -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>8. Intellectual Property</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    The NeighborTools platform, including its design, code, and content, is protected by intellectual property laws. You agree that:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Copyright" IconSize="Size.Small">NeighborTools retains all rights to our platform and branding</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Copyright" IconSize="Size.Small">You retain rights to content you post, but grant us license to use it</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Copyright" IconSize="Size.Small">You will not copy, modify, or distribute our platform without permission</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.Copyright" IconSize="Size.Small">You will respect the intellectual property rights of other users</MudListItem>
+                </MudList>
+            </div>
+
+            <!-- Privacy -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>9. Privacy</MudText>
+                <MudText Typo="Typo.body1">
+                    Your privacy is important to us. Our collection and use of personal information is governed by our 
+                    <MudLink Href="/privacy-policy" Color="Color.Primary">Privacy Policy</MudLink>, which is incorporated 
+                    into these Terms by reference. By using our service, you consent to the collection and use of your 
+                    information as described in our Privacy Policy.
+                </MudText>
+            </div>
+
+            <!-- Termination -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>10. Termination</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    We may terminate or suspend your account at any time for violation of these Terms. You may also 
+                    terminate your account at any time. Upon termination:
+                </MudText>
+                <MudList T="string">
+                    <MudListItem T="string" Icon="Icons.Material.Filled.ExitToApp" IconSize="Size.Small">Your access to the platform will be immediately revoked</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.ExitToApp" IconSize="Size.Small">Ongoing rental agreements remain valid until completion</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.ExitToApp" IconSize="Size.Small">We may retain certain information as required by law</MudListItem>
+                    <MudListItem T="string" Icon="Icons.Material.Filled.ExitToApp" IconSize="Size.Small">Unpaid fees remain due and payable</MudListItem>
+                </MudList>
+            </div>
+
+            <!-- Disclaimers -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>11. Disclaimers</MudText>
+                <MudText Typo="Typo.body1">
+                    THE SERVICE IS PROVIDED "AS IS" WITHOUT WARRANTIES OF ANY KIND. TO THE FULLEST EXTENT PERMITTED BY LAW, 
+                    WE DISCLAIM ALL WARRANTIES, EXPRESS OR IMPLIED, INCLUDING WARRANTIES OF MERCHANTABILITY, FITNESS FOR A 
+                    PARTICULAR PURPOSE, AND NON-INFRINGEMENT. WE DO NOT WARRANT THAT THE SERVICE WILL BE UNINTERRUPTED, 
+                    ERROR-FREE, OR COMPLETELY SECURE.
+                </MudText>
+            </div>
+
+            <!-- Limitation of Liability -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>12. Limitation of Liability</MudText>
+                <MudText Typo="Typo.body1">
+                    TO THE FULLEST EXTENT PERMITTED BY LAW, NEIGHBORTOOLS SHALL NOT BE LIABLE FOR ANY INDIRECT, INCIDENTAL, 
+                    SPECIAL, PUNITIVE, OR CONSEQUENTIAL DAMAGES ARISING FROM OR RELATED TO YOUR USE OF THE SERVICE. OUR TOTAL 
+                    LIABILITY SHALL NOT EXCEED THE AMOUNT OF FEES PAID BY YOU IN THE 12 MONTHS PRECEDING THE CLAIM.
+                </MudText>
+            </div>
+
+            <!-- Governing Law -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>13. Governing Law</MudText>
+                <MudText Typo="Typo.body1">
+                    These Terms are governed by and construed in accordance with the laws of [Your State/Country]. 
+                    Any disputes arising from these Terms or your use of the service shall be resolved in the courts 
+                    of [Your Jurisdiction].
+                </MudText>
+            </div>
+
+            <!-- Contact Information -->
+            <div>
+                <MudText Typo="Typo.h5" GutterBottom>14. Contact Us</MudText>
+                <MudText Typo="Typo.body1" Class="mb-3">
+                    If you have any questions about these Terms of Service, please contact us:
+                </MudText>
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.body2"><strong>Email:</strong> legal@neighbortools.com</MudText>
+                        <MudText Typo="Typo.body2"><strong>Address:</strong> 123 Community Street, Tech City, TC 12345</MudText>
+                        <MudText Typo="Typo.body2"><strong>Phone:</strong> +1 (555) 123-4567</MudText>
+                    </MudStack>
+                </MudPaper>
+            </div>
+        </MudStack>
+
+        <MudDivider Class="my-6" />
+
+        <MudStack Row Spacing="3" Justify="Justify.Center" Class="mt-6">
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      Href="/privacy-policy"
+                      StartIcon="Icons.Material.Filled.Security">
+                Privacy Policy
+            </MudButton>
+            <MudButton Variant="Variant.Outlined" 
+                      Color="Color.Primary" 
+                      Href="/contact"
+                      StartIcon="Icons.Material.Filled.ContactSupport">
+                Contact Support
+            </MudButton>
+        </MudStack>
+    </MudPaper>
+</MudContainer>

@@ -3,6 +3,7 @@ using ToolsSharing.Core.Entities.GDPR;
 using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.Interfaces.GDPR;
 using ToolsSharing.Infrastructure.Data;
+using ToolsSharing.Core.Common.Constants;
 
 namespace ToolsSharing.Infrastructure.Services.GDPR;
 
@@ -33,7 +34,7 @@ public class ConsentService : IConsentService
         await _context.SaveChangesAsync();
     }
 
-    public async Task<List<UserConsent>> GetUserConsentsAsync(int userId)
+    public async Task<List<UserConsent>> GetUserConsentsAsync(string userId)
     {
         return await _context.UserConsents
             .Where(c => c.UserId == userId)
@@ -41,7 +42,7 @@ public class ConsentService : IConsentService
             .ToListAsync();
     }
 
-    public async Task WithdrawConsentAsync(int userId, ConsentType consentType, string reason)
+    public async Task WithdrawConsentAsync(string userId, ConsentType consentType, string reason)
     {
         var activeConsents = await _context.UserConsents
             .Where(c => c.UserId == userId && 
@@ -58,7 +59,7 @@ public class ConsentService : IConsentService
         await _context.SaveChangesAsync();
     }
 
-    public async Task<bool> HasValidConsentAsync(int userId, ConsentType consentType)
+    public async Task<bool> HasValidConsentAsync(string userId, ConsentType consentType)
     {
         return await _context.UserConsents
             .AnyAsync(c => c.UserId == userId && 
@@ -70,10 +71,10 @@ public class ConsentService : IConsentService
     public async Task<string> GetCurrentPrivacyVersionAsync()
     {
         var currentPolicy = await _context.PrivacyPolicyVersions.FirstOrDefaultAsync(p => p.IsActive);
-        return currentPolicy?.Version ?? "1.0";
+        return currentPolicy?.Version ?? VersionConstants.GetCurrentPrivacyVersion();
     }
 
-    public async Task UpdateUserConsentStatusAsync(int userId, ConsentType consentType, bool granted)
+    public async Task UpdateUserConsentStatusAsync(string userId, ConsentType consentType, bool granted)
     {
         var consent = new UserConsent
         {

@@ -10,6 +10,57 @@ NeighborTools is a **community tool sharing platform** with a .NET 9 Web API bac
 - **ToolsSharing.Infrastructure** - Data access, Mapster, and external services  
 - **ToolsSharing.API** - Controllers, JWT authentication, and API configuration
 
+## ⚠️ CRITICAL: MudBlazor Version 8.x Requirements
+
+**The frontend uses MudBlazor 8.9.0 - Claude MUST always consult MudBlazor 8.x documentation, NOT 7.x patterns!**
+
+### Key Breaking Changes from v7.x to v8.x:
+- **Dialog Structure**: Each dialog must be a separate .razor file with `<MudDialog>` as root element
+- **Dialog Injection**: Use `[CascadingParameter] IMudDialogInstance MudDialog { get; set; }` (THIS project's MudBlazor 8.9.0 uses IMudDialogInstance)
+- **Dialog Closing**: Use `MudDialog.Close(DialogResult.Ok(data))` and `MudDialog.Cancel()` directly (no null checks needed)
+- **Dialog Showing**: Use `@inject IDialogService DialogService` and `DialogService.Show<DialogComponent>(title, parameters, options)` (NOT ShowAsync)
+- **Dialog Parameters**: Use `new DialogParameters { { "ParamName", value } }` for passing data
+- **Dialog Options**: `DialogOptions` is now immutable - use `with` keyword for modifications
+- **Component Binding**: Use `@bind-Value` instead of `@bind-Checked` on switches
+- **Date Picker Events**: Use `@bind-Date:after` instead of `OnDateChanged`
+
+### Complete Dialog Pattern:
+```csharp
+// Caller component
+@inject IDialogService DialogService
+
+private Task OpenDialog()
+{
+    var parameters = new DialogParameters { { "ParamName", value } };
+    var options = new DialogOptions { CloseOnEscapeKey = true };
+    var dialog = DialogService.Show<MyDialog>("Dialog Title", parameters, options);
+    return dialog.Result;
+}
+
+// Dialog component (separate .razor file)
+<MudDialog>
+    <TitleContent>Dialog Title</TitleContent>
+    <DialogContent>Dialog Content</DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit">OK</MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public string ParamName { get; set; }
+    
+    private void Submit() => MudDialog.Close(DialogResult.Ok(true));
+    private void Cancel() => MudDialog.Cancel();
+}
+```
+
+### Always Check Current Documentation:
+- **Primary Source**: https://mudblazor.com/components/
+- **Migration Guide**: https://github.com/MudBlazor/MudBlazor/issues/9953
+- **When in doubt**: Search "MudBlazor 8.x [component name]" to verify current API
+
 ## Essential Development Commands
 
 ### Initial Setup

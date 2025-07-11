@@ -75,12 +75,8 @@ cd ..
 echo "📦 Installing .NET dependencies..."
 dotnet restore
 
-# Run database migrations
-echo "🔄 Running database migrations..."
-dotnet ef database update --project src/ToolsSharing.API --verbose
-
-# Seed initial data
-echo "🌱 Seeding initial data..."
+# Seed initial data (migrations will run automatically)
+echo "🌱 Running database migrations and seeding initial data..."
 dotnet run --project src/ToolsSharing.API --seed-only
 
 echo ""

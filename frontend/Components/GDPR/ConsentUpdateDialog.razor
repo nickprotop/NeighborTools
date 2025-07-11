@@ -1,0 +1,215 @@
+@using System.Text.Json
+@using frontend.Models
+@using MudBlazor
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject ILogger<ConsentUpdateDialog> Logger
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">Update Your Consent Preferences</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="4">
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                You can update your consent preferences below. These changes will take effect immediately.
+            </MudText>
+
+            @if (ConsentItems != null)
+            {
+                @foreach (var consent in ConsentItems)
+                {
+                    <MudPaper Class="pa-4" Elevation="1">
+                        <MudStack Spacing="2">
+                            <MudText Typo="Typo.subtitle1">@GetConsentTypeDisplay(consent.ConsentType)</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @GetConsentDescription(consent.ConsentType)
+                            </MudText>
+                            
+                            @if (consent.ConsentType == 100) // Terms of Service - cannot be withdrawn
+                            {
+                                <MudChip T="string" Color="@(consent.ConsentGiven ? Color.Success : Color.Warning)" 
+                                        Size="Size.Small" Class="mt-2">
+                                    @(consent.ConsentGiven ? "Accepted" : "Not Accepted")
+                                </MudChip>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Terms of Service acceptance cannot be modified here. 
+                                    @if (!consent.ConsentGiven)
+                                    {
+                                        <span>You will be prompted to accept them when needed.</span>
+                                    }
+                                </MudText>
+                            }
+                            else
+                            {
+                                <MudSwitch T="bool" @bind-Value="consent.ConsentGiven" 
+                                          Color="Color.Primary"
+                                          Label="@(consent.ConsentGiven ? "Granted" : "Not Granted")"
+                                          Class="mt-2" />
+                            }
+                            
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Current version: @consent.ConsentVersion
+                                @if (consent.ConsentDate != DateTime.MinValue)
+                                {
+                                    <span> • Last updated: @consent.ConsentDate.ToString("MMM dd, yyyy")</span>
+                                }
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
+                }
+            }
+            else
+            {
+                <MudSkeleton Height="200px" />
+            }
+
+            @if (!string.IsNullOrEmpty(ErrorMessage))
+            {
+                <MudAlert Severity="Severity.Error" Class="mt-4">
+                    @ErrorMessage
+                </MudAlert>
+            }
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton Color="Color.Secondary" OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="SaveChanges" Disabled="IsSaving">
+            @if (IsSaving)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ml-2">Saving...</MudText>
+            }
+            else
+            {
+                <MudText>Save Changes</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public string UserId { get; set; } = "";
+    [Parameter] public List<ConsentResponse> InitialConsents { get; set; } = new();
+
+    private List<ConsentResponse>? ConsentItems;
+    private bool IsSaving = false;
+    private string ErrorMessage = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Create a copy of the initial consents for editing
+        ConsentItems = InitialConsents.Select(c => new ConsentResponse
+        {
+            ConsentType = c.ConsentType,
+            ConsentGiven = c.ConsentGiven,
+            ConsentDate = c.ConsentDate,
+            ConsentVersion = c.ConsentVersion,
+            WithdrawnDate = c.WithdrawnDate
+        }).ToList();
+    }
+
+    private async Task SaveChanges()
+    {
+        if (ConsentItems == null) return;
+
+        IsSaving = true;
+        ErrorMessage = "";
+
+        try
+        {
+            var hasChanges = false;
+            
+            // Check what has changed and update accordingly
+            foreach (var consent in ConsentItems)
+            {
+                var original = InitialConsents.FirstOrDefault(c => c.ConsentType == consent.ConsentType);
+                if (original != null && consent.ConsentGiven != original.ConsentGiven)
+                {
+                    hasChanges = true;
+                    
+                    // Skip Terms of Service - it can't be modified here
+                    if (consent.ConsentType == 100) continue;
+                    
+                    // Update the consent via API
+                    await UpdateConsentAsync(consent.ConsentType, consent.ConsentGiven);
+                }
+            }
+
+            if (hasChanges)
+            {
+                Snackbar.Add("Consent preferences updated successfully", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add("No changes to save", Severity.Info);
+                MudDialog.Close(DialogResult.Ok(false));
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error saving consent changes");
+            ErrorMessage = "Failed to save changes. Please try again.";
+        }
+        finally
+        {
+            IsSaving = false;
+        }
+    }
+
+    private async Task UpdateConsentAsync(int consentType, bool granted)
+    {
+        var updateRequest = new
+        {
+            UserId = UserId,
+            ConsentType = consentType,
+            ConsentGiven = granted,
+            Source = "privacy_dashboard"
+        };
+
+        var response = await Http.PostAsJsonAsync("api/gdpr/consent", updateRequest);
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            throw new Exception($"Failed to update consent type {consentType}");
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private string GetConsentTypeDisplay(int consentType)
+    {
+        return consentType switch
+        {
+            0 => "Cookies", // ConsentType.Cookies
+            1 => "Marketing Communications", // ConsentType.Marketing
+            2 => "Analytics & Performance", // ConsentType.Analytics
+            3 => "Data Processing", // ConsentType.DataProcessing
+            4 => "Financial Data", // ConsentType.FinancialData
+            5 => "Location Data", // ConsentType.LocationData
+            100 => "Terms of Service", // Special type for Terms of Service
+            _ => "Unknown"
+        };
+    }
+
+    private string GetConsentDescription(int consentType)
+    {
+        return consentType switch
+        {
+            0 => "Allow us to use cookies and similar technologies to enhance your browsing experience and remember your preferences.",
+            1 => "Receive marketing communications, newsletters, and promotional offers from NeighborTools.",
+            2 => "Allow us to collect analytics data to improve our platform and user experience.",
+            3 => "Allow us to process your personal data to provide our services, including tool sharing, rentals, and account management.",
+            4 => "Allow us to process financial data for payment processing and transaction management.",
+            5 => "Allow us to collect and process your location data to provide location-based services.",
+            100 => "Acceptance of our Terms of Service and user agreement.",
+            _ => "Unknown consent type"
+        };
+    }
+
+}

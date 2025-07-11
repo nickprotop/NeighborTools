@@ -29,7 +29,7 @@ public class PrivacyPolicyService : IPrivacyPolicyService
             .ToListAsync();
     }
 
-    public async Task<PrivacyPolicyVersion> CreatePolicyVersionAsync(string version, string content, int createdBy)
+    public async Task<PrivacyPolicyVersion> CreatePolicyVersionAsync(string version, string content, string createdBy)
     {
         // Deactivate current policy
         var currentPolicy = await _context.PrivacyPolicyVersions

@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ToolsSharing.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using ToolsSharing.Infrastructure.Data;
 namespace ToolsSharing.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250710204626_AllowNullUserIdInDataProcessingLog")]
+    partial class AllowNullUserIdInDataProcessingLog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -823,15 +826,6 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .HasColumnType("longtext");
 
                     b.Property<string>("SecurityStamp")
-                        .HasColumnType("longtext");
-
-                    b.Property<DateTime?>("TermsAcceptedDate")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<bool>("TermsOfServiceAccepted")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("TermsVersion")
                         .HasColumnType("longtext");
 
                     b.Property<bool>("TwoFactorEnabled")

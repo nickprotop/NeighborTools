@@ -33,7 +33,7 @@
 {
     <div class="cookie-banner">
         <div class="cookie-content">
-            <MudGrid Spacing="2" AlignItems="Center">
+            <MudGrid Spacing="2" AlignItems="AlignItems.Center">
                 <MudItem xs="12" md="8">
                     <MudText Typo="Typo.body1">
                         We use cookies to enhance your experience, analyze site traffic, and for marketing purposes.
@@ -80,56 +80,56 @@
         <MudStack Spacing="3">
             <MudCard>
                 <MudCardContent>
-                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="Center">
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                         <div>
                             <MudText Typo="Typo.subtitle1" GutterBottom>Essential Cookies</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Default">
                                 Required for basic website functionality, authentication, and security.
                             </MudText>
                         </div>
-                        <MudSwitch @bind-Checked="@EssentialCookies" Disabled="true" Color="Color.Success" />
+                        <MudSwitch T="bool" @bind-Checked="@EssentialCookies" Disabled="true" Color="Color.Success" />
                     </MudStack>
                 </MudCardContent>
             </MudCard>
 
             <MudCard>
                 <MudCardContent>
-                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="Center">
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                         <div>
                             <MudText Typo="Typo.subtitle1" GutterBottom>Functional Cookies</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Default">
                                 Remember your preferences and settings to provide a personalized experience.
                             </MudText>
                         </div>
-                        <MudSwitch @bind-Checked="@FunctionalCookies" Color="Color.Primary" />
+                        <MudSwitch T="bool" @bind-Checked="@FunctionalCookies" Color="Color.Primary" />
                     </MudStack>
                 </MudCardContent>
             </MudCard>
 
             <MudCard>
                 <MudCardContent>
-                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="Center">
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                         <div>
                             <MudText Typo="Typo.subtitle1" GutterBottom>Analytics Cookies</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Default">
                                 Help us understand how visitors interact with our website to improve performance.
                             </MudText>
                         </div>
-                        <MudSwitch @bind-Checked="@AnalyticsCookies" Color="Color.Info" />
+                        <MudSwitch T="bool" @bind-Checked="@AnalyticsCookies" Color="Color.Info" />
                     </MudStack>
                 </MudCardContent>
             </MudCard>
 
             <MudCard>
                 <MudCardContent>
-                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="Center">
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                         <div>
                             <MudText Typo="Typo.subtitle1" GutterBottom>Marketing Cookies</MudText>
                             <MudText Typo="Typo.body2" Color="Color.Default">
                                 Used to track visitors across websites to display relevant advertisements.
                             </MudText>
                         </div>
-                        <MudSwitch @bind-Checked="@MarketingCookies" Color="Color.Warning" />
+                        <MudSwitch T="bool" @bind-Checked="@MarketingCookies" Color="Color.Warning" />
                     </MudStack>
                 </MudCardContent>
             </MudCard>
@@ -142,7 +142,7 @@
 </MudDialog>
 
 @code {
-    [Parameter] public int? UserId { get; set; }
+    [Parameter] public string? UserId { get; set; }
     
     private bool ShowBanner = false;
     private bool ShowPreferencesDialog = false;
@@ -178,15 +178,37 @@
     {
         try
         {
-            var sessionId = await JSRuntime.InvokeAsync<string>("getSessionId");
+            var sessionId = await GetOrCreateSessionId();
             var response = await Http.GetAsync($"api/gdpr/cookies/session/{sessionId}");
             
             if (response.IsSuccessStatusCode)
             {
                 var consentsJson = await response.Content.ReadAsStringAsync();
-                var consents = JsonSerializer.Deserialize<CookieConsentResponse[]>(consentsJson, new JsonSerializerOptions { PropertyNamePolicy = JsonNamingPolicy.CamelCase });
+                var consents = JsonSerializer.Deserialize<CookieConsentResponse[]>(consentsJson, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
                 
-                return consents != null && consents.Any();
+                // Load existing preferences if available
+                if (consents != null && consents.Any())
+                {
+                    foreach (var consent in consents)
+                    {
+                        switch (consent.CookieCategory)
+                        {
+                            case 0: // Essential
+                                EssentialCookies = consent.ConsentGiven;
+                                break;
+                            case 1: // Functional
+                                FunctionalCookies = consent.ConsentGiven;
+                                break;
+                            case 2: // Analytics
+                                AnalyticsCookies = consent.ConsentGiven;
+                                break;
+                            case 3: // Marketing
+                                MarketingCookies = consent.ConsentGiven;
+                                break;
+                        }
+                    }
+                    return true;
+                }
             }
         }
         catch (Exception ex)
@@ -195,6 +217,29 @@
         }
         
         return false;
+    }
+
+    private async Task<string> GetOrCreateSessionId()
+    {
+        try
+        {
+            // Try to get existing session ID from localStorage
+            var sessionId = await JSRuntime.InvokeAsync<string?>("localStorage.getItem", "gdpr_session_id");
+            
+            if (string.IsNullOrEmpty(sessionId))
+            {
+                // Generate new session ID and store it
+                sessionId = Guid.NewGuid().ToString();
+                await JSRuntime.InvokeVoidAsync("localStorage.setItem", "gdpr_session_id", sessionId);
+            }
+            
+            return sessionId;
+        }
+        catch
+        {
+            // Fallback to generating a new GUID if localStorage fails
+            return Guid.NewGuid().ToString();
+        }
     }
 
     private async Task AcceptAll()
@@ -243,12 +288,14 @@
 
     private async Task RecordConsent(bool essential, bool functional, bool analytics, bool marketing)
     {
+        var sessionId = await GetOrCreateSessionId();
+        
         var consentRequests = new[]
         {
-            new { UserId = UserId, CookieCategory = 0, ConsentGiven = essential }, // Essential
-            new { UserId = UserId, CookieCategory = 1, ConsentGiven = functional }, // Functional
-            new { UserId = UserId, CookieCategory = 2, ConsentGiven = analytics }, // Analytics
-            new { UserId = UserId, CookieCategory = 3, ConsentGiven = marketing } // Marketing
+            new { UserId = UserId, SessionId = sessionId, CookieCategory = 0, ConsentGiven = essential }, // Essential
+            new { UserId = UserId, SessionId = sessionId, CookieCategory = 1, ConsentGiven = functional }, // Functional
+            new { UserId = UserId, SessionId = sessionId, CookieCategory = 2, ConsentGiven = analytics }, // Analytics
+            new { UserId = UserId, SessionId = sessionId, CookieCategory = 3, ConsentGiven = marketing } // Marketing
         };
 
         foreach (var request in consentRequests)
@@ -266,6 +313,9 @@
                 Logger.LogError(ex, "Error recording cookie consent for category {Category}", request.CookieCategory);
             }
         }
+        
+        // Store consent timestamp in localStorage for client-side validation
+        await JSRuntime.InvokeVoidAsync("localStorage.setItem", "gdpr_consent_timestamp", DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString());
     }
 
     public class CookieConsentResponse

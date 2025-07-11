@@ -62,7 +62,7 @@ public class DataSubjectController : ControllerBase
     }
 
     [HttpGet("requests/{userId}")]
-    public async Task<IActionResult> GetUserRequests(int userId)
+    public async Task<IActionResult> GetUserRequests(string userId)
     {
         try
         {
@@ -118,7 +118,7 @@ public class DataSubjectController : ControllerBase
     }
 
     [HttpPost("validate-erasure/{userId}")]
-    public async Task<IActionResult> ValidateErasureRequest(int userId)
+    public async Task<IActionResult> ValidateErasureRequest(string userId)
     {
         try
         {
@@ -152,7 +152,7 @@ public class DataSubjectController : ControllerBase
 // DTOs
 public class DataRequestDto
 {
-    public int UserId { get; set; }
+    public string UserId { get; set; } = "";
     public DataRequestType RequestType { get; set; }
     public string? Details { get; set; }
 }

@@ -1,0 +1,271 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using System.Text.Json
+@inject HttpClient Http
+@inject AuthenticationStateProvider AuthStateProvider
+@inject NavigationManager NavigationManager
+@inject ILogger<TermsComplianceCheck> Logger
+
+
+@if (ShowTermsModal)
+{
+    <MudOverlay Visible="true" DarkBackground="true" Absolute="false">
+        <MudPaper Class="pa-6" Style="max-width: 600px; margin: 50px auto; max-height: 80vh; overflow-y: auto;">
+            <MudText Typo="Typo.h5" Class="mb-4">Updated Terms of Service</MudText>
+            <MudStack Spacing="4">
+                <MudAlert Severity="Severity.Warning">
+                    <MudText Typo="Typo.body1">
+                        We have updated our Terms of Service and Privacy Policy. You must review and accept these updates to continue using NeighborTools.
+                    </MudText>
+                </MudAlert>
+                
+                <MudText Typo="Typo.body2">
+                    This ensures you're aware of any changes to how we handle your data and provide our services.
+                </MudText>
+                
+                <MudStack Spacing="2">
+                    <MudCheckBox T="bool" @bind-Value="AcceptUpdatedTerms" 
+                                Required="true"
+                                Color="Color.Primary">
+                        <MudText Typo="Typo.body2">
+                            I have read and accept the updated <MudLink Href="/terms-of-service" Target="_blank" Color="Color.Primary">Terms of Service</MudLink>
+                        </MudText>
+                    </MudCheckBox>
+                    
+                    <MudCheckBox T="bool" @bind-Value="AcceptUpdatedPrivacy" 
+                                Required="true"
+                                Color="Color.Primary">
+                        <MudText Typo="Typo.body2">
+                            I have read and accept the updated <MudLink Href="/privacy-policy" Target="_blank" Color="Color.Primary">Privacy Policy</MudLink>
+                        </MudText>
+                    </MudCheckBox>
+                    
+                    <MudCheckBox T="bool" @bind-Value="AcceptDataProcessing" 
+                                Required="true"
+                                Color="Color.Primary">
+                        <MudText Typo="Typo.body2">
+                            I consent to the processing of my personal data as described in the Privacy Policy
+                        </MudText>
+                    </MudCheckBox>
+                </MudStack>
+                
+                @if (!string.IsNullOrEmpty(ValidationError))
+                {
+                    <MudAlert Severity="Severity.Error">
+                        @ValidationError
+                    </MudAlert>
+                }
+            </MudStack>
+            
+            <MudCardActions Class="mt-4">
+            <MudButton Color="Color.Error" 
+                      Variant="Variant.Text" 
+                      OnClick="HandleLogout">
+                Logout
+            </MudButton>
+            <MudButton Color="Color.Primary" 
+                      Variant="Variant.Filled" 
+                      OnClick="AcceptTermsAndContinue"
+                      Disabled="IsUpdating">
+                @if (IsUpdating)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ml-2">Updating...</MudText>
+                }
+                else
+                {
+                    <MudText>Accept and Continue</MudText>
+                }
+            </MudButton>
+            </MudCardActions>
+        </MudPaper>
+    </MudOverlay>
+}
+
+@code {
+    [Parameter] public EventCallback OnTermsAccepted { get; set; }
+    
+    private bool ShowTermsModal = false;
+    private bool AcceptUpdatedTerms = false;
+    private bool AcceptUpdatedPrivacy = false;
+    private bool AcceptDataProcessing = false;
+    private bool IsUpdating = false;
+    private string ValidationError = string.Empty;
+    private string? CurrentUserId;
+    private string CurrentTermsVersion = "1.0"; // Default fallback
+
+    protected override async Task OnInitializedAsync()
+    {
+        Logger.LogInformation("TermsComplianceCheck component initializing...");
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            CurrentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                           ?? authState.User.FindFirst("sub")?.Value 
+                           ?? authState.User.FindFirst("id")?.Value;
+            
+            Logger.LogInformation("Found authenticated user with ID: {UserId}", CurrentUserId);
+            
+            if (CurrentUserId != null)
+            {
+                await LoadCurrentTermsVersion();
+                await CheckTermsCompliance();
+            }
+        }
+        else
+        {
+            Logger.LogInformation("User is not authenticated, skipping terms compliance check");
+        }
+    }
+
+    private async Task LoadCurrentTermsVersion()
+    {
+        try
+        {
+            var response = await Http.GetAsync("api/auth/terms-version");
+            if (response.IsSuccessStatusCode)
+            {
+                var versionJson = await response.Content.ReadAsStringAsync();
+                var versionInfo = JsonSerializer.Deserialize<VersionInfo>(versionJson, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                
+                if (versionInfo != null)
+                {
+                    CurrentTermsVersion = versionInfo.TermsVersion;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading current terms version");
+            // Keep default version if API call fails
+        }
+    }
+
+    private async Task CheckTermsCompliance()
+    {
+        try
+        {
+            var response = await Http.GetAsync($"api/auth/user/{CurrentUserId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var userJson = await response.Content.ReadAsStringAsync();
+                var user = JsonSerializer.Deserialize<UserInfo>(userJson, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+                
+                // Debug logging
+                Logger.LogInformation("Terms compliance check for user {UserId}: TermsAccepted={TermsAccepted}, TermsVersion={TermsVersion}", 
+                    CurrentUserId, user?.TermsOfServiceAccepted, user?.TermsVersion);
+                
+                // Check if user needs to accept updated terms
+                // Check if user has accepted the current version
+                if (user != null && (!user.TermsOfServiceAccepted || user.TermsVersion != CurrentTermsVersion))
+                {
+                    Logger.LogInformation("Showing terms modal for user {UserId}", CurrentUserId);
+                    ShowTermsModal = true;
+                    StateHasChanged();
+                }
+                else
+                {
+                    Logger.LogInformation("User {UserId} has already accepted current terms", CurrentUserId);
+                }
+            }
+            else
+            {
+                Logger.LogWarning("Failed to get user info for terms compliance check. Status: {StatusCode}", response.StatusCode);
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error checking terms compliance for user {UserId}", CurrentUserId);
+        }
+    }
+
+    private async Task AcceptTermsAndContinue()
+    {
+        ValidationError = string.Empty;
+        
+        // Validate required acceptances
+        if (!AcceptUpdatedTerms)
+        {
+            ValidationError = "You must accept the Terms of Service to continue.";
+            return;
+        }
+
+        if (!AcceptUpdatedPrivacy)
+        {
+            ValidationError = "You must accept the Privacy Policy to continue.";
+            return;
+        }
+
+        if (!AcceptDataProcessing)
+        {
+            ValidationError = "You must consent to data processing to continue.";
+            return;
+        }
+
+        IsUpdating = true;
+        
+        try
+        {
+            var updateRequest = new
+            {
+                TermsOfServiceAccepted = AcceptUpdatedTerms,
+                TermsVersion = CurrentTermsVersion,
+                DataProcessingConsent = AcceptDataProcessing,
+                TermsAcceptedDate = DateTime.UtcNow
+            };
+
+            var response = await Http.PutAsJsonAsync($"api/auth/user/{CurrentUserId}/terms", updateRequest);
+            if (response.IsSuccessStatusCode)
+            {
+                ShowTermsModal = false;
+                await OnTermsAccepted.InvokeAsync();
+            }
+            else
+            {
+                ValidationError = "Failed to update your preferences. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error updating terms acceptance for user {UserId}", CurrentUserId);
+            ValidationError = "An error occurred. Please try again.";
+        }
+        finally
+        {
+            IsUpdating = false;
+        }
+    }
+
+    private async Task HandleLogout()
+    {
+        try
+        {
+            // Clear authentication state and redirect to login
+            await Http.PostAsync("api/auth/logout", null);
+            NavigationManager.NavigateTo("/login", true);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error during logout");
+        }
+    }
+
+    public class UserInfo
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Email { get; set; } = string.Empty;
+        public string FirstName { get; set; } = string.Empty;
+        public string LastName { get; set; } = string.Empty;
+        public bool TermsOfServiceAccepted { get; set; }
+        public string? TermsVersion { get; set; }
+        public DateTime? TermsAcceptedDate { get; set; }
+        public bool DataProcessingConsent { get; set; }
+        public bool MarketingConsent { get; set; }
+    }
+
+    public class VersionInfo
+    {
+        public string TermsVersion { get; set; } = string.Empty;
+        public string PrivacyVersion { get; set; } = string.Empty;
+        public string ConsentVersion { get; set; } = string.Empty;
+    }
+}

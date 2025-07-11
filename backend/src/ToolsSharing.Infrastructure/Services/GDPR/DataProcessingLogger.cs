@@ -34,7 +34,7 @@ public class DataProcessingLogger : IDataProcessingLogger
         await _context.SaveChangesAsync();
     }
 
-    public async Task<List<DataProcessingLog>> GetUserProcessingLogAsync(int userId)
+    public async Task<List<DataProcessingLog>> GetUserProcessingLogAsync(string userId)
     {
         return await _context.DataProcessingLogs
             .Where(l => l.UserId == userId)

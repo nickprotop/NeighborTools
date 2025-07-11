@@ -24,7 +24,7 @@ public class DataExportController : ControllerBase
     }
 
     [HttpGet("{userId}")]
-    public async Task<IActionResult> ExportUserData(int userId)
+    public async Task<IActionResult> ExportUserData(string userId)
     {
         try
         {

@@ -10,7 +10,11 @@ public record RegisterCommand(
     string? Address = null,
     string? City = null,
     string? PostalCode = null,
-    string? Country = null
+    string? Country = null,
+    bool AcceptTerms = false,
+    bool AcceptPrivacyPolicy = false,
+    bool AcceptDataProcessing = false,
+    bool AcceptMarketing = false
 );
 
 public record LoginCommand(

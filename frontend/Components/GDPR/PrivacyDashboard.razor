@@ -1,10 +1,13 @@
 @page "/privacy-dashboard"
 @using MudBlazor
 @using System.Text.Json
+@using frontend.Models
 @inject HttpClient Http
 @inject ILogger<PrivacyDashboard> Logger
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+@inject IDialogService DialogService
 @attribute [Authorize]
 
 <PageTitle>Privacy Dashboard</PageTitle>
@@ -27,25 +30,45 @@
                 <MudCardContent>
                     @if (UserConsents != null)
                     {
-                        <MudStack Spacing="2">
-                            @foreach (var consent in UserConsents)
-                            {
-                                <MudPaper Class="pa-3" Elevation="1">
-                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="Center">
-                                        <div>
-                                            <MudText Typo="Typo.subtitle2">@GetConsentTypeDisplay(consent.ConsentType)</MudText>
-                                            <MudText Typo="Typo.caption">
-                                                Last updated: @consent.ConsentDate.ToString("MMM dd, yyyy")
-                                            </MudText>
-                                        </div>
-                                        <MudChip Color="@(consent.ConsentGiven ? Color.Success : Color.Default)" 
-                                                Size="Size.Small">
-                                            @(consent.ConsentGiven ? "Granted" : "Withdrawn")
-                                        </MudChip>
-                                    </MudStack>
-                                </MudPaper>
-                            }
-                        </MudStack>
+                        @if (UserConsents.Any())
+                        {
+                            <MudStack Spacing="2">
+                                @foreach (var consent in UserConsents)
+                                {
+                                    <MudPaper Class="pa-3" Elevation="1">
+                                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle2">@GetConsentTypeDisplay(consent.ConsentType)</MudText>
+                                                <MudText Typo="Typo.caption">
+                                                    Last updated: @consent.ConsentDate.ToString("MMM dd, yyyy")
+                                                </MudText>
+                                            </div>
+                                            <MudChip T="string" Color="@(consent.ConsentGiven ? Color.Success : Color.Default)" 
+                                                    Size="Size.Small">
+                                                @(consent.ConsentGiven ? "Granted" : "Withdrawn")
+                                            </MudChip>
+                                        </MudStack>
+                                    </MudPaper>
+                                }
+                            </MudStack>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Class="my-4">
+                                <MudStack Spacing="2">
+                                    <MudText Typo="Typo.body1">
+                                        <strong>No consent records found</strong>
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        You haven't set any specific privacy preferences yet. Your basic account consents (data processing, marketing) 
+                                        were set when you created your account.
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        You can update your cookie preferences using the cookie banner or manage additional consents as they become available.
+                                    </MudText>
+                                </MudStack>
+                            </MudAlert>
+                        }
                     }
                     else
                     {
@@ -124,7 +147,7 @@
                             <RowTemplate>
                                 <MudTd>@GetRequestTypeDisplay(context.RequestType)</MudTd>
                                 <MudTd>
-                                    <MudChip Color="@GetStatusColor(context.Status)" Size="Size.Small">
+                                    <MudChip T="string" Color="@GetStatusColor(context.Status)" Size="Size.Small">
                                         @context.Status
                                     </MudChip>
                                 </MudTd>
@@ -167,7 +190,8 @@
         var authState = await AuthStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            CurrentUserId = authState.User.FindFirst("sub")?.Value 
+            CurrentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                           ?? authState.User.FindFirst("sub")?.Value 
                            ?? authState.User.FindFirst("id")?.Value;
             
             if (CurrentUserId != null)
@@ -186,7 +210,7 @@
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                UserConsents = JsonSerializer.Deserialize<List<ConsentResponse>>(json, new JsonSerializerOptions { PropertyNamePolicy = JsonNamingPolicy.CamelCase });
+                UserConsents = JsonSerializer.Deserialize<List<ConsentResponse>>(json, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
             }
         }
         catch (Exception ex)
@@ -204,7 +228,7 @@
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
-                DataRequests = JsonSerializer.Deserialize<List<DataRequestResponse>>(json, new JsonSerializerOptions { PropertyNamePolicy = JsonNamingPolicy.CamelCase });
+                DataRequests = JsonSerializer.Deserialize<List<DataRequestResponse>>(json, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
             }
         }
         catch (Exception ex)
@@ -220,7 +244,7 @@
         {
             var request = new
             {
-                UserId = int.Parse(CurrentUserId!),
+                UserId = CurrentUserId!,
                 RequestType = requestType,
                 Details = requestType switch
                 {
@@ -249,7 +273,7 @@
         }
     }
 
-    private async Task DownloadData(int requestId)
+    private async Task DownloadData(Guid requestId)
     {
         try
         {
@@ -275,20 +299,45 @@
         }
     }
 
-    private void UpdateConsents()
+    private async Task UpdateConsents()
     {
-        // Navigate to consent management page or show modal
-        Snackbar.Add("Consent update feature coming soon", Severity.Info);
+        if (UserConsents == null || CurrentUserId == null) return;
+
+        var parameters = new DialogParameters
+        {
+            { "UserId", CurrentUserId },
+            { "InitialConsents", UserConsents }
+        };
+
+        var options = new DialogOptions 
+        { 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true,
+            CloseButton = true,
+            BackdropClick = false
+        };
+
+        var dialog = DialogService.Show<ConsentUpdateDialog>("Update Consents", parameters, options);
+        var result = await dialog.Result;
+
+        // If changes were saved, refresh the consent data
+        if (!result.Canceled && result.Data is bool changed && changed)
+        {
+            await LoadUserConsents();
+        }
     }
 
     private string GetConsentTypeDisplay(int consentType)
     {
         return consentType switch
         {
-            0 => "Data Processing",
-            1 => "Marketing Communications",
-            2 => "Analytics & Performance",
-            3 => "Third-party Integrations",
+            0 => "Cookies", // ConsentType.Cookies
+            1 => "Marketing Communications", // ConsentType.Marketing
+            2 => "Analytics & Performance", // ConsentType.Analytics
+            3 => "Data Processing", // ConsentType.DataProcessing
+            4 => "Financial Data", // ConsentType.FinancialData
+            5 => "Location Data", // ConsentType.LocationData
+            100 => "Terms of Service", // Special type for Terms of Service
             _ => "Unknown"
         };
     }
@@ -318,24 +367,4 @@
         };
     }
 
-    // DTO classes
-    public class ConsentResponse
-    {
-        public int ConsentType { get; set; }
-        public bool ConsentGiven { get; set; }
-        public DateTime ConsentDate { get; set; }
-        public string ConsentVersion { get; set; } = string.Empty;
-        public DateTime? WithdrawnDate { get; set; }
-    }
-
-    public class DataRequestResponse
-    {
-        public int Id { get; set; }
-        public int RequestType { get; set; }
-        public object Status { get; set; } = null!;
-        public DateTime RequestDate { get; set; }
-        public DateTime? CompletedDate { get; set; }
-        public string Details { get; set; } = string.Empty;
-        public string? ResponseData { get; set; }
-    }
 }

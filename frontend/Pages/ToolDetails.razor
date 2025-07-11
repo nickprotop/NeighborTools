@@ -299,7 +299,7 @@ else if (tool != null)
 
             var options = new DialogOptions();
 
-            var dialog = await DialogService.ShowAsync<frontend.Shared.RentalRequestDialog>("Request Rental", parameters, options);
+            var dialog = DialogService.Show<frontend.Shared.RentalRequestDialog>("Request Rental", parameters, options);
             var result = await dialog.Result;
 
             if (result is not null && !result.Canceled)
