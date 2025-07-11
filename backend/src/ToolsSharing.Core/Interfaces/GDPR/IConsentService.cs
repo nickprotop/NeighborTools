@@ -10,6 +10,11 @@ public interface IConsentService
     Task<bool> HasValidConsentAsync(string userId, ConsentType consentType);
     Task<string> GetCurrentPrivacyVersionAsync();
     Task UpdateUserConsentStatusAsync(string userId, ConsentType consentType, bool granted);
+    
+    // Synchronization methods
+    Task SyncUserConsentAsync(string userId, ConsentType consentType, bool granted, string source, string? ipAddress = null, string? userAgent = null);
+    Task SyncAllUserConsentsFromEntityAsync(string userId);
+    Task RecordInitialConsentsAsync(string userId, bool dataProcessingConsent, bool marketingConsent, string source, string? ipAddress = null, string? userAgent = null);
 }
 
 public interface IDataProcessingLogger

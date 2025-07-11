@@ -39,19 +39,17 @@ public class ConsentController : ControllerBase
     {
         try
         {
-            var consent = new UserConsent
-            {
-                UserId = request.UserId,
-                ConsentType = request.ConsentType,
-                ConsentGiven = request.ConsentGiven,
-                ConsentDate = DateTime.UtcNow,
-                ConsentSource = request.Source,
-                ConsentVersion = await _consentService.GetCurrentPrivacyVersionAsync(),
-                IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "",
-                UserAgent = Request.Headers["User-Agent"].ToString()
-            };
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+            var userAgent = Request.Headers["User-Agent"].ToString();
 
-            await _consentService.RecordConsentAsync(consent);
+            // Use the sync method to ensure both storage locations are updated
+            await _consentService.SyncUserConsentAsync(
+                request.UserId,
+                request.ConsentType,
+                request.ConsentGiven,
+                request.Source,
+                ipAddress,
+                userAgent);
 
             // Log data processing activity
             await _dataLogger.LogDataProcessingAsync(new DataProcessingActivity
@@ -63,11 +61,11 @@ public class ConsentController : ControllerBase
                 LegalBasis = LegalBasis.LegalObligation,
                 DataSources = new[] { request.Source }.ToList(),
                 RetentionPeriod = "7 years",
-                IPAddress = consent.IPAddress,
-                UserAgent = consent.UserAgent
+                IPAddress = ipAddress,
+                UserAgent = userAgent
             });
 
-            return Ok(new { Success = true, ConsentId = consent.Id });
+            return Ok(new { Success = true });
         }
         catch (Exception ex)
         {
@@ -160,10 +158,17 @@ public class ConsentController : ControllerBase
     {
         try
         {
-            await _consentService.WithdrawConsentAsync(
+            var ipAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? "";
+            var userAgent = Request.Headers["User-Agent"].ToString();
+
+            // Use sync method for withdrawal (setting consent to false)
+            await _consentService.SyncUserConsentAsync(
                 request.UserId,
                 request.ConsentType,
-                request.Reason);
+                false, // Withdrawing consent means setting it to false
+                $"withdrawal: {request.Reason}",
+                ipAddress,
+                userAgent);
 
             // Log withdrawal
             await _dataLogger.LogDataProcessingAsync(new DataProcessingActivity
@@ -175,7 +180,8 @@ public class ConsentController : ControllerBase
                 LegalBasis = LegalBasis.LegalObligation,
                 DataSources = new[] { "user_request" }.ToList(),
                 RetentionPeriod = "7 years",
-                IPAddress = HttpContext.Connection.RemoteIpAddress?.ToString() ?? ""
+                IPAddress = ipAddress,
+                UserAgent = userAgent
             });
 
             return Ok(new { Success = true });

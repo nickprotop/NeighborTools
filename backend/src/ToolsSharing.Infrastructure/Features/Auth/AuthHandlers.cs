@@ -6,6 +6,7 @@ using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Features.Auth;
 using ToolsSharing.Core.Common.Constants;
+using ToolsSharing.Core.Interfaces.GDPR;
 
 namespace ToolsSharing.Infrastructure.Features.Auth;
 
@@ -14,17 +15,20 @@ public class AuthService : IAuthService
     private readonly UserManager<User> _userManager;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IEmailService _emailService;
+    private readonly IConsentService _consentService;
     private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         UserManager<User> userManager, 
         IJwtTokenService jwtTokenService, 
         IEmailService emailService,
+        IConsentService consentService,
         ILogger<AuthService> logger)
     {
         _userManager = userManager;
         _jwtTokenService = jwtTokenService;
         _emailService = emailService;
+        _consentService = consentService;
         _logger = logger;
     }
 
@@ -89,6 +93,16 @@ public class AuthService : IAuthService
                 return ApiResponse<AuthResult>.CreateFailure($"Failed to create user: {errors}");
             }
 
+            // Record initial consents in UserConsents table for GDPR audit trail
+            await _consentService.RecordInitialConsentsAsync(
+                user.Id,
+                command.AcceptDataProcessing,
+                command.AcceptMarketing,
+                "registration",
+                null, // IP address would be captured by the controller
+                null  // User agent would be captured by the controller
+            );
+
             // Generate tokens
             var accessToken = await _jwtTokenService.GenerateAccessTokenAsync(user);
             var refreshToken = _jwtTokenService.GenerateRefreshToken();
@@ -129,6 +143,9 @@ public class AuthService : IAuthService
             {
                 return ApiResponse<AuthResult>.CreateFailure("Invalid email or password");
             }
+
+            // Sync consents for existing users who might not have UserConsent records
+            await _consentService.SyncAllUserConsentsFromEntityAsync(user.Id);
 
             // Generate tokens
             var accessToken = await _jwtTokenService.GenerateAccessTokenAsync(user);
