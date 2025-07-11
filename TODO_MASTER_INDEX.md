@@ -43,7 +43,24 @@ This document provides a prioritized overview of all planned features and improv
 
 ### 🟡 Medium Priority (Important/Near-term)
 
-#### 3. **TODO_AUTOMATED_CLOUD_DEPLOYMENT.md**
+#### 3. **TODO_CACHE_STRATEGY_ENHANCEMENT.md**
+**Timeline**: 2-5 days  
+**Effort**: Low-Medium  
+**Dependencies**: None  
+**Description**: Automatic update type detection and intelligent cache invalidation
+
+**Why Medium Priority:**
+- Improves user experience with smart update handling
+- Reduces interruptions from unnecessary update prompts
+- Prevents version conflicts and cache-related issues
+- Foundation for better PWA experience
+- Can be implemented incrementally
+
+**Recommended Timeline**: Implement Phase 1 within 1 week
+
+---
+
+#### 4. **TODO_AUTOMATED_CLOUD_DEPLOYMENT.md**
 **Timeline**: 3 weeks  
 **Effort**: Medium  
 **Dependencies**: Basic commission system (recommended)  
