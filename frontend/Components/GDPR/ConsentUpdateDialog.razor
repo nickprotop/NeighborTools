@@ -90,6 +90,7 @@
 
 @code {
     [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    
     [Parameter] public string UserId { get; set; } = "";
     [Parameter] public List<ConsentResponse> InitialConsents { get; set; } = new();
 
@@ -140,12 +141,12 @@
             if (hasChanges)
             {
                 Snackbar.Add("Consent preferences updated successfully", Severity.Success);
-                MudDialog.Close(DialogResult.Ok(true));
+                MudDialog?.Close(DialogResult.Ok(true));
             }
             else
             {
                 Snackbar.Add("No changes to save", Severity.Info);
-                MudDialog.Close(DialogResult.Ok(false));
+                MudDialog?.Close(DialogResult.Ok(false));
             }
         }
         catch (Exception ex)
@@ -179,7 +180,7 @@
 
     private void Cancel()
     {
-        MudDialog.Cancel();
+        MudDialog?.Cancel();
     }
 
     private string GetConsentTypeDisplay(int consentType)

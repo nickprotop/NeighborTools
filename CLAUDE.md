@@ -23,6 +23,7 @@ NeighborTools is a **community tool sharing platform** with a .NET 9 Web API bac
 - **Dialog Options**: `DialogOptions` is now immutable - use `with` keyword for modifications
 - **Component Binding**: Use `@bind-Value` instead of `@bind-Checked` on switches
 - **Date Picker Events**: Use `@bind-Date:after` instead of `OnDateChanged`
+- **Icon References**: Always prefix icon names with `@` (e.g., `Icon="@Icons.Material.Filled.Save"` NOT `Icon="Icons.Material.Filled.Save"`)
 
 ### Complete Dialog Pattern:
 ```csharp
@@ -42,8 +43,8 @@ private Task OpenDialog()
     <TitleContent>Dialog Title</TitleContent>
     <DialogContent>Dialog Content</DialogContent>
     <DialogActions>
-        <MudButton OnClick="Cancel">Cancel</MudButton>
-        <MudButton Color="Color.Primary" OnClick="Submit">OK</MudButton>
+        <MudButton OnClick="Cancel" StartIcon="@Icons.Material.Filled.Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="Submit" StartIcon="@Icons.Material.Filled.Save">OK</MudButton>
     </DialogActions>
 </MudDialog>
 
@@ -60,6 +61,22 @@ private Task OpenDialog()
 - **Primary Source**: https://mudblazor.com/components/
 - **Migration Guide**: https://github.com/MudBlazor/MudBlazor/issues/9953
 - **When in doubt**: Search "MudBlazor 8.x [component name]" to verify current API
+
+### ⚠️ CRITICAL: Provider Configuration
+**NEVER duplicate MudBlazor providers!** Only declare providers once in `App.razor`:
+```csharp
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+```
+
+**Common Issue**: Duplicate `MudPopoverProvider` or `MudDialogProvider` in both `App.razor` and `MainLayout.razor` causes:
+- Dialog closing failures (background overlay changes but dialog stays open)
+- Error: "There is already a subscriber to the content with the given section ID 'mud-overlay-to-popover-provider'"
+- Conflicting overlay state management
+
+**Solution**: Remove all provider declarations from `MainLayout.razor` and keep only in `App.razor`.
 
 ## Essential Development Commands
 
