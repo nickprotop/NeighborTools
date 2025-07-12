@@ -15,6 +15,7 @@ public class Tool
     public string Condition { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty;
     public bool IsAvailable { get; set; }
+    public string OwnerId { get; set; } = string.Empty;
     public string OwnerName { get; set; } = string.Empty;
     public List<string> ImageUrls { get; set; } = new();
     

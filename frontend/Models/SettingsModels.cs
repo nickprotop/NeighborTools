@@ -78,7 +78,7 @@ public class SecuritySettingsDto
     public bool TwoFactorEnabled { get; set; } = false;
     public bool LoginAlertsEnabled { get; set; } = true;
     
-    [Range(30, 1440)] // 30 minutes to 24 hours
+    [Range(30, 43200)] // 30 minutes to 30 days (43200 minutes)
     public int SessionTimeoutMinutes { get; set; } = 480; // 8 hours
 }
 
@@ -187,5 +187,25 @@ public static class TimezoneOptions
         ("Europe/Berlin", "Berlin (CET/CEST)"),
         ("Asia/Tokyo", "Tokyo (JST)"),
         ("Australia/Sydney", "Sydney (AEST/AEDT)")
+    };
+}
+
+// Session timeout options
+public static class SessionTimeoutOptions
+{
+    public static readonly List<(int Value, string Display)> Options = new()
+    {
+        (30, "30 minutes"),
+        (60, "1 hour"),
+        (120, "2 hours"),
+        (240, "4 hours"),
+        (480, "8 hours (Recommended)"),
+        (720, "12 hours"),
+        (1440, "24 hours"),
+        (2880, "2 days"),
+        (7200, "5 days"),
+        (10080, "1 week"),
+        (20160, "2 weeks"),
+        (43200, "30 days (Extended)")
     };
 }

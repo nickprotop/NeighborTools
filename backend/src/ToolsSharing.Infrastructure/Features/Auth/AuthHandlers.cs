@@ -7,6 +7,7 @@ using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Features.Auth;
 using ToolsSharing.Core.Common.Constants;
 using ToolsSharing.Core.Interfaces.GDPR;
+using ToolsSharing.Core.Interfaces;
 
 namespace ToolsSharing.Infrastructure.Features.Auth;
 
@@ -16,6 +17,7 @@ public class AuthService : IAuthService
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IEmailService _emailService;
     private readonly IConsentService _consentService;
+    private readonly ISettingsService _settingsService;
     private readonly ILogger<AuthService> _logger;
 
     public AuthService(
@@ -23,12 +25,14 @@ public class AuthService : IAuthService
         IJwtTokenService jwtTokenService, 
         IEmailService emailService,
         IConsentService consentService,
+        ISettingsService settingsService,
         ILogger<AuthService> logger)
     {
         _userManager = userManager;
         _jwtTokenService = jwtTokenService;
         _emailService = emailService;
         _consentService = consentService;
+        _settingsService = settingsService;
         _logger = logger;
     }
 
@@ -147,8 +151,31 @@ public class AuthService : IAuthService
             // Sync consents for existing users who might not have UserConsent records
             await _consentService.SyncAllUserConsentsFromEntityAsync(user.Id);
 
-            // Generate tokens
-            var accessToken = await _jwtTokenService.GenerateAccessTokenAsync(user);
+            // Get user's session timeout preference
+            int sessionTimeoutMinutes = 60; // Default fallback
+            try
+            {
+                var userSettings = await _settingsService.GetUserSettingsAsync(user.Id);
+                if (userSettings != null)
+                {
+                    sessionTimeoutMinutes = userSettings.Security.SessionTimeoutMinutes;
+                    _logger.LogInformation("Using user's session timeout preference: {TimeoutMinutes} minutes for user {UserId}", 
+                        sessionTimeoutMinutes, user.Id);
+                }
+                else
+                {
+                    _logger.LogInformation("No user settings found, using default session timeout: {TimeoutMinutes} minutes for user {UserId}", 
+                        sessionTimeoutMinutes, user.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load user settings for session timeout, using default: {TimeoutMinutes} minutes for user {UserId}", 
+                    sessionTimeoutMinutes, user.Id);
+            }
+
+            // Generate tokens with user's preferred timeout
+            var accessToken = await _jwtTokenService.GenerateAccessTokenAsync(user, sessionTimeoutMinutes);
             var refreshToken = _jwtTokenService.GenerateRefreshToken();
 
             var authResult = new AuthResult
@@ -159,7 +186,7 @@ public class AuthService : IAuthService
                 LastName = user.LastName,
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(60) // Should match JWT expiration
+                ExpiresAt = DateTime.UtcNow.AddMinutes(sessionTimeoutMinutes) // Match JWT expiration with user preference
             };
 
             return ApiResponse<AuthResult>.CreateSuccess(authResult, "Login successful");
@@ -193,8 +220,24 @@ public class AuthService : IAuthService
                 return ApiResponse<AuthResult>.CreateFailure("User not found");
             }
 
-            // Generate new tokens
-            var newAccessToken = await _jwtTokenService.GenerateAccessTokenAsync(user);
+            // Get user's session timeout preference for refresh token
+            int sessionTimeoutMinutes = 60; // Default fallback
+            try
+            {
+                var userSettings = await _settingsService.GetUserSettingsAsync(user.Id);
+                if (userSettings != null)
+                {
+                    sessionTimeoutMinutes = userSettings.Security.SessionTimeoutMinutes;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load user settings for token refresh, using default timeout: {TimeoutMinutes} minutes for user {UserId}", 
+                    sessionTimeoutMinutes, user.Id);
+            }
+
+            // Generate new tokens with user's preferred timeout
+            var newAccessToken = await _jwtTokenService.GenerateAccessTokenAsync(user, sessionTimeoutMinutes);
             var newRefreshToken = _jwtTokenService.GenerateRefreshToken();
 
             var authResult = new AuthResult
@@ -205,7 +248,7 @@ public class AuthService : IAuthService
                 LastName = user.LastName,
                 AccessToken = newAccessToken,
                 RefreshToken = newRefreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(60)
+                ExpiresAt = DateTime.UtcNow.AddMinutes(sessionTimeoutMinutes)
             };
 
             return ApiResponse<AuthResult>.CreateSuccess(authResult, "Token refreshed successfully");

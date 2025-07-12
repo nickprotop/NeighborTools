@@ -25,6 +25,7 @@ public static class MappingConfig
             .Map(dest => dest.Condition, src => src.Condition ?? "")
             .Map(dest => dest.Location, src => src.Location ?? "")
             .Map(dest => dest.IsAvailable, src => src.IsAvailable)
+            .Map(dest => dest.OwnerId, src => src.OwnerId ?? "")
             .Map(dest => dest.OwnerName, src => 
                 src.Owner != null ? $"{src.Owner.FirstName ?? ""} {src.Owner.LastName ?? ""}".Trim() : "Unknown Owner")
             .Map(dest => dest.ImageUrls, src => 

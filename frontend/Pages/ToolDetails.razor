@@ -3,6 +3,7 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using frontend.Components
 @using System.Web
 @inject IToolService ToolService
 @inject ISnackbar Snackbar
@@ -155,11 +156,12 @@ else if (tool != null)
                 <MudDivider Class="my-4" />
                 <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Owner</MudText>
                 <div class="d-flex align-center gap-3">
-                    <MudAvatar Size="Size.Medium" Color="Color.Secondary">
-                        @GetOwnerInitials(tool.OwnerName)
-                    </MudAvatar>
+                    <UserLink UserId="@tool.OwnerId" 
+                              DisplayName="@tool.OwnerName" 
+                              ShowAvatar="true" 
+                              AvatarSize="Size.Medium"
+                              AdditionalClass="d-flex flex-column" />
                     <div>
-                        <MudText Typo="Typo.body1">@tool.OwnerName</MudText>
                         <MudText Typo="Typo.caption" Color="Color.Secondary">Tool Owner</MudText>
                     </div>
                 </div>

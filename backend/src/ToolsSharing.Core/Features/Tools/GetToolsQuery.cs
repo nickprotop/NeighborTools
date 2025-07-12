@@ -29,6 +29,7 @@ public class ToolDto
     public string Condition { get; set; } = "";
     public string Location { get; set; } = "";
     public bool IsAvailable { get; set; } = true;
+    public string OwnerId { get; set; } = "";
     public string OwnerName { get; set; } = "";
     public List<string>? ImageUrls { get; set; } = null;
 }

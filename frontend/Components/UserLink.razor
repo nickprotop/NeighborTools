@@ -1,0 +1,74 @@
+@using MudBlazor
+@inject NavigationManager Navigation
+
+@if (ShowAsLink && !string.IsNullOrEmpty(UserId))
+{
+    <MudLink Href="@GetProfileUrl()" 
+             Color="Color.Inherit" 
+             Underline="Underline.Hover"
+             Class="@AdditionalClass">
+        @if (ShowAvatar)
+        {
+            <div class="d-flex align-center gap-2">
+                <MudAvatar Size="@AvatarSize" Color="Color.Secondary">
+                    @GetUserInitials()
+                </MudAvatar>
+                <span>@DisplayName</span>
+            </div>
+        }
+        else
+        {
+            @DisplayName
+        }
+    </MudLink>
+}
+else
+{
+    @if (ShowAvatar)
+    {
+        <div class="d-flex align-center gap-2">
+            <MudAvatar Size="@AvatarSize" Color="Color.Secondary">
+                @GetUserInitials()
+            </MudAvatar>
+            <span class="@AdditionalClass">@DisplayName</span>
+        </div>
+    }
+    else
+    {
+        <span class="@AdditionalClass">@DisplayName</span>
+    }
+}
+
+@code {
+    [Parameter] public string UserId { get; set; } = "";
+    [Parameter] public string DisplayName { get; set; } = "";
+    [Parameter] public bool ShowAsLink { get; set; } = true;
+    [Parameter] public bool ShowAvatar { get; set; } = false;
+    [Parameter] public Size AvatarSize { get; set; } = Size.Small;
+    [Parameter] public string AdditionalClass { get; set; } = "";
+
+    private string GetProfileUrl()
+    {
+        if (string.IsNullOrEmpty(UserId))
+            return "#";
+        return $"/users/{UserId}";
+    }
+
+    private string GetUserInitials()
+    {
+        if (string.IsNullOrEmpty(DisplayName))
+            return "?";
+
+        var parts = DisplayName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 0)
+            return "?";
+        
+        var initials = "";
+        if (parts.Length >= 1)
+            initials += parts[0][0];
+        if (parts.Length >= 2)
+            initials += parts[^1][0];
+
+        return initials.ToUpper();
+    }
+}

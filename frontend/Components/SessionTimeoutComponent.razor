@@ -1,0 +1,104 @@
+@using frontend.Services
+@inject ISessionTimeoutService SessionTimeoutService
+@inject SettingsService SettingsService
+@inject ISnackbar Snackbar
+@inject ILogger<SessionTimeoutComponent> Logger
+@implements IDisposable
+
+@* This component handles session timeout functionality *@
+
+@code {
+    private bool _initialized = false;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && !_initialized)
+        {
+            try
+            {
+                // Initialize session timeout service
+                await SessionTimeoutService.InitializeAsync();
+                
+                // Load user's timeout preference
+                await LoadUserTimeoutPreference();
+                
+                // Subscribe to timeout events
+                SessionTimeoutService.OnSessionExpiring += OnSessionExpiring;
+                SessionTimeoutService.OnSessionExpired += OnSessionExpired;
+                
+                _initialized = true;
+                Logger.LogInformation("Session timeout component initialized");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Failed to initialize session timeout component");
+            }
+        }
+    }
+
+    private async Task LoadUserTimeoutPreference()
+    {
+        try
+        {
+            var response = await SettingsService.GetSettingsAsync();
+            if (response?.Success == true && response.Data != null)
+            {
+                var timeoutMinutes = response.Data.Security.SessionTimeoutMinutes;
+                await SessionTimeoutService.UpdateTimeoutAsync(timeoutMinutes);
+                Logger.LogInformation("Loaded user session timeout preference: {TimeoutMinutes} minutes", timeoutMinutes);
+            }
+            else
+            {
+                Logger.LogWarning("Failed to load user settings, using default timeout");
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Error loading user timeout preference");
+        }
+    }
+
+    private void OnSessionExpiring()
+    {
+        InvokeAsync(() =>
+        {
+            Snackbar.Add(
+                "Your session will expire soon due to inactivity. Move your mouse or click somewhere to stay logged in.",
+                Severity.Warning,
+                config =>
+                {
+                    config.RequireInteraction = true;
+                    config.ShowCloseIcon = true;
+                    config.VisibleStateDuration = 30000; // Show for 30 seconds
+                }
+            );
+        });
+    }
+
+    private void OnSessionExpired()
+    {
+        InvokeAsync(() =>
+        {
+            Snackbar.Add(
+                "You have been logged out due to inactivity.",
+                Severity.Error,
+                config =>
+                {
+                    config.RequireInteraction = true;
+                    config.ShowCloseIcon = false;
+                    config.VisibleStateDuration = 5000;
+                }
+            );
+        });
+    }
+
+    public void Dispose()
+    {
+        if (_initialized)
+        {
+            SessionTimeoutService.OnSessionExpiring -= OnSessionExpiring;
+            SessionTimeoutService.OnSessionExpired -= OnSessionExpired;
+            SessionTimeoutService.Dispose();
+        }
+    }
+}

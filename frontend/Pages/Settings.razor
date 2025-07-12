@@ -6,6 +6,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject SettingsService SettingsService
+@inject ISessionTimeoutService SessionTimeoutService
 @attribute [Authorize]
 
 <PageTitle>Settings - NeighborTools</PageTitle>
@@ -142,14 +143,25 @@
                                         <div class="w-100">
                                             <MudText Typo="Typo.body1" Class="mb-2">Session Timeout</MudText>
                                             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">How long you stay logged in without activity</MudText>
-                                            <MudSlider @bind-Value="settings.Security.SessionTimeoutMinutes"
-                                                       Min="30" Max="1440" Step="30"
-                                                       ValueLabel="true"
-                                                       Color="Color.Primary"
-                                                       @bind-Value:after="() => SaveSecuritySettings()" />
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                                                @($"{settings.Security.SessionTimeoutMinutes / 60:F1} hours")
-                                            </MudText>
+                                            <MudSelect @bind-Value="settings.Security.SessionTimeoutMinutes"
+                                                       @bind-Value:after="() => SaveSecuritySettings()"
+                                                       Label="Session Duration"
+                                                       Variant="Variant.Outlined"
+                                                       AnchorOrigin="Origin.BottomCenter">
+                                                @foreach (var option in SessionTimeoutOptions.Options)
+                                                {
+                                                    <MudSelectItem Value="@option.Value">@option.Display</MudSelectItem>
+                                                }
+                                            </MudSelect>
+                                            @if (settings.Security.SessionTimeoutMinutes >= 10080)
+                                            {
+                                                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                                                    <MudText Typo="Typo.caption">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" Class="mr-1" />
+                                                        Extended sessions may pose security risks on shared devices
+                                                    </MudText>
+                                                </MudAlert>
+                                            }
                                         </div>
                                     </MudListItem>
                                 </MudList>
@@ -848,6 +860,9 @@
             
             if (response?.Success == true)
             {
+                // Update the session timeout service with the new timeout value
+                await SessionTimeoutService.UpdateTimeoutAsync(settings.Security.SessionTimeoutMinutes);
+                
                 Snackbar.Add("Security settings saved!", Severity.Success);
             }
             else

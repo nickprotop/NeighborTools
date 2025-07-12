@@ -3,6 +3,7 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using frontend.Components
 @inject IRentalService RentalService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -78,7 +79,11 @@
                                 </div>
                                 
                                 <MudText Typo="Typo.body2" Class="mb-2">
-                                    <strong>Owner:</strong> @rental.OwnerName
+                                    <strong>Owner:</strong> 
+                                    <UserLink UserId="@rental.OwnerId" 
+                                              DisplayName="@rental.OwnerName" 
+                                              ShowAsLink="true" 
+                                              ShowAvatar="false" />
                                 </MudText>
                                 
                                 <MudText Typo="Typo.body2" Class="mb-2">
@@ -186,7 +191,11 @@
                                 </div>
                                 
                                 <MudText Typo="Typo.body2" Class="mb-2">
-                                    <strong>Renter:</strong> @rental.RenterName
+                                    <strong>Renter:</strong> 
+                                    <UserLink UserId="@rental.RenterId" 
+                                              DisplayName="@rental.RenterName" 
+                                              ShowAsLink="true" 
+                                              ShowAvatar="false" />
                                 </MudText>
                                 
                                 <MudText Typo="Typo.body2" Class="mb-2">

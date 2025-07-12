@@ -1,0 +1,333 @@
+@page "/users/{UserId}"
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IPublicProfileService PublicProfileService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>@GetPageTitle() - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-center align-center" style="min-height: 400px;">
+            <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+        </div>
+    }
+    else if (profile == null)
+    {
+        <MudAlert Severity="Severity.Error" Class="mb-4">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-2" />
+                <div>
+                    <MudText Typo="Typo.h6">User Not Found</MudText>
+                    <MudText Typo="Typo.body2">The requested user profile could not be found or is not available.</MudText>
+                </div>
+            </div>
+        </MudAlert>
+        
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.ArrowBack"
+                   OnClick="@(() => Navigation.NavigateTo("/tools"))">
+            Back to Tools
+        </MudButton>
+    }
+    else
+    {
+        <!-- Profile Header -->
+        <MudPaper Class="pa-6 mb-4" Elevation="2" Style="border-radius: 16px;">
+            <div class="d-flex flex-column flex-md-row align-center gap-4">
+                <!-- Profile Picture -->
+                <div class="d-flex justify-center">
+                    @if (!string.IsNullOrEmpty(profile.ProfilePictureUrl))
+                    {
+                        <MudAvatar Size="Size.Large" 
+                                   Style="width: 120px; height: 120px; font-size: 2.5rem;">
+                            <MudImage Src="@profile.ProfilePictureUrl" 
+                                      Alt="@GetDisplayName()" 
+                                      ObjectFit="ObjectFit.Cover"
+                                      Style="width: 100%; height: 100%;" />
+                        </MudAvatar>
+                    }
+                    else
+                    {
+                        <MudAvatar Size="Size.Large" 
+                                   Color="Color.Primary" 
+                                   Style="width: 120px; height: 120px; font-size: 2.5rem;">
+                            @GetUserInitials()
+                        </MudAvatar>
+                    }
+                </div>
+
+                <!-- Profile Info -->
+                <div class="flex-grow-1 text-center text-md-start">
+                    <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-2">
+                        @GetDisplayName()
+                    </MudText>
+                    
+                    @if (!string.IsNullOrEmpty(profile.Location))
+                    {
+                        <div class="d-flex align-center justify-center justify-md-start mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.LocationOn" 
+                                     Size="Size.Small" 
+                                     Color="Color.Secondary" 
+                                     Class="mr-1" />
+                            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                                @profile.Location
+                            </MudText>
+                        </div>
+                    }
+
+                    <div class="d-flex align-center justify-center justify-md-start mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.CalendarToday" 
+                                 Size="Size.Small" 
+                                 Color="Color.Secondary" 
+                                 Class="mr-1" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Member since @profile.JoinedDate.ToString("MMMM yyyy")
+                        </MudText>
+                    </div>
+
+                    <!-- Contact Information (if visible) -->
+                    <div class="d-flex flex-column flex-md-row gap-2">
+                        @if (!string.IsNullOrEmpty(profile.Email))
+                        {
+                            <MudChip T="string"
+                                     Icon="@Icons.Material.Filled.Email" 
+                                     Color="Color.Secondary" 
+                                     Variant="Variant.Outlined"
+                                     Size="Size.Small">
+                                @profile.Email
+                            </MudChip>
+                        }
+                        @if (!string.IsNullOrEmpty(profile.PhoneNumber))
+                        {
+                            <MudChip T="string"
+                                     Icon="@Icons.Material.Filled.Phone" 
+                                     Color="Color.Secondary" 
+                                     Variant="Variant.Outlined"
+                                     Size="Size.Small">
+                                @profile.PhoneNumber
+                            </MudChip>
+                        }
+                    </div>
+                </div>
+            </div>
+        </MudPaper>
+
+        <!-- Statistics Cards -->
+        @if (profile.Statistics != null && HasVisibleStatistics())
+        {
+            <MudGrid Class="mb-4">
+                @if (profile.Statistics.ToolsShared.HasValue)
+                {
+                    <MudItem xs="6" md="3">
+                        <MudPaper Class="pa-4 text-center" Elevation="1" Style="border-radius: 12px;">
+                            <MudIcon Icon="@Icons.Material.Filled.Build" 
+                                     Color="Color.Primary" 
+                                     Size="Size.Large" 
+                                     Class="mb-2" />
+                            <MudText Typo="Typo.h5" Color="Color.Primary">
+                                @profile.Statistics.ToolsShared
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Tools Shared
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                }
+
+                @if (profile.Statistics.SuccessfulRentals.HasValue)
+                {
+                    <MudItem xs="6" md="3">
+                        <MudPaper Class="pa-4 text-center" Elevation="1" Style="border-radius: 12px;">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                                     Color="Color.Success" 
+                                     Size="Size.Large" 
+                                     Class="mb-2" />
+                            <MudText Typo="Typo.h5" Color="Color.Success">
+                                @profile.Statistics.SuccessfulRentals
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Completed Rentals
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                }
+
+                @if (profile.Statistics.AverageRating.HasValue && profile.Statistics.ReviewCount.HasValue)
+                {
+                    <MudItem xs="6" md="3">
+                        <MudPaper Class="pa-4 text-center" Elevation="1" Style="border-radius: 12px;">
+                            <div class="d-flex justify-center align-center mb-2">
+                                <MudRating ReadOnly="true" 
+                                           SelectedValue="(int)Math.Round(profile.Statistics.AverageRating.Value)"
+                                           MaxValue="5"
+                                           Size="Size.Small" />
+                            </div>
+                            <MudText Typo="Typo.h6" Color="Color.Warning">
+                                @profile.Statistics.AverageRating.Value.ToString("F1")
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                (@profile.Statistics.ReviewCount reviews)
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                }
+
+                @if (profile.Statistics.ResponseTime.HasValue)
+                {
+                    <MudItem xs="6" md="3">
+                        <MudPaper Class="pa-4 text-center" Elevation="1" Style="border-radius: 12px;">
+                            <MudIcon Icon="@Icons.Material.Filled.AccessTime" 
+                                     Color="Color.Info" 
+                                     Size="Size.Large" 
+                                     Class="mb-2" />
+                            <MudText Typo="Typo.h6" Color="Color.Info">
+                                @GetResponseTimeText()
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Response Time
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+
+        <!-- Content Tabs -->
+        <MudTabs Elevation="2" Rounded="true" Color="Color.Primary">
+            <MudTabPanel Text="Tools" Icon="@Icons.Material.Filled.Build">
+                <div class="pa-4">
+                    <!-- Tools section - we'll load this separately -->
+                    <MudText Typo="Typo.h6" Class="mb-4">Available Tools</MudText>
+                    <MudAlert Severity="Severity.Info">
+                        <MudText>Tool listings will be implemented in the next phase.</MudText>
+                    </MudAlert>
+                </div>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Reviews" Icon="@Icons.Material.Filled.Star">
+                <div class="pa-4">
+                    <!-- Reviews section - we'll load this separately -->
+                    <MudText Typo="Typo.h6" Class="mb-4">Reviews</MudText>
+                    <MudAlert Severity="Severity.Info">
+                        <MudText>User reviews will be implemented in the next phase.</MudText>
+                    </MudAlert>
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public string UserId { get; set; } = "";
+    
+    private PublicUserProfileDto? profile;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfileAsync();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!string.IsNullOrEmpty(UserId))
+        {
+            await LoadProfileAsync();
+        }
+    }
+
+    private async Task LoadProfileAsync()
+    {
+        if (string.IsNullOrEmpty(UserId))
+        {
+            isLoading = false;
+            return;
+        }
+
+        try
+        {
+            isLoading = true;
+            var response = await PublicProfileService.GetPublicProfileAsync(UserId);
+            
+            if (response?.Success == true)
+            {
+                profile = response.Data;
+            }
+            else
+            {
+                profile = null;
+                Snackbar.Add(response?.Message ?? "Failed to load user profile", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            profile = null;
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private string GetPageTitle()
+    {
+        if (profile == null) return "User Profile";
+        return $"{GetDisplayName()}'s Profile";
+    }
+
+    private string GetDisplayName()
+    {
+        if (profile == null) return "Unknown User";
+        
+        if (!string.IsNullOrEmpty(profile.DisplayName))
+            return profile.DisplayName;
+            
+        if (!string.IsNullOrEmpty(profile.FirstName) || !string.IsNullOrEmpty(profile.LastName))
+            return $"{profile.FirstName} {profile.LastName}".Trim();
+            
+        return "NeighborTools User";
+    }
+
+    private string GetUserInitials()
+    {
+        if (profile == null) return "?";
+        
+        var initials = "";
+        if (!string.IsNullOrEmpty(profile.FirstName))
+            initials += profile.FirstName[0];
+        if (!string.IsNullOrEmpty(profile.LastName))
+            initials += profile.LastName[0];
+            
+        return string.IsNullOrEmpty(initials) ? "?" : initials.ToUpper();
+    }
+
+    private bool HasVisibleStatistics()
+    {
+        return profile?.Statistics != null && (
+            profile.Statistics.ToolsShared.HasValue ||
+            profile.Statistics.SuccessfulRentals.HasValue ||
+            profile.Statistics.AverageRating.HasValue ||
+            profile.Statistics.ResponseTime.HasValue
+        );
+    }
+
+    private string GetResponseTimeText()
+    {
+        if (!profile?.Statistics?.ResponseTime.HasValue ?? true)
+            return "N/A";
+            
+        var hours = profile.Statistics.ResponseTime.Value;
+        if (hours < 1)
+            return "< 1 hour";
+        else if (hours < 24)
+            return $"{hours} hours";
+        else
+            return $"{hours / 24} days";
+    }
+}

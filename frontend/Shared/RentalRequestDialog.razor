@@ -2,6 +2,7 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using frontend.Components
 @inject IRentalService RentalService
 @inject ISnackbar Snackbar
 
@@ -27,7 +28,9 @@
                             }
                             <div>
                                 <MudText Typo="Typo.h6">@Tool.Name</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">Owner: @Tool.OwnerName</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    Owner: <UserLink UserId="@Tool.OwnerId" DisplayName="@Tool.OwnerName" ShowAvatar="false" />
+                                </MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">Location: @Tool.Location</MudText>
                             </div>
                         </div>

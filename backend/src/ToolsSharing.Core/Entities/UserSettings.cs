@@ -38,7 +38,7 @@ public class UserSettings : BaseEntity
     // Security Settings
     public bool TwoFactorEnabled { get; set; } = false;
     public bool LoginAlertsEnabled { get; set; } = true;
-    public int SessionTimeoutMinutes { get; set; } = 480; // 8 hours
+    public int SessionTimeoutMinutes { get; set; } = 480; // 8 hours (range: 30 minutes to 30 days)
     
     // Communication Preferences
     public bool AllowDirectMessages { get; set; } = true;

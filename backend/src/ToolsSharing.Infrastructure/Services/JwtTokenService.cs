@@ -28,6 +28,11 @@ public class JwtTokenService : IJwtTokenService
 
     public Task<string> GenerateAccessTokenAsync(User user)
     {
+        return GenerateAccessTokenAsync(user, _expiresInMinutes);
+    }
+
+    public Task<string> GenerateAccessTokenAsync(User user, int timeoutMinutes)
+    {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_secretKey);
 
@@ -44,7 +49,7 @@ public class JwtTokenService : IJwtTokenService
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddMinutes(_expiresInMinutes),
+            Expires = DateTime.UtcNow.AddMinutes(timeoutMinutes),
             Issuer = _issuer,
             Audience = _audience,
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)

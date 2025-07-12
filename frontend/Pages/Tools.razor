@@ -3,6 +3,7 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using frontend.Components
 @inject IToolService ToolService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -161,13 +162,12 @@ else if (filteredTools != null && filteredTools.Any())
                             </div>
                         }
                         
-                        <div class="d-flex align-center gap-2 mt-2">
-                            <MudAvatar Size="Size.Small" Color="Color.Secondary">
-                                @GetOwnerInitials(tool.OwnerName)
-                            </MudAvatar>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @tool.OwnerName
-                            </MudText>
+                        <div class="mt-2">
+                            <UserLink UserId="@tool.OwnerId" 
+                                      DisplayName="@tool.OwnerName" 
+                                      ShowAvatar="true" 
+                                      AvatarSize="Size.Small"
+                                      AdditionalClass="text-secondary" />
                         </div>
                     </MudCardContent>
                     
