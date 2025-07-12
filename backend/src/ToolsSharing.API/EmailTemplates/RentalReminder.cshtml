@@ -1,0 +1,154 @@
+@model dynamic
+@{
+    Layout = "_Layout";
+    var reminderType = Model.ReminderType; // "pickup", "return", "overdue"
+    var iconEmoji = reminderType == "pickup" ? "📅" : reminderType == "return" ? "⏰" : "⚠️";
+    var alertClass = reminderType == "overdue" ? "alert-danger" : "alert-info";
+}
+
+<h2>@iconEmoji Rental Reminder: @Model.ToolName</h2>
+
+<p>Hi @Model.UserName,</p>
+
+@if (reminderType == "pickup")
+{
+    <p>
+        This is a friendly reminder that you have a tool pickup scheduled for tomorrow!
+    </p>
+}
+else if (reminderType == "return")
+{
+    <p>
+        This is a reminder that your rental period for <strong>@Model.ToolName</strong> is ending soon.
+        Please return the tool on time to avoid late fees.
+    </p>
+}
+else if (reminderType == "overdue")
+{
+    <p>
+        <strong>Your rental is now overdue.</strong> Please return <strong>@Model.ToolName</strong> 
+        immediately to avoid additional late fees.
+    </p>
+}
+
+<!-- Rental Details Card -->
+<div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+    <h3 style="margin-top: 0;">Rental Details</h3>
+    
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td style="padding: 5px 0;"><strong>Tool:</strong></td>
+            <td style="padding: 5px 0;">@Model.ToolName</td>
+        </tr>
+        @if (reminderType == "pickup")
+        {
+            <tr>
+                <td style="padding: 5px 0;"><strong>Owner:</strong></td>
+                <td style="padding: 5px 0;">@Model.OwnerName</td>
+            </tr>
+            <tr>
+                <td style="padding: 5px 0;"><strong>Pickup Date:</strong></td>
+                <td style="padding: 5px 0; color: #594AE2;"><strong>@Model.PickupDate.ToString("dddd, MMMM d, yyyy")</strong></td>
+            </tr>
+            <tr>
+                <td style="padding: 5px 0;"><strong>Pickup Time:</strong></td>
+                <td style="padding: 5px 0;">@Model.PickupTime</td>
+            </tr>
+            <tr>
+                <td style="padding: 5px 0;"><strong>Location:</strong></td>
+                <td style="padding: 5px 0;">@Model.PickupAddress</td>
+            </tr>
+        }
+        else
+        {
+            <tr>
+                <td style="padding: 5px 0;"><strong>Renter:</strong></td>
+                <td style="padding: 5px 0;">@Model.RenterName</td>
+            </tr>
+            <tr>
+                <td style="padding: 5px 0;"><strong>Return Date:</strong></td>
+                <td style="padding: 5px 0; color: @(reminderType == "overdue" ? "#dc3545" : "#594AE2");"><strong>@Model.ReturnDate.ToString("dddd, MMMM d, yyyy")</strong></td>
+            </tr>
+            @if (reminderType == "overdue")
+            {
+                <tr>
+                    <td style="padding: 5px 0;"><strong>Days Overdue:</strong></td>
+                    <td style="padding: 5px 0; color: #dc3545;"><strong>@Model.DaysOverdue days</strong></td>
+                </tr>
+                <tr>
+                    <td style="padding: 5px 0;"><strong>Late Fee:</strong></td>
+                    <td style="padding: 5px 0; color: #dc3545;"><strong>$@Model.LateFee.ToString("F2")</strong></td>
+                </tr>
+            }
+        }
+    </table>
+</div>
+
+<div class="alert @alertClass">
+    @if (reminderType == "pickup")
+    {
+        <text><strong>Pickup Checklist:</strong></text>
+        <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+            <li>Bring a valid ID for verification</li>
+            <li>Arrive on time for pickup</li>
+            <li>Inspect the tool before taking it</li>
+            <li>Take photos for your records</li>
+        </ul>
+    }
+    else if (reminderType == "return")
+    {
+        <text><strong>Return Checklist:</strong></text>
+        <ul style="margin: 10px 0 0 0; padding-left: 20px;">
+            <li>Clean the tool before returning</li>
+            <li>Check all accessories are included</li>
+            <li>Return on time to avoid late fees</li>
+            <li>Coordinate return time with the owner</li>
+        </ul>
+    }
+    else
+    {
+        <text><strong>Important:</strong> Late fees of $@Model.DailyLateFee per day are being applied to your account. 
+        Please return the tool immediately to stop additional charges.</text>
+    }
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="@Model.RentalDetailsUrl" class="button">
+        View Rental Details
+    </a>
+    @if (reminderType != "overdue")
+    {
+        <a href="@Model.MessageUrl" class="button button-secondary" style="margin-left: 10px;">
+            Message @(reminderType == "pickup" ? "Owner" : "Renter")
+        </a>
+    }
+    else
+    {
+        <a href="@Model.ExtendRentalUrl" class="button button-secondary" style="margin-left: 10px;">
+            Request Extension
+        </a>
+    }
+</div>
+
+@if (reminderType != "pickup")
+{
+    <div class="divider"></div>
+    
+    <p style="font-size: 14px; color: #6c757d;">
+        <strong>Need to extend your rental?</strong> Contact the owner as soon as possible to request 
+        an extension. Many owners are happy to accommodate if the tool isn't needed by someone else.
+    </p>
+}
+
+<p>
+    @if (reminderType == "overdue")
+    {
+        <text>Please resolve this promptly,</text>
+    }
+    else
+    {
+        <text>Happy renting!</text>
+    }
+    <br>
+    <strong>The NeighborTools Team</strong>
+</p>

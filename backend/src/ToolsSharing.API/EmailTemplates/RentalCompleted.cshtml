@@ -1,0 +1,131 @@
+@model dynamic
+@{
+    Layout = "_Layout";
+    var duration = Model.Duration > 1 ? $"{Model.Duration} days" : "1 day";
+}
+
+<h2>✅ Rental Completed Successfully!</h2>
+
+<p>Hi @Model.UserName,</p>
+
+<p>
+    Great news! Your rental of <strong>@Model.ToolName</strong> has been completed successfully.
+    @if (Model.IsOwner)
+    {
+        <text>Thank you for sharing your tool with the community!</text>
+    }
+    else
+    {
+        <text>We hope you found the tool useful for your project!</text>
+    }
+</p>
+
+<!-- Rental Summary Card -->
+<div style="background-color: #f8f9fa; border-radius: 8px; padding: 20px; margin: 20px 0;">
+    <h3 style="margin-top: 0;">Rental Summary</h3>
+    
+    <table width="100%" cellpadding="0" cellspacing="0">
+        <tr>
+            <td style="padding: 5px 0;"><strong>Tool:</strong></td>
+            <td style="padding: 5px 0;">@Model.ToolName</td>
+        </tr>
+        <tr>
+            <td style="padding: 5px 0;"><strong>@(Model.IsOwner ? "Renter" : "Owner"):</strong></td>
+            <td style="padding: 5px 0;">@Model.OtherPartyName</td>
+        </tr>
+        <tr>
+            <td style="padding: 5px 0;"><strong>Rental Period:</strong></td>
+            <td style="padding: 5px 0;">@Model.StartDate.ToString("MMM d") - @Model.EndDate.ToString("MMM d, yyyy") (@duration)</td>
+        </tr>
+        @if (Model.IsOwner)
+        {
+            <tr>
+                <td style="padding: 5px 0;"><strong>Earnings:</strong></td>
+                <td style="padding: 5px 0; font-size: 18px; color: #28a745;"><strong>$@Model.Earnings.ToString("F2")</strong></td>
+            </tr>
+            <tr>
+                <td style="padding: 5px 0;"><strong>Platform Fee:</strong></td>
+                <td style="padding: 5px 0;">-$@Model.PlatformFee.ToString("F2")</td>
+            </tr>
+            <tr>
+                <td style="padding: 5px 0;"><strong>Net Payout:</strong></td>
+                <td style="padding: 5px 0; font-size: 20px; color: #28a745;"><strong>$@Model.NetPayout.ToString("F2")</strong></td>
+            </tr>
+        }
+        else
+        {
+            <tr>
+                <td style="padding: 5px 0;"><strong>Total Cost:</strong></td>
+                <td style="padding: 5px 0; font-size: 18px;"><strong>$@Model.TotalCost.ToString("F2")</strong></td>
+            </tr>
+        }
+    </table>
+</div>
+
+<div class="alert alert-info">
+    <strong>⭐ Leave a Review!</strong> Your feedback helps build trust in our community. 
+    Take a moment to rate your experience and help others make informed decisions.
+</div>
+
+<div style="text-align: center; margin: 30px 0;">
+    <a href="@Model.LeaveReviewUrl" class="button">
+        Leave a Review
+    </a>
+    <a href="@Model.RentalDetailsUrl" class="button button-secondary" style="margin-left: 10px;">
+        View Details
+    </a>
+</div>
+
+@if (Model.IsOwner)
+{
+    <h3>Your Earnings</h3>
+    <p>
+        Your payout of <strong>$@Model.NetPayout.ToString("F2")</strong> will be processed within 
+        2-3 business days and deposited to your linked bank account.
+    </p>
+    
+    <div style="background-color: #e8f5e9; border-radius: 6px; padding: 15px; margin: 20px 0;">
+        <strong>📊 Tool Performance:</strong><br>
+        • This tool has been rented <strong>@Model.TotalRentals times</strong><br>
+        • Total earnings to date: <strong>$@Model.TotalEarnings.ToString("F2")</strong><br>
+        • Average rating: <strong>@Model.AverageRating.ToString("F1") ⭐</strong>
+    </div>
+}
+else
+{
+    <h3>Rent Again?</h3>
+    <p>
+        Did you enjoy using @Model.ToolName? You can easily rent it again for your next project!
+    </p>
+    
+    <div style="text-align: center; margin: 20px 0;">
+        <a href="@Model.RentAgainUrl" class="button button-secondary">
+            Rent This Tool Again
+        </a>
+    </div>
+}
+
+<div class="divider"></div>
+
+<h3>Build Your Reputation</h3>
+
+<p>
+    @if (Model.IsOwner)
+    {
+        <text>Keep your tools in great condition and respond promptly to rental requests to maintain your high rating!</text>
+    }
+    else
+    {
+        <text>Return tools on time and in good condition to build your reputation as a reliable renter!</text>
+    }
+</p>
+
+<p style="font-size: 14px; color: #6c757d;">
+    <strong>Questions about this rental?</strong> Visit our <a href="@Model.BaseUrl/help">Help Center</a> 
+    or <a href="@Model.BaseUrl/contact">contact support</a>.
+</p>
+
+<p>
+    Thank you for being part of NeighborTools!<br>
+    <strong>The NeighborTools Team</strong>
+</p>
