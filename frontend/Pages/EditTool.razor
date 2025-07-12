@@ -21,7 +21,7 @@
         }
         else if (!string.IsNullOrEmpty(errorMessage))
         {
-            <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="(() => errorMessage = string.Empty)">
+            <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => errorMessage = string.Empty)">
                 @errorMessage
             </MudAlert>
         }
@@ -29,7 +29,7 @@
         {
             <!-- Header -->
             <div class="d-flex flex-column align-center mb-6">
-                <MudIcon Icon="Icons.Material.Filled.Edit" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
+                <MudIcon Icon="@Icons.Material.Filled.Edit" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
                 <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
                     Edit Tool
                 </MudText>
@@ -43,14 +43,14 @@
 
                 @if (!string.IsNullOrEmpty(submitErrorMessage))
                 {
-                    <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="(() => submitErrorMessage = string.Empty)">
+                    <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="@(() => submitErrorMessage = string.Empty)">
                         @submitErrorMessage
                     </MudAlert>
                 }
 
                 <MudTabs Elevation="4" Rounded="true" Color="Color.Primary">
                     <!-- Basic Information Tab -->
-                    <MudTabPanel Text="Basic Info" Icon="Icons.Material.Filled.Info">
+                    <MudTabPanel Text="Basic Info" Icon="@Icons.Material.Filled.Info">
                         <div class="pa-4">
                             <MudGrid>
                                 <MudItem xs="12" md="8">
@@ -61,7 +61,7 @@
                                                   Required="true"
                                                   RequiredError="Tool name is required"
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="Icons.Material.Filled.Build"
+                                                  AdornmentIcon="@Icons.Material.Filled.Build"
                                                   Class="mb-4" />
 
                                     <MudTextField @bind-Value="updateToolRequest.Description"
@@ -72,7 +72,7 @@
                                                   Required="true"
                                                   RequiredError="Description is required"
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="Icons.Material.Filled.Description"
+                                                  AdornmentIcon="@Icons.Material.Filled.Description"
                                                   Class="mb-4" />
 
                                     <MudGrid>
@@ -115,20 +115,20 @@
                                 <MudItem xs="12" md="4">
                                     <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; background: var(--mud-palette-surface-variant);">
                                         <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
-                                            <MudIcon Icon="Icons.Material.Filled.Tips" Class="mr-2" />
+                                            <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Class="mr-2" />
                                             Edit Tips
                                         </MudText>
                                         <MudList T="string" Dense="true">
-                                            <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
                                                 Keep information current
                                             </MudListItem>
-                                            <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
                                                 Update condition honestly
                                             </MudListItem>
-                                            <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
                                                 Adjust pricing as needed
                                             </MudListItem>
-                                            <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
                                                 Add new photos if helpful
                                             </MudListItem>
                                         </MudList>
@@ -139,7 +139,7 @@
                     </MudTabPanel>
 
                     <!-- Details Tab -->
-                    <MudTabPanel Text="Details" Icon="Icons.Material.Filled.Settings">
+                    <MudTabPanel Text="Details" Icon="@Icons.Material.Filled.Settings">
                         <div class="pa-4">
                             <MudGrid>
                                 <MudItem xs="12" sm="6">
@@ -148,7 +148,7 @@
                                                   Variant="Variant.Outlined"
                                                   FullWidth="true"
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="Icons.Material.Filled.Business"
+                                                  AdornmentIcon="@Icons.Material.Filled.Business"
                                                   Class="mb-4" />
                                 </MudItem>
                                 <MudItem xs="12" sm="6">
@@ -157,7 +157,7 @@
                                                   Variant="Variant.Outlined"
                                                   FullWidth="true"
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="Icons.Material.Filled.ModelTraining"
+                                                  AdornmentIcon="@Icons.Material.Filled.ModelTraining"
                                                   Class="mb-4" />
                                 </MudItem>
                                 <MudItem xs="12">
@@ -168,7 +168,7 @@
                                                   Required="true"
                                                   RequiredError="Location is required"
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="Icons.Material.Filled.LocationOn"
+                                                  AdornmentIcon="@Icons.Material.Filled.LocationOn"
                                                   HelperText="Location where the tool is available (can be updated from your public profile location)"
                                                   Class="mb-4" />
                                 </MudItem>
@@ -188,11 +188,11 @@
                     </MudTabPanel>
 
                     <!-- Pricing Tab -->
-                    <MudTabPanel Text="Pricing" Icon="Icons.Material.Filled.AttachMoney">
+                    <MudTabPanel Text="Pricing" Icon="@Icons.Material.Filled.AttachMoney">
                         <div class="pa-4">
                             <MudGrid>
                                 <MudItem xs="12">
-                                    <MudAlert Severity="Severity.Info" Icon="Icons.Material.Filled.Lightbulb" Class="mb-4">
+                                    <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Lightbulb" Class="mb-4">
                                         Adjust your pricing to stay competitive. Consider recent market trends and tool condition.
                                     </MudAlert>
                                 </MudItem>
@@ -258,9 +258,9 @@
                     </MudTabPanel>
 
                     <!-- Images Tab -->
-                    <MudTabPanel Text="Photos" Icon="Icons.Material.Filled.PhotoCamera">
+                    <MudTabPanel Text="Photos" Icon="@Icons.Material.Filled.PhotoCamera">
                         <div class="pa-4">
-                            <MudAlert Severity="Severity.Info" Icon="Icons.Material.Filled.PhotoCamera" Class="mb-4">
+                            <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.PhotoCamera" Class="mb-4">
                                 Update your photos to show the current condition of your tool. Fresh photos can increase rental requests!
                             </MudAlert>
                             
@@ -280,7 +280,7 @@
                             
                             <!-- Image Upload Area -->
                             <MudPaper Class="pa-8 text-center mb-4" Elevation="2" Style="border: 2px dashed var(--mud-palette-primary); border-radius: 12px;">
-                                <MudIcon Icon="Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                                <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
                                 <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">Upload New Photos</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
                                     Drag and drop images here, or click to browse
@@ -299,7 +299,7 @@
                                Color="Color.Secondary" 
                                Size="Size.Large"
                                OnClick="Cancel"
-                               StartIcon="Icons.Material.Filled.Cancel">
+                               StartIcon="@Icons.Material.Filled.Cancel">
                         Cancel
                     </MudButton>
                     
@@ -308,7 +308,7 @@
                                    Color="Color.Warning" 
                                    Size="Size.Large"
                                    OnClick="ViewTool"
-                                   StartIcon="Icons.Material.Filled.Visibility">
+                                   StartIcon="@Icons.Material.Filled.Visibility">
                             View Tool
                         </MudButton>
 

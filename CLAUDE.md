@@ -23,7 +23,7 @@ NeighborTools is a **community tool sharing platform** with a .NET 9 Web API bac
 - **Dialog Options**: `DialogOptions` is now immutable - use `with` keyword for modifications
 - **Component Binding**: Use `@bind-Value` instead of `@bind-Checked` on switches
 - **Date Picker Events**: Use `@bind-Date:after` instead of `OnDateChanged`
-- **Icon References**: Always prefix icon names with `@` (e.g., `Icon="@Icons.Material.Filled.Save"` NOT `Icon="Icons.Material.Filled.Save"`)
+- **Icon References**: Always prefix icon names with `@` (e.g., `Icon="@Icons.Material.Filled.Save"` NOT `Icon="@Icons.Material.Filled.Save"`)
 
 ### Complete Dialog Pattern:
 ```csharp

@@ -23,10 +23,10 @@
 else if (!string.IsNullOrEmpty(errorMessage))
 {
     <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
-        <MudIcon Icon="Icons.Material.Filled.Error" Size="Size.Large" Color="Color.Error" Class="mb-4" />
+        <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Large" Color="Color.Error" Class="mb-4" />
         <MudText Typo="Typo.h6" Color="Color.Error" Class="mb-2">Error Loading Tool</MudText>
         <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">@errorMessage</MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo(GetBackUrl()))" StartIcon="Icons.Material.Filled.ArrowBack">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => Navigation.NavigateTo(GetBackUrl()))" StartIcon="@Icons.Material.Filled.ArrowBack">
             Back to Tools
         </MudButton>
     </MudPaper>
@@ -56,7 +56,7 @@ else if (tool != null)
                 else
                 {
                     <div class="d-flex align-center justify-center" style="height: 400px; background: var(--mud-palette-surface-variant);">
-                        <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 4rem;" />
+                        <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 4rem;" />
                     </div>
                 }
             </MudPaper>
@@ -174,7 +174,7 @@ else if (tool != null)
         <div class="d-flex justify-space-between align-center">
             <MudButton Variant="Variant.Outlined" 
                        Color="Color.Secondary" 
-                       StartIcon="Icons.Material.Filled.ArrowBack"
+                       StartIcon="@Icons.Material.Filled.ArrowBack"
                        OnClick="@(() => Navigation.NavigateTo(GetBackUrl()))">
                 Back to Tools
             </MudButton>
@@ -182,14 +182,14 @@ else if (tool != null)
             <div class="d-flex gap-3">
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Secondary" 
-                           StartIcon="Icons.Material.Filled.FavoriteBorder"
+                           StartIcon="@Icons.Material.Filled.FavoriteBorder"
                            OnClick="ToggleFavorite">
                     Add to Favorites
                 </MudButton>
                 
                 <MudButton Variant="Variant.Outlined" 
                            Color="Color.Secondary" 
-                           StartIcon="Icons.Material.Filled.Share"
+                           StartIcon="@Icons.Material.Filled.Share"
                            OnClick="ShareTool">
                     Share
                 </MudButton>

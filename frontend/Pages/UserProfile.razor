@@ -198,24 +198,160 @@
         }
 
         <!-- Content Tabs -->
-        <MudTabs Elevation="2" Rounded="true" Color="Color.Primary">
+        <MudTabs Elevation="2" Rounded="true" Color="Color.Primary" @bind-ActivePanelIndex="activeTabIndex">
             <MudTabPanel Text="Tools" Icon="@Icons.Material.Filled.Build">
                 <div class="pa-4">
-                    <!-- Tools section - we'll load this separately -->
-                    <MudText Typo="Typo.h6" Class="mb-4">Available Tools</MudText>
-                    <MudAlert Severity="Severity.Info">
-                        <MudText>Tool listings will be implemented in the next phase.</MudText>
-                    </MudAlert>
+                    <div class="d-flex justify-space-between align-center mb-4">
+                        <MudText Typo="Typo.h6">Available Tools (@(userTools?.Count ?? 0))</MudText>
+                        @if (userTools?.Any() == true && userTools.Count >= toolsPageSize)
+                        {
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="LoadMoreTools" StartIcon="@Icons.Material.Filled.ExpandMore">
+                                Load More
+                            </MudButton>
+                        }
+                    </div>
+                    
+                    @if (isLoadingTools)
+                    {
+                        <div class="d-flex justify-center align-center" style="min-height: 200px;">
+                            <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+                        </div>
+                    }
+                    else if (userTools?.Any() == true)
+                    {
+                        <MudGrid>
+                            @foreach (var tool in userTools)
+                            {
+                                <MudItem xs="12" sm="6" md="4">
+                                    <MudCard Elevation="4" Style="height: 100%; border-radius: 12px;">
+                                        @if (!string.IsNullOrEmpty(tool.ImageUrl))
+                                        {
+                                            <MudCardMedia Image="@tool.ImageUrl" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                                        }
+                                        else
+                                        {
+                                            <div class="d-flex align-center justify-center" style="height: 200px; background: var(--mud-palette-surface-variant); border-radius: 12px 12px 0 0;">
+                                                <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" />
+                                            </div>
+                                        }
+                                        
+                                        <MudCardContent>
+                                            <MudText Typo="Typo.h6" GutterBottom="true">@tool.Name</MudText>
+                                            <MudText Typo="Typo.body2" Class="mb-2" Color="Color.Secondary">@tool.Description</MudText>
+                                            
+                                            <div class="d-flex justify-space-between align-center mb-2">
+                                                <MudChip T="string" Color="Color.Primary" Size="Size.Small" Variant="Variant.Outlined">
+                                                    @tool.Category
+                                                </MudChip>
+                                                <MudText Typo="Typo.h6" Color="Color.Primary">
+                                                    $@tool.DailyRate.ToString("F2")/day
+                                                </MudText>
+                                            </div>
+                                            
+                                            @if (tool.Rating > 0)
+                                            {
+                                                <div class="d-flex align-center mb-2">
+                                                    <MudRating ReadOnly="true" SelectedValue="(int)Math.Round(tool.Rating)" MaxValue="5" Size="Size.Small" />
+                                                    <MudText Typo="Typo.caption" Class="ml-2">(@tool.ReviewCount reviews)</MudText>
+                                                </div>
+                                            }
+                                            
+                                            <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Error)" Size="Size.Small">
+                                                @(tool.IsAvailable ? "Available" : "Not Available")
+                                            </MudChip>
+                                        </MudCardContent>
+                                        
+                                        <MudCardActions>
+                                            <MudButton Variant="Variant.Text" Color="Color.Primary" Href="@($"/tools/{tool.Id}")" StartIcon="@Icons.Material.Filled.Visibility">
+                                                View Details
+                                            </MudButton>
+                                        </MudCardActions>
+                                    </MudCard>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    }
+                    else
+                    {
+                        <MudPaper Class="pa-8 text-center" Elevation="1" Style="border-radius: 12px;">
+                            <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No Tools Available</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                                This user hasn't shared any tools yet.
+                            </MudText>
+                        </MudPaper>
+                    }
                 </div>
             </MudTabPanel>
 
             <MudTabPanel Text="Reviews" Icon="@Icons.Material.Filled.Star">
                 <div class="pa-4">
-                    <!-- Reviews section - we'll load this separately -->
-                    <MudText Typo="Typo.h6" Class="mb-4">Reviews</MudText>
-                    <MudAlert Severity="Severity.Info">
-                        <MudText>User reviews will be implemented in the next phase.</MudText>
-                    </MudAlert>
+                    <div class="d-flex justify-space-between align-center mb-4">
+                        <MudText Typo="Typo.h6">Reviews (@(userReviews?.Count ?? 0))</MudText>
+                        @if (userReviews?.Any() == true && userReviews.Count >= reviewsPageSize)
+                        {
+                            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="LoadMoreReviews" StartIcon="@Icons.Material.Filled.ExpandMore">
+                                Load More
+                            </MudButton>
+                        }
+                    </div>
+                    
+                    @if (isLoadingReviews)
+                    {
+                        <div class="d-flex justify-center align-center" style="min-height: 200px;">
+                            <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+                        </div>
+                    }
+                    else if (userReviews?.Any() == true)
+                    {
+                        <MudStack Spacing="3">
+                            @foreach (var review in userReviews)
+                            {
+                                <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
+                                    <div class="d-flex align-start gap-3">
+                                        @if (!string.IsNullOrEmpty(review.ReviewerAvatarUrl))
+                                        {
+                                            <MudAvatar Size="Size.Medium">
+                                                <MudImage Src="@review.ReviewerAvatarUrl" Alt="@review.ReviewerName" />
+                                            </MudAvatar>
+                                        }
+                                        else
+                                        {
+                                            <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                                                @GetInitials(review.ReviewerName)
+                                            </MudAvatar>
+                                        }
+                                        
+                                        <div class="flex-grow-1">
+                                            <div class="d-flex justify-space-between align-center mb-2">
+                                                <div>
+                                                    <MudText Typo="Typo.subtitle1">@review.ReviewerName</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@review.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                                                </div>
+                                                <MudRating ReadOnly="true" SelectedValue="(int)Math.Round(review.Rating)" MaxValue="5" Size="Size.Small" />
+                                            </div>
+                                            
+                                            <MudText Typo="Typo.body2" Class="mb-2">@review.Comment</MudText>
+                                            
+                                            <MudChip T="string" Color="Color.Info" Size="Size.Small" Variant="Variant.Outlined">
+                                                Tool: @review.ToolName
+                                            </MudChip>
+                                        </div>
+                                    </div>
+                                </MudPaper>
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudPaper Class="pa-8 text-center" Elevation="1" Style="border-radius: 12px;">
+                            <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No Reviews Yet</MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                                This user hasn't received any reviews yet.
+                            </MudText>
+                        </MudPaper>
+                    }
                 </div>
             </MudTabPanel>
         </MudTabs>
@@ -227,10 +363,27 @@
     
     private PublicUserProfileDto? profile;
     private bool isLoading = true;
+    
+    // Tools tab
+    private List<PublicUserToolDto>? userTools;
+    private bool isLoadingTools = false;
+    private int toolsPage = 1;
+    private int toolsPageSize = 6;
+    
+    // Reviews tab
+    private List<PublicUserReviewDto>? userReviews;
+    private bool isLoadingReviews = false;
+    private int reviewsPage = 1;
+    private int reviewsPageSize = 10;
+    
+    // Tab management
+    private int activeTabIndex = 0;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadProfileAsync();
+        await LoadToolsAsync();
+        await LoadReviewsAsync();
     }
 
     protected override async Task OnParametersSetAsync()
@@ -238,6 +391,8 @@
         if (!string.IsNullOrEmpty(UserId))
         {
             await LoadProfileAsync();
+            await LoadToolsAsync();
+            await LoadReviewsAsync();
         }
     }
 
@@ -329,5 +484,150 @@
             return $"{hours} hours";
         else
             return $"{hours / 24} days";
+    }
+
+    private async Task LoadToolsAsync()
+    {
+        if (string.IsNullOrEmpty(UserId))
+        {
+            userTools = new List<PublicUserToolDto>();
+            return;
+        }
+
+        try
+        {
+            isLoadingTools = true;
+            var response = await PublicProfileService.GetUserToolsAsync(UserId, toolsPage, toolsPageSize);
+            
+            if (response?.Success == true)
+            {
+                userTools = response.Data ?? new List<PublicUserToolDto>();
+            }
+            else
+            {
+                userTools = new List<PublicUserToolDto>();
+                Snackbar.Add(response?.Message ?? "Failed to load user tools", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            userTools = new List<PublicUserToolDto>();
+            Snackbar.Add($"Error loading tools: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoadingTools = false;
+        }
+    }
+
+    private async Task LoadReviewsAsync()
+    {
+        if (string.IsNullOrEmpty(UserId))
+        {
+            userReviews = new List<PublicUserReviewDto>();
+            return;
+        }
+
+        try
+        {
+            isLoadingReviews = true;
+            var response = await PublicProfileService.GetUserReviewsAsync(UserId, reviewsPage, reviewsPageSize);
+            
+            if (response?.Success == true)
+            {
+                userReviews = response.Data ?? new List<PublicUserReviewDto>();
+            }
+            else
+            {
+                userReviews = new List<PublicUserReviewDto>();
+                Snackbar.Add(response?.Message ?? "Failed to load user reviews", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            userReviews = new List<PublicUserReviewDto>();
+            Snackbar.Add($"Error loading reviews: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoadingReviews = false;
+        }
+    }
+
+    private async Task LoadMoreTools()
+    {
+        if (string.IsNullOrEmpty(UserId) || isLoadingTools)
+            return;
+
+        try
+        {
+            isLoadingTools = true;
+            toolsPage++;
+            var response = await PublicProfileService.GetUserToolsAsync(UserId, toolsPage, toolsPageSize);
+            
+            if (response?.Success == true && response.Data?.Any() == true)
+            {
+                userTools = (userTools ?? new List<PublicUserToolDto>()).Concat(response.Data).ToList();
+            }
+            else
+            {
+                // No more tools, reset page
+                toolsPage--;
+            }
+        }
+        catch (Exception ex)
+        {
+            toolsPage--;
+            Snackbar.Add($"Error loading more tools: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoadingTools = false;
+        }
+    }
+
+    private async Task LoadMoreReviews()
+    {
+        if (string.IsNullOrEmpty(UserId) || isLoadingReviews)
+            return;
+
+        try
+        {
+            isLoadingReviews = true;
+            reviewsPage++;
+            var response = await PublicProfileService.GetUserReviewsAsync(UserId, reviewsPage, reviewsPageSize);
+            
+            if (response?.Success == true && response.Data?.Any() == true)
+            {
+                userReviews = (userReviews ?? new List<PublicUserReviewDto>()).Concat(response.Data).ToList();
+            }
+            else
+            {
+                // No more reviews, reset page
+                reviewsPage--;
+            }
+        }
+        catch (Exception ex)
+        {
+            reviewsPage--;
+            Snackbar.Add($"Error loading more reviews: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoadingReviews = false;
+        }
+    }
+
+    private string GetInitials(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "?";
+        
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length == 1)
+        {
+            return parts[0].Substring(0, Math.Min(2, parts[0].Length)).ToUpper();
+        }
+        
+        return $"{parts[0][0]}{parts[^1][0]}".ToUpper();
     }
 }
