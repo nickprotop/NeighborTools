@@ -1,435 +1,905 @@
 @page "/settings"
 @using Microsoft.AspNetCore.Authorization
 @using MudBlazor
+@using frontend.Models
+@using frontend.Services
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject SettingsService SettingsService
 @attribute [Authorize]
 
 <PageTitle>Settings - NeighborTools</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
-    <!-- Header -->
-    <div class="mb-6">
-        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
-            <MudIcon Icon="Icons.Material.Filled.Settings" Class="mr-2" />
-            Settings
-        </MudText>
-        <MudText Typo="Typo.body1" Color="Color.Secondary">
-            Manage your account preferences and privacy settings
-        </MudText>
-    </div>
+    @if (isPageLoading)
+    {
+        <div class="d-flex justify-center align-center" style="min-height: 400px;">
+            <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+        </div>
+    }
+    else if (settings == null)
+    {
+        <MudAlert Severity="Severity.Error">
+            Failed to load settings. Please try refreshing the page.
+        </MudAlert>
+    }
+    else
+    {
+        <!-- Header -->
+        <div class="mb-6">
+            <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
+                <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" />
+                Settings
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Manage your account preferences and privacy settings
+            </MudText>
+        </div>
 
-    <MudTabs Elevation="4" Rounded="true" Color="Color.Primary">
-        <!-- Account Settings Tab -->
-        <MudTabPanel Text="Account" Icon="Icons.Material.Filled.AccountCircle">
-            <div class="pa-6">
-                <MudGrid>
-                    <MudItem xs="12" md="8">
-                        <!-- Password Change Section -->
-                        <MudPaper Class="pa-4 mb-6" Elevation="2" Style="border-radius: 12px;">
-                            <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
-                                <MudIcon Icon="Icons.Material.Filled.Lock" Class="mr-2" />
-                                Change Password
-                            </MudText>
-                            
-                            <EditForm Model="passwordForm" OnValidSubmit="ChangePassword">
+        <MudTabs Elevation="4" Rounded="true" Color="Color.Primary">
+            <!-- Account Settings Tab -->
+            <MudTabPanel Text="Account" Icon="@Icons.Material.Filled.AccountCircle">
+                <div class="pa-6">
+                    <MudGrid>
+                        <MudItem xs="12" md="8">
+                            <!-- Password Change Section -->
+                            <MudPaper Class="pa-4 mb-6" Elevation="2" Style="border-radius: 12px;">
+                                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-2" />
+                                    Change Password
+                                </MudText>
+                                
+                                <EditForm Model="passwordForm" OnValidSubmit="ChangePassword">
+                                    <DataAnnotationsValidator />
+                                    <MudGrid>
+                                        <MudItem xs="12">
+                                            <MudTextField @bind-Value="passwordForm.CurrentPassword"
+                                                          Label="Current Password"
+                                                          Variant="Variant.Outlined"
+                                                          InputType="InputType.Password"
+                                                          FullWidth
+                                                          Required="true"
+                                                          For="@(() => passwordForm.CurrentPassword)"
+                                                          Adornment="Adornment.Start"
+                                                          AdornmentIcon="@Icons.Material.Filled.Lock" />
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudTextField @bind-Value="passwordForm.NewPassword"
+                                                          Label="New Password"
+                                                          Variant="Variant.Outlined"
+                                                          InputType="InputType.Password"
+                                                          FullWidth
+                                                          Required="true"
+                                                          For="@(() => passwordForm.NewPassword)"
+                                                          Adornment="Adornment.Start"
+                                                          AdornmentIcon="@Icons.Material.Filled.VpnKey" />
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudTextField @bind-Value="passwordForm.ConfirmPassword"
+                                                          Label="Confirm New Password"
+                                                          Variant="Variant.Outlined"
+                                                          InputType="InputType.Password"
+                                                          FullWidth
+                                                          Required="true"
+                                                          For="@(() => passwordForm.ConfirmPassword)"
+                                                          Adornment="Adornment.Start"
+                                                          AdornmentIcon="@Icons.Material.Filled.VpnKey" />
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudButton ButtonType="ButtonType.Submit" 
+                                                       Variant="Variant.Filled" 
+                                                       Color="Color.Primary" 
+                                                       Disabled="isPasswordChanging"
+                                                       StartIcon="@(isPasswordChanging ? null : Icons.Material.Filled.Save)">
+                                                @if (isPasswordChanging)
+                                                {
+                                                    <MudProgressCircular Color="Color.Secondary" Size="Size.Small" Indeterminate="true" />
+                                                    <MudText Class="ml-2">Changing Password...</MudText>
+                                                }
+                                                else
+                                                {
+                                                    <MudText>Change Password</MudText>
+                                                }
+                                            </MudButton>
+                                        </MudItem>
+                                    </MudGrid>
+                                </EditForm>
+                            </MudPaper>
+
+                            <!-- Security Settings -->
+                            <MudPaper Class="pa-4 mb-6" Elevation="2" Style="border-radius: 12px;">
+                                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.Security" Class="mr-2" />
+                                    Security Settings
+                                </MudText>
+                                
+                                <MudList T="string">
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Two-Factor Authentication</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Add an extra layer of security to your account</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Security.TwoFactorEnabled" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveSecuritySettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Login Alerts</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Receive notifications for account sign-ins</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Security.LoginAlertsEnabled" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveSecuritySettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="w-100">
+                                            <MudText Typo="Typo.body1" Class="mb-2">Session Timeout</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">How long you stay logged in without activity</MudText>
+                                            <MudSlider @bind-Value="settings.Security.SessionTimeoutMinutes"
+                                                       Min="30" Max="1440" Step="30"
+                                                       ValueLabel="true"
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveSecuritySettings()" />
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                                @($"{settings.Security.SessionTimeoutMinutes / 60:F1} hours")
+                                            </MudText>
+                                        </div>
+                                    </MudListItem>
+                                </MudList>
+                            </MudPaper>
+
+                            <!-- Account Actions Section -->
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
+                                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Class="mr-2" />
+                                    Account Actions
+                                </MudText>
+                                
+                                <MudList T="string">
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Refresh" IconColor="Color.Info">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Reset Settings</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Reset all settings to default values</MudText>
+                                            </div>
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small" OnClick="ResetSettings" StartIcon="@Icons.Material.Filled.Refresh">
+                                                Reset
+                                            </MudButton>
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudDivider />
+                                    
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Download" IconColor="Color.Info">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Export Account Data</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Download a copy of your data</MudText>
+                                            </div>
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small" OnClick="ExportData" StartIcon="@Icons.Material.Filled.Download">
+                                                Export
+                                            </MudButton>
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudDivider />
+                                    
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.DeleteForever" IconColor="Color.Error">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Delete Account</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Permanently delete your account and data</MudText>
+                                            </div>
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="DeleteAccount" StartIcon="@Icons.Material.Filled.DeleteForever">
+                                                Delete
+                                            </MudButton>
+                                        </div>
+                                    </MudListItem>
+                                </MudList>
+                            </MudPaper>
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="4">
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; background: var(--mud-palette-surface-variant);">
+                                <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Security" Class="mr-2" />
+                                    Security Tips
+                                </MudText>
+                                <MudList T="string" Dense="true">
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                                        Use a strong, unique password
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                                        Enable two-factor authentication
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                                        Keep personal info private
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                                        Log out on shared devices
+                                    </MudListItem>
+                                </MudList>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudTabPanel>
+
+            <!-- Privacy Settings Tab -->
+            <MudTabPanel Text="Privacy" Icon="@Icons.Material.Filled.PrivacyTip">
+                <div class="pa-6">
+                    <MudGrid>
+                        <MudItem xs="12" md="8">
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
+                                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.Visibility" Class="mr-2" />
+                                    Profile Visibility
+                                </MudText>
+                                
+                                <MudList T="string">
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Show Profile Picture</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Let others see your profile picture</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Privacy.ShowProfilePicture" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SavePrivacySettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Show Real Name</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Display your real name to other users</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Privacy.ShowRealName" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SavePrivacySettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Show Location</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Let others see your general location</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Privacy.ShowLocation" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SavePrivacySettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Show Phone Number</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Share phone number with approved renters</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Privacy.ShowPhoneNumber" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SavePrivacySettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Show Email Address</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Display email address in your public profile</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Privacy.ShowEmail" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SavePrivacySettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Show Statistics</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Display rental stats and ratings on your profile</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Privacy.ShowStatistics" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SavePrivacySettings()" />
+                                        </div>
+                                    </MudListItem>
+                                </MudList>
+                            </MudPaper>
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="4">
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; background: var(--mud-palette-surface-variant);">
+                                <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                                    Privacy Guide
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="mb-3">
+                                    Control what information you share with the NeighborTools community.
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    More visible profiles tend to get more rental requests and build trust faster.
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudTabPanel>
+
+            <!-- Notifications Tab -->
+            <MudTabPanel Text="Notifications" Icon="@Icons.Material.Filled.Notifications">
+                <div class="pa-6">
+                    <MudGrid>
+                        <MudItem xs="12" md="8">
+                            <MudPaper Class="pa-4 mb-4" Elevation="2" Style="border-radius: 12px;">
+                                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.Email" Class="mr-2" />
+                                    Email Notifications
+                                </MudText>
+                                
+                                <MudList T="string">
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Rental Requests</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">When someone wants to rent your tools</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Notifications.EmailRentalRequests" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveNotificationSettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Rental Updates</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Status changes on your rentals</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Notifications.EmailRentalUpdates" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveNotificationSettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Messages</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">New messages from other users</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Notifications.EmailMessages" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveNotificationSettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Security Alerts</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Important security notifications</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Notifications.EmailSecurityAlerts" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveNotificationSettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Marketing Emails</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Tips, features, and promotions</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Notifications.EmailMarketing" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveNotificationSettings()" />
+                                        </div>
+                                    </MudListItem>
+                                </MudList>
+                            </MudPaper>
+
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
+                                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.PhoneIphone" Class="mr-2" />
+                                    Push Notifications
+                                </MudText>
+                                
+                                <MudList T="string">
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Instant Messages</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Real-time chat messages</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Notifications.PushMessages" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveNotificationSettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Rental Requests</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">New rental requests for your tools</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Notifications.PushRentalRequests" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveNotificationSettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Rental Updates</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Status changes on your rentals</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Notifications.PushRentalUpdates" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveNotificationSettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Rental Reminders</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Pickup and return reminders</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Notifications.PushReminders" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveNotificationSettings()" />
+                                        </div>
+                                    </MudListItem>
+                                </MudList>
+                            </MudPaper>
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="4">
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; background: var(--mud-palette-surface-variant);">
+                                <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Tune" Class="mr-2" />
+                                    Stay Connected
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="mb-3">
+                                    Enable notifications to stay updated on your tool sharing activities.
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    You can always change these settings later.
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudTabPanel>
+
+            <!-- Display Preferences Tab -->
+            <MudTabPanel Text="Display" Icon="@Icons.Material.Filled.Palette">
+                <div class="pa-6">
+                    <MudGrid>
+                        <MudItem xs="12" md="8">
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
+                                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.Palette" Class="mr-2" />
+                                    Display Preferences
+                                </MudText>
+                                
                                 <MudGrid>
-                                    <MudItem xs="12">
-                                        <MudTextField @bind-Value="passwordForm.CurrentPassword"
-                                                      Label="Current Password"
-                                                      Variant="Variant.Outlined"
-                                                      InputType="InputType.Password"
-                                                      FullWidth="true"
-                                                      Required="true"
-                                                      Adornment="Adornment.Start"
-                                                      AdornmentIcon="Icons.Material.Filled.Lock" />
-                                    </MudItem>
                                     <MudItem xs="12" sm="6">
-                                        <MudTextField @bind-Value="passwordForm.NewPassword"
-                                                      Label="New Password"
-                                                      Variant="Variant.Outlined"
-                                                      InputType="InputType.Password"
-                                                      FullWidth="true"
-                                                      Required="true"
-                                                      Adornment="Adornment.Start"
-                                                      AdornmentIcon="Icons.Material.Filled.VpnKey" />
+                                        <MudSelect T="string" @bind-Value="settings.Display.Theme" 
+                                                   Label="Theme" 
+                                                   Variant="Variant.Outlined" 
+                                                   Adornment="Adornment.Start" 
+                                                   AdornmentIcon="@Icons.Material.Filled.Palette"
+                                                   @bind-Value:after="() => SaveDisplaySettings()">
+                                            @foreach (var option in ThemeOptions.Options)
+                                            {
+                                                <MudSelectItem T="string" Value="@option.Value">@option.Display</MudSelectItem>
+                                            }
+                                        </MudSelect>
                                     </MudItem>
+                                    
                                     <MudItem xs="12" sm="6">
-                                        <MudTextField @bind-Value="passwordForm.ConfirmPassword"
-                                                      Label="Confirm New Password"
-                                                      Variant="Variant.Outlined"
-                                                      InputType="InputType.Password"
-                                                      FullWidth="true"
-                                                      Required="true"
-                                                      Adornment="Adornment.Start"
-                                                      AdornmentIcon="Icons.Material.Filled.VpnKey" />
+                                        <MudSelect T="string" @bind-Value="settings.Display.Language" 
+                                                   Label="Language" 
+                                                   Variant="Variant.Outlined" 
+                                                   Adornment="Adornment.Start" 
+                                                   AdornmentIcon="@Icons.Material.Filled.Language"
+                                                   @bind-Value:after="() => SaveDisplaySettings()">
+                                            @foreach (var option in LanguageOptions.Options)
+                                            {
+                                                <MudSelectItem T="string" Value="@option.Value">@option.Display</MudSelectItem>
+                                            }
+                                        </MudSelect>
                                     </MudItem>
-                                    <MudItem xs="12">
-                                        <MudButton ButtonType="ButtonType.Submit" 
-                                                   Variant="Variant.Filled" 
-                                                   Color="Color.Primary" 
-                                                   StartIcon="Icons.Material.Filled.Save">
-                                            Change Password
-                                        </MudButton>
+                                    
+                                    <MudItem xs="12" sm="6">
+                                        <MudSelect T="string" @bind-Value="settings.Display.Currency" 
+                                                   Label="Currency" 
+                                                   Variant="Variant.Outlined" 
+                                                   Adornment="Adornment.Start" 
+                                                   AdornmentIcon="@Icons.Material.Filled.AttachMoney"
+                                                   @bind-Value:after="() => SaveDisplaySettings()">
+                                            @foreach (var option in CurrencyOptions.Options)
+                                            {
+                                                <MudSelectItem T="string" Value="@option.Value">@option.Display</MudSelectItem>
+                                            }
+                                        </MudSelect>
+                                    </MudItem>
+                                    
+                                    <MudItem xs="12" sm="6">
+                                        <MudSelect T="string" @bind-Value="settings.Display.TimeZone" 
+                                                   Label="Time Zone" 
+                                                   Variant="Variant.Outlined" 
+                                                   Adornment="Adornment.Start" 
+                                                   AdornmentIcon="@Icons.Material.Filled.Schedule"
+                                                   @bind-Value:after="() => SaveDisplaySettings()">
+                                            @foreach (var option in TimezoneOptions.Options)
+                                            {
+                                                <MudSelectItem T="string" Value="@option.Value">@option.Display</MudSelectItem>
+                                            }
+                                        </MudSelect>
                                     </MudItem>
                                 </MudGrid>
-                            </EditForm>
-                        </MudPaper>
-
-                        <!-- Account Actions Section -->
-                        <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
-                            <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
-                                <MudIcon Icon="Icons.Material.Filled.AdminPanelSettings" Class="mr-2" />
-                                Account Actions
-                            </MudText>
-                            
-                            <MudList T="string">
-                                <MudListItem T="string" Icon="Icons.Material.Filled.Download" IconColor="Color.Info">
-                                    <div class="d-flex justify-space-between align-center">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Export Account Data</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Download a copy of your data</MudText>
-                                        </div>
-                                        <MudButton Variant="Variant.Outlined" Color="Color.Info" Size="Size.Small" OnClick="ExportData" StartIcon="@Icons.Material.Filled.Download">
-                                            Export
-                                        </MudButton>
-                                    </div>
-                                </MudListItem>
-                                
-                                <MudDivider />
-                                
-                                <MudListItem T="string" Icon="Icons.Material.Filled.Pause" IconColor="Color.Warning">
-                                    <div class="d-flex justify-space-between align-center">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Deactivate Account</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Temporarily disable your account</MudText>
-                                        </div>
-                                        <MudButton Variant="Variant.Outlined" Color="Color.Warning" Size="Size.Small" OnClick="DeactivateAccount" StartIcon="@Icons.Material.Filled.PauseCircle">
-                                            Deactivate
-                                        </MudButton>
-                                    </div>
-                                </MudListItem>
-                                
-                                <MudDivider />
-                                
-                                <MudListItem T="string" Icon="Icons.Material.Filled.DeleteForever" IconColor="Color.Error">
-                                    <div class="d-flex justify-space-between align-center">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Delete Account</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Permanently delete your account and data</MudText>
-                                        </div>
-                                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="DeleteAccount" StartIcon="@Icons.Material.Filled.DeleteForever">
-                                            Delete
-                                        </MudButton>
-                                    </div>
-                                </MudListItem>
-                            </MudList>
-                        </MudPaper>
-                    </MudItem>
-                    
-                    <MudItem xs="12" md="4">
-                        <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; background: var(--mud-palette-surface-variant);">
-                            <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
-                                <MudIcon Icon="Icons.Material.Filled.Security" Class="mr-2" />
-                                Security Tips
-                            </MudText>
-                            <MudList T="string" Dense="true">
-                                <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
-                                    Use a strong, unique password
-                                </MudListItem>
-                                <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
-                                    Change password regularly
-                                </MudListItem>
-                                <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
-                                    Keep personal info private
-                                </MudListItem>
-                                <MudListItem T="string" Icon="Icons.Material.Filled.Check" IconColor="Color.Success">
-                                    Log out on shared devices
-                                </MudListItem>
-                            </MudList>
-                        </MudPaper>
-                    </MudItem>
-                </MudGrid>
-            </div>
-        </MudTabPanel>
-
-        <!-- Privacy Settings Tab -->
-        <MudTabPanel Text="Privacy" Icon="Icons.Material.Filled.PrivacyTip">
-            <div class="pa-6">
-                <MudGrid>
-                    <MudItem xs="12" md="8">
-                        <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
-                            <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
-                                <MudIcon Icon="Icons.Material.Filled.Visibility" Class="mr-2" />
-                                Profile Visibility
-                            </MudText>
-                            
-                            <MudList T="string">
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center w-100">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Show Profile Picture</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Let others see your profile picture</MudText>
-                                        </div>
-                                        <MudSwitch @bind-Value="privacySettings.ShowProfilePicture" Color="Color.Primary" />
-                                    </div>
-                                </MudListItem>
-                                
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center w-100">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Show Real Name</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Display your real name to other users</MudText>
-                                        </div>
-                                        <MudSwitch @bind-Value="privacySettings.ShowRealName" Color="Color.Primary" />
-                                    </div>
-                                </MudListItem>
-                                
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center w-100">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Show Location</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Let others see your general location</MudText>
-                                        </div>
-                                        <MudSwitch @bind-Value="privacySettings.ShowLocation" Color="Color.Primary" />
-                                    </div>
-                                </MudListItem>
-                                
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center w-100">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Show Phone Number</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Share phone number with approved renters</MudText>
-                                        </div>
-                                        <MudSwitch @bind-Value="privacySettings.ShowPhoneNumber" Color="Color.Primary" />
-                                    </div>
-                                </MudListItem>
-                            </MudList>
-                        </MudPaper>
-                    </MudItem>
-                    
-                    <MudItem xs="12" md="4">
-                        <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; background: var(--mud-palette-surface-variant);">
-                            <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
-                                <MudIcon Icon="Icons.Material.Filled.Info" Class="mr-2" />
-                                Privacy Guide
-                            </MudText>
-                            <MudText Typo="Typo.body2" Class="mb-3">
-                                Control what information you share with the NeighborTools community.
-                            </MudText>
-                            <MudText Typo="Typo.body2">
-                                More visible profiles tend to get more rental requests and build trust faster.
-                            </MudText>
-                        </MudPaper>
-                    </MudItem>
-                </MudGrid>
-            </div>
-        </MudTabPanel>
-
-        <!-- Notifications Tab -->
-        <MudTabPanel Text="Notifications" Icon="Icons.Material.Filled.Notifications">
-            <div class="pa-6">
-                <MudGrid>
-                    <MudItem xs="12" md="8">
-                        <MudPaper Class="pa-4 mb-4" Elevation="2" Style="border-radius: 12px;">
-                            <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
-                                <MudIcon Icon="Icons.Material.Filled.Email" Class="mr-2" />
-                                Email Notifications
-                            </MudText>
-                            
-                            <MudList T="string">
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center w-100">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Rental Requests</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">When someone wants to rent your tools</MudText>
-                                        </div>
-                                        <MudSwitch @bind-Value="notificationSettings.EmailRentalRequests" Color="Color.Primary" />
-                                    </div>
-                                </MudListItem>
-                                
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center w-100">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Rental Updates</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Status changes on your rentals</MudText>
-                                        </div>
-                                        <MudSwitch @bind-Value="notificationSettings.EmailRentalUpdates" Color="Color.Primary" />
-                                    </div>
-                                </MudListItem>
-                                
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center w-100">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Messages</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">New messages from other users</MudText>
-                                        </div>
-                                        <MudSwitch @bind-Value="notificationSettings.EmailMessages" Color="Color.Primary" />
-                                    </div>
-                                </MudListItem>
-                                
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center w-100">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Marketing Emails</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Tips, features, and promotions</MudText>
-                                        </div>
-                                        <MudSwitch @bind-Value="notificationSettings.EmailMarketing" Color="Color.Primary" />
-                                    </div>
-                                </MudListItem>
-                            </MudList>
-                        </MudPaper>
-
-                        <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
-                            <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
-                                <MudIcon Icon="Icons.Material.Filled.PhoneIphone" Class="mr-2" />
-                                Push Notifications
-                            </MudText>
-                            
-                            <MudList T="string">
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center w-100">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Instant Messages</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Real-time chat messages</MudText>
-                                        </div>
-                                        <MudSwitch @bind-Value="notificationSettings.PushMessages" Color="Color.Primary" />
-                                    </div>
-                                </MudListItem>
-                                
-                                <MudListItem T="string">
-                                    <div class="d-flex justify-space-between align-center w-100">
-                                        <div>
-                                            <MudText Typo="Typo.body1">Rental Reminders</MudText>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Pickup and return reminders</MudText>
-                                        </div>
-                                        <MudSwitch @bind-Value="notificationSettings.PushReminders" Color="Color.Primary" />
-                                    </div>
-                                </MudListItem>
-                            </MudList>
-                        </MudPaper>
-                    </MudItem>
-                    
-                    <MudItem xs="12" md="4">
-                        <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; background: var(--mud-palette-surface-variant);">
-                            <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
-                                <MudIcon Icon="Icons.Material.Filled.Tune" Class="mr-2" />
-                                Stay Connected
-                            </MudText>
-                            <MudText Typo="Typo.body2" Class="mb-3">
-                                Enable notifications to stay updated on your tool sharing activities.
-                            </MudText>
-                            <MudText Typo="Typo.body2">
-                                You can always change these settings later.
-                            </MudText>
-                        </MudPaper>
-                    </MudItem>
-                </MudGrid>
-                
-                <!-- Save Button -->
-                <div class="d-flex justify-end mt-6">
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
-                               StartIcon="Icons.Material.Filled.Save"
-                               OnClick="SaveSettings">
-                        Save Settings
-                    </MudButton>
+                            </MudPaper>
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="4">
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; background: var(--mud-palette-surface-variant);">
+                                <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                                    Display Info
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="mb-3">
+                                    Customize how dates, currencies, and content are displayed throughout the application.
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    These settings affect how you see information but don't change what others see.
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
                 </div>
-            </div>
-        </MudTabPanel>
-    </MudTabs>
+            </MudTabPanel>
+
+            <!-- Rental Preferences Tab -->
+            <MudTabPanel Text="Rentals" Icon="@Icons.Material.Filled.Build">
+                <div class="pa-6">
+                    <MudGrid>
+                        <MudItem xs="12" md="8">
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
+                                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
+                                    Rental Preferences
+                                </MudText>
+                                
+                                <MudList T="string">
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Auto-Approve Rentals</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Automatically approve rental requests for your tools</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Rental.AutoApproveRentals" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveRentalSettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="d-flex justify-space-between align-center w-100">
+                                            <div>
+                                                <MudText Typo="Typo.body1">Require Security Deposit</MudText>
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Require a security deposit for all rentals</MudText>
+                                            </div>
+                                            <MudSwitch @bind-Value="settings.Rental.RequireDeposit" 
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveRentalSettings()" />
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="w-100">
+                                            <MudText Typo="Typo.body1" Class="mb-2">Rental Lead Time</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">Minimum notice required before rental start (hours)</MudText>
+                                            <MudSlider @bind-Value="settings.Rental.RentalLeadTime"
+                                                       Min="1" Max="168" Step="1"
+                                                       ValueLabel="true"
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => SaveRentalSettings()" />
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                                @($"{settings.Rental.RentalLeadTime} hours")
+                                            </MudText>
+                                        </div>
+                                    </MudListItem>
+                                    
+                                    <MudListItem T="string">
+                                        <div class="w-100">
+                                            <MudText Typo="Typo.body1" Class="mb-2">Default Deposit Percentage</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">Default security deposit as percentage of rental cost</MudText>
+                                            <MudSlider @bind-Value="depositPercentageSlider"
+                                                       Min="0" Max="100" Step="5"
+                                                       ValueLabel="true"
+                                                       Color="Color.Primary"
+                                                       @bind-Value:after="() => UpdateDepositPercentage()" />
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                                @($"{depositPercentageSlider}%")
+                                            </MudText>
+                                        </div>
+                                    </MudListItem>
+                                </MudList>
+                            </MudPaper>
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="4">
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; background: var(--mud-palette-surface-variant);">
+                                <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                                    Rental Tips
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="mb-3">
+                                    These settings help streamline your rental process and protect your tools.
+                                </MudText>
+                                <MudText Typo="Typo.body2">
+                                    Auto-approval can increase bookings but requires more trust in renters.
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    }
 </MudContainer>
 
 @code {
+    private UserSettingsDto? settings;
     private PasswordForm passwordForm = new();
-    private PrivacySettings privacySettings = new();
-    private NotificationSettings notificationSettings = new();
+    private bool isPageLoading = true;
+    private bool isPasswordChanging = false;
+    private int depositPercentageSlider = 20;
 
-    protected override void OnInitialized()
+    protected override async Task OnInitializedAsync()
     {
-        LoadSettings();
+        await LoadSettings();
     }
 
-    private void LoadSettings()
+    private async Task LoadSettings()
     {
-        // Mock settings - in real app, load from API/storage
-        privacySettings = new PrivacySettings
+        try
         {
-            ShowProfilePicture = true,
-            ShowRealName = true,
-            ShowLocation = true,
-            ShowPhoneNumber = false
-        };
-
-        notificationSettings = new NotificationSettings
+            isPageLoading = true;
+            var response = await SettingsService.GetSettingsAsync();
+            
+            if (response?.Success == true && response.Data != null)
+            {
+                settings = response.Data;
+                depositPercentageSlider = (int)(settings.Rental.DefaultDepositPercentage * 100);
+            }
+            else
+            {
+                Snackbar.Add(response?.Message ?? "Failed to load settings.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
         {
-            EmailRentalRequests = true,
-            EmailRentalUpdates = true,
-            EmailMessages = true,
-            EmailMarketing = false,
-            PushMessages = true,
-            PushReminders = true
-        };
+            Snackbar.Add($"Error loading settings: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isPageLoading = false;
+            StateHasChanged();
+        }
     }
 
     private async Task ChangePassword()
     {
-        if (passwordForm.NewPassword != passwordForm.ConfirmPassword)
+        if (settings == null) return;
+        
+        isPasswordChanging = true;
+        
+        try
         {
-            Snackbar.Add("Passwords do not match!", Severity.Error);
-            return;
+            var request = new ChangePasswordRequest
+            {
+                CurrentPassword = passwordForm.CurrentPassword,
+                NewPassword = passwordForm.NewPassword,
+                ConfirmPassword = passwordForm.ConfirmPassword
+            };
+            
+            var response = await SettingsService.ChangePasswordAsync(request);
+            
+            if (response?.Success == true)
+            {
+                Snackbar.Add("Password changed successfully!", Severity.Success);
+                passwordForm = new PasswordForm();
+            }
+            else
+            {
+                Snackbar.Add(response?.Message ?? "Failed to change password.", Severity.Error);
+            }
         }
-
-        // TODO: Implement actual password change
-        await Task.Delay(1000);
-        Snackbar.Add("Password changed successfully!", Severity.Success);
-        passwordForm = new PasswordForm();
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error changing password: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isPasswordChanging = false;
+        }
     }
 
-    private async Task SaveSettings()
+    private async Task SavePrivacySettings()
     {
-        // TODO: Implement actual settings save
-        await Task.Delay(1000);
-        Snackbar.Add("Settings saved successfully!", Severity.Success);
+        if (settings == null) return;
+        
+        try
+        {
+            var response = await SettingsService.UpdatePrivacySettingsAsync(settings.Privacy);
+            
+            if (response?.Success == true)
+            {
+                Snackbar.Add("Privacy settings saved!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(response?.Message ?? "Failed to save privacy settings.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving privacy settings: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveNotificationSettings()
+    {
+        if (settings == null) return;
+        
+        try
+        {
+            var response = await SettingsService.UpdateNotificationSettingsAsync(settings.Notifications);
+            
+            if (response?.Success == true)
+            {
+                Snackbar.Add("Notification settings saved!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(response?.Message ?? "Failed to save notification settings.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving notification settings: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveDisplaySettings()
+    {
+        if (settings == null) return;
+        
+        try
+        {
+            var request = new UpdateUserSettingsRequest { Display = settings.Display };
+            var response = await SettingsService.UpdateSettingsAsync(request);
+            
+            if (response?.Success == true)
+            {
+                Snackbar.Add("Display settings saved!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(response?.Message ?? "Failed to save display settings.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving display settings: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveRentalSettings()
+    {
+        if (settings == null) return;
+        
+        try
+        {
+            var request = new UpdateUserSettingsRequest { Rental = settings.Rental };
+            var response = await SettingsService.UpdateSettingsAsync(request);
+            
+            if (response?.Success == true)
+            {
+                Snackbar.Add("Rental settings saved!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(response?.Message ?? "Failed to save rental settings.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving rental settings: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SaveSecuritySettings()
+    {
+        if (settings == null) return;
+        
+        try
+        {
+            var request = new UpdateUserSettingsRequest { Security = settings.Security };
+            var response = await SettingsService.UpdateSettingsAsync(request);
+            
+            if (response?.Success == true)
+            {
+                Snackbar.Add("Security settings saved!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(response?.Message ?? "Failed to save security settings.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving security settings: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task UpdateDepositPercentage()
+    {
+        if (settings == null) return;
+        
+        settings.Rental.DefaultDepositPercentage = depositPercentageSlider / 100.0m;
+        await SaveRentalSettings();
+    }
+
+    private async Task ResetSettings()
+    {
+        try
+        {
+            var response = await SettingsService.ResetSettingsAsync();
+            
+            if (response?.Success == true && response.Data != null)
+            {
+                settings = response.Data;
+                depositPercentageSlider = (int)(settings.Rental.DefaultDepositPercentage * 100);
+                Snackbar.Add("Settings reset to defaults successfully!", Severity.Success);
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add(response?.Message ?? "Failed to reset settings.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error resetting settings: {ex.Message}", Severity.Error);
+        }
     }
 
     private void ExportData()
     {
-        Snackbar.Add("Data export feature coming soon!", Severity.Info);
-    }
-
-    private void DeactivateAccount()
-    {
-        Snackbar.Add("Account deactivation feature coming soon!", Severity.Warning);
+        Navigation.NavigateTo("/privacy-dashboard");
     }
 
     private void DeleteAccount()
     {
-        Snackbar.Add("Account deletion feature coming soon!", Severity.Error);
-    }
-
-    public class PasswordForm
-    {
-        public string CurrentPassword { get; set; } = string.Empty;
-        public string NewPassword { get; set; } = string.Empty;
-        public string ConfirmPassword { get; set; } = string.Empty;
-    }
-
-    public class PrivacySettings
-    {
-        public bool ShowProfilePicture { get; set; }
-        public bool ShowRealName { get; set; }
-        public bool ShowLocation { get; set; }
-        public bool ShowPhoneNumber { get; set; }
-    }
-
-    public class NotificationSettings
-    {
-        public bool EmailRentalRequests { get; set; }
-        public bool EmailRentalUpdates { get; set; }
-        public bool EmailMessages { get; set; }
-        public bool EmailMarketing { get; set; }
-        public bool PushMessages { get; set; }
-        public bool PushReminders { get; set; }
+        Navigation.NavigateTo("/privacy-dashboard");
     }
 }

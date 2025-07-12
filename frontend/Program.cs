@@ -34,6 +34,7 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IToolService, ToolService>();
 builder.Services.AddScoped<IRentalService, RentalService>();
 builder.Services.AddScoped<UserService>();
+builder.Services.AddScoped<SettingsService>();
 
 var app = builder.Build();
 

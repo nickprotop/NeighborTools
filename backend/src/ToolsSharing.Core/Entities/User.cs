@@ -38,6 +38,7 @@ public class User : IdentityUser
     public ICollection<Rental> RentalsAsRenter { get; set; } = new List<Rental>();
     public ICollection<Review> ReviewsGiven { get; set; } = new List<Review>();
     public ICollection<Review> ReviewsReceived { get; set; } = new List<Review>();
+    public UserSettings? Settings { get; set; }
     
     // GDPR navigation properties
     public ICollection<UserConsent> Consents { get; set; } = new List<UserConsent>();

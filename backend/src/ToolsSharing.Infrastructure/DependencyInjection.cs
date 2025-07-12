@@ -10,6 +10,7 @@ using ToolsSharing.Infrastructure.Features.Auth;
 using ToolsSharing.Infrastructure.Features.Tools;
 using ToolsSharing.Infrastructure.Features.Rentals;
 using ToolsSharing.Infrastructure.Features.Users;
+using ToolsSharing.Infrastructure.Features.Settings;
 using ToolsSharing.Infrastructure.Repositories;
 using ToolsSharing.Infrastructure.Services;
 using ToolsSharing.Infrastructure.Mappings;
@@ -45,6 +46,7 @@ public static class DependencyInjection
         services.AddScoped<IToolsService, ToolsService>();
         services.AddScoped<IRentalsService, RentalsService>();
         services.AddScoped<IUserService, UserService>();
+        services.AddScoped<ISettingsService, SettingsService>();
 
         return services;
     }

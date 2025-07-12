@@ -16,6 +16,7 @@ public class ApplicationDbContext : IdentityDbContext<User>
     public DbSet<ToolImage> ToolImages { get; set; }
     public DbSet<Rental> Rentals { get; set; }
     public DbSet<Review> Reviews { get; set; }
+    public DbSet<UserSettings> UserSettings { get; set; }
     
     // GDPR entities
     public DbSet<UserConsent> UserConsents { get; set; }
