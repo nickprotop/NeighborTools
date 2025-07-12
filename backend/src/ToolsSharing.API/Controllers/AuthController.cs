@@ -72,6 +72,47 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("confirm-email")]
+    public async Task<IActionResult> ConfirmEmail([FromBody] ConfirmEmailCommand command)
+    {
+        var result = await _authService.ConfirmEmailAsync(command);
+        
+        if (!result.Success)
+            return BadRequest(result);
+            
+        return Ok(result);
+    }
+
+    [HttpPost("resend-verification")]
+    public async Task<IActionResult> ResendEmailVerification([FromBody] ResendEmailVerificationCommand command)
+    {
+        var result = await _authService.ResendEmailVerificationAsync(command);
+        return Ok(result); // Always return OK for security
+    }
+
+    [HttpGet("verification-status/{email}")]
+    public async Task<IActionResult> GetVerificationStatus(string email)
+    {
+        try
+        {
+            var user = await _userManager.FindByEmailAsync(email);
+            if (user == null)
+            {
+                return NotFound(new { Error = "User not found" });
+            }
+
+            return Ok(new { 
+                EmailConfirmed = user.EmailConfirmed,
+                Email = user.Email,
+                UserId = user.Id
+            });
+        }
+        catch (Exception)
+        {
+            return StatusCode(500, new { Error = "Failed to check verification status" });
+        }
+    }
+
     [HttpGet("user/{userId}")]
     [Authorize]
     public async Task<IActionResult> GetUser(string userId)

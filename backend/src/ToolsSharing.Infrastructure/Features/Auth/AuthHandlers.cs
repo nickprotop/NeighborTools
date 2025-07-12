@@ -1,13 +1,16 @@
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Configuration;
 using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.Common.Models;
+using ToolsSharing.Core.Common.Models.EmailNotifications;
 using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Features.Auth;
 using ToolsSharing.Core.Common.Constants;
 using ToolsSharing.Core.Interfaces.GDPR;
 using ToolsSharing.Core.Interfaces;
+using System.Web;
 
 namespace ToolsSharing.Infrastructure.Features.Auth;
 
@@ -16,23 +19,29 @@ public class AuthService : IAuthService
     private readonly UserManager<User> _userManager;
     private readonly IJwtTokenService _jwtTokenService;
     private readonly IEmailService _emailService;
+    private readonly IEmailNotificationService _emailNotificationService;
     private readonly IConsentService _consentService;
     private readonly ISettingsService _settingsService;
+    private readonly IConfiguration _configuration;
     private readonly ILogger<AuthService> _logger;
 
     public AuthService(
         UserManager<User> userManager, 
         IJwtTokenService jwtTokenService, 
         IEmailService emailService,
+        IEmailNotificationService emailNotificationService,
         IConsentService consentService,
         ISettingsService settingsService,
+        IConfiguration configuration,
         ILogger<AuthService> logger)
     {
         _userManager = userManager;
         _jwtTokenService = jwtTokenService;
         _emailService = emailService;
+        _emailNotificationService = emailNotificationService;
         _consentService = consentService;
         _settingsService = settingsService;
+        _configuration = configuration;
         _logger = logger;
     }
 
@@ -65,11 +74,12 @@ public class AuthService : IAuthService
 
             var currentTime = DateTime.UtcNow;
             
-            // Create new user
+            // Create new user with unconfirmed email
             var user = new User
             {
                 UserName = command.Email,
                 Email = command.Email,
+                EmailConfirmed = false, // Require email verification
                 FirstName = command.FirstName,
                 LastName = command.LastName,
                 PhoneNumber = command.PhoneNumber,
@@ -107,22 +117,47 @@ public class AuthService : IAuthService
                 null  // User agent would be captured by the controller
             );
 
-            // Generate tokens
-            var accessToken = await _jwtTokenService.GenerateAccessTokenAsync(user);
-            var refreshToken = _jwtTokenService.GenerateRefreshToken();
+            // Send email verification
+            try
+            {
+                var verificationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                var frontendBaseUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:5000";
+                var verificationUrl = $"{frontendBaseUrl}/verify-email?userId={HttpUtility.UrlEncode(user.Id)}&token={HttpUtility.UrlEncode(verificationToken)}";
+                
+                var emailVerificationNotification = new EmailVerificationNotification
+                {
+                    RecipientEmail = user.Email!,
+                    RecipientName = $"{user.FirstName} {user.LastName}",
+                    UserId = user.Id,
+                    UserName = user.FirstName,
+                    VerificationToken = verificationToken,
+                    VerificationUrl = verificationUrl,
+                    Priority = EmailPriority.High
+                };
 
+                await _emailNotificationService.SendNotificationAsync(emailVerificationNotification);
+                _logger.LogInformation("Email verification sent to {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send email verification to {Email}", user.Email);
+                // Don't fail registration if email fails, but log the error
+            }
+
+            // Return registration result WITHOUT tokens (user must verify email first)
             var authResult = new AuthResult
             {
                 UserId = user.Id,
                 Email = user.Email!,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                AccessToken = accessToken,
-                RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(60) // Should match JWT expiration
+                AccessToken = "", // No access until email verified
+                RefreshToken = "", // No refresh token until email verified
+                ExpiresAt = DateTime.UtcNow, // Expired immediately
+                EmailVerificationRequired = true
             };
 
-            return ApiResponse<AuthResult>.CreateSuccess(authResult, "User registered successfully");
+            return ApiResponse<AuthResult>.CreateSuccess(authResult, "Registration successful. Please check your email to verify your account before logging in.");
         }
         catch (Exception ex)
         {
@@ -146,6 +181,12 @@ public class AuthService : IAuthService
             if (!isPasswordValid)
             {
                 return ApiResponse<AuthResult>.CreateFailure("Invalid email or password");
+            }
+
+            // Check if email is verified
+            if (!user.EmailConfirmed)
+            {
+                return ApiResponse<AuthResult>.CreateFailure("Please verify your email address before logging in. Check your inbox for a verification email.");
             }
 
             // Sync consents for existing users who might not have UserConsent records
@@ -272,10 +313,26 @@ public class AuthService : IAuthService
 
             var token = await _userManager.GeneratePasswordResetTokenAsync(user);
             
-            // Send email with reset token
+            // Send password reset email using the new notification system
             try
             {
-                await _emailService.SendPasswordResetEmailAsync(user.Email, token, $"{user.FirstName} {user.LastName}");
+                var frontendBaseUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:5000";
+                var resetUrl = $"{frontendBaseUrl}/reset-password?email={HttpUtility.UrlEncode(user.Email)}&token={HttpUtility.UrlEncode(token)}";
+                
+                var passwordResetNotification = new PasswordResetNotification
+                {
+                    RecipientEmail = user.Email!,
+                    RecipientName = $"{user.FirstName} {user.LastName}",
+                    UserId = user.Id,
+                    UserName = user.FirstName,
+                    ResetToken = token,
+                    ResetUrl = resetUrl,
+                    ExpiresAt = DateTime.UtcNow.AddHours(24), // Password reset tokens expire in 24 hours
+                    Priority = EmailPriority.High
+                };
+
+                await _emailNotificationService.SendNotificationAsync(passwordResetNotification);
+                _logger.LogInformation("Password reset email sent to {Email}", user.Email);
             }
             catch (Exception ex)
             {
@@ -313,6 +370,112 @@ public class AuthService : IAuthService
         catch (Exception ex)
         {
             return ApiResponse<bool>.CreateFailure($"Password reset failed: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ConfirmEmailAsync(ConfirmEmailCommand command)
+    {
+        try
+        {
+            var user = await _userManager.FindByIdAsync(command.UserId);
+            if (user == null)
+            {
+                return ApiResponse<bool>.CreateFailure("Invalid verification request");
+            }
+
+            if (user.EmailConfirmed)
+            {
+                return ApiResponse<bool>.CreateSuccess(true, "Email already verified");
+            }
+
+            var result = await _userManager.ConfirmEmailAsync(user, command.Token);
+            if (!result.Succeeded)
+            {
+                var errors = string.Join(", ", result.Errors.Select(e => e.Description));
+                _logger.LogWarning("Email verification failed for user {UserId}: {Errors}", user.Id, errors);
+                return ApiResponse<bool>.CreateFailure("Invalid or expired verification token");
+            }
+
+            // Send welcome email after successful verification
+            try
+            {
+                var welcomeNotification = new WelcomeEmailNotification
+                {
+                    RecipientEmail = user.Email!,
+                    RecipientName = $"{user.FirstName} {user.LastName}",
+                    UserId = user.Id,
+                    UserName = user.FirstName,
+                    Priority = EmailPriority.Normal
+                };
+
+                await _emailNotificationService.SendNotificationAsync(welcomeNotification);
+                _logger.LogInformation("Welcome email sent to {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to send welcome email to {Email}", user.Email);
+                // Don't fail verification if welcome email fails
+            }
+
+            _logger.LogInformation("Email verified successfully for user {UserId}", user.Id);
+            return ApiResponse<bool>.CreateSuccess(true, "Email verified successfully! You can now log in to your account.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Email verification failed for user {UserId}", command.UserId);
+            return ApiResponse<bool>.CreateFailure("Email verification failed");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ResendEmailVerificationAsync(ResendEmailVerificationCommand command)
+    {
+        try
+        {
+            var user = await _userManager.FindByEmailAsync(command.Email);
+            if (user == null)
+            {
+                // For security, always return success even if user doesn't exist
+                return ApiResponse<bool>.CreateSuccess(true, "If the email is registered and unverified, a verification email has been sent");
+            }
+
+            if (user.EmailConfirmed)
+            {
+                return ApiResponse<bool>.CreateSuccess(true, "Email is already verified");
+            }
+
+            // Send verification email
+            try
+            {
+                var verificationToken = await _userManager.GenerateEmailConfirmationTokenAsync(user);
+                var frontendBaseUrl = _configuration["Frontend:BaseUrl"] ?? "http://localhost:5000";
+                var verificationUrl = $"{frontendBaseUrl}/verify-email?userId={HttpUtility.UrlEncode(user.Id)}&token={HttpUtility.UrlEncode(verificationToken)}";
+                
+                var emailVerificationNotification = new EmailVerificationNotification
+                {
+                    RecipientEmail = user.Email!,
+                    RecipientName = $"{user.FirstName} {user.LastName}",
+                    UserId = user.Id,
+                    UserName = user.FirstName,
+                    VerificationToken = verificationToken,
+                    VerificationUrl = verificationUrl,
+                    Priority = EmailPriority.High
+                };
+
+                await _emailNotificationService.SendNotificationAsync(emailVerificationNotification);
+                _logger.LogInformation("Email verification resent to {Email}", user.Email);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to resend email verification to {Email}", user.Email);
+                return ApiResponse<bool>.CreateFailure("Failed to send verification email");
+            }
+
+            return ApiResponse<bool>.CreateSuccess(true, "Verification email sent. Please check your inbox.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to resend email verification for {Email}", command.Email);
+            return ApiResponse<bool>.CreateSuccess(true, "If the email is registered and unverified, a verification email has been sent");
         }
     }
 }

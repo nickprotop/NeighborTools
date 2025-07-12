@@ -36,6 +36,15 @@ public record ResetPasswordCommand(
     string NewPassword
 );
 
+public record ConfirmEmailCommand(
+    string UserId,
+    string Token
+);
+
+public record ResendEmailVerificationCommand(
+    string Email
+);
+
 public class AuthResult
 {
     public string UserId { get; set; } = "";
@@ -45,4 +54,5 @@ public class AuthResult
     public string AccessToken { get; set; } = "";
     public string RefreshToken { get; set; } = "";
     public DateTime ExpiresAt { get; set; }
+    public bool EmailVerificationRequired { get; set; } = false;
 }

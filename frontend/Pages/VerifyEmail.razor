@@ -1,0 +1,255 @@
+@page "/verify-email"
+@using Microsoft.AspNetCore.WebUtilities
+@using frontend.Services
+@using frontend.Models
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Verify Email - NeighborTools</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <MudCard Class="pa-8">
+                <MudCardContent Class="text-center">
+                    @if (isLoading)
+                    {
+                        <div class="d-flex flex-column align-items-center">
+                            <MudProgressCircular Size="Size.Large" Indeterminate="true" Color="Color.Primary" />
+                            <MudText Typo="Typo.h5" Class="mt-4">Verifying your email...</MudText>
+                            <MudText Typo="Typo.body1" Class="mt-2">Please wait while we confirm your email address.</MudText>
+                        </div>
+                    }
+                    else if (verificationSuccess)
+                    {
+                        <div class="d-flex flex-column align-items-center">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Style="font-size: 64px;" />
+                            <MudText Typo="Typo.h4" Color="Color.Success" Class="mt-3">Email Verified!</MudText>
+                            <MudText Typo="Typo.body1" Class="mt-3">
+                                Your email address has been successfully verified. 
+                                You can now log in to your NeighborTools account and start sharing tools with your neighbors.
+                            </MudText>
+                            
+                            <div class="mt-4">
+                                <MudButton Variant="Variant.Filled" 
+                                          Color="Color.Primary" 
+                                          Size="Size.Large"
+                                          StartIcon="@Icons.Material.Filled.Login"
+                                          OnClick="NavigateToLogin">
+                                    Continue to Login
+                                </MudButton>
+                            </div>
+                        </div>
+                    }
+                    else if (verificationFailed)
+                    {
+                        <div class="d-flex flex-column align-items-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Large" Color="Color.Error" Style="font-size: 64px;" />
+                            <MudText Typo="Typo.h4" Color="Color.Error" Class="mt-3">Verification Failed</MudText>
+                            <MudText Typo="Typo.body1" Class="mt-3">
+                                @errorMessage
+                            </MudText>
+                            
+                            <div class="mt-4 d-flex flex-column align-items-center">
+                                <MudText Typo="Typo.body2" Class="mb-3">
+                                    Need a new verification email?
+                                </MudText>
+                                
+                                <MudTextField @bind-Value="resendEmail" 
+                                             Label="Email Address" 
+                                             Variant="Variant.Outlined"
+                                             Class="mb-3"
+                                             Style="max-width: 300px;"
+                                             Disabled="isResending" />
+                                
+                                <MudButton Variant="Variant.Outlined" 
+                                          Color="Color.Primary"
+                                          StartIcon="@Icons.Material.Filled.Email"
+                                          OnClick="ResendVerification"
+                                          Disabled="isResending || string.IsNullOrWhiteSpace(resendEmail)">
+                                    @if (isResending)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                        <span class="ml-2">Sending...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Resend Verification Email</span>
+                                    }
+                                </MudButton>
+                                
+                                @if (resendSuccess)
+                                {
+                                    <MudAlert Severity="Severity.Success" Class="mt-3">
+                                        Verification email sent! Please check your inbox.
+                                    </MudAlert>
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(resendError))
+                                {
+                                    <MudAlert Severity="Severity.Error" Class="mt-3">
+                                        @resendError
+                                    </MudAlert>
+                                }
+                            </div>
+                            
+                            <MudDivider Class="my-4" />
+                            
+                            <MudButton Variant="Variant.Text" 
+                                      Color="Color.Primary"
+                                      StartIcon="@Icons.Material.Filled.Home"
+                                      OnClick="NavigateToHome">
+                                Return to Home
+                            </MudButton>
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column align-items-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Large" Color="Color.Primary" Style="font-size: 64px;" />
+                            <MudText Typo="Typo.h4" Class="mt-3">Email Verification</MudText>
+                            <MudText Typo="Typo.body1" Class="mt-3">
+                                Invalid verification link. Please check your email for the correct verification link or request a new one.
+                            </MudText>
+                            
+                            <div class="mt-4">
+                                <MudButton Variant="Variant.Filled" 
+                                          Color="Color.Primary"
+                                          StartIcon="@Icons.Material.Filled.Home"
+                                          OnClick="NavigateToHome">
+                                    Return to Home
+                                </MudButton>
+                            </div>
+                        </div>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </div>
+    </div>
+</div>
+
+@code {
+    private bool isLoading = false;
+    private bool verificationSuccess = false;
+    private bool verificationFailed = false;
+    private string errorMessage = "";
+    private string resendEmail = "";
+    private bool isResending = false;
+    private bool resendSuccess = false;
+    private string resendError = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var queryParams = QueryHelpers.ParseQuery(uri.Query);
+
+        if (queryParams.TryGetValue("userId", out var userIdValues) && 
+            queryParams.TryGetValue("token", out var tokenValues))
+        {
+            var userId = userIdValues.FirstOrDefault();
+            var token = tokenValues.FirstOrDefault();
+
+            if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(token))
+            {
+                await VerifyEmail(userId, token);
+            }
+            else
+            {
+                verificationFailed = true;
+                errorMessage = "Invalid verification link. Missing required parameters.";
+            }
+        }
+        else
+        {
+            verificationFailed = true;
+            errorMessage = "Invalid verification link. Please check your email for the correct verification link.";
+        }
+    }
+
+    private async Task VerifyEmail(string userId, string token)
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var request = new ConfirmEmailRequest
+            {
+                UserId = userId,
+                Token = token
+            };
+
+            var result = await AuthService.ConfirmEmailAsync(request);
+
+            if (result.Success)
+            {
+                verificationSuccess = true;
+            }
+            else
+            {
+                verificationFailed = true;
+                errorMessage = result.Message ?? "Email verification failed. The link may be invalid or expired.";
+            }
+        }
+        catch (Exception ex)
+        {
+            verificationFailed = true;
+            errorMessage = $"An error occurred during verification: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ResendVerification()
+    {
+        isResending = true;
+        resendSuccess = false;
+        resendError = "";
+        StateHasChanged();
+
+        try
+        {
+            var request = new ResendVerificationRequest
+            {
+                Email = resendEmail
+            };
+
+            var result = await AuthService.ResendVerificationAsync(request);
+
+            if (result.Success)
+            {
+                resendSuccess = true;
+                resendError = "";
+            }
+            else
+            {
+                resendSuccess = false;
+                resendError = result.Message ?? "Failed to resend verification email.";
+            }
+        }
+        catch (Exception ex)
+        {
+            resendSuccess = false;
+            resendError = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isResending = false;
+            StateHasChanged();
+        }
+    }
+
+    private void NavigateToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+
+    private void NavigateToHome()
+    {
+        Navigation.NavigateTo("/");
+    }
+}

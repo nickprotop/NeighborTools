@@ -83,6 +83,41 @@
             </MudButton>
         </EditForm>
 
+        @if (showVerificationNeeded)
+        {
+            <MudCard Class="mt-6" Style="border: 2px solid var(--mud-palette-warning); background-color: var(--mud-palette-warning-lighten);">
+                <MudCardContent Class="text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.MarkEmailRead" Size="Size.Large" Color="Color.Warning" Class="mb-3" Style="font-size: 3rem;" />
+                    <MudText Typo="Typo.h5" Color="Color.Warning" GutterBottom="true">
+                        Email Verification Required
+                    </MudText>
+                    <MudText Typo="Typo.body1" Class="mb-3">
+                        Your account exists but your email address hasn't been verified yet. 
+                        Please check your email and click the verification link to activate your account.
+                    </MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                        Can't find the email? Check your spam folder or click below to resend.
+                    </MudText>
+                    
+                    <MudButton Variant="Variant.Outlined" 
+                              Color="Color.Primary"
+                              StartIcon="@Icons.Material.Filled.Email"
+                              OnClick="ResendVerification"
+                              Disabled="isResending">
+                        @if (isResending)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                            <span class="ml-2">Sending...</span>
+                        }
+                        else
+                        {
+                            <span>Resend Verification Email</span>
+                        }
+                    </MudButton>
+                </MudCardContent>
+            </MudCard>
+        }
+
         <MudDivider Class="my-4" />
 
         <div class="d-flex justify-center">
@@ -101,6 +136,8 @@
     private string errorMessage = string.Empty;
     private bool isLoading = false;
     private bool rememberMe = false;
+    private bool showVerificationNeeded = false;
+    private bool isResending = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -127,7 +164,19 @@
             }
             else
             {
-                errorMessage = result.Message ?? "Login failed. Please check your credentials and try again.";
+                // Check if the error is related to email verification
+                var message = result.Message ?? "Login failed. Please check your credentials and try again.";
+                if (message.Contains("verify your email", StringComparison.OrdinalIgnoreCase) || 
+                    message.Contains("email verification", StringComparison.OrdinalIgnoreCase))
+                {
+                    showVerificationNeeded = true;
+                    errorMessage = "";
+                }
+                else
+                {
+                    errorMessage = message;
+                    showVerificationNeeded = false;
+                }
             }
         }
         catch (Exception ex)
@@ -137,6 +186,46 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task ResendVerification()
+    {
+        if (string.IsNullOrWhiteSpace(loginRequest.Email))
+        {
+            Snackbar.Add("Please enter your email address first.", Severity.Warning);
+            return;
+        }
+
+        isResending = true;
+        StateHasChanged();
+
+        try
+        {
+            var request = new ResendVerificationRequest
+            {
+                Email = loginRequest.Email
+            };
+
+            var result = await AuthService.ResendVerificationAsync(request);
+
+            if (result.Success)
+            {
+                Snackbar.Add("Verification email resent! Please check your inbox.", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Failed to resend verification email. Please try again.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isResending = false;
+            StateHasChanged();
         }
     }
 }

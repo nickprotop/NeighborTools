@@ -1,0 +1,161 @@
+@page "/resend-verification"
+@using frontend.Services
+@using frontend.Models
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Resend Email Verification - NeighborTools</PageTitle>
+
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <MudCard Class="pa-8">
+                <MudCardContent>
+                    <div class="d-flex flex-column align-items-center mb-6">
+                        <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
+                            Resend Verification Email
+                        </MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                            Enter your email address and we'll send you a new verification link
+                        </MudText>
+                    </div>
+
+                    @if (!emailSent)
+                    {
+                        <EditForm Model="request" OnValidSubmit="HandleResend">
+                            <DataAnnotationsValidator />
+
+                            @if (!string.IsNullOrEmpty(errorMessage))
+                            {
+                                <MudAlert Severity="Severity.Error" Class="mb-4" ShowCloseIcon="true" CloseIconClicked="(() => errorMessage = string.Empty)">
+                                    @errorMessage
+                                </MudAlert>
+                            }
+
+                            <MudTextField @bind-Value="request.Email"
+                                          Label="Email Address"
+                                          Variant="Variant.Outlined"
+                                          InputType="InputType.Email"
+                                          FullWidth="true"
+                                          Class="mb-6"
+                                          Required="true"
+                                          RequiredError="Email is required"
+                                          Adornment="Adornment.Start"
+                                          AdornmentIcon="@Icons.Material.Filled.Email" />
+
+                            <MudButton ButtonType="ButtonType.Submit"
+                                       Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       Size="Size.Large"
+                                       FullWidth="true"
+                                       Class="mb-4"
+                                       Disabled="isLoading"
+                                       StartIcon="@(isLoading ? null : Icons.Material.Filled.Send)">
+                                @if (isLoading)
+                                {
+                                    <MudProgressCircular Color="Color.Secondary" Size="Size.Small" Indeterminate="true" />
+                                    <MudText Class="ml-2">Sending...</MudText>
+                                }
+                                else
+                                {
+                                    <MudText>Send Verification Email</MudText>
+                                }
+                            </MudButton>
+                        </EditForm>
+                    }
+                    else
+                    {
+                        <div class="d-flex flex-column align-items-center">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Style="font-size: 64px;" />
+                            <MudText Typo="Typo.h5" Color="Color.Success" Class="mt-3">Email Sent!</MudText>
+                            <MudText Typo="Typo.body1" Class="mt-3 text-center">
+                                We've sent a verification email to <strong>@request.Email</strong>.
+                                Please check your inbox and click the verification link to activate your account.
+                            </MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2 text-center">
+                                Don't forget to check your spam folder if you don't see the email.
+                            </MudText>
+                            
+                            <div class="mt-4">
+                                <MudButton Variant="Variant.Outlined" 
+                                          Color="Color.Primary"
+                                          StartIcon="@Icons.Material.Filled.Refresh"
+                                          OnClick="ResetForm"
+                                          Class="mr-2">
+                                    Send Another
+                                </MudButton>
+                                <MudButton Variant="Variant.Filled" 
+                                          Color="Color.Primary"
+                                          StartIcon="@Icons.Material.Filled.Login"
+                                          OnClick="NavigateToLogin">
+                                    Go to Login
+                                </MudButton>
+                            </div>
+                        </div>
+                    }
+
+                    <MudDivider Class="my-4" />
+
+                    <div class="d-flex justify-center">
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Remember your password?
+                            <MudLink Href="/login" Color="Color.Primary" Class="ml-1">
+                                Back to Login
+                            </MudLink>
+                        </MudText>
+                    </div>
+                </MudCardContent>
+            </MudCard>
+        </div>
+    </div>
+</div>
+
+@code {
+    private ResendVerificationRequest request = new();
+    private string errorMessage = string.Empty;
+    private bool isLoading = false;
+    private bool emailSent = false;
+
+    private async Task HandleResend()
+    {
+        isLoading = true;
+        errorMessage = string.Empty;
+
+        try
+        {
+            var result = await AuthService.ResendVerificationAsync(request);
+
+            if (result.Success)
+            {
+                emailSent = true;
+                Snackbar.Add("Verification email sent successfully!", Severity.Success);
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to send verification email. Please try again.";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        emailSent = false;
+        request = new ResendVerificationRequest();
+        errorMessage = string.Empty;
+    }
+
+    private void NavigateToLogin()
+    {
+        Navigation.NavigateTo("/login");
+    }
+}

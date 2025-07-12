@@ -13,6 +13,11 @@ public interface IAuthService
     Task<bool> IsAuthenticatedAsync();
     Task<UserInfo?> GetCurrentUserAsync();
     Task RestoreAuthenticationAsync();
+    Task<ApiResponse<bool>> ConfirmEmailAsync(ConfirmEmailRequest request);
+    Task<ApiResponse<bool>> ResendVerificationAsync(ResendVerificationRequest request);
+    Task<EmailVerificationStatus?> GetVerificationStatusAsync(string email);
+    Task<ApiResponse<bool>> ForgotPasswordAsync(ForgotPasswordRequest request);
+    Task<ApiResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request);
 }
 
 public class AuthService : IAuthService
@@ -96,6 +101,13 @@ public class AuthService : IAuthService
 
             if (result?.Success == true && result.Data != null)
             {
+                // Check if email verification is required
+                if (result.Data.EmailVerificationRequired)
+                {
+                    // Don't store tokens or authenticate user if email verification is required
+                    return result;
+                }
+
                 var userInfo = new UserInfo
                 {
                     Id = result.Data.UserId,
@@ -104,12 +116,16 @@ public class AuthService : IAuthService
                     LastName = result.Data.LastName
                 };
                 
-                // Default to remember me for registration
-                await _localStorage.SetItemAsync("authToken", result.Data.AccessToken);
-                await _localStorage.SetItemAsync("refreshToken", result.Data.RefreshToken);
-                await _localStorage.SetItemAsync("user", userInfo);
-                
-                ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(userInfo);
+                // Only authenticate if tokens are provided (email verified)
+                if (!string.IsNullOrEmpty(result.Data.AccessToken))
+                {
+                    // Default to remember me for registration
+                    await _localStorage.SetItemAsync("authToken", result.Data.AccessToken);
+                    await _localStorage.SetItemAsync("refreshToken", result.Data.RefreshToken);
+                    await _localStorage.SetItemAsync("user", userInfo);
+                    
+                    ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(userInfo);
+                }
             }
 
             return result ?? new ApiResponse<AuthResult> { Success = false, Message = "Invalid response" };
@@ -159,6 +175,125 @@ public class AuthService : IAuthService
         if (!string.IsNullOrEmpty(token) && user != null)
         {
             ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(user);
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ConfirmEmailAsync(ConfirmEmailRequest request)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/api/auth/confirm-email", request);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<bool>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<bool> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<bool> 
+            { 
+                Success = false, 
+                Message = $"Email verification failed: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ResendVerificationAsync(ResendVerificationRequest request)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/api/auth/resend-verification", request);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<bool>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<bool> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<bool> 
+            { 
+                Success = false, 
+                Message = $"Failed to resend verification: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<EmailVerificationStatus?> GetVerificationStatusAsync(string email)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/auth/verification-status/{Uri.EscapeDataString(email)}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var content = await response.Content.ReadAsStringAsync();
+                return JsonSerializer.Deserialize<EmailVerificationStatus>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+            }
+
+            return null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ForgotPasswordAsync(ForgotPasswordRequest request)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/api/auth/forgot-password", request);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<bool>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<bool> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<bool> 
+            { 
+                Success = false, 
+                Message = $"Failed to send password reset email: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ResetPasswordAsync(ResetPasswordRequest request)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync("/api/auth/reset-password", request);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<bool>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<bool> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<bool> 
+            { 
+                Success = false, 
+                Message = $"Password reset failed: {ex.Message}" 
+            };
         }
     }
 }
