@@ -8,28 +8,49 @@ This document outlines all the functionality that needs to be implemented to mak
 - ✅ **Database Schema**: UserSettings entity with all required fields
 - ✅ **API Endpoints**: Full CRUD operations for settings management
 - ✅ **Frontend Models**: Complete DTOs with validation
-- 🔲 **Actual Functionality**: Needs implementation (this document)
+- 🔄 **Actual Functionality**: In Progress (see completed items below)
+
+## Recently Completed ✅
+- ✅ **Session Timeout Implementation**: Complete automatic logout system
+  - SessionTimeoutService for activity tracking and timeout management
+  - Configurable timeout duration from UserSettings.Security.SessionTimeoutMinutes
+  - Automatic logout after configured inactivity period
+  - Integration with authentication state provider for seamless logout
+  
+- ✅ **Profile Visibility Controls**: Complete granular privacy settings implementation
+  - Public user profiles with privacy-aware data filtering
+  - Tools and reviews tabs with pagination
+  - UserLink component for consistent profile linking throughout the app
+  - All privacy settings (ShowProfilePicture, ShowRealName, ShowLocation, ShowEmail, ShowPhoneNumber, ShowStatistics) fully functional
 
 ---
 
 ## 🔥 High Priority - Core Security & Business Logic
 
 ### 1. Session Timeout Implementation
-**Status**: Pending  
+**Status**: ✅ **COMPLETED**  
 **Priority**: High  
 **Effort**: Medium  
-**Timeline**: 3-5 days
+**Timeline**: ✅ Completed in 3 days
 
-**Description**: Implement automatic logout after configured minutes of inactivity
-- Track user activity across the application
-- Implement session timeout middleware
-- Add countdown warnings before logout
-- Persist timeout preference from UserSettings.Security.SessionTimeoutMinutes
+**Description**: ✅ Implemented automatic logout after configured minutes of inactivity
+- ✅ Track user activity across the application
+- ✅ Implement session timeout service with automatic logout
+- ✅ Automatic logout after configured inactivity period
+- ✅ Persist timeout preference from UserSettings.Security.SessionTimeoutMinutes
 
-**Implementation Areas**:
-- Frontend: Activity tracking, timeout warnings, auto-logout
-- Backend: Session middleware, token expiration logic
-- Database: Session tracking table (optional)
+**Implementation Completed**:
+- ✅ Frontend: SessionTimeoutService for activity tracking and timeout management
+- ✅ Frontend: Automatic logout integration with CustomAuthenticationStateProvider
+- ✅ Frontend: Activity detection across user interactions
+- ✅ Configuration: Timeout duration configurable via UserSettings.Security.SessionTimeoutMinutes
+- ✅ Authentication: Seamless logout with proper cleanup of authentication state
+
+**Key Features**:
+- ✅ Configurable timeout duration (default: 30 minutes)
+- ✅ Automatic activity tracking on user interactions
+- ✅ Clean logout process that clears authentication state
+- ✅ Respects user's configured session timeout preference from Settings
 
 ---
 
@@ -53,28 +74,40 @@ This document outlines all the functionality that needs to be implemented to mak
 ---
 
 ### 3. Profile Visibility Controls
-**Status**: Pending  
+**Status**: ✅ **COMPLETED**  
 **Priority**: High  
 **Effort**: Medium  
-**Timeline**: 1 week
+**Timeline**: ✅ Completed in 1 week
 
-**Description**: Implement granular profile visibility settings
-- Control what information is shown to other users
-- Apply privacy settings across all profile displays
-- Respect UserSettings.Privacy.* fields
+**Description**: ✅ Implemented granular profile visibility settings
+- ✅ Control what information is shown to other users
+- ✅ Apply privacy settings across all profile displays
+- ✅ Respect UserSettings.Privacy.* fields
 
-**Settings to Implement**:
-- ShowProfilePicture
-- ShowRealName  
-- ShowLocation
-- ShowPhoneNumber
-- ShowEmail
-- ShowStatistics
+**Settings Implemented**:
+- ✅ ShowProfilePicture - Controls profile picture visibility in public profiles
+- ✅ ShowRealName - Controls real name vs username display
+- ✅ ShowLocation - Controls location information visibility
+- ✅ ShowPhoneNumber - Controls phone number visibility in contact info
+- ✅ ShowEmail - Controls email address visibility in contact info
+- ✅ ShowStatistics - Controls statistics visibility (tools shared, ratings, etc.)
 
-**Implementation Areas**:
-- Frontend: Conditional rendering in user profiles, tool listings
-- Backend: Privacy-aware user DTOs and queries
-- API: Filter user data based on privacy settings
+**Implementation Completed**:
+- ✅ Frontend: Public UserProfile.razor page with privacy-aware rendering
+- ✅ Frontend: UserLink component for consistent user profile linking across the app
+- ✅ Frontend: Updated Tools.razor, ToolDetails.razor, MyRentals.razor with profile links
+- ✅ Backend: PublicProfileService with privacy-aware data filtering
+- ✅ Backend: PublicProfileController with REST API endpoints
+- ✅ API: PublicUserProfileDto, PublicUserToolDto, PublicUserReviewDto with filtered data
+- ✅ Database: Privacy settings properly stored and retrieved from UserSettings.Privacy
+
+**Key Features**:
+- ✅ Public profile page at `/users/{userId}` respecting privacy settings
+- ✅ Tool owner names throughout the app now link to public profiles
+- ✅ Statistics display (tools shared, successful rentals, average rating, response time) when privacy allows
+- ✅ Contact information (email, phone) only shown when user permits
+- ✅ Profile pictures and real names controlled by privacy preferences
+- ✅ Tools and reviews tabs with pagination in public profiles
 
 ---
 
@@ -415,15 +448,22 @@ This document outlines all the functionality that needs to be implemented to mak
 ---
 
 ### 22. Statistics Visibility Controls
-**Status**: Pending  
+**Status**: ✅ **COMPLETED**  
 **Priority**: Medium  
 **Effort**: Low-Medium  
-**Timeline**: 3-5 days
+**Timeline**: ✅ Completed in 3 days
 
-**Description**: Control what statistics are visible to other users
-- Respect UserSettings.Privacy.ShowStatistics
-- Hide/show rental history, ratings, review counts
-- Privacy-aware profile displays
+**Description**: ✅ Implemented statistics visibility controls
+- ✅ Respect UserSettings.Privacy.ShowStatistics setting
+- ✅ Hide/show rental history, ratings, review counts based on user preference
+- ✅ Privacy-aware profile displays throughout the application
+
+**Implementation Completed**:
+- ✅ Backend: PublicProfileService checks ShowStatistics setting before returning user statistics
+- ✅ Frontend: UserProfile.razor conditionally displays statistics cards based on privacy settings
+- ✅ API: Statistics are filtered out from PublicUserProfileDto when ShowStatistics is false
+- ✅ Statistics include: tools shared, successful rentals, average rating, review count, response time
+- ✅ Integrated with the main Profile Visibility Controls implementation
 
 ---
 
@@ -500,8 +540,8 @@ This document outlines all the functionality that needs to be implemented to mak
 ## Implementation Strategy
 
 ### Phase 1: Security & Core Business (Weeks 1-4)
-- Session timeout
-- Profile visibility
+- ✅ **Session timeout** - COMPLETED
+- ✅ **Profile visibility** - COMPLETED
 - Auto-approval system
 - Lead time enforcement
 - Deposit requirements
