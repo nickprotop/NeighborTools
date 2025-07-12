@@ -21,6 +21,8 @@ public static class DataSeeder
             
             await SeedUsersAsync(userManager, logger);
             await SeedToolsAsync(context, logger);
+            await SeedRentalsAsync(context, logger);
+            await SeedReviewsAsync(context, logger);
             
             logger.LogInformation("Database seeding completed successfully");
         }
@@ -58,8 +60,15 @@ public static class DataSeeder
                 City = "San Francisco",
                 PostalCode = "94102",
                 Country = "USA",
+                PublicLocation = "Downtown San Francisco",
                 DateOfBirth = new DateTime(1985, 5, 15),
-                CreatedAt = DateTime.UtcNow,
+                ProfilePictureUrl = "/images/profiles/john-doe.jpg",
+                DataProcessingConsent = true,
+                MarketingConsent = true,
+                TermsOfServiceAccepted = true,
+                TermsAcceptedDate = DateTime.UtcNow,
+                TermsVersion = "1.0",
+                CreatedAt = DateTime.UtcNow.AddDays(-180),
                 UpdatedAt = DateTime.UtcNow
             },
             new User
@@ -76,8 +85,15 @@ public static class DataSeeder
                 City = "Oakland",
                 PostalCode = "94607",
                 Country = "USA",
+                PublicLocation = "East Oakland",
                 DateOfBirth = new DateTime(1990, 8, 22),
-                CreatedAt = DateTime.UtcNow,
+                ProfilePictureUrl = "/images/profiles/jane-smith.jpg",
+                DataProcessingConsent = true,
+                MarketingConsent = false,
+                TermsOfServiceAccepted = true,
+                TermsAcceptedDate = DateTime.UtcNow,
+                TermsVersion = "1.0",
+                CreatedAt = DateTime.UtcNow.AddDays(-120),
                 UpdatedAt = DateTime.UtcNow
             }
         };
@@ -123,7 +139,7 @@ public static class DataSeeder
                 MonthlyRate = 250.00m,
                 DepositRequired = 50.00m,
                 Condition = "Excellent",
-                Location = "San Francisco, CA",
+                Location = "Downtown San Francisco",
                 IsAvailable = true,
                 OwnerId = "user1-guid-1234-5678-9012345678901",
                 CreatedAt = DateTime.UtcNow,
@@ -142,7 +158,7 @@ public static class DataSeeder
                 MonthlyRate = 450.00m,
                 DepositRequired = 100.00m,
                 Condition = "Good",
-                Location = "San Francisco, CA",
+                Location = "Downtown San Francisco",
                 IsAvailable = true,
                 OwnerId = "user1-guid-1234-5678-9012345678901",
                 CreatedAt = DateTime.UtcNow,
@@ -161,7 +177,7 @@ public static class DataSeeder
                 MonthlyRate = 150.00m,
                 DepositRequired = 25.00m,
                 Condition = "Good",
-                Location = "Oakland, CA",
+                Location = "East Oakland",
                 IsAvailable = true,
                 OwnerId = "user2-guid-1234-5678-9012345678902",
                 CreatedAt = DateTime.UtcNow,
@@ -180,7 +196,7 @@ public static class DataSeeder
                 MonthlyRate = 500.00m,
                 DepositRequired = 150.00m,
                 Condition = "Excellent",
-                Location = "Berkeley, CA",
+                Location = "Berkeley",
                 IsAvailable = true,
                 OwnerId = "user2-guid-1234-5678-9012345678902",
                 CreatedAt = DateTime.UtcNow,
@@ -192,5 +208,143 @@ public static class DataSeeder
         await context.SaveChangesAsync();
         
         logger.LogInformation("Seeded {Count} tools", tools.Length);
+    }
+    
+    private static async Task SeedRentalsAsync(ApplicationDbContext context, ILogger logger)
+    {
+        // Check if rentals already exist
+        if (await context.Rentals.AnyAsync())
+        {
+            logger.LogInformation("Rentals already exist, skipping rental seeding");
+            return;
+        }
+        
+        logger.LogInformation("Seeding rentals...");
+        
+        var rentals = new[]
+        {
+            new Rental
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                RenterId = "user2-guid-1234-5678-9012345678902",
+                OwnerId = "user1-guid-1234-5678-9012345678901",
+                StartDate = DateTime.UtcNow.AddDays(-30),
+                EndDate = DateTime.UtcNow.AddDays(-25),
+                Status = RentalStatus.Returned,
+                TotalCost = 75.00m,
+                DepositAmount = 50.00m,
+                CreatedAt = DateTime.UtcNow.AddDays(-32),
+                UpdatedAt = DateTime.UtcNow.AddDays(-25)
+            },
+            new Rental
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                RenterId = "user1-guid-1234-5678-9012345678901",
+                OwnerId = "user2-guid-1234-5678-9012345678902",
+                StartDate = DateTime.UtcNow.AddDays(-15),
+                EndDate = DateTime.UtcNow.AddDays(-10),
+                Status = RentalStatus.Returned,
+                TotalCost = 50.00m,
+                DepositAmount = 25.00m,
+                CreatedAt = DateTime.UtcNow.AddDays(-17),
+                UpdatedAt = DateTime.UtcNow.AddDays(-10)
+            },
+            new Rental
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000004"),
+                RenterId = "user1-guid-1234-5678-9012345678901",
+                OwnerId = "user2-guid-1234-5678-9012345678902",
+                StartDate = DateTime.UtcNow.AddDays(-5),
+                EndDate = DateTime.UtcNow.AddDays(2),
+                Status = RentalStatus.PickedUp,
+                TotalCost = 210.00m,
+                DepositAmount = 150.00m,
+                CreatedAt = DateTime.UtcNow.AddDays(-7),
+                UpdatedAt = DateTime.UtcNow.AddDays(-5)
+            }
+        };
+        
+        context.Rentals.AddRange(rentals);
+        await context.SaveChangesAsync();
+        
+        logger.LogInformation("Seeded {Count} rentals", rentals.Length);
+    }
+    
+    private static async Task SeedReviewsAsync(ApplicationDbContext context, ILogger logger)
+    {
+        // Check if reviews already exist
+        if (await context.Reviews.AnyAsync())
+        {
+            logger.LogInformation("Reviews already exist, skipping review seeding");
+            return;
+        }
+        
+        logger.LogInformation("Seeding reviews...");
+        
+        var reviews = new[]
+        {
+            new Review
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                RentalId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                ReviewerId = "user2-guid-1234-5678-9012345678902",
+                RevieweeId = "user1-guid-1234-5678-9012345678901",
+                Rating = 5,
+                Title = "Excellent drill, worked perfectly!",
+                Comment = "John's drill was in excellent condition and worked perfectly for my home renovation project. Very reliable and powerful. Would definitely rent from John again!",
+                Type = ReviewType.UserReview,
+                CreatedAt = DateTime.UtcNow.AddDays(-23),
+                UpdatedAt = DateTime.UtcNow.AddDays(-23)
+            },
+            new Review
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                RentalId = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                ReviewerId = "user1-guid-1234-5678-9012345678901",
+                RevieweeId = "user2-guid-1234-5678-9012345678902",
+                Rating = 4,
+                Title = "Good ladder, fair price",
+                Comment = "The ladder was sturdy and perfect for my needs. Jane was very responsive and helpful. Only minor issue was a small dent, but it didn't affect functionality.",
+                Type = ReviewType.UserReview,
+                CreatedAt = DateTime.UtcNow.AddDays(-8),
+                UpdatedAt = DateTime.UtcNow.AddDays(-8)
+            },
+            new Review
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                ReviewerId = "user1-guid-1234-5678-9012345678901",
+                RevieweeId = "user2-guid-1234-5678-9012345678902",
+                Rating = 5,
+                Title = "Great renter, took good care of my tools",
+                Comment = "Jane was an excellent renter. She picked up and returned the drill on time, and it was in perfect condition. Very professional and trustworthy. Highly recommend!",
+                Type = ReviewType.UserReview,
+                CreatedAt = DateTime.UtcNow.AddDays(-22),
+                UpdatedAt = DateTime.UtcNow.AddDays(-22)
+            },
+            new Review
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000004"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                ReviewerId = "user2-guid-1234-5678-9012345678902",
+                RevieweeId = "user1-guid-1234-5678-9012345678901",
+                Rating = 4,
+                Title = "Reliable renter, good communication",
+                Comment = "John was very communicative throughout the rental process. He returned the ladder clean and in good condition. Would rent to him again without hesitation.",
+                Type = ReviewType.UserReview,
+                CreatedAt = DateTime.UtcNow.AddDays(-7),
+                UpdatedAt = DateTime.UtcNow.AddDays(-7)
+            }
+        };
+        
+        context.Reviews.AddRange(reviews);
+        await context.SaveChangesAsync();
+        
+        logger.LogInformation("Seeded {Count} reviews", reviews.Length);
     }
 }

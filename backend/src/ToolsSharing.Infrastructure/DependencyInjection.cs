@@ -4,10 +4,12 @@ using Microsoft.Extensions.DependencyInjection;
 using Mapster;
 using MapsterMapper;
 using ToolsSharing.Core.Common.Interfaces;
+using ToolsSharing.Core.Interfaces;
 using ToolsSharing.Infrastructure.Data;
 using ToolsSharing.Infrastructure.Features.Auth;
 using ToolsSharing.Infrastructure.Features.Tools;
 using ToolsSharing.Infrastructure.Features.Rentals;
+using ToolsSharing.Infrastructure.Features.Users;
 using ToolsSharing.Infrastructure.Repositories;
 using ToolsSharing.Infrastructure.Services;
 using ToolsSharing.Infrastructure.Mappings;
@@ -42,6 +44,7 @@ public static class DependencyInjection
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IToolsService, ToolsService>();
         services.AddScoped<IRentalsService, RentalsService>();
+        services.AddScoped<IUserService, UserService>();
 
         return services;
     }

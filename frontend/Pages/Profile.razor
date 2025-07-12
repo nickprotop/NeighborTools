@@ -2,19 +2,36 @@
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
 @using MudBlazor
+@using frontend.Models
+@using frontend.Services
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UserService UserService
 @attribute [Authorize]
 
 <PageTitle>Profile - NeighborTools</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    @if (isPageLoading)
+    {
+        <div class="d-flex justify-center align-center" style="min-height: 400px;">
+            <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+        </div>
+    }
+    else if (userProfile == null)
+    {
+        <MudAlert Severity="Severity.Error">
+            Failed to load profile data. Please try refreshing the page.
+        </MudAlert>
+    }
+    else
+    {
     <!-- Header -->
     <div class="d-flex flex-column align-center mb-6">
         <MudAvatar Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="width: 120px; height: 120px; font-size: 3rem;">
-            @if (!string.IsNullOrEmpty(userProfile.AvatarUrl))
+            @if (!string.IsNullOrEmpty(userProfile?.ProfilePictureUrl))
             {
-                <MudImage Src="@userProfile.AvatarUrl" Alt="Profile Picture" />
+                <MudImage Src="@userProfile.ProfilePictureUrl" Alt="Profile Picture" />
             }
             else
             {
@@ -23,26 +40,26 @@
         </MudAvatar>
         
         <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
-            @userProfile.FirstName @userProfile.LastName
+            @userProfile?.FirstName @userProfile?.LastName
         </MudText>
         
         <div class="d-flex align-center gap-2 mb-2">
             <MudIcon Icon="@Icons.Material.Filled.LocationOn" Color="Color.Secondary" Size="Size.Small" />
-            <MudText Typo="Typo.body1" Color="Color.Secondary">@userProfile.Location</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">@GetLocation()</MudText>
         </div>
         
         <div class="d-flex align-center gap-4 mb-4">
             <div class="d-flex align-center gap-1">
-                <MudRating ReadOnly="true" SelectedValue="@userProfile.Rating" MaxValue="5" Size="Size.Small" />
-                <MudText Typo="Typo.body2">(@userProfile.ReviewCount reviews)</MudText>
+                <MudRating ReadOnly="true" SelectedValue="@((int)Math.Round(userProfile?.AverageRating ?? 0))" MaxValue="5" Size="Size.Small" />
+                <MudText Typo="Typo.body2">(@(userProfile?.ReviewCount ?? 0) reviews)</MudText>
             </div>
-            <MudChip T="string" Color="@(userProfile.IsVerified ? Color.Success : Color.Warning)" Size="Size.Small" Icon="@(userProfile.IsVerified ? Icons.Material.Filled.Verified : Icons.Material.Filled.Warning)">
-                @(userProfile.IsVerified ? "Verified" : "Unverified")
+            <MudChip T="string" Color="@(userProfile?.IsVerified == true ? Color.Success : Color.Warning)" Size="Size.Small" Icon="@(userProfile?.IsVerified == true ? Icons.Material.Filled.Verified : Icons.Material.Filled.Warning)">
+                @(userProfile?.IsVerified == true ? "Verified" : "Unverified")
             </MudChip>
         </div>
         
         <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center" Class="mb-4" Style="max-width: 600px;">
-            @userProfile.Bio
+            Member since @(userProfile?.CreatedAt.ToString("MMMM yyyy") ?? "Unknown")
         </MudText>
     </div>
 
@@ -52,66 +69,96 @@
             <div class="pa-6">
                 <MudGrid>
                     <MudItem xs="12" md="8">
-                        <EditForm Model="userProfile" OnValidSubmit="SaveProfile">
+                        <EditForm Model="updateRequest" OnValidSubmit="SaveProfile">
                             <DataAnnotationsValidator />
                             
                             <MudGrid>
                                 <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="userProfile.FirstName"
+                                    <MudTextField @bind-Value="updateRequest.FirstName"
                                                   Label="First Name"
                                                   Variant="Variant.Outlined"
-                                                  FullWidth="true"
+                                                  FullWidth
                                                   Required="true"
                                                   Adornment="Adornment.Start"
                                                   AdornmentIcon="@Icons.Material.Filled.Person" />
                                 </MudItem>
                                 <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="userProfile.LastName"
+                                    <MudTextField @bind-Value="updateRequest.LastName"
                                                   Label="Last Name"
                                                   Variant="Variant.Outlined"
-                                                  FullWidth="true"
+                                                  FullWidth
                                                   Required="true"
                                                   Adornment="Adornment.Start"
                                                   AdornmentIcon="@Icons.Material.Filled.Person" />
                                 </MudItem>
                                 <MudItem xs="12">
-                                    <MudTextField @bind-Value="userProfile.Email"
+                                    <MudTextField Value="@(userProfile?.Email ?? "")"
                                                   Label="Email Address"
                                                   Variant="Variant.Outlined"
                                                   InputType="InputType.Email"
-                                                  FullWidth="true"
+                                                  FullWidth
                                                   Disabled="true"
                                                   Adornment="Adornment.Start"
                                                   AdornmentIcon="@Icons.Material.Filled.Email"
                                                   HelperText="Email cannot be changed. Contact support if needed." />
                                 </MudItem>
                                 <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="userProfile.PhoneNumber"
+                                    <MudTextField @bind-Value="updateRequest.PhoneNumber"
                                                   Label="Phone Number"
                                                   Variant="Variant.Outlined"
                                                   InputType="InputType.Telephone"
-                                                  FullWidth="true"
+                                                  FullWidth
                                                   Adornment="Adornment.Start"
                                                   AdornmentIcon="@Icons.Material.Filled.Phone" />
                                 </MudItem>
                                 <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="userProfile.Location"
-                                                  Label="Location"
+                                    <MudTextField @bind-Value="updateRequest.Address"
+                                                  Label="Address"
                                                   Variant="Variant.Outlined"
-                                                  FullWidth="true"
-                                                  Required="true"
+                                                  FullWidth
                                                   Adornment="Adornment.Start"
                                                   AdornmentIcon="@Icons.Material.Filled.LocationOn" />
                                 </MudItem>
-                                <MudItem xs="12">
-                                    <MudTextField @bind-Value="userProfile.Bio"
-                                                  Label="Bio"
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField @bind-Value="updateRequest.City"
+                                                  Label="City"
                                                   Variant="Variant.Outlined"
-                                                  Lines="4"
-                                                  FullWidth="true"
+                                                  FullWidth
                                                   Adornment="Adornment.Start"
-                                                  AdornmentIcon="@Icons.Material.Filled.Description"
-                                                  HelperText="Tell others about yourself and your tool-sharing philosophy" />
+                                                  AdornmentIcon="@Icons.Material.Filled.LocationCity" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField @bind-Value="updateRequest.PostalCode"
+                                                  Label="Postal Code"
+                                                  Variant="Variant.Outlined"
+                                                  FullWidth
+                                                  Adornment="Adornment.Start"
+                                                  AdornmentIcon="@Icons.Material.Filled.MarkunreadMailbox" />
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudTextField @bind-Value="updateRequest.Country"
+                                                  Label="Country"
+                                                  Variant="Variant.Outlined"
+                                                  FullWidth
+                                                  Adornment="Adornment.Start"
+                                                  AdornmentIcon="@Icons.Material.Filled.Public" />
+                                </MudItem>
+                                <MudItem xs="12">
+                                    <MudTextField @bind-Value="updateRequest.PublicLocation"
+                                                  Label="Public Location"
+                                                  Variant="Variant.Outlined"
+                                                  FullWidth
+                                                  Adornment="Adornment.Start"
+                                                  AdornmentIcon="@Icons.Material.Filled.LocationOn"
+                                                  HelperText="This location will be visible to other users and used for tool searches. For security, keep it general (e.g., 'Downtown Toronto', 'Berlin Mitte')." />
+                                </MudItem>
+                                <MudItem xs="12" sm="6">
+                                    <MudDatePicker @bind-Date="updateRequest.DateOfBirth"
+                                                   Label="Date of Birth"
+                                                   Variant="Variant.Outlined"
+                                                   Class="full-width"
+                                                   Adornment="Adornment.Start"
+                                                   AdornmentIcon="@Icons.Material.Filled.Cake" />
                                 </MudItem>
                             </MudGrid>
                             
@@ -143,9 +190,9 @@
                             
                             <div class="text-center mb-4">
                                 <MudAvatar Size="Size.Large" Color="Color.Primary" Style="width: 100px; height: 100px; font-size: 2rem;">
-                                    @if (!string.IsNullOrEmpty(userProfile.AvatarUrl))
+                                    @if (!string.IsNullOrEmpty(userProfile?.ProfilePictureUrl))
                                     {
-                                        <MudImage Src="@userProfile.AvatarUrl" Alt="Profile Picture" />
+                                        <MudImage Src="@userProfile.ProfilePictureUrl" Alt="Profile Picture" />
                                     }
                                     else
                                     {
@@ -154,13 +201,13 @@
                                 </MudAvatar>
                             </div>
                             
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true" StartIcon="@Icons.Material.Filled.Upload">
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth StartIcon="@Icons.Material.Filled.Upload">
                                 Upload New Photo
                             </MudButton>
                             
-                            @if (!string.IsNullOrEmpty(userProfile.AvatarUrl))
+                            @if (!string.IsNullOrEmpty(userProfile?.ProfilePictureUrl))
                             {
-                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth="true" StartIcon="@Icons.Material.Filled.Delete" Class="mt-2">
+                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth StartIcon="@Icons.Material.Filled.Delete" Class="mt-2">
                                     Remove Photo
                                 </MudButton>
                             }
@@ -178,7 +225,7 @@
                         <MudCard Elevation="4" Style="border-radius: 12px;">
                             <MudCardContent Class="text-center">
                                 <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
-                                <MudText Typo="Typo.h4" Color="Color.Primary">12</MudText>
+                                <MudText Typo="Typo.h4" Color="Color.Primary">@(userStatistics?.ToolsShared ?? 0)</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">Tools Shared</MudText>
                             </MudCardContent>
                         </MudCard>
@@ -187,7 +234,7 @@
                         <MudCard Elevation="4" Style="border-radius: 12px;">
                             <MudCardContent Class="text-center">
                                 <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" Color="Color.Success" Class="mb-2" />
-                                <MudText Typo="Typo.h4" Color="Color.Success">28</MudText>
+                                <MudText Typo="Typo.h4" Color="Color.Success">@(userStatistics?.SuccessfulRentals ?? 0)</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">Successful Rentals</MudText>
                             </MudCardContent>
                         </MudCard>
@@ -196,7 +243,7 @@
                         <MudCard Elevation="4" Style="border-radius: 12px;">
                             <MudCardContent Class="text-center">
                                 <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Info" Class="mb-2" />
-                                <MudText Typo="Typo.h4" Color="Color.Info">$1,245</MudText>
+                                <MudText Typo="Typo.h4" Color="Color.Info">$@(userStatistics?.TotalEarned.ToString("N0") ?? "0")</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">Total Earned</MudText>
                             </MudCardContent>
                         </MudCard>
@@ -205,7 +252,7 @@
                         <MudCard Elevation="4" Style="border-radius: 12px;">
                             <MudCardContent Class="text-center">
                                 <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
-                                <MudText Typo="Typo.h4" Color="Color.Warning">4.8</MudText>
+                                <MudText Typo="Typo.h4" Color="Color.Warning">@(userStatistics?.AverageRating.ToString("F1") ?? "0.0")</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">Average Rating</MudText>
                             </MudCardContent>
                         </MudCard>
@@ -216,41 +263,34 @@
                 
                 <MudText Typo="Typo.h5" Color="Color.Primary" Class="mb-4">Recent Activity</MudText>
                 
-                <MudTimeline TimelineOrientation="TimelineOrientation.Vertical">
-                    <MudTimelineItem Color="Color.Success" Size="Size.Small">
-                        <ItemContent>
-                            <div class="d-flex justify-space-between align-center">
-                                <div>
-                                    <MudText Typo="Typo.body1">Received 5-star review</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">For renting out Circular Saw</MudText>
-                                </div>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">2 days ago</MudText>
-                            </div>
-                        </ItemContent>
-                    </MudTimelineItem>
-                    <MudTimelineItem Color="Color.Info" Size="Size.Small">
-                        <ItemContent>
-                            <div class="d-flex justify-space-between align-center">
-                                <div>
-                                    <MudText Typo="Typo.body1">Added new tool</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Pressure Washer</MudText>
-                                </div>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">1 week ago</MudText>
-                            </div>
-                        </ItemContent>
-                    </MudTimelineItem>
-                    <MudTimelineItem Color="Color.Primary" Size="Size.Small">
-                        <ItemContent>
-                            <div class="d-flex justify-space-between align-center">
-                                <div>
-                                    <MudText Typo="Typo.body1">Completed rental</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Rented Lawn Mower from John</MudText>
-                                </div>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">2 weeks ago</MudText>
-                            </div>
-                        </ItemContent>
-                    </MudTimelineItem>
-                </MudTimeline>
+                @if (userStatistics?.RecentActivity?.Any() == true)
+                {
+                    <MudTimeline TimelineOrientation="TimelineOrientation.Vertical">
+                        @foreach (var activity in userStatistics.RecentActivity)
+                        {
+                            <MudTimelineItem Color="@GetActivityColor(activity.ActivityType)" Size="Size.Small">
+                                <ItemContent>
+                                    <div class="d-flex justify-space-between align-center">
+                                        <div>
+                                            <MudText Typo="Typo.body1">@activity.Description</MudText>
+                                            @if (!string.IsNullOrEmpty(activity.ToolName))
+                                            {
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">@activity.ToolName</MudText>
+                                            }
+                                        </div>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@GetRelativeTime(activity.Date)</MudText>
+                                    </div>
+                                </ItemContent>
+                            </MudTimelineItem>
+                        }
+                    </MudTimeline>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="text-center">
+                        No recent activity to display
+                    </MudText>
+                }
             </div>
         </MudTabPanel>
 
@@ -260,69 +300,177 @@
                 <div class="d-flex justify-space-between align-center mb-6">
                     <MudText Typo="Typo.h5" Color="Color.Primary">Reviews & Ratings</MudText>
                     <div class="d-flex align-center gap-2">
-                        <MudRating ReadOnly="true" SelectedValue="@userProfile.Rating" MaxValue="5" />
-                        <MudText Typo="Typo.h6">@userProfile.Rating/5</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary">(@userProfile.ReviewCount reviews)</MudText>
+                        <MudRating ReadOnly="true" SelectedValue="@((int)Math.Round(userProfile?.AverageRating ?? 0))" MaxValue="5" />
+                        <MudText Typo="Typo.h6">@(userProfile?.AverageRating.ToString("F1") ?? "0.0")/5</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">(@(userProfile?.ReviewCount ?? 0) reviews)</MudText>
                     </div>
                 </div>
                 
-                <!-- Mock Reviews -->
-                @foreach (var review in GetMockReviews())
+                @if (userReviews.Any())
                 {
-                    <MudCard Elevation="2" Class="mb-4" Style="border-radius: 12px;">
-                        <MudCardContent>
-                            <div class="d-flex justify-space-between align-start mb-3">
-                                <div class="d-flex align-center gap-3">
-                                    <MudAvatar Color="Color.Secondary" Size="Size.Medium">
-                                        @review.ReviewerName.Substring(0, 1)
-                                    </MudAvatar>
-                                    <div>
-                                        <MudText Typo="Typo.body1">@review.ReviewerName</MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@review.Date.ToString("MMM dd, yyyy")</MudText>
+                    @foreach (var review in userReviews)
+                    {
+                        <MudCard Elevation="2" Class="mb-4" Style="border-radius: 12px;">
+                            <MudCardContent>
+                                <div class="d-flex justify-space-between align-start mb-3">
+                                    <div class="d-flex align-center gap-3">
+                                        <MudAvatar Color="Color.Secondary" Size="Size.Medium">
+                                            @if (!string.IsNullOrEmpty(review.ReviewerAvatarUrl))
+                                            {
+                                                <MudImage Src="@review.ReviewerAvatarUrl" Alt="@review.ReviewerName" />
+                                            }
+                                            else
+                                            {
+                                                <MudText>@review.ReviewerName.Substring(0, 1)</MudText>
+                                            }
+                                        </MudAvatar>
+                                        <div>
+                                            <MudText Typo="Typo.body1">@review.ReviewerName</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@review.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                                        </div>
                                     </div>
+                                    <MudRating ReadOnly="true" SelectedValue="@review.Rating" MaxValue="5" Size="Size.Small" />
                                 </div>
-                                <MudRating ReadOnly="true" SelectedValue="@review.Rating" MaxValue="5" Size="Size.Small" />
-                            </div>
-                            <MudText Typo="Typo.body2" Class="mb-2">@review.Comment</MudText>
-                            <MudChip T="string" Color="Color.Info" Size="Size.Small">@review.ToolName</MudChip>
+                                <MudText Typo="Typo.body1" Class="mb-2"><strong>@review.Title</strong></MudText>
+                                <MudText Typo="Typo.body2" Class="mb-2">@review.Comment</MudText>
+                            @if (!string.IsNullOrEmpty(review.ToolName))
+                            {
+                                <MudChip T="string" Color="Color.Info" Size="Size.Small">@review.ToolName</MudChip>
+                            }
                         </MudCardContent>
                     </MudCard>
+                    }
+                }
+                else
+                {
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="text-center">
+                        No reviews yet
+                    </MudText>
                 }
             </div>
         </MudTabPanel>
     </MudTabs>
+    }
 </MudContainer>
 
 @code {
-    private UserProfile userProfile = new();
+    private UserProfileDto? userProfile;
+    private UserStatisticsDto? userStatistics;
+    private List<UserReviewDto> userReviews = new();
+    private UpdateUserProfileRequest updateRequest = new();
     private bool isLoading = false;
+    private bool isPageLoading = true;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadUserProfile();
+        try
+        {
+            await LoadUserProfile();
+            await LoadUserStatistics();
+            await LoadUserReviews();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isPageLoading = false;
+            StateHasChanged();
+        }
     }
 
     private async Task LoadUserProfile()
     {
-        // Mock user data - in real app, load from API
-        userProfile = new UserProfile
+        try
         {
-            FirstName = "John",
-            LastName = "Smith",
-            Email = "john.smith@example.com",
-            PhoneNumber = "+1 (555) 123-4567",
-            Location = "San Francisco, CA",
-            Bio = "Passionate DIY enthusiast who loves sharing tools and helping neighbors with their projects. I believe in building stronger communities through collaboration and resource sharing.",
-            AvatarUrl = "",
-            Rating = 5,
-            ReviewCount = 24,
-            IsVerified = true
-        };
+            var response = await UserService.GetProfileAsync();
+            if (response?.Success == true && response.Data != null)
+            {
+                userProfile = response.Data;
+                // Map to update request for editing
+                updateRequest = new UpdateUserProfileRequest
+                {
+                    FirstName = userProfile.FirstName ?? "",
+                    LastName = userProfile.LastName ?? "",
+                    PhoneNumber = userProfile.PhoneNumber,
+                    Address = userProfile.Address,
+                    City = userProfile.City,
+                    PostalCode = userProfile.PostalCode,
+                    Country = userProfile.Country,
+                    PublicLocation = userProfile.PublicLocation,
+                    DateOfBirth = userProfile.DateOfBirth,
+                    ProfilePictureUrl = userProfile.ProfilePictureUrl
+                };
+            }
+            else
+            {
+                Snackbar.Add("Failed to load profile data.", Severity.Error);
+                // Initialize with empty values to prevent null reference errors
+                updateRequest = new UpdateUserProfileRequest
+                {
+                    FirstName = "",
+                    LastName = ""
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadUserStatistics()
+    {
+        try
+        {
+            var response = await UserService.GetStatisticsAsync();
+            if (response?.Success == true && response.Data != null)
+            {
+                userStatistics = response.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading statistics: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadUserReviews()
+    {
+        try
+        {
+            var response = await UserService.GetReviewsAsync(1, 10);
+            if (response?.Success == true && response.Data != null)
+            {
+                userReviews = response.Data.Items;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading reviews: {ex.Message}", Severity.Error);
+        }
     }
 
     private string GetInitials()
     {
-        return $"{userProfile.FirstName?.FirstOrDefault()}{userProfile.LastName?.FirstOrDefault()}";
+        return $"{userProfile?.FirstName?.FirstOrDefault()}{userProfile?.LastName?.FirstOrDefault()}";
+    }
+
+    private string GetLocation()
+    {
+        if (userProfile == null) return "Unknown";
+        
+        if (!string.IsNullOrEmpty(userProfile.PublicLocation))
+        {
+            return userProfile.PublicLocation;
+        }
+        
+        var parts = new List<string>();
+        if (!string.IsNullOrEmpty(userProfile.City)) parts.Add(userProfile.City);
+        if (!string.IsNullOrEmpty(userProfile.Country)) parts.Add(userProfile.Country);
+        
+        return parts.Count > 0 ? string.Join(", ", parts) : "Location not specified";
     }
 
     private async Task SaveProfile()
@@ -331,13 +479,20 @@
         
         try
         {
-            // Simulate API call
-            await Task.Delay(2000);
-            Snackbar.Add("Profile updated successfully!", Severity.Success);
+            var response = await UserService.UpdateProfileAsync(updateRequest);
+            if (response?.Success == true)
+            {
+                Snackbar.Add("Profile updated successfully!", Severity.Success);
+                await LoadUserProfile(); // Refresh data
+            }
+            else
+            {
+                Snackbar.Add(response?.Message ?? "Failed to update profile.", Severity.Error);
+            }
         }
-        catch
+        catch (Exception ex)
         {
-            Snackbar.Add("Failed to update profile. Please try again.", Severity.Error);
+            Snackbar.Add($"Error updating profile: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -345,63 +500,52 @@
         }
     }
 
-    private void ResetForm()
+    private async Task ResetForm()
     {
-        // Reload original data
-        LoadUserProfile();
+        try
+        {
+            await LoadUserProfile();
+            Snackbar.Add("Form reset successfully", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error resetting form: {ex.Message}", Severity.Error);
+        }
     }
 
-    private List<ReviewInfo> GetMockReviews()
+    private string GetActivityIcon(string activityType)
     {
-        return new List<ReviewInfo>
+        return activityType switch
         {
-            new ReviewInfo
-            {
-                ReviewerName = "Alice Johnson",
-                Rating = 5,
-                Comment = "John was very responsive and the drill was in excellent condition. Highly recommended!",
-                ToolName = "Cordless Drill",
-                Date = DateTime.Now.AddDays(-5)
-            },
-            new ReviewInfo
-            {
-                ReviewerName = "Mike Wilson",
-                Rating = 4,
-                Comment = "Great experience renting the saw. John provided clear instructions and was flexible with pickup.",
-                ToolName = "Circular Saw",
-                Date = DateTime.Now.AddDays(-12)
-            },
-            new ReviewInfo
-            {
-                ReviewerName = "Sarah Brown",
-                Rating = 5,
-                Comment = "Perfect condition tool and great communication. Will definitely rent from John again!",
-                ToolName = "Pressure Washer",
-                Date = DateTime.Now.AddDays(-20)
-            }
+            "rental_created" => Icons.Material.Filled.Handshake,
+            "tool_added" => Icons.Material.Filled.Add,
+            "review_received" => Icons.Material.Filled.Star,
+            _ => Icons.Material.Filled.Info
         };
     }
 
-    public class UserProfile
+    private Color GetActivityColor(string activityType)
     {
-        public string FirstName { get; set; } = string.Empty;
-        public string LastName { get; set; } = string.Empty;
-        public string Email { get; set; } = string.Empty;
-        public string PhoneNumber { get; set; } = string.Empty;
-        public string Location { get; set; } = string.Empty;
-        public string Bio { get; set; } = string.Empty;
-        public string AvatarUrl { get; set; } = string.Empty;
-        public int Rating { get; set; }
-        public int ReviewCount { get; set; }
-        public bool IsVerified { get; set; }
+        return activityType switch
+        {
+            "rental_created" => Color.Success,
+            "tool_added" => Color.Info,
+            "review_received" => Color.Warning,
+            _ => Color.Primary
+        };
     }
 
-    public class ReviewInfo
+    private string GetRelativeTime(DateTime date)
     {
-        public string ReviewerName { get; set; } = string.Empty;
-        public int Rating { get; set; }
-        public string Comment { get; set; } = string.Empty;
-        public string ToolName { get; set; } = string.Empty;
-        public DateTime Date { get; set; }
+        var timeSpan = DateTime.Now - date;
+        
+        if (timeSpan.Days > 0)
+            return $"{timeSpan.Days} day{(timeSpan.Days == 1 ? "" : "s")} ago";
+        if (timeSpan.Hours > 0)
+            return $"{timeSpan.Hours} hour{(timeSpan.Hours == 1 ? "" : "s")} ago";
+        if (timeSpan.Minutes > 0)
+            return $"{timeSpan.Minutes} minute{(timeSpan.Minutes == 1 ? "" : "s")} ago";
+        
+        return "Just now";
     }
 }

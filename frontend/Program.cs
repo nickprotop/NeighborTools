@@ -33,6 +33,7 @@ builder.Services.AddScoped<ILocalStorageService, LocalStorageService>();
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<IToolService, ToolService>();
 builder.Services.AddScoped<IRentalService, RentalService>();
+builder.Services.AddScoped<UserService>();
 
 var app = builder.Build();
 

@@ -4,6 +4,7 @@
 @using frontend.Models
 @using frontend.Services
 @inject IToolService ToolService
+@inject UserService UserService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @attribute [Authorize]
@@ -12,16 +13,24 @@
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
     <MudPaper Elevation="8" Class="pa-8" Style="border-radius: 16px;">
-        <!-- Header -->
-        <div class="d-flex flex-column align-center mb-6">
-            <MudIcon Icon="Icons.Material.Filled.Add" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
-            <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
-                Add Your Tool
-            </MudText>
-            <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
-                Share your tools with neighbors and start earning money today!
-            </MudText>
-        </div>
+        @if (isInitializing)
+        {
+            <div class="d-flex justify-center align-center" style="min-height: 200px;">
+                <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+            </div>
+        }
+        else
+        {
+            <!-- Header -->
+            <div class="d-flex flex-column align-center mb-6">
+                <MudIcon Icon="Icons.Material.Filled.Add" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
+                <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
+                    Add Your Tool
+                </MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Align="Align.Center">
+                    Share your tools with neighbors and start earning money today!
+                </MudText>
+            </div>
 
         <EditForm Model="createToolRequest" OnValidSubmit="HandleCreateTool">
             <DataAnnotationsValidator />
@@ -154,7 +163,7 @@
                                               RequiredError="Location is required"
                                               Adornment="Adornment.Start"
                                               AdornmentIcon="Icons.Material.Filled.LocationOn"
-                                              HelperText="Enter your city, neighborhood, or general area"
+                                              HelperText="Location where the tool is available (defaults to your public profile location)"
                                               Class="mb-4" />
                             </MudItem>
                         </MudGrid>
@@ -292,6 +301,7 @@
                 </MudButton>
             </div>
         </EditForm>
+        }
     </MudPaper>
 </MudContainer>
 
@@ -299,7 +309,34 @@
     private CreateToolRequest createToolRequest = new();
     private string errorMessage = string.Empty;
     private bool isLoading = false;
+    private bool isInitializing = true;
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserLocation();
+        isInitializing = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadUserLocation()
+    {
+        try
+        {
+            var response = await UserService.GetProfileAsync();
+            if (response?.Success == true && response.Data != null)
+            {
+                // Set default location from user's public location
+                if (!string.IsNullOrEmpty(response.Data.PublicLocation))
+                {
+                    createToolRequest.Location = response.Data.PublicLocation;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Don't show error for location loading failure, just continue with empty location
+        }
+    }
 
     private async Task HandleCreateTool()
     {
