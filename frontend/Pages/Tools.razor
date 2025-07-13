@@ -343,7 +343,7 @@ else
 
     private void ViewTool(string toolId)
     {
-        Navigation.NavigateTo($"/tools/{toolId}");
+        Navigation.NavigateTo($"/tools/{toolId}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
     }
 
     private void ToggleFavorite(string toolId)

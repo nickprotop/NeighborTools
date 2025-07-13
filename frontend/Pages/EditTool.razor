@@ -6,6 +6,7 @@
 @inject IToolService ToolService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject INavigationHelperService NavigationHelper
 @attribute [Authorize]
 
 <PageTitle>Edit Tool - NeighborTools</PageTitle>
@@ -429,7 +430,7 @@
             if (result.Success)
             {
                 Snackbar.Add("Tool updated successfully!", Severity.Success);
-                Navigation.NavigateTo("/my-tools");
+                await NavigationHelper.NavigateBack("/my-tools");
             }
             else
             {
@@ -446,9 +447,9 @@
         }
     }
 
-    private void Cancel()
+    private async Task Cancel()
     {
-        Navigation.NavigateTo("/my-tools");
+        await NavigationHelper.NavigateBack("/my-tools");
     }
 
     private void ViewTool()

@@ -242,12 +242,12 @@
 
     private void EditTool(string toolId)
     {
-        Navigation.NavigateTo($"/tools/edit/{toolId}");
+        Navigation.NavigateTo($"/tools/edit/{toolId}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
     }
 
     private void ViewTool(string toolId)
     {
-        Navigation.NavigateTo($"/tools/{toolId}?from=my-tools");
+        Navigation.NavigateTo($"/tools/{toolId}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
     }
 
     private void DeleteTool(string toolId, string toolName)

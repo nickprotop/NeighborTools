@@ -37,6 +37,7 @@ builder.Services.AddScoped<UserService>();
 builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<ISessionTimeoutService, SessionTimeoutService>();
 builder.Services.AddScoped<IPublicProfileService, PublicProfileService>();
+builder.Services.AddScoped<INavigationHelperService, NavigationHelperService>();
 
 var app = builder.Build();
 
