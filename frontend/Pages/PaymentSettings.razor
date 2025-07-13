@@ -1,0 +1,320 @@
+@page "/settings/payments"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Services
+@using frontend.Models
+@inject IPaymentService PaymentService
+@inject ISnackbar Snackbar
+@attribute [Authorize]
+
+<PageTitle>Payment Settings - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-4">
+    <MudPaper Elevation="4" Class="pa-6" Style="border-radius: 16px;">
+        <div class="d-flex align-center mb-6">
+            <MudIcon Icon="@Icons.Material.Filled.Payment" Color="Color.Primary" Class="mr-3" Style="font-size: 2.5rem;" />
+            <div>
+                <MudText Typo="Typo.h4" Color="Color.Primary">Payment Settings</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Configure your payment preferences and payout settings</MudText>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="d-flex justify-center align-center" style="min-height: 300px;">
+                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            </div>
+        }
+        else if (settings != null)
+        {
+            <MudTabs Elevation="0" Rounded="true" Color="Color.Primary">
+                <MudTabPanel Text="Payout Settings" Icon="@Icons.Material.Filled.AccountBalance">
+                    <div class="pa-4">
+                        <MudAlert Severity="Severity.Info" Class="mb-4">
+                            <MudText>
+                                Configure how you receive payments when other users rent your tools.
+                            </MudText>
+                        </MudAlert>
+
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="settings.PayPalEmail"
+                                              Label="PayPal Email"
+                                              Variant="Variant.Outlined"
+                                              HelperText="Email address where you'll receive payouts"
+                                              InputType="InputType.Email"
+                                              Adornment="Adornment.Start"
+                                              AdornmentIcon="@Icons.Material.Filled.Payment"
+                                              Immediate="true" />
+                            </MudItem>
+
+                            <MudItem xs="12" md="6">
+                                <MudSelect @bind-Value="settings.PayoutSchedule" 
+                                           Label="Payout Schedule" 
+                                           Variant="Variant.Outlined"
+                                           Adornment="Adornment.Start"
+                                           AdornmentIcon="@Icons.Material.Filled.Schedule">
+                                    <MudSelectItem Value="@("OnDemand")">On Demand</MudSelectItem>
+                                    <MudSelectItem Value="@("Daily")">Daily</MudSelectItem>
+                                    <MudSelectItem Value="@("Weekly")">Weekly</MudSelectItem>
+                                    <MudSelectItem Value="@("Monthly")">Monthly</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+
+                            <MudItem xs="12" md="6">
+                                <MudNumericField @bind-Value="settings.MinimumPayoutAmount"
+                                                 Label="Minimum Payout Amount"
+                                                 Variant="Variant.Outlined"
+                                                 Format="F2"
+                                                 Min="1.00m"
+                                                 Max="1000.00m"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentText="$"
+                                                 HelperText="Payouts will accumulate until this amount is reached" />
+                            </MudItem>
+
+                            <MudItem xs="12">
+                                <MudCard Elevation="0" Style="background: var(--mud-palette-surface-variant);">
+                                    <MudCardContent>
+                                        <div class="d-flex align-center mb-2">
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Class="mr-2" />
+                                            <MudText Typo="Typo.subtitle1">Verification Status</MudText>
+                                        </div>
+                                        @if (settings.IsPayoutVerified)
+                                        {
+                                            <MudChip T="string" Color="Color.Success" Icon="@Icons.Material.Filled.Verified">
+                                                Verified for Payouts
+                                            </MudChip>
+                                        }
+                                        else
+                                        {
+                                            <div>
+                                                <MudChip T="string" Color="Color.Warning" Icon="@Icons.Material.Filled.Warning">
+                                                    Not Verified
+                                                </MudChip>
+                                                <MudText Typo="Typo.body2" Class="mt-2">
+                                                    Please ensure your PayPal email is correct to receive payouts.
+                                                </MudText>
+                                            </div>
+                                        }
+                                    </MudCardContent>
+                                </MudCard>
+                            </MudItem>
+                        </MudGrid>
+                    </div>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Commission Settings" Icon="@Icons.Material.Filled.Percent">
+                    <div class="pa-4">
+                        <MudAlert Severity="Severity.Info" Class="mb-4">
+                            <MudText>
+                                Platform commission helps maintain and improve NeighborTools. The default rate is 10%.
+                            </MudText>
+                        </MudAlert>
+
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudSwitch @bind-Value="settings.IsCommissionEnabled"
+                                           Label="Enable Platform Commission"
+                                           Color="Color.Primary"
+                                           Disabled="true"
+                                           HelperText="Commission is required to use the platform" />
+                            </MudItem>
+
+                            @if (settings.CustomCommissionRate.HasValue)
+                            {
+                                <MudItem xs="12">
+                                    <MudCard Elevation="0" Style="background: var(--mud-palette-success-light);">
+                                        <MudCardContent>
+                                            <div class="d-flex align-center">
+                                                <MudIcon Icon="@Icons.Material.Filled.Discount" Color="Color.Success" Class="mr-2" />
+                                                <MudText>
+                                                    Your custom commission rate: @((settings.CustomCommissionRate.Value * 100).ToString("F1"))%
+                                                </MudText>
+                                            </div>
+                                        </MudCardContent>
+                                    </MudCard>
+                                </MudItem>
+                            }
+                            else
+                            {
+                                <MudItem xs="12">
+                                    <MudText Typo="Typo.body1">
+                                        Standard commission rate: 10%
+                                    </MudText>
+                                </MudItem>
+                            }
+
+                            <MudItem xs="12" Class="mt-4">
+                                <MudText Typo="Typo.h6" Class="mb-2">Commission Example</MudText>
+                                <MudSimpleTable Elevation="0" Bordered="true">
+                                    <tbody>
+                                        <tr>
+                                            <td>Rental Amount</td>
+                                            <td class="text-right">$100.00</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Commission (@((GetCommissionRate() * 100).ToString("F1"))%)</td>
+                                            <td class="text-right">-$@((100 * GetCommissionRate()).ToString("F2"))</td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Your Payout</strong></td>
+                                            <td class="text-right"><strong>$@((100 * (1 - GetCommissionRate())).ToString("F2"))</strong></td>
+                                        </tr>
+                                    </tbody>
+                                </MudSimpleTable>
+                            </MudItem>
+                        </MudGrid>
+                    </div>
+                </MudTabPanel>
+
+                <MudTabPanel Text="Notifications" Icon="@Icons.Material.Filled.Notifications">
+                    <div class="pa-4">
+                        <MudText Typo="Typo.h6" Class="mb-4">Email Notifications</MudText>
+                        
+                        <MudGrid>
+                            <MudItem xs="12">
+                                <MudSwitch @bind-Value="settings.NotifyOnPaymentReceived"
+                                           Label="Payment Received"
+                                           Color="Color.Primary"
+                                           HelperText="Get notified when someone pays for your tool rental" />
+                            </MudItem>
+
+                            <MudItem xs="12">
+                                <MudSwitch @bind-Value="settings.NotifyOnPayoutSent"
+                                           Label="Payout Sent"
+                                           Color="Color.Primary"
+                                           HelperText="Get notified when we send you a payout" />
+                            </MudItem>
+
+                            <MudItem xs="12">
+                                <MudSwitch @bind-Value="settings.NotifyOnPayoutFailed"
+                                           Label="Payout Failed"
+                                           Color="Color.Primary"
+                                           HelperText="Get notified if a payout fails (important!)" />
+                            </MudItem>
+                        </MudGrid>
+                    </div>
+                </MudTabPanel>
+            </MudTabs>
+
+            <MudDivider Class="my-6" />
+
+            <div class="d-flex justify-space-between">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Secondary"
+                           Href="/settings"
+                           StartIcon="@Icons.Material.Filled.ArrowBack">
+                    Back to Settings
+                </MudButton>
+
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary"
+                           OnClick="SaveSettings"
+                           Disabled="isSaving"
+                           StartIcon="@Icons.Material.Filled.Save">
+                    @if (isSaving)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Saving...</span>
+                    }
+                    else
+                    {
+                        <span>Save Changes</span>
+                    }
+                </MudButton>
+            </div>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private frontend.Models.PaymentSettings? settings;
+    private bool isLoading = true;
+    private bool isSaving = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSettings();
+    }
+
+    private async Task LoadSettings()
+    {
+        try
+        {
+            isLoading = true;
+            var result = await PaymentService.GetPaymentSettingsAsync();
+            
+            if (result.Success && result.Data?.Settings != null)
+            {
+                settings = result.Data.Settings;
+            }
+            else
+            {
+                settings = new frontend.Models.PaymentSettings
+                {
+                    PayoutSchedule = "OnDemand",
+                    MinimumPayoutAmount = 10.00m,
+                    IsCommissionEnabled = true,
+                    NotifyOnPaymentReceived = true,
+                    NotifyOnPayoutSent = true,
+                    NotifyOnPayoutFailed = true
+                };
+                Snackbar.Add("Failed to load settings. Using defaults.", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading settings: {ex.Message}", Severity.Error);
+            settings = new frontend.Models.PaymentSettings();
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveSettings()
+    {
+        if (settings == null) return;
+
+        try
+        {
+            isSaving = true;
+            
+            var request = new UpdatePaymentSettingsRequest
+            {
+                PayPalEmail = settings.PayPalEmail,
+                PayoutSchedule = settings.PayoutSchedule,
+                MinimumPayoutAmount = settings.MinimumPayoutAmount,
+                NotifyOnPaymentReceived = settings.NotifyOnPaymentReceived,
+                NotifyOnPayoutSent = settings.NotifyOnPayoutSent,
+                NotifyOnPayoutFailed = settings.NotifyOnPayoutFailed
+            };
+
+            var result = await PaymentService.UpdatePaymentSettingsAsync(request);
+            
+            if (result.Success)
+            {
+                Snackbar.Add("Payment settings saved successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to save settings", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error saving settings: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private decimal GetCommissionRate()
+    {
+        return settings?.CustomCommissionRate ?? 0.10m;
+    }
+}

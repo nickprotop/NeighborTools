@@ -22,6 +22,7 @@ public class Rental : BaseEntity
     public User Renter { get; set; } = null!;
     public User Owner { get; set; } = null!;
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public Transaction? Transaction { get; set; } // Financial transaction for this rental
 }
 
 public enum RentalStatus

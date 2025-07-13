@@ -48,7 +48,8 @@ public static class MappingConfig
             .Map(dest => dest.RenterName, src => $"{src.Renter.FirstName} {src.Renter.LastName}")
             .Map(dest => dest.OwnerId, src => src.Tool.OwnerId)
             .Map(dest => dest.OwnerName, src => $"{src.Tool.Owner.FirstName} {src.Tool.Owner.LastName}")
-            .Map(dest => dest.Status, src => src.Status.ToString());
+            .Map(dest => dest.Status, src => src.Status.ToString())
+            .Map(dest => dest.IsPaid, src => false); // Will be set separately based on payment status
 
         TypeAdapterConfig<RentalDto, Rental>
             .NewConfig()

@@ -14,6 +14,9 @@ using ToolsSharing.Infrastructure.Features.Settings;
 using ToolsSharing.Infrastructure.Repositories;
 using ToolsSharing.Infrastructure.Services;
 using ToolsSharing.Infrastructure.Mappings;
+using ToolsSharing.Infrastructure.PaymentProviders;
+using ToolsSharing.Infrastructure.Security;
+using ToolsSharing.Core.Configuration;
 
 namespace ToolsSharing.Infrastructure;
 
@@ -50,6 +53,36 @@ public static class DependencyInjection
 
         // Email Notification Service
         services.AddScoped<IEmailNotificationService, EmailNotificationService>();
+
+        // Payment Configuration
+        services.Configure<PaymentConfiguration>(configuration.GetSection("Payment"));
+
+        // Payment Services
+        services.AddHttpClient<PayPalPaymentProvider>();
+        services.AddScoped<IPaymentProvider, PayPalPaymentProvider>();
+        services.AddScoped<IPaymentService, PaymentService>();
+
+        // Payment Security
+        services.AddHttpClient<IPayPalWebhookValidator, PayPalWebhookValidator>();
+
+        // Fraud Detection Configuration
+        services.Configure<FraudDetectionConfiguration>(configuration.GetSection("FraudDetection"));
+        
+        // Fraud Detection Service
+        services.AddScoped<IFraudDetectionService, FraudDetectionService>();
+
+        // Payment Status and Communication Services
+        services.AddScoped<IPaymentStatusService, PaymentStatusService>();
+        services.AddScoped<IPaymentReceiptService, PaymentReceiptService>();
+
+        // Dispute Management Service
+        services.AddScoped<IDisputeService, DisputeService>();
+        
+        // File Storage Service
+        services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        
+        // Dispute Notification Service
+        services.AddScoped<IDisputeNotificationService, DisputeNotificationService>();
 
         return services;
     }

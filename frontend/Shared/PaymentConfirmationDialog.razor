@@ -1,0 +1,152 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@using frontend.Shared
+@inject IPaymentService PaymentService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Payment" Color="Color.Primary" Class="mr-3" />
+            <MudText Typo="Typo.h6">Confirm Payment</MudText>
+        </div>
+    </TitleContent>
+    
+    <DialogContent>
+        <div class="pa-2">
+            @if (Tool != null)
+            {
+                <MudPaper Elevation="1" Class="pa-3 mb-4" Style="border-radius: 8px;">
+                    <div class="d-flex align-center gap-3">
+                        @if (Tool.ImageUrls.Any())
+                        {
+                            <img src="@Tool.ImageUrls.First()" alt="@Tool.Name" style="width: 60px; height: 60px; object-fit: cover; border-radius: 6px;" />
+                        }
+                        else
+                        {
+                            <div class="d-flex align-center justify-center" style="width: 60px; height: 60px; background: var(--mud-palette-surface-variant); border-radius: 6px;">
+                                <MudIcon Icon="@Icons.Material.Filled.Build" Color="Color.Secondary" />
+                            </div>
+                        }
+                        <div>
+                            <MudText Typo="Typo.h6">@Tool.Name</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Owner: @Tool.OwnerName</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                @StartDate.ToString("MMM dd") - @EndDate.ToString("MMM dd, yyyy") (@GetRentalDays() days)
+                            </MudText>
+                        </div>
+                    </div>
+                </MudPaper>
+            }
+
+            <PaymentBreakdownComponent RentalAmount="@RentalAmount" 
+                                       SecurityDeposit="@SecurityDeposit"
+                                       ShowCommissionForRenter="true"
+                                       ShowOwnerPayout="false"
+                                       OnFeesCalculated="OnFeesCalculated" />
+
+            <div class="mt-4">
+                <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
+                    <MudText Typo="Typo.body2">
+                        <strong>Important:</strong> You will be redirected to PayPal to complete this payment securely. 
+                        The rental will be confirmed once payment is successful.
+                    </MudText>
+                </MudAlert>
+
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    <MudText Typo="Typo.body2">
+                        <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" /> 
+                        Your payment information is processed securely by PayPal and never stored on our servers.
+                    </MudText>
+                </MudAlert>
+            </div>
+        </div>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancel" 
+                   Variant="Variant.Text" 
+                   StartIcon="@Icons.Material.Filled.Cancel">
+            Cancel
+        </MudButton>
+        <MudButton OnClick="ConfirmPayment" 
+                   Variant="Variant.Filled" 
+                   Color="Color.Primary"
+                   Disabled="@(isProcessing || feeBreakdown == null)"
+                   StartIcon="@(isProcessing ? null : Icons.Material.Filled.Payment)">
+            @if (isProcessing)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                <MudText Class="ms-2">Processing...</MudText>
+            }
+            else
+            {
+                <MudText>Pay $@(feeBreakdown?.TotalPayerAmount.ToString("F2") ?? "0.00") via PayPal</MudText>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+    [Parameter] public Guid RentalId { get; set; }
+    [Parameter] public Tool? Tool { get; set; }
+    [Parameter] public decimal RentalAmount { get; set; }
+    [Parameter] public decimal SecurityDeposit { get; set; }
+    [Parameter] public DateTime StartDate { get; set; }
+    [Parameter] public DateTime EndDate { get; set; }
+
+    private CalculateFeesResponse? feeBreakdown;
+    private bool isProcessing = false;
+
+    private void OnFeesCalculated(CalculateFeesResponse fees)
+    {
+        feeBreakdown = fees;
+        StateHasChanged();
+    }
+
+    private async Task ConfirmPayment()
+    {
+        if (feeBreakdown == null)
+        {
+            Snackbar.Add("Payment calculation is still loading. Please wait.", Severity.Warning);
+            return;
+        }
+
+        try
+        {
+            isProcessing = true;
+            
+            var result = await PaymentService.InitiatePaymentAsync(RentalId);
+            
+            if (result.Success && !string.IsNullOrEmpty(result.Data?.ApprovalUrl))
+            {
+                // Close dialog and redirect to PayPal
+                MudDialog.Close(DialogResult.Ok(true));
+                Navigation.NavigateTo(result.Data.ApprovalUrl, true);
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to initiate payment", Severity.Error);
+                isProcessing = false;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error initiating payment: {ex.Message}", Severity.Error);
+            isProcessing = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private int GetRentalDays()
+    {
+        return (int)(EndDate - StartDate).TotalDays;
+    }
+}

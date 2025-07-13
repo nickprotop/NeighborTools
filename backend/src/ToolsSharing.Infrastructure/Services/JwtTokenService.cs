@@ -2,7 +2,9 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.Entities;
@@ -12,26 +14,28 @@ namespace ToolsSharing.Infrastructure.Services;
 public class JwtTokenService : IJwtTokenService
 {
     private readonly IConfiguration _configuration;
+    private readonly IServiceProvider _serviceProvider;
     private readonly string _secretKey;
     private readonly string _issuer;
     private readonly string _audience;
     private readonly int _expiresInMinutes;
 
-    public JwtTokenService(IConfiguration configuration)
+    public JwtTokenService(IConfiguration configuration, IServiceProvider serviceProvider)
     {
         _configuration = configuration;
+        _serviceProvider = serviceProvider;
         _secretKey = _configuration["JwtSettings:SecretKey"] ?? throw new InvalidOperationException("JWT SecretKey is not configured");
         _issuer = _configuration["JwtSettings:Issuer"] ?? throw new InvalidOperationException("JWT Issuer is not configured");
         _audience = _configuration["JwtSettings:Audience"] ?? throw new InvalidOperationException("JWT Audience is not configured");
         _expiresInMinutes = int.Parse(_configuration["JwtSettings:ExpiresInMinutes"] ?? "60");
     }
 
-    public Task<string> GenerateAccessTokenAsync(User user)
+    public async Task<string> GenerateAccessTokenAsync(User user)
     {
-        return GenerateAccessTokenAsync(user, _expiresInMinutes);
+        return await GenerateAccessTokenAsync(user, _expiresInMinutes);
     }
 
-    public Task<string> GenerateAccessTokenAsync(User user, int timeoutMinutes)
+    public async Task<string> GenerateAccessTokenAsync(User user, int timeoutMinutes)
     {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_secretKey);
@@ -46,6 +50,23 @@ public class JwtTokenService : IJwtTokenService
             new("UserId", user.Id)
         };
 
+        // Get user roles from UserManager
+        using var scope = _serviceProvider.CreateScope();
+        var userManager = scope.ServiceProvider.GetRequiredService<UserManager<User>>();
+        var roles = await userManager.GetRolesAsync(user);
+        
+        // Add role claims
+        foreach (var role in roles)
+        {
+            claims.Add(new Claim(ClaimTypes.Role, role));
+        }
+        
+        // Add IsAdmin claim for easier frontend checking
+        if (roles.Contains("Admin"))
+        {
+            claims.Add(new Claim("IsAdmin", "true"));
+        }
+
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
@@ -56,7 +77,7 @@ public class JwtTokenService : IJwtTokenService
         };
 
         var token = tokenHandler.CreateToken(tokenDescriptor);
-        return Task.FromResult(tokenHandler.WriteToken(token));
+        return tokenHandler.WriteToken(token);
     }
 
     public string GenerateRefreshToken()

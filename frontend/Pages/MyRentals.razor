@@ -5,6 +5,7 @@
 @using frontend.Services
 @using frontend.Components
 @inject IRentalService RentalService
+@inject IPaymentService PaymentService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
@@ -78,6 +79,15 @@
                                     </MudText>
                                 </div>
                                 
+                                @if (rental.Status == "Approved" && !rental.IsPaid)
+                                {
+                                    <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
+                                        <MudText Typo="Typo.caption">
+                                            <MudIcon Icon="@Icons.Material.Filled.Payment" Size="Size.Small" /> Payment Required
+                                        </MudText>
+                                    </MudAlert>
+                                }
+                                
                                 <MudText Typo="Typo.body2" Class="mb-2">
                                     <strong>Owner:</strong> 
                                     <UserLink UserId="@rental.OwnerId" 
@@ -113,7 +123,13 @@
                                 <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ViewRentalDetails(rental.Id)" StartIcon="@Icons.Material.Filled.Visibility">
                                     View Details
                                 </MudButton>
-                                @if (rental.Status == "Pending")
+                                @if (rental.Status == "Approved" && !rental.IsPaid)
+                                {
+                                    <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="() => InitiatePayment(rental.Id)" StartIcon="@Icons.Material.Filled.Payment">
+                                        Pay Now
+                                    </MudButton>
+                                }
+                                else if (rental.Status == "Pending")
                                 {
                                     <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => CancelRental(rental.Id)" StartIcon="@Icons.Material.Filled.Cancel">
                                         Cancel
@@ -351,7 +367,7 @@
 
     private void ViewRentalDetails(string rentalId)
     {
-        Snackbar.Add("Rental details view coming soon!", Severity.Info);
+        Navigation.NavigateTo($"/rentals/{rentalId}");
     }
 
     private async Task ApproveRental(string rentalId)
@@ -397,6 +413,34 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Error rejecting rental: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task InitiatePayment(string rentalId)
+    {
+        try
+        {
+            if (Guid.TryParse(rentalId, out var rentalGuid))
+            {
+                var result = await PaymentService.InitiatePaymentAsync(rentalGuid);
+                
+                if (result.Success && !string.IsNullOrEmpty(result.Data?.ApprovalUrl))
+                {
+                    Navigation.NavigateTo(result.Data.ApprovalUrl, true);
+                }
+                else
+                {
+                    Snackbar.Add(result.Message ?? "Failed to initiate payment", Severity.Error);
+                }
+            }
+            else
+            {
+                Snackbar.Add("Invalid rental ID", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error initiating payment: {ex.Message}", Severity.Error);
         }
     }
 

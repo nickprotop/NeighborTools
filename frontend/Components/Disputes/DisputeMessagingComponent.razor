@@ -1,0 +1,406 @@
+@using frontend.Models
+@using frontend.Services
+@inject IDisputeService DisputeService
+
+<MudPaper Elevation="2" Class="pa-4">
+    <div class="d-flex align-center mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Forum" Color="Color.Primary" Class="mr-3"/>
+        <MudText Typo="Typo.h6">Dispute Communication</MudText>
+        @if (UnreadCount > 0)
+        {
+            <MudSpacer/>
+            <MudBadge Content="@UnreadCount" Color="Color.Error" Overlap="true">
+                <MudIcon Icon="@Icons.Material.Filled.Notifications" Color="Color.Error"/>
+            </MudBadge>
+        }
+    </div>
+
+    <!-- Message History -->
+    <div class="message-container" style="max-height: 400px; overflow-y: auto; margin-bottom: 16px;">
+        @if (Messages.Any())
+        {
+            @foreach (var message in Messages.OrderBy(m => m.CreatedAt))
+            {
+                <MudCard Elevation="1" 
+                         Class="@($"ma-2 {(IsOwnMessage(message) ? "ml-8" : "mr-8")}")"
+                         Style="@(IsOwnMessage(message) ? "background-color: var(--mud-palette-primary-lighten);" : "")">
+                    <MudCardContent Class="pa-3">
+                        <div class="d-flex align-center mb-2">
+                            <MudAvatar Size="Size.Small" 
+                                       Color="@GetUserColor(message.SenderRole)"
+                                       Class="mr-2">
+                                @GetUserInitials(message.SenderName)
+                            </MudAvatar>
+                            <div class="flex-grow-1">
+                                <MudText Typo="Typo.subtitle2">
+                                    @message.SenderName
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @GetRoleDisplay(message.SenderRole) • @message.CreatedAt.ToString("MMM dd, h:mm tt")
+                                </MudText>
+                            </div>
+                            @if (message.IsInternal)
+                            {
+                                <MudChip T="string" 
+                                         Size="Size.Small" 
+                                         Icon="@Icons.Material.Filled.Lock" 
+                                         Text="Internal"
+                                         Color="Color.Warning"/>
+                            }
+                        </div>
+                        
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            @message.Message
+                        </MudText>
+                        
+                        @if (message.Attachments.Any())
+                        {
+                            <MudDivider Class="my-2"/>
+                            <div class="d-flex flex-wrap gap-2">
+                                @foreach (var attachment in message.Attachments)
+                                {
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Outlined" 
+                                               StartIcon="@GetAttachmentIcon(attachment)"
+                                               OnClick="() => DownloadAttachment(attachment)">
+                                        @GetAttachmentName(attachment)
+                                    </MudButton>
+                                }
+                            </div>
+                        }
+                        
+                        @if (ShowMessageActions && CanPerformActions(message))
+                        {
+                            <MudDivider Class="my-2"/>
+                            <div class="d-flex gap-2">
+                                <MudButton Size="Size.Small" 
+                                           Variant="Variant.Text" 
+                                           StartIcon="@Icons.Material.Filled.Reply"
+                                           OnClick="() => StartReplyToMessage(message)">
+                                    Reply
+                                </MudButton>
+                                @if (IsOwnMessage(message) && CanEditMessage(message))
+                                {
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Text" 
+                                               StartIcon="@Icons.Material.Filled.Edit"
+                                               OnClick="() => EditMessage(message)">
+                                        Edit
+                                    </MudButton>
+                                }
+                            </div>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            }
+        }
+        else
+        {
+            <div class="text-center pa-8">
+                <MudIcon Icon="@Icons.Material.Filled.Chat" 
+                         Color="Color.Secondary" 
+                         Size="Size.Large" 
+                         Class="mb-4"/>
+                <MudText Typo="Typo.h6" Color="Color.Secondary">
+                    No Messages Yet
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Start the conversation by sending a message below.
+                </MudText>
+            </div>
+        }
+    </div>
+
+    <!-- Message Composer -->
+    @if (CanSendMessages)
+    {
+        <MudDivider Class="mb-4"/>
+        
+        <MudExpansionPanels Elevation="0" MultiExpansion="false">
+            <MudExpansionPanel IsExpanded="ShowMessageComposer" 
+                               Text="@(ShowMessageComposer ? "Compose Message" : "Add Message")"
+                               Icon="@Icons.Material.Filled.Create">
+                <div class="pa-2">
+                    @if (IsReplying && ReplyToMessage != null)
+                    {
+                        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-3">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">
+                                Replying to @ReplyToMessage.SenderName
+                            </MudText>
+                            <MudText Typo="Typo.caption">
+                                "@(ReplyToMessage.Message.Length > 100 ? ReplyToMessage.Message.Substring(0, 100) + "..." : ReplyToMessage.Message)"
+                            </MudText>
+                            <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                                           Size="Size.Small" 
+                                           OnClick="CancelReply"
+                                           Class="ml-auto"/>
+                        </MudAlert>
+                    }
+                    
+                    <MudTextField @bind-Value="NewMessage.Message" 
+                                  Label="Message" 
+                                  Variant="Variant.Outlined"
+                                  Lines="4"
+                                  Counter="1000"
+                                  MaxLength="1000"
+                                  HelperText="Describe your concern or provide additional information"
+                                  Class="mb-3"/>
+                    
+                    @if (ShowInternalOption)
+                    {
+                        <MudSwitch @bind-Value="NewMessage.IsInternal" 
+                                   Label="Internal Message (Only visible to support staff)" 
+                                   Color="Color.Warning"
+                                   Class="mb-3"/>
+                    }
+                    
+                    <!-- File Attachments -->
+                    <div class="mb-3">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Attachments (Optional)</MudText>
+                        <MudButton Variant="Variant.Outlined" 
+                                   StartIcon="@Icons.Material.Filled.AttachFile"
+                                   OnClick="ShowAttachmentDialog"
+                                   Class="mr-2">
+                            Add Attachment
+                        </MudButton>
+                        
+                        @if (NewMessage.Attachments.Any())
+                        {
+                            <div class="mt-2">
+                                @foreach (var attachment in NewMessage.Attachments)
+                                {
+                                    <MudChip T="string" 
+                                             Text="@attachment" 
+                                             Icon="@Icons.Material.Filled.AttachFile"
+                                             OnClose="() => RemoveAttachment(attachment)"
+                                             Class="ma-1"/>
+                                }
+                            </div>
+                        }
+                    </div>
+                    
+                    <div class="d-flex justify-end gap-2">
+                        <MudButton Variant="Variant.Text" 
+                                   OnClick="CancelMessage"
+                                   Disabled="IsSending">
+                            Cancel
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Send"
+                                   OnClick="SendMessage"
+                                   Disabled="!CanSendCurrentMessage() || IsSending">
+                            @(IsSending ? "Sending..." : "Send Message")
+                        </MudButton>
+                    </div>
+                    
+                    @if (IsSending)
+                    {
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="mt-2"/>
+                    }
+                </div>
+            </MudExpansionPanel>
+        </MudExpansionPanels>
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Info" Dense="true">
+            <MudText Typo="Typo.body2">
+                @GetMessagingDisabledReason()
+            </MudText>
+        </MudAlert>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public string DisputeId { get; set; } = string.Empty;
+    [Parameter] public List<DisputeMessage> Messages { get; set; } = new();
+    [Parameter] public string CurrentUserId { get; set; } = string.Empty;
+    [Parameter] public string CurrentUserRole { get; set; } = "User";
+    [Parameter] public bool CanSendMessages { get; set; } = true;
+    [Parameter] public bool ShowMessageActions { get; set; } = true;
+    [Parameter] public bool ShowInternalOption { get; set; } = false;
+    [Parameter] public DisputeStatus DisputeStatus { get; set; }
+    [Parameter] public EventCallback<DisputeMessage> OnMessageSent { get; set; }
+    [Parameter] public EventCallback<DisputeMessage> OnMessageEdited { get; set; }
+    [Parameter] public EventCallback<string> OnAttachmentDownload { get; set; }
+
+    private AddDisputeMessageRequest NewMessage = new();
+    private bool ShowMessageComposer = false;
+    private bool IsSending = false;
+    private bool IsReplying = false;
+    private DisputeMessage? ReplyToMessage = null;
+    private int UnreadCount => Messages.Count(m => !m.IsRead && !IsOwnMessage(m));
+
+    protected override void OnParametersSet()
+    {
+        NewMessage.DisputeId = DisputeId;
+    }
+
+    private bool IsOwnMessage(DisputeMessage message)
+    {
+        return message.SenderId == CurrentUserId;
+    }
+
+    private Color GetUserColor(string role) => role switch
+    {
+        "Admin" => Color.Error,
+        "Support" => Color.Warning,
+        "Owner" => Color.Primary,
+        "Renter" => Color.Success,
+        _ => Color.Secondary
+    };
+
+    private string GetUserInitials(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "?";
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length > 1 ? $"{parts[0][0]}{parts[1][0]}" : name.Substring(0, Math.Min(2, name.Length));
+    }
+
+    private string GetRoleDisplay(string role) => role switch
+    {
+        "Admin" => "Administrator",
+        "Support" => "Support Team",
+        "Owner" => "Tool Owner",
+        "Renter" => "Renter",
+        _ => "User"
+    };
+
+    private bool CanPerformActions(DisputeMessage message)
+    {
+        return DisputeStatus != DisputeStatus.Closed && DisputeStatus != DisputeStatus.Cancelled;
+    }
+
+    private bool CanEditMessage(DisputeMessage message)
+    {
+        return (DateTime.UtcNow - message.CreatedAt).TotalMinutes < 15; // 15-minute edit window
+    }
+
+    private string GetAttachmentIcon(string attachment)
+    {
+        var extension = Path.GetExtension(attachment).ToLower();
+        return extension switch
+        {
+            ".pdf" => Icons.Material.Filled.PictureAsPdf,
+            ".jpg" or ".jpeg" or ".png" or ".gif" => Icons.Material.Filled.Image,
+            ".doc" or ".docx" => Icons.Material.Filled.Description,
+            ".txt" => Icons.Material.Filled.TextSnippet,
+            _ => Icons.Material.Filled.AttachFile
+        };
+    }
+
+    private string GetAttachmentName(string attachment)
+    {
+        return Path.GetFileName(attachment);
+    }
+
+    private void StartReplyToMessage(DisputeMessage message)
+    {
+        IsReplying = true;
+        ReplyToMessage = message;
+        ShowMessageComposer = true;
+        StateHasChanged();
+    }
+
+    private void EditMessage(DisputeMessage message)
+    {
+        // TODO: Implement message editing
+    }
+
+    private void CancelReply()
+    {
+        IsReplying = false;
+        ReplyToMessage = null;
+        StateHasChanged();
+    }
+
+    private void ShowAttachmentDialog()
+    {
+        // TODO: Implement file upload dialog
+        // For now, add a placeholder
+        NewMessage.Attachments.Add("sample-evidence.pdf");
+        StateHasChanged();
+    }
+
+    private void RemoveAttachment(string attachment)
+    {
+        NewMessage.Attachments.Remove(attachment);
+        StateHasChanged();
+    }
+
+    private bool CanSendCurrentMessage()
+    {
+        return !string.IsNullOrWhiteSpace(NewMessage.Message);
+    }
+
+    private async Task SendMessage()
+    {
+        if (!CanSendCurrentMessage() || IsSending) return;
+
+        IsSending = true;
+        try
+        {
+            // Call actual service
+            var result = await DisputeService.AddDisputeMessageAsync(NewMessage);
+            
+            if (result.Success && result.Data != null)
+            {
+                // Add to local list for immediate feedback
+                Messages.Add(result.Data);
+                
+                // Notify parent component
+                if (OnMessageSent.HasDelegate)
+                {
+                    await OnMessageSent.InvokeAsync(result.Data);
+                }
+                
+                // Reset form
+                NewMessage = new AddDisputeMessageRequest { DisputeId = DisputeId };
+                IsReplying = false;
+                ReplyToMessage = null;
+                ShowMessageComposer = false;
+                
+                StateHasChanged();
+            }
+            else
+            {
+                // Handle error - could show snackbar or other notification
+                Console.WriteLine($"Failed to send message: {result.Message}");
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to send message: {ex.Message}");
+        }
+        finally
+        {
+            IsSending = false;
+        }
+    }
+
+    private void CancelMessage()
+    {
+        NewMessage = new AddDisputeMessageRequest { DisputeId = DisputeId };
+        IsReplying = false;
+        ReplyToMessage = null;
+        ShowMessageComposer = false;
+        StateHasChanged();
+    }
+
+    private async Task DownloadAttachment(string attachment)
+    {
+        if (OnAttachmentDownload.HasDelegate)
+        {
+            await OnAttachmentDownload.InvokeAsync(attachment);
+        }
+    }
+
+    private string GetMessagingDisabledReason() => DisputeStatus switch
+    {
+        DisputeStatus.Closed => "This dispute has been closed. No additional messages can be added.",
+        DisputeStatus.Cancelled => "This dispute has been cancelled. No additional messages can be added.",
+        DisputeStatus.EscalatedToPayPal => "This dispute has been escalated to PayPal. Further communication will be handled through PayPal's dispute resolution system.",
+        _ => "Messaging is currently disabled for this dispute."
+    };
+}

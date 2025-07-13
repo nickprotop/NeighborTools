@@ -154,6 +154,350 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.ToTable("AspNetUserTokens", (string)null);
                 });
 
+            modelBuilder.Entity("PayoutTransactions", b =>
+                {
+                    b.Property<Guid>("PayoutId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("TransactionId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("PayoutId", "TransactionId");
+
+                    b.HasIndex("TransactionId");
+
+                    b.ToTable("PayoutTransactions");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Dispute", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Category")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<decimal?>("DisputeAmount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<decimal?>("DisputedAmount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<DateTime?>("EscalatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Evidence")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ExternalCaseId")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ExternalDisputeId")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("InitiatedBy")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("InitiatedByName")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("InitiatorId")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("LastActionAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("longtext");
+
+                    b.Property<int?>("PayPalReason")
+                        .HasColumnType("int");
+
+                    b.Property<Guid?>("PaymentId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal?>("RefundAmount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<Guid>("RentalId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int?>("Resolution")
+                        .HasColumnType("int");
+
+                    b.Property<string>("ResolutionNotes")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ResolvedBy")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("ResponseDueDate")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InitiatorId");
+
+                    b.HasIndex("PaymentId");
+
+                    b.HasIndex("RentalId");
+
+                    b.ToTable("Disputes");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.DisputeEvidence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<Guid>("DisputeId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsPublic")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("Tags")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("UploadedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UploadedBy")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DisputeId");
+
+                    b.HasIndex("UploadedAt");
+
+                    b.HasIndex("UploadedBy");
+
+                    b.ToTable("DisputeEvidence", (string)null);
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.DisputeMessage", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Attachments")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("DisputeId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("FromUserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsFromAdmin")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsInternal")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsSystemGenerated")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("SenderId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("SenderName")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("SenderRole")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("ToUserId")
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DisputeId");
+
+                    b.HasIndex("FromUserId");
+
+                    b.HasIndex("ToUserId");
+
+                    b.ToTable("DisputeMessages");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.FraudCheck", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<bool>("AdminNotified")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("CheckDetails")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("CheckType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DeviceFingerprint")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("IpAddress")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("PaymentBlocked")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("PaymentId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid?>("PaymentId1")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ReviewNotes")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("ReviewedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ReviewedBy")
+                        .HasColumnType("longtext");
+
+                    b.Property<int>("RiskLevel")
+                        .HasColumnType("int");
+
+                    b.Property<decimal>("RiskScore")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<string>("TriggeredRules")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UserAgent")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("UserFlagged")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentId1");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("FraudChecks");
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.GDPR.CookieConsent", b =>
                 {
                     b.Property<Guid>("Id")
@@ -465,6 +809,339 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.ToTable("UserConsents");
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Payment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("varchar(3)")
+                        .HasDefaultValue("USD");
+
+                    b.Property<string>("ExternalOrderId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ExternalPayerId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ExternalPaymentId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime?>("FailedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsRefunded")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("JSON");
+
+                    b.Property<string>("PayeeId")
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<string>("PayerId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("RefundReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<decimal>("RefundedAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("RefundedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("RentalId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalPaymentId");
+
+                    b.HasIndex("PayeeId");
+
+                    b.HasIndex("PayerId");
+
+                    b.HasIndex("RentalId");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Provider", "ExternalPaymentId")
+                        .IsUnique()
+                        .HasFilter("ExternalPaymentId IS NOT NULL");
+
+                    b.ToTable("Payments", (string)null);
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.PaymentSettings", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("BusinessName")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("BusinessType")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal?>("CustomCommissionRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<bool>("IsCommissionEnabled")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsPayoutVerified")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<decimal>("MinimumPayoutAmount")
+                        .ValueGeneratedOnAdd()
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)")
+                        .HasDefaultValue(10.00m);
+
+                    b.Property<bool>("NotifyOnPaymentReceived")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("NotifyOnPayoutFailed")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("NotifyOnPayoutSent")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("PayPalEmail")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<int?>("PayoutDayOfMonth")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("PayoutDayOfWeek")
+                        .HasColumnType("int");
+
+                    b.Property<string>("PayoutSchedule")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("PreferredPayoutMethod")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("StripeAccountId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("TaxIdLast4")
+                        .HasMaxLength(4)
+                        .HasColumnType("varchar(4)");
+
+                    b.Property<string>("TaxIdType")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<bool>("TaxInfoProvided")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<string>("VerificationNotes")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime?>("VerifiedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("IsPayoutVerified");
+
+                    b.HasIndex("PayPalEmail");
+
+                    b.HasIndex("UserId")
+                        .IsUnique();
+
+                    b.ToTable("PaymentSettings", (string)null);
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Payout", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("Amount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("CompletedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("varchar(3)")
+                        .HasDefaultValue("USD");
+
+                    b.Property<string>("ExternalBatchId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ExternalPayoutId")
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ExternalTransactionId")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("FailedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("FailureReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("JSON");
+
+                    b.Property<decimal>("NetAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("PayPalEmail")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("PayoutDestination")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("PayoutMethod")
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<decimal>("PlatformFee")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("ProcessedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Provider")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<string>("RecipientId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<Guid>("RentalId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("RetryCount")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime?>("ScheduledAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExternalPayoutId");
+
+                    b.HasIndex("RecipientId");
+
+                    b.HasIndex("RentalId");
+
+                    b.HasIndex("ScheduledAt");
+
+                    b.HasIndex("Status");
+
+                    b.HasIndex("Provider", "ExternalPayoutId")
+                        .IsUnique()
+                        .HasFilter("ExternalPayoutId IS NOT NULL");
+
+                    b.ToTable("Payouts", (string)null);
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.Rental", b =>
                 {
                     b.Property<Guid>("Id")
@@ -606,6 +1283,82 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.ToTable("Reviews");
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.SuspiciousActivity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("ActivityType")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime>("FirstDetectedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<int>("Frequency")
+                        .HasColumnType("int");
+
+                    b.Property<string>("InvestigationNotes")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime>("LastDetectedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("PatternData")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("PaymentsBlocked")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("RelatedPaymentIds")
+                        .HasColumnType("longtext");
+
+                    b.Property<string>("RelatedUserIds")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("RequiresManualReview")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("ResolvedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ResolvedBy")
+                        .HasColumnType("longtext");
+
+                    b.Property<decimal>("RiskScore")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<bool>("UserSuspended")
+                        .HasColumnType("tinyint(1)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("SuspiciousActivities");
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.Tool", b =>
                 {
                     b.Property<Guid>("Id")
@@ -728,6 +1481,99 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.HasIndex("ToolId");
 
                     b.ToTable("ToolImages");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Transaction", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("CommissionAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<decimal>("CommissionRate")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("decimal(5,4)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(3)
+                        .HasColumnType("varchar(3)")
+                        .HasDefaultValue("USD");
+
+                    b.Property<DateTime?>("DepositRefundedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("DisputeOpenedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("DisputeReason")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<DateTime?>("DisputeResolvedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("HasDispute")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<decimal>("OwnerPayoutAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime?>("PaymentCompletedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("PayoutCompletedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("PayoutScheduledAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("RentalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<Guid>("RentalId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("SecurityDeposit")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<decimal>("TotalAmount")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("decimal(18,2)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HasDispute");
+
+                    b.HasIndex("PayoutScheduledAt");
+
+                    b.HasIndex("RentalId")
+                        .IsUnique();
+
+                    b.HasIndex("Status");
+
+                    b.ToTable("Transactions", (string)null);
                 });
 
             modelBuilder.Entity("ToolsSharing.Core.Entities.User", b =>
@@ -1043,6 +1889,62 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.ToTable("UserSettings");
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.VelocityLimit", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<decimal>("AmountLimit")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal>("CurrentAmount")
+                        .HasColumnType("decimal(65,30)");
+
+                    b.Property<int>("CurrentTransactions")
+                        .HasColumnType("int");
+
+                    b.Property<string>("CustomReason")
+                        .HasColumnType("longtext");
+
+                    b.Property<DateTime?>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<int>("LimitType")
+                        .HasColumnType("int");
+
+                    b.Property<TimeSpan>("TimeWindow")
+                        .HasColumnType("time(6)");
+
+                    b.Property<int>("TransactionLimit")
+                        .HasColumnType("int");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<DateTime>("WindowStartTime")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("VelocityLimits");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -1092,6 +1994,105 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("PayoutTransactions", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.Payout", null)
+                        .WithMany()
+                        .HasForeignKey("PayoutId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("TransactionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Dispute", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.User", "Initiator")
+                        .WithMany()
+                        .HasForeignKey("InitiatorId");
+
+                    b.HasOne("ToolsSharing.Core.Entities.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentId");
+
+                    b.HasOne("ToolsSharing.Core.Entities.Rental", "Rental")
+                        .WithMany()
+                        .HasForeignKey("RentalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Initiator");
+
+                    b.Navigation("Payment");
+
+                    b.Navigation("Rental");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.DisputeEvidence", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.Dispute", "Dispute")
+                        .WithMany()
+                        .HasForeignKey("DisputeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "UploadedByUser")
+                        .WithMany()
+                        .HasForeignKey("UploadedBy")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Dispute");
+
+                    b.Navigation("UploadedByUser");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.DisputeMessage", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.Dispute", "Dispute")
+                        .WithMany("Messages")
+                        .HasForeignKey("DisputeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "FromUser")
+                        .WithMany()
+                        .HasForeignKey("FromUserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "ToUser")
+                        .WithMany()
+                        .HasForeignKey("ToUserId");
+
+                    b.Navigation("Dispute");
+
+                    b.Navigation("FromUser");
+
+                    b.Navigation("ToUser");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.FraudCheck", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.Payment", "Payment")
+                        .WithMany()
+                        .HasForeignKey("PaymentId1");
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Payment");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("ToolsSharing.Core.Entities.GDPR.CookieConsent", b =>
@@ -1154,6 +2155,68 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Payment", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.User", "Payee")
+                        .WithMany("PaymentsReceived")
+                        .HasForeignKey("PayeeId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "Payer")
+                        .WithMany("PaymentsMade")
+                        .HasForeignKey("PayerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.Rental", "Rental")
+                        .WithMany()
+                        .HasForeignKey("RentalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.Transaction", null)
+                        .WithMany("Payments")
+                        .HasForeignKey("RentalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Payee");
+
+                    b.Navigation("Payer");
+
+                    b.Navigation("Rental");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.PaymentSettings", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.User", "User")
+                        .WithOne("PaymentSettings")
+                        .HasForeignKey("ToolsSharing.Core.Entities.PaymentSettings", "UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Payout", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.User", "Recipient")
+                        .WithMany("Payouts")
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.Rental", "Rental")
+                        .WithMany()
+                        .HasForeignKey("RentalId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Recipient");
+
+                    b.Navigation("Rental");
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.Rental", b =>
                 {
                     b.HasOne("ToolsSharing.Core.Entities.User", "Owner")
@@ -1214,6 +2277,17 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.Navigation("Tool");
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.SuspiciousActivity", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.Tool", b =>
                 {
                     b.HasOne("ToolsSharing.Core.Entities.User", "Owner")
@@ -1236,6 +2310,17 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.Navigation("Tool");
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Transaction", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.Rental", "Rental")
+                        .WithOne("Transaction")
+                        .HasForeignKey("ToolsSharing.Core.Entities.Transaction", "RentalId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Rental");
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.UserSettings", b =>
                 {
                     b.HasOne("ToolsSharing.Core.Entities.User", "User")
@@ -1247,9 +2332,27 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.VelocityLimit", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Dispute", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.Rental", b =>
                 {
                     b.Navigation("Reviews");
+
+                    b.Navigation("Transaction");
                 });
 
             modelBuilder.Entity("ToolsSharing.Core.Entities.Tool", b =>
@@ -1261,6 +2364,11 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.Navigation("Reviews");
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Transaction", b =>
+                {
+                    b.Navigation("Payments");
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.User", b =>
                 {
                     b.Navigation("Consents");
@@ -1270,6 +2378,14 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.Navigation("DataRequests");
 
                     b.Navigation("OwnedTools");
+
+                    b.Navigation("PaymentSettings");
+
+                    b.Navigation("PaymentsMade");
+
+                    b.Navigation("PaymentsReceived");
+
+                    b.Navigation("Payouts");
 
                     b.Navigation("ProcessingLogs");
 

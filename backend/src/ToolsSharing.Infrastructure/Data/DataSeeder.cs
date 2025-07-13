@@ -18,7 +18,9 @@ public static class DataSeeder
         {
             var context = services.GetRequiredService<ApplicationDbContext>();
             var userManager = services.GetRequiredService<UserManager<User>>();
+            var roleManager = services.GetRequiredService<RoleManager<IdentityRole>>();
             
+            await SeedRolesAsync(roleManager, logger);
             await SeedUsersAsync(userManager, logger);
             await SeedToolsAsync(context, logger);
             await SeedRentalsAsync(context, logger);
@@ -30,6 +32,40 @@ public static class DataSeeder
         {
             logger.LogError(ex, "An error occurred while seeding the database");
             throw;
+        }
+    }
+    
+    private static async Task SeedRolesAsync(RoleManager<IdentityRole> roleManager, ILogger logger)
+    {
+        // Check if roles already exist
+        if (await roleManager.Roles.AnyAsync())
+        {
+            logger.LogInformation("Roles already exist, skipping role seeding");
+            return;
+        }
+        
+        logger.LogInformation("Seeding roles...");
+        
+        var roles = new[]
+        {
+            "Admin",
+            "User"
+        };
+        
+        foreach (var roleName in roles)
+        {
+            var role = new IdentityRole(roleName);
+            var result = await roleManager.CreateAsync(role);
+            
+            if (result.Succeeded)
+            {
+                logger.LogInformation("Created role: {RoleName}", roleName);
+            }
+            else
+            {
+                logger.LogError("Failed to create role {RoleName}: {Errors}", 
+                    roleName, string.Join(", ", result.Errors.Select(e => e.Description)));
+            }
         }
     }
     
@@ -104,6 +140,21 @@ public static class DataSeeder
             if (result.Succeeded)
             {
                 logger.LogInformation("Created user: {Email}", user.Email);
+                
+                // Assign roles
+                if (user.Email == "john.doe@email.com")
+                {
+                    // Make John Doe an admin
+                    await userManager.AddToRoleAsync(user, "Admin");
+                    await userManager.AddToRoleAsync(user, "User");
+                    logger.LogInformation("Assigned Admin and User roles to {Email}", user.Email);
+                }
+                else
+                {
+                    // All other users get User role
+                    await userManager.AddToRoleAsync(user, "User");
+                    logger.LogInformation("Assigned User role to {Email}", user.Email);
+                }
             }
             else
             {

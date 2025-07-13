@@ -28,4 +28,5 @@ public class RentalDto
     public string? Notes { get; set; }
     public DateTime? PickupDate { get; set; }
     public DateTime? ReturnDate { get; set; }
+    public bool IsPaid { get; set; }
 }

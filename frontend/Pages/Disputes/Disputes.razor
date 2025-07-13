@@ -1,0 +1,250 @@
+@page "/disputes"
+@using frontend.Models
+@using frontend.Services
+@inject IDisputeService DisputeService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+
+<PageTitle>Disputes - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <div class="d-flex align-center mb-4">
+        <MudText Typo="Typo.h4" Class="flex-grow-1">
+            <MudIcon Icon="@Icons.Material.Filled.Gavel" Class="mr-2"/>
+            Disputes
+        </MudText>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="OpenCreateDisputeDialog">
+            Create Dispute
+        </MudButton>
+    </div>
+
+    <!-- Filters -->
+    <MudPaper Elevation="2" Class="pa-4 mb-4">
+        <MudGrid>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect @bind-Value="FilterRequest.Status" 
+                          Label="Status" 
+                          Clearable="true" 
+                          Variant="Variant.Outlined"
+                          T="DisputeStatus?">
+                    @foreach (DisputeStatus status in Enum.GetValues<DisputeStatus>())
+                    {
+                        <MudSelectItem T="DisputeStatus?" Value="@status">@status.ToString()</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudSelect @bind-Value="FilterRequest.Type" 
+                          Label="Type" 
+                          Clearable="true" 
+                          Variant="Variant.Outlined"
+                          T="DisputeType?">
+                    @foreach (DisputeType type in Enum.GetValues<DisputeType>())
+                    {
+                        <MudSelectItem T="DisputeType?" Value="@type">@type.ToString()</MudSelectItem>
+                    }
+                </MudSelect>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker @bind-Date="FilterRequest.StartDate" 
+                              Label="Start Date" 
+                              Clearable="true" 
+                              Variant="Variant.Outlined"/>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudDatePicker @bind-Date="FilterRequest.EndDate" 
+                              Label="End Date" 
+                              Clearable="true" 
+                              Variant="Variant.Outlined"/>
+            </MudItem>
+        </MudGrid>
+        <div class="d-flex justify-end mt-3">
+            <MudButton Variant="Variant.Outlined" 
+                       StartIcon="@Icons.Material.Filled.Clear"
+                       OnClick="ClearFilters"
+                       Class="mr-2">
+                Clear
+            </MudButton>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Search"
+                       OnClick="LoadDisputes">
+                Search
+            </MudButton>
+        </div>
+    </MudPaper>
+
+    <!-- Disputes Table -->
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-center align-center" style="min-height: 300px;">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true"/>
+        </div>
+    }
+    else if (DisputesList.Any())
+    {
+        <MudDataGrid Items="@DisputesList" 
+                     Filterable="false" 
+                     SortMode="SortMode.None"
+                     Class="mb-4">
+            <Columns>
+                <PropertyColumn Property="x => x.Id" Title="ID" Format="x => x.Substring(0, 8)" />
+                <PropertyColumn Property="x => x.Subject" Title="Subject" />
+                <PropertyColumn Property="x => x.Type" Title="Type" />
+                <PropertyColumn Property="x => x.Status" Title="Status">
+                    <CellTemplate>
+                        <MudChip T="string" 
+                                 Color="@GetStatusColor(context.Item.Status)" 
+                                 Size="Size.Small"
+                                 Text="@context.Item.Status.ToString()" />
+                    </CellTemplate>
+                </PropertyColumn>
+                <PropertyColumn Property="x => x.Category" Title="Category" />
+                <PropertyColumn Property="x => x.DisputedAmount" Title="Amount" Format="C" />
+                <PropertyColumn Property="x => x.CreatedAt" Title="Created" Format="MMM dd, yyyy" />
+                <TemplateColumn CellClass="d-flex justify-end">
+                    <CellTemplate>
+                        <MudButtonGroup Variant="Variant.Text" Size="Size.Small">
+                            <MudButton StartIcon="@Icons.Material.Filled.Visibility"
+                                      OnClick="() => ViewDispute(context.Item.Id)">
+                                View
+                            </MudButton>
+                            @if (CanManageDispute(context.Item))
+                            {
+                                <MudButton StartIcon="@Icons.Material.Filled.Edit"
+                                          OnClick="() => ManageDispute(context.Item)">
+                                    Manage
+                                </MudButton>
+                            }
+                        </MudButtonGroup>
+                    </CellTemplate>
+                </TemplateColumn>
+            </Columns>
+        </MudDataGrid>
+
+        <!-- Pagination -->
+        <div class="d-flex justify-between align-center">
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Showing @((FilterRequest.PageNumber - 1) * FilterRequest.PageSize + 1) - 
+                @Math.Min(FilterRequest.PageNumber * FilterRequest.PageSize, TotalCount) of @TotalCount disputes
+            </MudText>
+            <MudPagination Count="@TotalPages" 
+                          Selected="@FilterRequest.PageNumber" 
+                          SelectedChanged="OnPageChanged"
+                          ShowFirstButton="true"
+                          ShowLastButton="true" />
+        </div>
+    }
+    else
+    {
+        <MudPaper Elevation="2" Class="pa-8 text-center">
+            <MudIcon Icon="@Icons.Material.Filled.Gavel" 
+                     Size="Size.Large" 
+                     Color="Color.Secondary" 
+                     Class="mb-4"/>
+            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">
+                No Disputes Found
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                You don't have any disputes yet. Disputes help resolve issues between renters and tool owners.
+            </MudText>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary"
+                       StartIcon="@Icons.Material.Filled.Add"
+                       OnClick="OpenCreateDisputeDialog">
+                Create Your First Dispute
+            </MudButton>
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private List<Dispute> DisputesList = new();
+    private GetDisputesRequest FilterRequest = new();
+    private bool IsLoading = true;
+    private int TotalCount = 0;
+    private int TotalPages => (int)Math.Ceiling((double)TotalCount / FilterRequest.PageSize);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDisputes();
+    }
+
+    private async Task LoadDisputes()
+    {
+        IsLoading = true;
+        try
+        {
+            var result = await DisputeService.GetDisputesAsync(FilterRequest);
+            if (result.Success && result.Data != null)
+            {
+                DisputesList = result.Data;
+                TotalCount = result.TotalCount ?? 0;
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to load disputes", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading disputes: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        FilterRequest.PageNumber = page;
+        await LoadDisputes();
+    }
+
+    private async Task ClearFilters()
+    {
+        FilterRequest = new GetDisputesRequest();
+        await LoadDisputes();
+    }
+
+    private void ViewDispute(string disputeId)
+    {
+        Navigation.NavigateTo($"/disputes/{disputeId}");
+    }
+
+    private void ManageDispute(Dispute dispute)
+    {
+        // For now, just navigate to view page
+        // In the future, this could open a management dialog
+        Navigation.NavigateTo($"/disputes/{dispute.Id}");
+    }
+
+    private bool CanManageDispute(Dispute dispute)
+    {
+        // Simplified logic - in production, check user permissions
+        return dispute.Status == DisputeStatus.Open || dispute.Status == DisputeStatus.InProgress;
+    }
+
+    private Color GetStatusColor(DisputeStatus status) => status switch
+    {
+        DisputeStatus.Open => Color.Warning,
+        DisputeStatus.InProgress => Color.Info,
+        DisputeStatus.EscalatedToPayPal => Color.Error,
+        DisputeStatus.Resolved => Color.Success,
+        DisputeStatus.Closed => Color.Secondary,
+        DisputeStatus.Cancelled => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private async Task OpenCreateDisputeDialog()
+    {
+        // TODO: Implement create dispute dialog
+        Snackbar.Add("Create dispute dialog not yet implemented", Severity.Info);
+    }
+}

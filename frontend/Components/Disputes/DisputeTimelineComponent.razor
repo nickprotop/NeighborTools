@@ -1,0 +1,210 @@
+@using frontend.Models
+
+<MudPaper Elevation="2" Class="pa-4 mb-4">
+    <div class="d-flex align-center mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Primary" Class="mr-3"/>
+        <MudText Typo="Typo.h6">Dispute Timeline</MudText>
+        @if (ShowStatusChip && Dispute != null)
+        {
+            <MudSpacer/>
+            <MudChip T="string" 
+                     Color="@GetStatusColor(Dispute.Status)" 
+                     Size="Size.Small" 
+                     Text="@Dispute.Status.ToString()" />
+        }
+    </div>
+
+    @if (TimelineEvents.Any())
+    {
+        <MudTimeline TimelinePosition="TimelinePosition.Start" DisableModifiers="true">
+            @foreach (var timelineEvent in TimelineEvents.OrderBy(e => e.Timestamp))
+            {
+                <MudTimelineItem Color="@GetEventColor(timelineEvent)" 
+                                 Size="Size.Small"
+                                 TimelineAlign="TimelineAlign.End">
+                    <ItemOpposite>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @timelineEvent.Timestamp.ToString("MMM dd, yyyy")
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            @timelineEvent.Timestamp.ToString("h:mm tt")
+                        </MudText>
+                    </ItemOpposite>
+                    <ItemContent>
+                        <MudCard Elevation="1" Class="pa-3 mb-2">
+                            <div class="d-flex align-center mb-2">
+                                <MudIcon Icon="@GetEventIcon(timelineEvent)" 
+                                         Color="@GetEventColor(timelineEvent)" 
+                                         Size="Size.Small" 
+                                         Class="mr-2"/>
+                                <MudText Typo="Typo.subtitle2">
+                                    @timelineEvent.Title
+                                </MudText>
+                                @if (!string.IsNullOrEmpty(timelineEvent.ActorName))
+                                {
+                                    <MudSpacer/>
+                                    <MudChip T="string" 
+                                             Size="Size.Small" 
+                                             Variant="Variant.Text"
+                                             Text="@timelineEvent.ActorName"/>
+                                }
+                            </div>
+                            
+                            <MudText Typo="Typo.body2" Class="mb-2">
+                                @timelineEvent.Description
+                            </MudText>
+                            
+                            @if (!string.IsNullOrEmpty(timelineEvent.Details))
+                            {
+                                <MudCollapse Expanded="timelineEvent.ShowDetails">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @timelineEvent.Details
+                                    </MudText>
+                                </MudCollapse>
+                                
+                                <MudButton Size="Size.Small" 
+                                           Variant="Variant.Text" 
+                                           StartIcon="@(timelineEvent.ShowDetails ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                           OnClick="() => ToggleEventDetails(timelineEvent)"
+                                           Class="mt-1">
+                                    @(timelineEvent.ShowDetails ? "Less" : "More") Details
+                                </MudButton>
+                            }
+                            
+                            @if (timelineEvent.Attachments.Any())
+                            {
+                                <div class="mt-2">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Attachments:</MudText>
+                                    @foreach (var attachment in timelineEvent.Attachments)
+                                    {
+                                        <MudChip T="string" 
+                                                 Size="Size.Small" 
+                                                 Icon="@Icons.Material.Filled.AttachFile" 
+                                                 Text="@attachment"
+                                                 Class="ml-1"/>
+                                    }
+                                </div>
+                            }
+                            
+                            @if (timelineEvent.ActionRequired && timelineEvent.Actions.Any())
+                            {
+                                <MudDivider Class="my-2"/>
+                                <div class="d-flex gap-2">
+                                    @foreach (var action in timelineEvent.Actions)
+                                    {
+                                        <MudButton Size="Size.Small" 
+                                                   Variant="Variant.Outlined" 
+                                                   Color="@GetColorFromString(action.Color)"
+                                                   StartIcon="@action.Icon"
+                                                   OnClick="() => OnTimelineAction.InvokeAsync((timelineEvent, action))">
+                                            @action.Label
+                                        </MudButton>
+                                    }
+                                </div>
+                            }
+                        </MudCard>
+                    </ItemContent>
+                </MudTimelineItem>
+            }
+        </MudTimeline>
+        
+        @if (ShowAddMessage)
+        {
+            <div class="mt-4">
+                <MudDivider Class="mb-3"/>
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Add"
+                           OnClick="OnAddMessage"
+                           FullWidth="true">
+                    Add Response
+                </MudButton>
+            </div>
+        }
+    }
+    else
+    {
+        <div class="text-center pa-8">
+            <MudIcon Icon="@Icons.Material.Filled.Timeline" 
+                     Color="Color.Secondary" 
+                     Size="Size.Large" 
+                     Class="mb-4"/>
+            <MudText Typo="Typo.h6" Color="Color.Secondary">
+                No Timeline Events
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Timeline events will appear here as the dispute progresses.
+            </MudText>
+        </div>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public Dispute? Dispute { get; set; }
+    [Parameter] public List<DisputeTimelineEvent> TimelineEvents { get; set; } = new();
+    [Parameter] public bool ShowStatusChip { get; set; } = true;
+    [Parameter] public bool ShowAddMessage { get; set; } = true;
+    [Parameter] public EventCallback<(DisputeTimelineEvent Event, TimelineAction Action)> OnTimelineAction { get; set; }
+    [Parameter] public EventCallback OnAddMessage { get; set; }
+
+    private void ToggleEventDetails(DisputeTimelineEvent timelineEvent)
+    {
+        timelineEvent.ShowDetails = !timelineEvent.ShowDetails;
+        StateHasChanged();
+    }
+
+    private Color GetStatusColor(DisputeStatus status) => status switch
+    {
+        DisputeStatus.Open => Color.Warning,
+        DisputeStatus.InProgress => Color.Info,
+        DisputeStatus.EscalatedToPayPal => Color.Error,
+        DisputeStatus.Resolved => Color.Success,
+        DisputeStatus.Closed => Color.Secondary,
+        DisputeStatus.Cancelled => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private Color GetEventColor(DisputeTimelineEvent timelineEvent) => timelineEvent.EventType switch
+    {
+        DisputeEventType.Created => Color.Primary,
+        DisputeEventType.MessageAdded => Color.Info,
+        DisputeEventType.StatusChanged => Color.Warning,
+        DisputeEventType.EvidenceAdded => Color.Success,
+        DisputeEventType.EscalatedToPayPal => Color.Error,
+        DisputeEventType.PayPalUpdate => Color.Secondary,
+        DisputeEventType.AdminAction => Color.Tertiary,
+        DisputeEventType.Resolved => Color.Success,
+        DisputeEventType.Closed => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private Color GetColorFromString(string colorString) => colorString?.ToLower() switch
+    {
+        "primary" => Color.Primary,
+        "secondary" => Color.Secondary,
+        "tertiary" => Color.Tertiary,
+        "info" => Color.Info,
+        "success" => Color.Success,
+        "warning" => Color.Warning,
+        "error" => Color.Error,
+        "dark" => Color.Dark,
+        "inherit" => Color.Inherit,
+        "surface" => Color.Surface,
+        _ => Color.Default
+    };
+
+    private string GetEventIcon(DisputeTimelineEvent timelineEvent) => timelineEvent.EventType switch
+    {
+        DisputeEventType.Created => Icons.Material.Filled.Start,
+        DisputeEventType.MessageAdded => Icons.Material.Filled.Message,
+        DisputeEventType.StatusChanged => Icons.Material.Filled.Update,
+        DisputeEventType.EvidenceAdded => Icons.Material.Filled.AttachFile,
+        DisputeEventType.EscalatedToPayPal => Icons.Material.Filled.ArrowUpward,
+        DisputeEventType.PayPalUpdate => Icons.Material.Filled.Sync,
+        DisputeEventType.AdminAction => Icons.Material.Filled.AdminPanelSettings,
+        DisputeEventType.Resolved => Icons.Material.Filled.CheckCircle,
+        DisputeEventType.Closed => Icons.Material.Filled.Close,
+        _ => Icons.Material.Filled.Event
+    };
+}
+

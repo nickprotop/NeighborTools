@@ -3,9 +3,12 @@
 @using frontend.Models
 @using frontend.Services
 @using frontend.Components
+@using frontend.Shared
 @inject IRentalService RentalService
 @inject IToolService ToolService
+@inject IPaymentService PaymentService
 @inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 
 <MudDialog>
     <DialogContent>
@@ -40,7 +43,7 @@
 
                 <MudItem xs="12" md="6">
                     <MudDatePicker @bind-Date="startDate" 
-                                   @bind-Date:after="CalculateCost"
+                                   @bind-Date:after="CalculateRentalCost"
                                    Label="Start Date" 
                                    Variant="Variant.Outlined"
                                    MinDate="@GetMinimumStartDate()"
@@ -50,7 +53,7 @@
                 
                 <MudItem xs="12" md="6">
                     <MudDatePicker @bind-Date="endDate" 
-                                   @bind-Date:after="CalculateCost"
+                                   @bind-Date:after="CalculateRentalCost"
                                    Label="End Date" 
                                    Variant="Variant.Outlined"
                                    MinDate="startDate ?? DateTime.Today.AddDays(1)"
@@ -98,33 +101,116 @@
                     </MudItem>
                 }
 
-                @if (totalCost > 0)
+                @if (isCalculatingCost)
                 {
                     <MudItem xs="12">
-                        <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px; background: var(--mud-palette-primary-lighten);">
-                            <MudText Typo="Typo.h6" Class="mb-2">Rental Summary</MudText>
+                        <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px;">
+                            <div class="d-flex justify-center align-center py-4">
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-3" />
+                                <MudText Typo="Typo.body2">Calculating rental cost...</MudText>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+                }
+                else if (costCalculation != null)
+                {
+                    <MudItem xs="12">
+                        <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px; background: var(--mud-palette-surface-variant);">
+                            <div class="d-flex align-center mb-3">
+                                <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" Class="mr-2" />
+                                <MudText Typo="Typo.h6">Payment Breakdown</MudText>
+                            </div>
+
                             <MudGrid>
-                                <MudItem xs="6">
-                                    <MudText Typo="Typo.body2">Duration:</MudText>
-                                    <MudText Typo="Typo.body1"><strong>@rentalDays days</strong></MudText>
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body2">Rental Duration:</MudText>
                                 </MudItem>
-                                <MudItem xs="6">
-                                    <MudText Typo="Typo.body2">Rate:</MudText>
-                                    <MudText Typo="Typo.body1"><strong>$@selectedRate.ToString("F2") @rateType</strong></MudText>
+                                <MudItem xs="4" Class="text-right">
+                                    <MudText Typo="Typo.body1"><strong>@costCalculation.RentalDays day@(costCalculation.RentalDays != 1 ? "s" : "")</strong></MudText>
                                 </MudItem>
-                                <MudItem xs="6">
-                                    <MudText Typo="Typo.body2">Total Cost:</MudText>
-                                    <MudText Typo="Typo.h6" Color="Color.Primary"><strong>$@totalCost.ToString("F2")</strong></MudText>
+
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body2">Rate (@costCalculation.RateType):</MudText>
                                 </MudItem>
-                                @if (Tool.DepositRequired > 0)
+                                <MudItem xs="4" Class="text-right">
+                                    <MudText Typo="Typo.body1">$@costCalculation.SelectedRate.ToString("F2")</MudText>
+                                </MudItem>
+
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body2">Rental Amount:</MudText>
+                                </MudItem>
+                                <MudItem xs="4" Class="text-right">
+                                    <MudText Typo="Typo.body1">$@costCalculation.RentalAmount.ToString("F2")</MudText>
+                                </MudItem>
+
+                                @if (costCalculation.SecurityDeposit > 0)
                                 {
-                                    <MudItem xs="6">
-                                        <MudText Typo="Typo.body2">Deposit Required:</MudText>
-                                        <MudText Typo="Typo.h6" Color="Color.Secondary"><strong>$@Tool.DepositRequired.ToString("F2")</strong></MudText>
+                                    <MudItem xs="8">
+                                        <MudText Typo="Typo.body2">Security Deposit:</MudText>
+                                    </MudItem>
+                                    <MudItem xs="4" Class="text-right">
+                                        <MudText Typo="Typo.body1">$@costCalculation.SecurityDeposit.ToString("F2")</MudText>
                                     </MudItem>
                                 }
+
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body2">Platform Fee (@((costCalculation.CommissionRate * 100).ToString("F1"))%):</MudText>
+                                </MudItem>
+                                <MudItem xs="4" Class="text-right">
+                                    <MudText Typo="Typo.body1">$@costCalculation.CommissionAmount.ToString("F2")</MudText>
+                                </MudItem>
+
+                                <MudItem xs="12">
+                                    <MudDivider Class="my-2" />
+                                </MudItem>
+
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.h6" Color="Color.Primary"><strong>Total Amount:</strong></MudText>
+                                </MudItem>
+                                <MudItem xs="4" Class="text-right">
+                                    <MudText Typo="Typo.h6" Color="Color.Primary"><strong>$@costCalculation.TotalPayerAmount.ToString("F2")</strong></MudText>
+                                </MudItem>
+
+                                @if (costCalculation.SecurityDeposit > 0)
+                                {
+                                    <MudItem xs="12" Class="mt-3">
+                                        <MudAlert Severity="Severity.Info" Dense="true">
+                                            <MudText Typo="Typo.caption">
+                                                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" /> 
+                                                Security deposit will be refunded after the rental is completed and the tool is returned in good condition.
+                                            </MudText>
+                                        </MudAlert>
+                                    </MudItem>
+                                }
+
+                                <MudItem xs="12" Class="mt-2">
+                                    <MudAlert Severity="Severity.Info" Dense="true">
+                                        <MudText Typo="Typo.caption">
+                                            <MudIcon Icon="@Icons.Material.Filled.Payment" Size="Size.Small" /> 
+                                            Payment will be processed securely via PayPal.
+                                        </MudText>
+                                    </MudAlert>
+                                </MudItem>
                             </MudGrid>
                         </MudPaper>
+                    </MudItem>
+                }
+
+                @if (paymentSettingsChecked && !ownerCanReceivePayments)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Warning" Class="mb-3">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Payment" Class="mr-3" />
+                                <div>
+                                    <MudText Typo="Typo.subtitle2"><strong>Tool Temporarily Unavailable</strong></MudText>
+                                    <MudText Typo="Typo.body2">
+                                        This tool is currently unavailable for rent because the owner hasn't configured their payment settings yet. 
+                                        Please check back later or contact the tool owner directly.
+                                    </MudText>
+                                </div>
+                            </div>
+                        </MudAlert>
                     </MudItem>
                 }
 
@@ -143,7 +229,7 @@
         <MudButton Color="Color.Primary" 
                    Variant="Variant.Filled" 
                    OnClick="SubmitRequest"
-                   Disabled="@(isSubmitting || !IsFormValid())"
+                   Disabled="@(isSubmitting || !IsFormValid() || !ownerCanReceivePayments)"
                    StartIcon="@(isSubmitting ? null : Icons.Material.Filled.Send)">
             @if (isSubmitting)
             {
@@ -168,16 +254,18 @@
     private string errorMessage = string.Empty;
     private bool isSubmitting = false;
     
-    // Cost calculation
-    private decimal totalCost = 0;
-    private decimal selectedRate = 0;
-    private string rateType = "";
-    private int rentalDays = 0;
+    // Cost calculation from API
+    private RentalCostCalculationResponse? costCalculation = null;
+    private bool isCalculatingCost = false;
 
     // Lead time validation
     private int ownerLeadTimeHours = 24; // Default 24 hours, will be fetched from API
     private bool autoApprovalEnabled = false;
     private bool settingsLoaded = false;
+    
+    // Payment settings validation
+    private bool ownerCanReceivePayments = true;
+    private bool paymentSettingsChecked = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -187,47 +275,58 @@
         // Load owner settings for lead time and auto-approval info
         await LoadOwnerSettings();
         
-        CalculateCost();
+        // Check if owner can receive payments
+        await CheckOwnerPaymentSettings();
+        
+        await CalculateRentalCost();
     }
 
-    private void CalculateCost()
+    private async Task CalculateRentalCost()
     {
         if (Tool == null || startDate == null || endDate == null || startDate >= endDate)
         {
-            totalCost = 0;
+            costCalculation = null;
+            ValidateLeadTime();
+            StateHasChanged();
             return;
         }
 
-        rentalDays = (int)(endDate.Value - startDate.Value).TotalDays;
-        
-        // Calculate best rate (similar to backend logic)
-        decimal dailyCost = Tool.DailyRate * rentalDays;
-        decimal weeklyCost = Tool.WeeklyRate.HasValue && rentalDays >= 7 ? 
-            Tool.WeeklyRate.Value * (rentalDays / 7) + Tool.DailyRate * (rentalDays % 7) : decimal.MaxValue;
-        decimal monthlyCost = Tool.MonthlyRate.HasValue && rentalDays >= 30 ? 
-            Tool.MonthlyRate.Value * (rentalDays / 30) + Tool.DailyRate * (rentalDays % 30) : decimal.MaxValue;
+        try
+        {
+            isCalculatingCost = true;
+            StateHasChanged();
 
-        if (monthlyCost < dailyCost && monthlyCost < weeklyCost)
-        {
-            totalCost = monthlyCost;
-            selectedRate = Tool.MonthlyRate!.Value;
-            rateType = "per month";
-        }
-        else if (weeklyCost < dailyCost)
-        {
-            totalCost = weeklyCost;
-            selectedRate = Tool.WeeklyRate!.Value;
-            rateType = "per week";
-        }
-        else
-        {
-            totalCost = dailyCost;
-            selectedRate = Tool.DailyRate;
-            rateType = "per day";
-        }
+            if (!Guid.TryParse(Tool.Id, out var toolGuid))
+            {
+                costCalculation = null;
+                errorMessage = "Invalid tool ID format.";
+                return;
+            }
 
-        ValidateLeadTime();
-        StateHasChanged();
+            var result = await PaymentService.CalculateRentalCostAsync(toolGuid, startDate.Value, endDate.Value);
+            
+            if (result.Success && result.Data != null)
+            {
+                costCalculation = result.Data;
+                errorMessage = string.Empty;
+            }
+            else
+            {
+                costCalculation = null;
+                errorMessage = result.Message ?? "Failed to calculate rental cost.";
+            }
+        }
+        catch (Exception ex)
+        {
+            costCalculation = null;
+            errorMessage = $"Error calculating rental cost: {ex.Message}";
+        }
+        finally
+        {
+            isCalculatingCost = false;
+            ValidateLeadTime();
+            StateHasChanged();
+        }
     }
 
     private async Task LoadOwnerSettings()
@@ -270,6 +369,44 @@
         }
     }
 
+    private async Task CheckOwnerPaymentSettings()
+    {
+        if (Tool?.OwnerId == null)
+        {
+            ownerCanReceivePayments = false;
+            paymentSettingsChecked = true;
+            return;
+        }
+
+        try
+        {
+            // Check if we can get payment settings for the owner
+            // We'll use the tool service to check if the owner has payment settings configured
+            // This is a bit indirect, but we don't want to expose payment settings endpoint to all users
+            var result = await PaymentService.CanOwnerReceivePaymentsAsync(Tool.OwnerId);
+            
+            if (result.Success)
+            {
+                ownerCanReceivePayments = result.Data.CanReceivePayments;
+            }
+            else
+            {
+                // If we can't determine, assume they can't receive payments (safe default)
+                ownerCanReceivePayments = false;
+            }
+        }
+        catch (Exception)
+        {
+            // If there's an error checking, assume they can't receive payments (safe default)
+            ownerCanReceivePayments = false;
+        }
+        finally
+        {
+            paymentSettingsChecked = true;
+            StateHasChanged();
+        }
+    }
+
     private void ValidateLeadTime()
     {
         if (startDate.HasValue && settingsLoaded)
@@ -290,7 +427,7 @@
 
     private bool IsFormValid()
     {
-        if (Tool == null || !startDate.HasValue || !endDate.HasValue || startDate >= endDate || totalCost <= 0)
+        if (Tool == null || !startDate.HasValue || !endDate.HasValue || startDate >= endDate || costCalculation == null)
             return false;
 
         // Check lead time requirement
@@ -343,14 +480,33 @@
 
             var result = await RentalService.CreateRentalAsync(request);
 
-            if (result.Success)
+            if (result.Success && result.Data != null)
             {
-                // Show appropriate success message based on response
-                var successMessage = result.Message ?? "Rental request submitted successfully!";
-                var severity = result.Message?.Contains("automatically approved") == true ? Severity.Success : Severity.Info;
+                // If rental was created successfully, initiate payment
+                if (Guid.TryParse(result.Data.Id, out var rentalGuid))
+                {
+                    var paymentResult = await PaymentService.InitiatePaymentAsync(rentalGuid);
                 
-                Snackbar.Add(successMessage, severity);
-                MudDialog.Close(DialogResult.Ok(result.Data));
+                    if (paymentResult.Success && !string.IsNullOrEmpty(paymentResult.Data?.ApprovalUrl))
+                    {
+                        // Store rental info in session storage for after payment completion
+                        var localStorage = Navigation.ToAbsoluteUri(Navigation.Uri).Host;
+                        
+                        // Close dialog and redirect to PayPal
+                        MudDialog.Close(DialogResult.Ok(result.Data));
+                        Navigation.NavigateTo(paymentResult.Data.ApprovalUrl, true);
+                    }
+                    else
+                    {
+                        // Payment initiation failed - show error but rental was created
+                        errorMessage = paymentResult.Message ?? "Rental created but payment initiation failed. Please contact support.";
+                        Snackbar.Add("Rental created but payment could not be initiated. Please try paying from My Rentals page.", Severity.Warning);
+                    }
+                }
+                else
+                {
+                    errorMessage = "Invalid rental ID format.";
+                }
             }
             else
             {
@@ -371,4 +527,5 @@
     {
         MudDialog.Cancel();
     }
+
 }

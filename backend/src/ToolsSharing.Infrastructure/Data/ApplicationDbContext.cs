@@ -18,12 +18,28 @@ public class ApplicationDbContext : IdentityDbContext<User>
     public DbSet<Review> Reviews { get; set; }
     public DbSet<UserSettings> UserSettings { get; set; }
     
+    // Payment entities
+    public DbSet<Payment> Payments { get; set; }
+    public DbSet<Transaction> Transactions { get; set; }
+    public DbSet<Payout> Payouts { get; set; }
+    public DbSet<PaymentSettings> PaymentSettings { get; set; }
+    
     // GDPR entities
     public DbSet<UserConsent> UserConsents { get; set; }
     public DbSet<DataProcessingLog> DataProcessingLogs { get; set; }
     public DbSet<DataSubjectRequest> DataSubjectRequests { get; set; }
     public DbSet<CookieConsent> CookieConsents { get; set; }
     public DbSet<PrivacyPolicyVersion> PrivacyPolicyVersions { get; set; }
+    
+    // Fraud detection entities
+    public DbSet<FraudCheck> FraudChecks { get; set; }
+    public DbSet<SuspiciousActivity> SuspiciousActivities { get; set; }
+    public DbSet<VelocityLimit> VelocityLimits { get; set; }
+    
+    // Dispute management entities
+    public DbSet<Dispute> Disputes { get; set; }
+    public DbSet<DisputeMessage> DisputeMessages { get; set; }
+    public DbSet<DisputeEvidence> DisputeEvidence { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

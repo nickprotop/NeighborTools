@@ -1,0 +1,121 @@
+@using MudBlazor
+@using frontend.Services
+@using frontend.Models
+@inject IToolService ToolService
+@inject IPaymentService PaymentService
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+
+@if (showNotification)
+{
+    <MudAlert Severity="Severity.Warning" 
+              ShowCloseIcon="true" 
+              CloseIconClicked="DismissNotification"
+              Class="ma-4"
+              Elevation="2">
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-3" />
+            <div class="flex-grow-1">
+                <MudText Typo="Typo.subtitle1"><strong>Payment Setup Required</strong></MudText>
+                <MudText Typo="Typo.body2">
+                    You have @toolCount tool(s) listed for rent, but haven't configured your PayPal email for receiving payments. 
+                    Without payment settings, you won't receive payouts when someone rents your tools.
+                </MudText>
+            </div>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.Payment"
+                       OnClick="NavigateToPaymentSettings"
+                       Class="ml-3">
+                Setup Payments
+            </MudButton>
+        </div>
+    </MudAlert>
+}
+
+@code {
+    [Parameter] public bool AutoCheck { get; set; } = true;
+    [Parameter] public EventCallback OnSetupComplete { get; set; }
+
+    private bool showNotification = false;
+    private int toolCount = 0;
+    private bool isLoading = true;
+    private string? currentUserId;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AutoCheck)
+        {
+            await CheckPaymentSetupStatus();
+        }
+    }
+
+    public async Task CheckPaymentSetupStatus()
+    {
+        try
+        {
+            isLoading = true;
+            
+            // Get current user
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            currentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            
+            if (string.IsNullOrEmpty(currentUserId) || !authState.User.Identity?.IsAuthenticated == true)
+            {
+                return;
+            }
+
+            // Check if user has tools
+            var toolsResult = await ToolService.GetMyToolsAsync();
+            if (!toolsResult.Success || toolsResult.Data == null || !toolsResult.Data.Any())
+            {
+                showNotification = false;
+                return;
+            }
+
+            toolCount = toolsResult.Data.Count();
+
+            // Check if payment settings are configured
+            var paymentResult = await PaymentService.GetPaymentSettingsAsync();
+            
+            if (paymentResult.Success && paymentResult.Data?.Settings != null)
+            {
+                var settings = paymentResult.Data.Settings;
+                
+                // Show notification if PayPal email is not configured
+                showNotification = string.IsNullOrEmpty(settings.PayPalEmail);
+            }
+            else
+            {
+                // If we can't get settings or they don't exist, assume they need setup
+                showNotification = true;
+            }
+        }
+        catch (Exception)
+        {
+            // Don't show notification if there's an error checking
+            showNotification = false;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void NavigateToPaymentSettings()
+    {
+        Navigation.NavigateTo("/settings/payments");
+    }
+
+    private void DismissNotification()
+    {
+        showNotification = false;
+        StateHasChanged();
+    }
+
+    public async Task RefreshStatus()
+    {
+        await CheckPaymentSetupStatus();
+    }
+}

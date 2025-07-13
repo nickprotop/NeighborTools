@@ -37,6 +37,8 @@ public class AuthResult
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
     public bool EmailVerificationRequired { get; set; } = false;
+    public List<string> Roles { get; set; } = new();
+    public bool IsAdmin { get; set; } = false;
 }
 
 public class UserInfo
@@ -48,6 +50,8 @@ public class UserInfo
     public string PhoneNumber { get; set; } = string.Empty;
     public string Address { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public List<string> Roles { get; set; } = new();
+    public bool IsAdmin { get; set; } = false;
 }
 
 public class ConfirmEmailRequest

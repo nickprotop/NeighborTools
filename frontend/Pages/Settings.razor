@@ -588,6 +588,74 @@
                 </div>
             </MudTabPanel>
 
+            <!-- Payment Settings Tab -->
+            <MudTabPanel Text="Payments" Icon="@Icons.Material.Filled.Payment">
+                <div class="pa-6">
+                    <MudGrid>
+                        <MudItem xs="12" md="8">
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px;">
+                                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-4">
+                                    <MudIcon Icon="@Icons.Material.Filled.Payment" Class="mr-2" />
+                                    Payment Settings
+                                </MudText>
+                                
+                                <MudText Typo="Typo.body1" Class="mb-4">
+                                    Configure your PayPal settings to receive payouts when your tools are rented.
+                                </MudText>
+                                
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Primary" 
+                                           Href="/settings/payments"
+                                           StartIcon="@Icons.Material.Filled.Payment"
+                                           Size="Size.Large"
+                                           Class="mb-4">
+                                    Manage Payment Settings
+                                </MudButton>
+                                
+                                <MudDivider Class="mb-4" />
+                                
+                                <MudText Typo="Typo.subtitle1" Class="mb-3">Quick Setup Guide:</MudText>
+                                <MudList T="string" Dense="true">
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                                        Enter your PayPal email address
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                                        Choose your payout schedule preference
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                                        Set minimum payout amount
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                                        Configure notification preferences
+                                    </MudListItem>
+                                </MudList>
+                            </MudPaper>
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="4">
+                            <MudPaper Class="pa-4" Elevation="2" Style="border-radius: 12px; background: var(--mud-palette-surface-variant);">
+                                <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
+                                    <MudIcon Icon="@Icons.Material.Filled.Security" Class="mr-2" />
+                                    Secure Payments
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="mb-3">
+                                    All payments are processed securely through PayPal. We never store your payment information.
+                                </MudText>
+                                <MudText Typo="Typo.body2" Class="mb-3">
+                                    Payouts are automatically processed based on your schedule preferences.
+                                </MudText>
+                                <MudAlert Severity="Severity.Warning" Dense="true">
+                                    <MudText Typo="Typo.caption">
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" /> 
+                                        Payment settings must be configured to receive rental payouts.
+                                    </MudText>
+                                </MudAlert>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudTabPanel>
+
             <!-- Rental Preferences Tab -->
             <MudTabPanel Text="Rentals" Icon="@Icons.Material.Filled.Build">
                 <div class="pa-6">

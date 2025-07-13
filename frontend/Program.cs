@@ -38,6 +38,8 @@ builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<ISessionTimeoutService, SessionTimeoutService>();
 builder.Services.AddScoped<IPublicProfileService, PublicProfileService>();
 builder.Services.AddScoped<INavigationHelperService, NavigationHelperService>();
+builder.Services.AddScoped<IPaymentService, PaymentService>();
+builder.Services.AddScoped<IDisputeService, DisputeService>();
 
 var app = builder.Build();
 

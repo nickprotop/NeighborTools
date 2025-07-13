@@ -12,18 +12,29 @@ NeighborTools is a **community tool sharing platform** with a .NET 9 Web API bac
 
 ## ⚠️ CRITICAL: MudBlazor Version 8.x Requirements
 
-**The frontend uses MudBlazor 8.9.0 - Claude MUST always consult MudBlazor 8.x documentation, NOT 7.x patterns!**
+**⚠️ BREAKING: Claude consistently follows outdated MudBlazor 7.x patterns causing build errors!**
+**The frontend uses MudBlazor 8.9.0 - Claude MUST ALWAYS consult MudBlazor 8.x documentation, NEVER 7.x patterns!**
 
-### Key Breaking Changes from v7.x to v8.x:
+### ⚠️ CRITICAL API Changes in MudBlazor 8.x:
+
+#### Dialog Management (MOST COMMON ERROR SOURCE):
 - **Dialog Structure**: Each dialog must be a separate .razor file with `<MudDialog>` as root element
-- **Dialog Injection**: Use `[CascadingParameter] IMudDialogInstance MudDialog { get; set; }` (THIS project's MudBlazor 8.9.0 uses IMudDialogInstance)
+- **Dialog Injection**: Use `[CascadingParameter] IMudDialogInstance MudDialog { get; set; }` (IMudDialogInstance is the correct interface)
 - **Dialog Closing**: Use `MudDialog.Close(DialogResult.Ok(data))` and `MudDialog.Cancel()` directly (no null checks needed)
-- **Dialog Showing**: Use `@inject IDialogService DialogService` and `DialogService.Show<DialogComponent>(title, parameters, options)` (NOT ShowAsync)
-- **Dialog Parameters**: Use `new DialogParameters { { "ParamName", value } }` for passing data
-- **Dialog Options**: `DialogOptions` is now immutable - use `with` keyword for modifications
-- **Component Binding**: Use `@bind-Value` instead of `@bind-Checked` on switches
-- **Date Picker Events**: Use `@bind-Date:after` instead of `OnDateChanged`
-- **Icon References**: Always prefix icon names with `@` (e.g., `Icon="@Icons.Material.Filled.Save"` NOT `Icon="@Icons.Material.Filled.Save"`)
+- **Dialog Showing**: Use `DialogService.Show<DialogComponent>(title, parameters, options)` (NOT ShowAsync)
+- **Dialog Parameters**: Use `new DialogParameters { { "ParamName", value } }` or `new DialogParameters().Add("ParamName", value)` (both work)
+
+#### Component Property Changes:
+- **Switch Components**: Use `@bind-Value` instead of `@bind-Checked`
+- **Date Picker Events**: Use `@bind-Date:after` instead of `OnDateChanged`  
+- **Icon References**: Always prefix with `@` (e.g., `Icon="@Icons.Material.Filled.Save"`)
+- **MudSelect**: Use `T="Type"` for value type declaration
+- **MudTable**: Items property binding: `Items="@items"` not `ServerData`
+
+#### Table and Data Display:
+- **MudTable**: Use `Items="@dataList"` for client-side data
+- **Pagination**: Use `MudPagination` with `Selected` and `SelectedChanged` parameters
+- **Loading States**: Use `Loading="@isLoading"` parameter on components
 
 ### Complete Dialog Pattern:
 ```csharp
@@ -165,6 +176,9 @@ The application uses **JWT Bearer tokens** with a sophisticated flow:
 - **User** → owns multiple **Tools**
 - **Tool** → has multiple **Rentals**  
 - **Rental** → connects User (renter) with Tool (owner)
+- **Payment** → processes financial transactions for rentals
+- **Dispute** → handles rental conflicts with evidence and communication
+- **FraudCheck** → monitors suspicious activity patterns
 - All entities have audit fields (CreatedAt, UpdatedAt) and soft deletion
 
 ### Data Access Pattern
@@ -223,7 +237,7 @@ public class ApiResponse<T>
 
 ### Frontend Service Architecture
 - **HttpClient Factory**: Named client with `AuthenticatedHttpClientHandler`
-- **Service Layer**: `AuthService`, `ToolService`, `RentalService` for API communication
+- **Service Layer**: `AuthService`, `ToolService`, `RentalService`, `PaymentService`, `DisputeService` for API communication
 - **State Management**: Blazor authentication state with local storage persistence
 - **UI Framework**: MudBlazor 8.9.0 for modern, responsive components
 - **Layout**: Mobile-responsive design with drawer navigation and modern header
@@ -248,6 +262,208 @@ Entity configurations are in `src/ToolsSharing.Infrastructure/Configurations/` u
 4. **Request Interception** → `AuthenticatedHttpClientHandler` adds Bearer header automatically
 5. **Token Refresh** → Automatic refresh when access token expires
 6. **Logout** → Clears localStorage and authentication state
+
+## Payment System Architecture
+
+The application features a **comprehensive payment processing system** with PayPal integration, commission tracking, fraud detection, and dispute management:
+
+### Payment Flow
+1. **Rental Creation** → Payment required before approval
+2. **PayPal Integration** → Secure payment processing via PayPal API
+3. **Commission Calculation** → Automatic platform fee calculation
+4. **Security Deposit** → Hold funds for tool protection
+5. **Owner Payouts** → Automatic or manual payout processing
+6. **Dispute Handling** → Comprehensive dispute resolution workflow
+
+### Key Payment Services
+
+#### Core Payment Services
+- **`IPaymentService`** - Main payment processing interface
+  - Location: `ToolsSharing.Infrastructure.Services.PaymentService`
+  - Handles payment creation, processing, refunds, and status management
+  - Integrates with PayPal API and fraud detection systems
+
+- **`IPaymentProvider`** - Payment provider abstraction
+  - Location: `ToolsSharing.Infrastructure.PaymentProviders.PayPalPaymentProvider`
+  - Supports multiple payment providers (currently PayPal, extensible for Stripe)
+  - Handles external API communication and webhook validation
+
+- **`IPaymentStatusService`** - Payment status tracking and communication
+  - Location: `ToolsSharing.Infrastructure.Services.PaymentStatusService`
+  - Provides user-friendly status explanations and payout timelines
+  - Manages payment lifecycle notifications
+
+#### Security and Fraud Detection
+- **`IFraudDetectionService`** - Advanced fraud prevention
+  - Location: `ToolsSharing.Infrastructure.Services.FraudDetectionService`
+  - Velocity limits, suspicious activity monitoring, AML compliance
+  - Configurable rules and automatic blocking mechanisms
+
+- **`IPayPalWebhookValidator`** - Webhook signature validation
+  - Location: `ToolsSharing.Infrastructure.Security.PayPalWebhookValidator`
+  - Prevents webhook fraud and ensures payment authenticity
+  - Validates PayPal signature headers and request integrity
+
+#### Financial Operations
+- **`IPaymentReceiptService`** - Receipt generation and tracking
+  - Location: `ToolsSharing.Infrastructure.Services.PaymentReceiptService`
+  - Generates professional receipts with detailed breakdowns
+  - Tracks receipt delivery and payment confirmations
+
+- **Payout Background Service** - Automated owner payments
+  - Location: `ToolsSharing.API.Services.PayoutBackgroundService`
+  - Scheduled processing of owner payouts after rental completion
+  - Configurable delay and retry mechanisms
+
+### Payment Configuration
+```json
+{
+  "Payment": {
+    "PayPal": {
+      "ClientId": "...",
+      "ClientSecret": "...",
+      "Environment": "Sandbox", // or "Live"
+      "WebhookId": "..."
+    },
+    "Commission": {
+      "PlatformFeePercentage": 5.0,
+      "MinimumFee": 0.50
+    },
+    "SecurityDeposit": {
+      "DefaultPercentage": 20.0,
+      "MaximumAmount": 500.00
+    }
+  }
+}
+```
+
+## Dispute Management System
+
+Comprehensive dispute resolution system with evidence upload, communication, and PayPal integration:
+
+### Dispute Workflow
+1. **Dispute Creation** → Users can create disputes for rental issues
+2. **Evidence Upload** → File upload system for supporting documentation
+3. **Communication** → Message system between parties
+4. **Escalation** → Admin review and PayPal dispute creation
+5. **Resolution** → Final resolution with potential refunds
+6. **Notifications** → Email notifications for all dispute events
+
+### Key Dispute Services
+
+#### Core Dispute Management
+- **`IDisputeService`** - Main dispute processing interface
+  - Location: `ToolsSharing.Infrastructure.Services.DisputeService`
+  - Handles dispute creation, message management, evidence upload, and resolution
+  - Integrates with PayPal dispute API for escalation
+
+- **`IDisputeNotificationService`** - Comprehensive notification system
+  - Location: `ToolsSharing.Infrastructure.Services.DisputeNotificationService`
+  - Sends branded email notifications for all dispute events
+  - Supports dispute creation, messages, status changes, escalation, resolution, evidence upload, and overdue reminders
+
+#### File and Evidence Management
+- **`IFileStorageService`** - File upload and storage abstraction
+  - Location: `ToolsSharing.Infrastructure.Services.LocalFileStorageService`
+  - Secure file validation, storage, and retrieval
+  - Supports local storage with extensibility for cloud providers
+  - File type validation, size limits, and secure naming
+
+### Dispute Entity Structure
+- **`Dispute`** - Main dispute entity with rental relationship
+- **`DisputeMessage`** - Communication between parties and admins
+- **`DisputeEvidence`** - File evidence with metadata and access control
+- **`DisputeTimeline`** - Audit trail of all dispute activities
+
+## Shared Services Architecture
+
+### Email Notification System
+- **`IEmailNotificationService`** - Comprehensive email system
+  - Location: `ToolsSharing.Infrastructure.Services.EmailNotificationService`
+  - Professional HTML templates for all email types
+  - User preference management and unsubscribe handling
+  - Queue management and delivery tracking
+  - Template types: Authentication, Rentals, Payments, Disputes, Security, Marketing
+
+### Email Notification Types
+The system supports professional email templates for:
+- **Authentication**: Welcome, verification, password reset, security alerts
+- **Rentals**: Requests, approvals, rejections, reminders, overdue notifications
+- **Payments**: Processing confirmations, receipts, payout notifications, failed payments
+- **Disputes**: Creation, messages, status changes, escalation, resolution, evidence upload
+- **Security**: Login alerts, two-factor codes, suspicious activity warnings
+- **System**: Maintenance notifications, terms updates, privacy policy changes
+
+### File Storage Service
+- **`IFileStorageService`** - Universal file management
+  - Location: `ToolsSharing.Infrastructure.Services.LocalFileStorageService`
+  - Used by dispute evidence, tool images, and user uploads
+  - Configurable validation rules and storage providers
+  - Security features: file type validation, size limits, secure paths
+
+### Usage Examples
+
+#### Payment Processing
+```csharp
+// Inject payment service
+[Inject] private IPaymentService PaymentService { get; set; }
+
+// Process rental payment
+var result = await PaymentService.ProcessRentalPaymentAsync(new ProcessRentalPaymentRequest
+{
+    RentalId = rentalId,
+    PaymentMethod = PaymentMethod.PayPal,
+    ReturnUrl = "https://localhost:5001/payment/success",
+    CancelUrl = "https://localhost:5001/payment/cancel"
+});
+```
+
+#### Dispute Creation
+```csharp
+// Inject dispute service
+[Inject] private IDisputeService DisputeService { get; set; }
+
+// Create dispute with evidence
+var result = await DisputeService.CreateDisputeAsync(new CreateDisputeRequest
+{
+    RentalId = rentalId,
+    Type = DisputeType.ToolDamage,
+    Category = DisputeCategory.Quality,
+    Title = "Tool was damaged upon pickup",
+    Description = "The drill had a broken chuck...",
+    Evidence = evidenceFiles
+});
+```
+
+#### File Upload
+```csharp
+// Inject file storage service
+[Inject] private IFileStorageService FileStorage { get; set; }
+
+// Upload file with validation
+var storagePath = await FileStorage.UploadFileAsync(
+    fileStream, 
+    fileName, 
+    contentType, 
+    folder: "disputes/evidence"
+);
+```
+
+#### Email Notifications
+```csharp
+// Inject email service
+[Inject] private IEmailNotificationService EmailService { get; set; }
+
+// Send notification
+var notification = new DisputeCreatedNotification
+{
+    RecipientEmail = user.Email,
+    RecipientName = user.Name,
+    DisputeTitle = dispute.Title,
+    // ... other properties
+};
+await EmailService.SendNotificationAsync(notification);
+```
 
 ## Error Handling and Validation
 
@@ -296,6 +512,41 @@ The project includes detailed TODO files with prioritized roadmap:
   - Fixed rental dialog close/cancel button functionality
   - Updated DialogParameters to use non-generic approach for MudBlazor 8.x
   - Resolved MissingMethodException in dialog creation
+- ✅ Admin Dashboard Implementation
+  - Added role-based authentication with Admin role
+  - JWT tokens include role claims and IsAdmin flag
+  - Admin dashboard with comprehensive overview and statistics
+  - Conditional navigation menu items for admin users
+  - John Doe is seeded as admin user for testing
+- ✅ Production-Ready Admin Management System (completed January 2025)
+  - **FraudManagement.razor** - Complete fraud detection center with real-time alerts, risk level filtering, and admin workflows
+  - **UserManagement.razor** - Comprehensive user administration with search, suspend/unsuspend, verification, and activity tracking
+  - **PaymentManagement.razor** - Payment oversight with status management, approval/rejection workflows, retry/refund capabilities
+  - **DisputeManagement.razor** - Full dispute resolution center with filtering, escalation to PayPal, and resolution workflows
+  - **Real Backend Integration** - All admin pages use actual API endpoints instead of mockup data
+  - **Advanced Filtering** - Comprehensive search and filtering capabilities across all management interfaces
+  - **Role-Based Security** - All admin pages protected with `[Authorize(Roles = "Admin")]`
+  - **Professional UI** - Modern MudBlazor 8.x components with responsive design and consistent styling
+- ✅ Comprehensive Payment System (completed January 2025)
+  - PayPal integration with secure webhook validation
+  - Commission calculation and automated owner payouts
+  - Security deposit handling with real PayPal refunds
+  - Advanced fraud detection and velocity limits
+  - Professional receipt generation and tracking
+  - Payment status communication and timeline explanations
+- ✅ Dispute Management System (completed January 2025)
+  - Full dispute workflow with evidence upload capability
+  - File storage service with security validation
+  - Communication system between parties and admins
+  - PayPal dispute API integration for escalation
+  - Comprehensive email notification system
+  - Professional HTML email templates for all dispute events
+- ✅ Advanced Services Architecture (completed January 2025)
+  - Universal email notification service with 15+ template types
+  - File storage abstraction with local/cloud provider support
+  - Payment receipt service with detailed breakdowns
+  - Background services for automated payout processing
+  - Fraud detection service with configurable rules
 
 See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 
@@ -306,12 +557,18 @@ See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 - **MudBlazor 8.x Compatibility**: Dialog creation uses simplified `DialogParameters` and `DialogOptions`
 - **WSL Development**: Universal compatibility via `Directory.Build.props` without hardcoded paths
 - **Authentication Robustness**: Enhanced token validation prevents inconsistent auth states
+- **Service Layer Expansion**: Comprehensive service architecture with payment, dispute, email, and file storage services
+- **Email Notification System**: Professional email templates with user preference management and delivery tracking
 
 ### Known Working Patterns
 - **Dialog Creation**: Use `new DialogParameters()` and `.Add()` method instead of generic syntax
 - **Date Picker Events**: Use `@bind-Date:after="Method"` instead of `OnDateChanged`
 - **Authentication**: State automatically syncs between localStorage/sessionStorage and auth provider
 - **WSL Builds**: All .NET commands work universally without path modifications
+- **Service Injection**: All services are registered in DI and available via `[Inject]` in Blazor or constructor injection in backend
+- **Email Notifications**: Use specific notification classes (e.g., `DisputeCreatedNotification`) rather than generic email sending
+- **File Uploads**: Always use `IFileStorageService` for consistent validation and storage abstraction
+- **Payment Processing**: All payment operations go through `IPaymentService` with automatic fraud detection and receipt generation
 
 ## Common Troubleshooting
 
@@ -328,3 +585,87 @@ See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 - MySQL container must be running before API starts
 - Connection string in `appsettings.json` should match Docker container settings
 - Use `docker-compose logs mysql` for MySQL container debugging
+
+### Service Registration Issues
+- All services are automatically registered in `DependencyInjection.cs`
+- Payment services require PayPal configuration in `appsettings.json`
+- Email services require SMTP configuration for production use
+- File storage services use local storage by default (configurable for cloud providers)
+
+## Quick Service Reference
+
+### Available Services for Dependency Injection
+
+#### Core Business Services
+- `IAuthService` - Authentication and user management
+- `IToolsService` - Tool listing and management
+- `IRentalsService` - Rental creation and management
+- `IUserService` - User profile and settings
+- `ISettingsService` - Application and user settings
+
+#### Payment and Financial Services
+- `IPaymentService` - Payment processing and management
+- `IPaymentProvider` - PayPal integration (extensible for other providers)
+- `IPaymentStatusService` - Payment status tracking and communication
+- `IPaymentReceiptService` - Receipt generation and tracking
+- `IFraudDetectionService` - Fraud prevention and monitoring
+- `IPayPalWebhookValidator` - Webhook security validation
+
+#### Dispute and Communication Services  
+- `IDisputeService` - Dispute management and resolution
+- `IDisputeNotificationService` - Dispute-specific email notifications
+- `IEmailNotificationService` - Universal email notification system
+- `IFileStorageService` - File upload and storage management
+
+#### Infrastructure Services
+- `IRepository<T>` - Generic repository pattern
+- `IUnitOfWork` - Transaction management
+- `IJwtTokenService` - JWT token generation and validation
+- `IMapper` - Mapster object mapping
+
+## Feature Implementation Workflow
+
+When implementing new features or completing tasks, follow this workflow:
+
+### Implementation Steps
+1. Use the TodoWrite tool to plan the task if required
+2. Use available search tools to understand the codebase and requirements
+3. Implement the solution using all available tools
+4. Verify the solution if possible with tests
+5. Run lint and typecheck commands (e.g., `npm run lint`, `npm run typecheck`, `ruff`, etc.) if available
+6. **NEVER commit changes unless explicitly asked by the user**
+
+### 🔄 CRITICAL: Update TODO Documentation After Feature Completion
+
+**MANDATORY FINAL STEP**: After successfully implementing any feature or completing a significant task, you MUST update the relevant TODO files to reflect the progress:
+
+#### Required TODO Updates:
+1. **`TODO_MASTER_INDEX.md`**:
+   - Mark completed items as ✅ **COMPLETED**
+   - Update priority rankings if dependencies are resolved
+   - Add new items to "Recently Completed" section with detailed description
+   - Adjust phase timelines based on completed work
+
+2. **Specific TODO files** (e.g., `TODO_BASIC_COMMISSION_SYSTEM.md`):
+   - Mark completed sections as ✅ **COMPLETED**
+   - Update implementation status and progress
+   - Note any deviations from original plan (e.g., PayPal instead of Stripe)
+   - Document lessons learned or architectural decisions
+
+3. **`CLAUDE.md`** (this file):
+   - Update "Recently Completed" section with new achievements
+   - Add new services to Quick Service Reference if applicable
+   - Update Known Working Patterns with new implementations
+   - Document any new architectural patterns or best practices
+
+#### Example Update Pattern:
+```markdown
+### ✅ Recently Completed:
+- ✅ [Feature Name] (completed [Date])
+  - [Key achievement 1]
+  - [Key achievement 2] 
+  - [Technical implementation details]
+  - [Architectural decisions made]
+```
+
+**Why This Matters**: Keeping TODO files updated ensures accurate project tracking, prevents duplicate work, and maintains clear development roadmap for future sessions.

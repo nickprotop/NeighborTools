@@ -1,0 +1,677 @@
+@page "/admin"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Admin Dashboard - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
+    <MudText Typo="Typo.h3" Class="mb-4">Admin Dashboard</MudText>
+    
+    @if (isLoading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (loadError != null)
+    {
+        <MudAlert Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else
+    {
+        <!-- Overview Cards -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Users</MudText>
+                                <MudText Typo="Typo.h4">@overview?.Users?.Total.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Success">+@overview?.Users?.NewThisMonth this month</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Handyman" Color="Color.Secondary" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Tools</MudText>
+                                <MudText Typo="Typo.h4">@overview?.Tools?.Total.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption">@overview?.Tools?.Available available</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Tertiary" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Active Rentals</MudText>
+                                <MudText Typo="Typo.h4">@overview?.Rentals?.Active.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption">@overview?.Rentals?.Pending pending</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Success" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Revenue (Month)</MudText>
+                                <MudText Typo="Typo.h4">$@overview?.Revenue?.TotalThisMonth.ToString("N2")</MudText>
+                                <MudText Typo="Typo.caption">$@overview?.Revenue?.CommissionThisMonth.ToString("N2") commission</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Quick Actions -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Quick Actions</MudText>
+                    <div class="d-flex flex-wrap gap-2">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.People"
+                                   Href="/admin/users">
+                            Manage Users
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Secondary" 
+                                   StartIcon="@Icons.Material.Filled.ReportProblem"
+                                   Href="/admin/disputes">
+                            View Disputes
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Success" 
+                                   StartIcon="@Icons.Material.Filled.Payment"
+                                   Href="/admin/payments">
+                            Manage Payments
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Warning" 
+                                   StartIcon="@Icons.Material.Filled.Security"
+                                   Href="/admin/fraud">
+                            Fraud Detection
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Info" 
+                                   StartIcon="@Icons.Material.Filled.Analytics"
+                                   Href="/admin/reports">
+                            View Reports
+                        </MudButton>
+                    </div>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Critical Alerts Section -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" style="border-left: 4px solid var(--mud-palette-error);">
+                    <div class="d-flex align-center mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Size="Size.Medium" />
+                        <MudText Typo="Typo.h6" Class="ml-2">Critical Alerts Requiring Action</MudText>
+                        <MudSpacer />
+                        <MudChip T="string" Color="Color.Error" Size="Size.Small">@GetCriticalAlertCount()</MudChip>
+                    </div>
+                    @if (GetCriticalAlertCount() > 0)
+                    {
+                        <MudGrid>
+                            <!-- High-Risk Fraud Alerts -->
+                            @if (fraudAlerts?.Any(f => f.RiskLevel == FraudRiskLevel.High || f.RequiresManualReview) == true)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudAlert Severity="Severity.Error" Class="mb-2">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle2">High-Risk Fraud Detection</MudText>
+                                                <MudText Typo="Typo.body2">@fraudAlerts.Count(f => f.RiskLevel == FraudRiskLevel.High || f.RequiresManualReview) alerts requiring review</MudText>
+                                            </div>
+                                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" Href="/admin/fraud">
+                                                Review
+                                            </MudButton>
+                                        </div>
+                                    </MudAlert>
+                                </MudItem>
+                            }
+                            
+                            <!-- Escalated Disputes -->
+                            @if (overview?.Disputes?.Escalated > 0)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudAlert Severity="Severity.Error" Class="mb-2">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle2">Disputes Escalated to PayPal</MudText>
+                                                <MudText Typo="Typo.body2">@overview.Disputes.Escalated require immediate attention</MudText>
+                                            </div>
+                                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" Href="/admin/disputes?status=escalated">
+                                                Review
+                                            </MudButton>
+                                        </div>
+                                    </MudAlert>
+                                </MudItem>
+                            }
+                            
+                            <!-- Failed Payments -->
+                            @if (failedPayments > 0)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudAlert Severity="Severity.Warning" Class="mb-2">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle2">Failed Payment Processing</MudText>
+                                                <MudText Typo="Typo.body2">@failedPayments payments need investigation</MudText>
+                                            </div>
+                                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" Href="/admin/payments?status=failed">
+                                                Review
+                                            </MudButton>
+                                        </div>
+                                    </MudAlert>
+                                </MudItem>
+                            }
+                            
+                            <!-- Pending Payouts -->
+                            @if (overview?.Revenue?.PendingPayouts > 0)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudAlert Severity="Severity.Info" Class="mb-2">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle2">Pending Owner Payouts</MudText>
+                                                <MudText Typo="Typo.body2">$@overview.Revenue.PendingPayouts.ToString("N2") awaiting processing</MudText>
+                                            </div>
+                                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info" Href="/admin/payouts">
+                                                Process
+                                            </MudButton>
+                                        </div>
+                                    </MudAlert>
+                                </MudItem>
+                            }
+                        </MudGrid>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Success">
+                            <MudText>No critical alerts - all systems operating normally</MudText>
+                        </MudAlert>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Admin Action Centers -->
+        <MudGrid Class="mb-6">
+            <!-- Fraud Detection Center -->
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4">
+                    <div class="d-flex align-center mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Warning" />
+                        <MudText Typo="Typo.h6" Class="ml-2">Fraud Detection Center</MudText>
+                    </div>
+                    @if (fraudAlerts?.Any() == true)
+                    {
+                        <MudList T="string" Dense="true">
+                            @foreach (var alert in fraudAlerts.Take(5))
+                            {
+                                <MudListItem T="string">
+                                    <div class="d-flex justify-space-between align-center w-100">
+                                        <div>
+                                            <MudText Typo="Typo.body2">@alert.UserName</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @alert.Type | @alert.DetectedAt.ToString("MMM dd, HH:mm")
+                                            </MudText>
+                                        </div>
+                                        <div class="d-flex align-center gap-2">
+                                            <MudChip T="string" Size="Size.Small" 
+                                                     Color="@GetRiskLevelColor(alert.RiskLevel)">
+                                                @alert.RiskLevel
+                                            </MudChip>
+                                            @if (alert.RequiresManualReview)
+                                            {
+                                                <MudButton Size="Size.Small" 
+                                                           Variant="Variant.Text" 
+                                                           Color="Color.Primary"
+                                                           OnClick="@(() => ReviewFraudCase(alert.Id))">
+                                                    Review
+                                                </MudButton>
+                                            }
+                                        </div>
+                                    </div>
+                                </MudListItem>
+                            }
+                        </MudList>
+                        <MudButton FullWidth="true" 
+                                   Variant="Variant.Outlined" 
+                                   Color="Color.Warning" 
+                                   Class="mt-3"
+                                   Href="/admin/fraud">
+                            View All Fraud Alerts (@fraudAlerts.Count)
+                        </MudButton>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No fraud alerts to review</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <!-- Dispute Management Center -->
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4">
+                    <div class="d-flex align-center mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Warning" />
+                        <MudText Typo="Typo.h6" Class="ml-2">Dispute Management</MudText>
+                    </div>
+                    @if (overview?.Disputes != null)
+                    {
+                        <MudGrid Class="mb-3">
+                            <MudItem xs="6">
+                                <div class="text-center">
+                                    <MudText Typo="Typo.h4" Color="@(overview.Disputes.Open > 0 ? Color.Warning : Color.Success)">
+                                        @overview.Disputes.Open
+                                    </MudText>
+                                    <MudText Typo="Typo.caption">Awaiting Review</MudText>
+                                </div>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <div class="text-center">
+                                    <MudText Typo="Typo.h4" Color="@(overview.Disputes.Escalated > 0 ? Color.Error : Color.Success)">
+                                        @overview.Disputes.Escalated
+                                    </MudText>
+                                    <MudText Typo="Typo.caption">Escalated</MudText>
+                                </div>
+                            </MudItem>
+                        </MudGrid>
+                        <div class="d-flex gap-2">
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Warning" 
+                                       Size="Size.Small"
+                                       Class="flex-1"
+                                       Href="/admin/disputes?status=open">
+                                Review Open
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Error" 
+                                       Size="Size.Small"
+                                       Class="flex-1"
+                                       Href="/admin/disputes?status=escalated">
+                                Handle Escalated
+                            </MudButton>
+                        </div>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- System Health and Quick Stats -->
+        <MudGrid Class="mb-6">
+            <!-- Payment System Health -->
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4">
+                    <div class="d-flex align-center mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Payment" Color="Color.Success" />
+                        <MudText Typo="Typo.h6" Class="ml-2">Payment System</MudText>
+                    </div>
+                    <MudList T="string" Dense="true">
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between w-100">
+                                <MudText Typo="Typo.body2">Failed Payments</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(failedPayments > 0 ? Color.Error : Color.Success)">
+                                    @failedPayments
+                                </MudChip>
+                            </div>
+                        </MudListItem>
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between w-100">
+                                <MudText Typo="Typo.body2">Pending Payouts</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(overview?.Revenue?.PendingPayouts > 0 ? Color.Warning : Color.Success)">
+                                    $@overview?.Revenue?.PendingPayouts.ToString("N0")
+                                </MudChip>
+                            </div>
+                        </MudListItem>
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between w-100">
+                                <MudText Typo="Typo.body2">Reviews Needed</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(paymentsUnderReview > 0 ? Color.Warning : Color.Success)">
+                                    @paymentsUnderReview
+                                </MudChip>
+                            </div>
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+
+            <!-- User Management -->
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4">
+                    <div class="d-flex align-center mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" />
+                        <MudText Typo="Typo.h6" Class="ml-2">User Management</MudText>
+                    </div>
+                    <MudList T="string" Dense="true">
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between w-100">
+                                <MudText Typo="Typo.body2">Unverified Users</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(unverifiedUsers > 0 ? Color.Warning : Color.Success)">
+                                    @unverifiedUsers
+                                </MudChip>
+                            </div>
+                        </MudListItem>
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between w-100">
+                                <MudText Typo="Typo.body2">New This Month</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                                    @overview?.Users?.NewThisMonth
+                                </MudChip>
+                            </div>
+                        </MudListItem>
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between w-100">
+                                <MudText Typo="Typo.body2">Suspended Users</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(suspendedUsers > 0 ? Color.Error : Color.Success)">
+                                    @suspendedUsers
+                                </MudChip>
+                            </div>
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+
+            <!-- System Health -->
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4">
+                    <div class="d-flex align-center mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Color="@(systemHealthStatus == "Healthy" ? Color.Success : Color.Warning)" />
+                        <MudText Typo="Typo.h6" Class="ml-2">System Health</MudText>
+                    </div>
+                    <MudList T="string" Dense="true">
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between w-100">
+                                <MudText Typo="Typo.body2">Overall Status</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(systemHealthStatus == "Healthy" ? Color.Success : Color.Warning)">
+                                    @systemHealthStatus
+                                </MudChip>
+                            </div>
+                        </MudListItem>
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between w-100">
+                                <MudText Typo="Typo.body2">Failed Jobs</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(failedBackgroundJobs > 0 ? Color.Error : Color.Success)">
+                                    @failedBackgroundJobs
+                                </MudChip>
+                            </div>
+                        </MudListItem>
+                        <MudListItem T="string">
+                            <div class="d-flex justify-space-between w-100">
+                                <MudText Typo="Typo.body2">Email Queue</MudText>
+                                <MudChip T="string" Size="Size.Small" Color="@(emailQueueErrors > 0 ? Color.Warning : Color.Success)">
+                                    @emailQueueErrors errors
+                                </MudChip>
+                            </div>
+                        </MudListItem>
+                    </MudList>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Recent Activity -->
+        <MudGrid>
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Recent Activity</MudText>
+                    @if (recentActivity?.Any() == true)
+                    {
+                        <MudTimeline TimelineOrientation="TimelineOrientation.Vertical">
+                            @foreach (var activity in recentActivity.Take(10))
+                            {
+                                <MudTimelineItem Size="Size.Small" 
+                                                 Color="@GetActivityColor(activity.Type)"
+                                                 TimelineAlign="TimelineAlign.Default">
+                                    <ItemContent>
+                                        <MudText Typo="Typo.body2">@activity.Description</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @activity.Timestamp.ToString("MMM dd, HH:mm")
+                                        </MudText>
+                                    </ItemContent>
+                                </MudTimelineItem>
+                            }
+                        </MudTimeline>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No recent activity</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <!-- Tool Categories -->
+            <MudItem xs="12" md="6">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Tool Categories</MudText>
+                    @if (overview?.Tools?.Categories?.Any() == true)
+                    {
+                        <MudSimpleTable Hover="true" Dense="true">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th class="text-right">Count</th>
+                                    <th class="text-right">Percentage</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var category in overview.Tools.Categories.OrderByDescending(c => c.Count))
+                                {
+                                    <tr>
+                                        <td>@category.Category</td>
+                                        <td class="text-right">@category.Count</td>
+                                        <td class="text-right">
+                                            @((category.Count * 100.0 / overview.Tools.Total).ToString("F1"))%
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+                    }
+                    else
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">No tool data available</MudText>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    [Inject] private HttpClient HttpClient { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private bool isLoading = true;
+    private string? loadError = null;
+    
+    private AdminDashboardOverview? overview = null;
+    private List<ActivityItem>? recentActivity = null;
+    private List<FraudAlert>? fraudAlerts = null;
+    
+    // System health metrics
+    private int failedPayments = 0;
+    private int paymentsUnderReview = 0;
+    private int unverifiedUsers = 0;
+    private int suspendedUsers = 0;
+    private int failedBackgroundJobs = 0;
+    private int emailQueueErrors = 0;
+    private string systemHealthStatus = "Healthy";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            isLoading = true;
+            loadError = null;
+
+            // Load overview
+            var overviewResponse = await HttpClient.GetAsync("api/admin/dashboard/overview");
+            if (overviewResponse.IsSuccessStatusCode)
+            {
+                var overviewResult = await overviewResponse.Content.ReadFromJsonAsync<ApiResponse<AdminDashboardOverview>>();
+                if (overviewResult?.Success == true)
+                {
+                    overview = overviewResult.Data;
+                }
+            }
+
+            // Load recent activity
+            var activityResponse = await HttpClient.GetAsync("api/admin/dashboard/activity?limit=20");
+            if (activityResponse.IsSuccessStatusCode)
+            {
+                var activityResult = await activityResponse.Content.ReadFromJsonAsync<ApiResponse<List<ActivityItem>>>();
+                if (activityResult?.Success == true && activityResult.Data != null)
+                {
+                    recentActivity = activityResult.Data;
+                }
+            }
+
+            // Load fraud alerts
+            var fraudResponse = await HttpClient.GetAsync("api/admin/fraud/alerts?limit=20");
+            if (fraudResponse.IsSuccessStatusCode)
+            {
+                var fraudResult = await fraudResponse.Content.ReadFromJsonAsync<ApiResponse<FraudAlertListResponse>>();
+                if (fraudResult?.Success == true && fraudResult.Data?.Alerts != null)
+                {
+                    fraudAlerts = fraudResult.Data.Alerts;
+                }
+            }
+            
+            // Load system health metrics (simulate for now - would be real endpoints)
+            await LoadSystemHealthMetrics();
+        }
+        catch (Exception ex)
+        {
+            loadError = $"Failed to load dashboard data: {ex.Message}";
+            Snackbar.Add(loadError, Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadSystemHealthMetrics()
+    {
+        try
+        {
+            // Load real system health data from backend
+            var healthResponse = await HttpClient.GetAsync("api/admin/system/health");
+            if (healthResponse.IsSuccessStatusCode)
+            {
+                var healthResult = await healthResponse.Content.ReadFromJsonAsync<ApiResponse<SystemHealthDto>>();
+                if (healthResult?.Success == true && healthResult.Data != null)
+                {
+                    var healthData = healthResult.Data;
+                    
+                    // Set real values from backend
+                    failedPayments = healthData.PaymentSystem.FailedPayments;
+                    paymentsUnderReview = healthData.PaymentSystem.PaymentsUnderReview;
+                    unverifiedUsers = healthData.UserManagement.UnverifiedUsers;
+                    suspendedUsers = healthData.UserManagement.SuspendedUsers;
+                    failedBackgroundJobs = healthData.BackgroundServices.FailedJobs;
+                    emailQueueErrors = healthData.BackgroundServices.EmailQueueErrors;
+                    systemHealthStatus = healthData.Status;
+                    
+                    return;
+                }
+            }
+            
+            // Fallback to default values if API call fails
+            failedPayments = 0;
+            paymentsUnderReview = 0;
+            unverifiedUsers = 0;
+            suspendedUsers = 0;
+            failedBackgroundJobs = 0;
+            emailQueueErrors = 0;
+            systemHealthStatus = "Unknown";
+        }
+        catch
+        {
+            systemHealthStatus = "Unknown";
+        }
+    }
+
+    private int GetCriticalAlertCount()
+    {
+        int count = 0;
+        
+        // High-risk fraud alerts  
+        if (fraudAlerts?.Any(f => f.RiskLevel == FraudRiskLevel.High || f.RequiresManualReview) == true)
+            count++;
+            
+        // Escalated disputes
+        if (overview?.Disputes?.Escalated > 0)
+            count++;
+            
+        // Failed payments
+        if (failedPayments > 0)
+            count++;
+            
+        // Pending payouts
+        if (overview?.Revenue?.PendingPayouts > 0)
+            count++;
+            
+        return count;
+    }
+
+    private async Task ReviewFraudCase(string alertId)
+    {
+        Navigation.NavigateTo($"/admin/fraud/{alertId}");
+    }
+
+    private Color GetRiskLevelColor(FraudRiskLevel riskLevel)
+    {
+        return riskLevel switch
+        {
+            FraudRiskLevel.High => Color.Error,
+            FraudRiskLevel.Medium => Color.Warning,
+            FraudRiskLevel.Low => Color.Success,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetActivityColor(string type)
+    {
+        return type switch
+        {
+            "rental" => Color.Primary,
+            "dispute" => Color.Warning,
+            "payment" => Color.Success,
+            "user" => Color.Info,
+            _ => Color.Default
+        };
+    }
+}

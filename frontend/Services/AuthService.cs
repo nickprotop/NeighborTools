@@ -56,7 +56,9 @@ public class AuthService : IAuthService
                     Id = result.Data.UserId,
                     Email = result.Data.Email,
                     FirstName = result.Data.FirstName,
-                    LastName = result.Data.LastName
+                    LastName = result.Data.LastName,
+                    Roles = result.Data.Roles,
+                    IsAdmin = result.Data.IsAdmin
                 };
                 
                 if (rememberMe)
@@ -113,7 +115,9 @@ public class AuthService : IAuthService
                     Id = result.Data.UserId,
                     Email = result.Data.Email,
                     FirstName = result.Data.FirstName,
-                    LastName = result.Data.LastName
+                    LastName = result.Data.LastName,
+                    Roles = result.Data.Roles,
+                    IsAdmin = result.Data.IsAdmin
                 };
                 
                 // Only authenticate if tokens are provided (email verified)

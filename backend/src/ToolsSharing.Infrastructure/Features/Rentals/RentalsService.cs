@@ -17,19 +17,22 @@ public class RentalsService : IRentalsService
     private readonly ApplicationDbContext _context;
     private readonly ISettingsService _settingsService;
     private readonly IEmailNotificationService _emailNotificationService;
+    private readonly IPaymentService _paymentService;
 
     public RentalsService(
         IUnitOfWork unitOfWork, 
         IMapper mapper, 
         ApplicationDbContext context,
         ISettingsService settingsService,
-        IEmailNotificationService emailNotificationService)
+        IEmailNotificationService emailNotificationService,
+        IPaymentService paymentService)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _context = context;
         _settingsService = settingsService;
         _emailNotificationService = emailNotificationService;
+        _paymentService = paymentService;
     }
 
     public async Task<ApiResponse<List<RentalDto>>> GetRentalsAsync(GetRentalsQuery query)
@@ -82,6 +85,21 @@ public class RentalsService : IRentalsService
 
             var rentals = await rentalsQuery.ToListAsync();
             var rentalDtos = _mapper.Map<List<RentalDto>>(rentals);
+            
+            // Set IsPaid based on transaction status
+            var rentalIds = rentals.Select(r => r.Id).ToList();
+            var paidRentalIds = await _context.Transactions
+                .Where(t => rentalIds.Contains(t.RentalId) && 
+                           (t.Status == TransactionStatus.PaymentCompleted || 
+                            t.Status == TransactionStatus.PayoutPending || 
+                            t.Status == TransactionStatus.PayoutCompleted))
+                .Select(t => t.RentalId)
+                .ToListAsync();
+            
+            foreach (var rentalDto in rentalDtos)
+            {
+                rentalDto.IsPaid = paidRentalIds.Contains(rentalDto.Id);
+            }
 
             return ApiResponse<List<RentalDto>>.CreateSuccess(rentalDtos, "Rentals retrieved successfully");
         }
@@ -108,6 +126,16 @@ public class RentalsService : IRentalsService
             }
 
             var rentalDto = _mapper.Map<RentalDto>(rental);
+            
+            // Set IsPaid based on transaction status
+            var isPaid = await _context.Transactions
+                .AnyAsync(t => t.RentalId == rental.Id && 
+                          (t.Status == TransactionStatus.PaymentCompleted || 
+                           t.Status == TransactionStatus.PayoutPending || 
+                           t.Status == TransactionStatus.PayoutCompleted));
+            
+            rentalDto.IsPaid = isPaid;
+            
             return ApiResponse<RentalDto>.CreateSuccess(rentalDto, "Rental retrieved successfully");
         }
         catch (Exception ex)
@@ -147,6 +175,16 @@ public class RentalsService : IRentalsService
             if (tool.OwnerId == command.RenterId)
             {
                 return ApiResponse<RentalDto>.CreateFailure("You cannot rent your own tool");
+            }
+
+            // SAFETY MEASURE: Validate that tool owner has payment settings configured
+            // This prevents rentals when the owner can't receive payouts
+            var ownerPaymentSettings = await _paymentService.GetOrCreatePaymentSettingsAsync(tool.OwnerId);
+            if (string.IsNullOrEmpty(ownerPaymentSettings.PayPalEmail))
+            {
+                return ApiResponse<RentalDto>.CreateFailure(
+                    "This tool is temporarily unavailable for rent. The owner needs to configure their payment settings to receive payouts. " +
+                    "Please try again later or contact the tool owner.");
             }
 
             // Get owner's settings for lead time enforcement and auto-approval

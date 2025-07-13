@@ -82,6 +82,7 @@ public class Rental
     public string? CancellationReason { get; set; }
     public DateTime CreatedAt { get; set; }
     public Tool? Tool { get; set; }
+    public bool IsPaid { get; set; }
 }
 
 public class CreateRentalRequest

@@ -1,0 +1,229 @@
+@using frontend.Models
+@inject IJSRuntime JSRuntime
+
+@if (Alert != null)
+{
+    <MudAlert Severity="@GetAlertSeverity()" 
+              Dense="@Dense" 
+              Class="@($"fraud-alert {GetAlertClass()} {Class}")"
+              Icon="@GetAlertIcon()"
+              ShowCloseIcon="@Dismissible"
+              CloseIconClicked="OnDismiss">
+        
+        <div class="d-flex align-center">
+            <div class="flex-grow-1">
+                <MudText Typo="Typo.subtitle2" Class="mb-1">
+                    <strong>@GetAlertTitle()</strong>
+                </MudText>
+                
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    @Alert.Description
+                </MudText>
+                
+                @if (ShowDetails && !string.IsNullOrEmpty(Alert.Details))
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @Alert.Details
+                    </MudText>
+                }
+                
+                @if (ShowTimestamp)
+                {
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                        Detected @Alert.DetectedAt.ToString("MMM dd, yyyy 'at' h:mm tt")
+                    </MudText>
+                }
+            </div>
+            
+            @if (ShowActions)
+            {
+                <div class="ml-4">
+                    @if (Alert.RequiresManualReview && Alert.Status == FraudAlertStatus.New)
+                    {
+                        <MudButton Variant="Variant.Outlined" 
+                                   Size="Size.Small" 
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Visibility"
+                                   OnClick="OnReviewClick"
+                                   Class="mr-2">
+                            Review
+                        </MudButton>
+                    }
+                    
+                    @if (Alert.Status == FraudAlertStatus.UnderReview)
+                    {
+                        <MudButton Variant="Variant.Outlined" 
+                                   Size="Size.Small" 
+                                   Color="Color.Success"
+                                   StartIcon="@Icons.Material.Filled.CheckCircle"
+                                   OnClick="() => OnStatusChange(FraudAlertStatus.Resolved)"
+                                   Class="mr-2">
+                            Resolve
+                        </MudButton>
+                        
+                        <MudButton Variant="Variant.Outlined" 
+                                   Size="Size.Small" 
+                                   Color="Color.Secondary"
+                                   StartIcon="@Icons.Material.Filled.Block"
+                                   OnClick="() => OnStatusChange(FraudAlertStatus.Dismissed)">
+                            Dismiss
+                        </MudButton>
+                    }
+                    
+                    @if (ShowMoreInfo)
+                    {
+                        <MudButton Variant="Variant.Text" 
+                                   Size="Size.Small" 
+                                   Color="Color.Primary"
+                                   StartIcon="@Icons.Material.Filled.Info"
+                                   OnClick="OnMoreInfoClick">
+                            More Info
+                        </MudButton>
+                    }
+                </div>
+            }
+        </div>
+        
+        @if (ShowRiskScore)
+        {
+            <div class="mt-3">
+                <MudText Typo="Typo.caption" Class="mb-1">
+                    Risk Level: <strong>@Alert.RiskLevel</strong>
+                </MudText>
+                <MudProgressLinear Color="@GetRiskLevelColor()" 
+                                   Value="@GetRiskLevelProgress()" 
+                                   Size="Size.Small"/>
+            </div>
+        }
+    </MudAlert>
+}
+
+<style>
+    .fraud-alert {
+        border-left: 4px solid;
+        margin-bottom: 16px;
+    }
+    
+    .fraud-alert.critical {
+        border-left-color: #f44336;
+        background-color: rgba(244, 67, 54, 0.05);
+    }
+    
+    .fraud-alert.high {
+        border-left-color: #ff9800;
+        background-color: rgba(255, 152, 0, 0.05);
+    }
+    
+    .fraud-alert.medium {
+        border-left-color: #2196f3;
+        background-color: rgba(33, 150, 243, 0.05);
+    }
+    
+    .fraud-alert.low {
+        border-left-color: #4caf50;
+        background-color: rgba(76, 175, 80, 0.05);
+    }
+</style>
+
+@code {
+    [Parameter] public FraudAlert? Alert { get; set; }
+    [Parameter] public bool Dense { get; set; } = false;
+    [Parameter] public bool Dismissible { get; set; } = false;
+    [Parameter] public bool ShowDetails { get; set; } = true;
+    [Parameter] public bool ShowTimestamp { get; set; } = true;
+    [Parameter] public bool ShowActions { get; set; } = false;
+    [Parameter] public bool ShowMoreInfo { get; set; } = false;
+    [Parameter] public bool ShowRiskScore { get; set; } = false;
+    [Parameter] public string Class { get; set; } = string.Empty;
+    [Parameter] public EventCallback<FraudAlert> OnReview { get; set; }
+    [Parameter] public EventCallback<FraudAlert> OnDismissed { get; set; }
+    [Parameter] public EventCallback<FraudAlert> OnMoreInfo { get; set; }
+    [Parameter] public EventCallback<(FraudAlert Alert, FraudAlertStatus NewStatus)> OnStatusChanged { get; set; }
+
+    private Severity GetAlertSeverity() => Alert?.RiskLevel switch
+    {
+        FraudRiskLevel.Critical => Severity.Error,
+        FraudRiskLevel.High => Severity.Warning,
+        FraudRiskLevel.Medium => Severity.Info,
+        FraudRiskLevel.Low => Severity.Success,
+        _ => Severity.Normal
+    };
+
+    private string GetAlertClass() => Alert?.RiskLevel.ToString().ToLower() ?? "";
+
+    private string GetAlertIcon() => Alert?.Type switch
+    {
+        FraudAlertType.VelocityLimit => Icons.Material.Filled.Speed,
+        FraudAlertType.SuspiciousPayment => Icons.Material.Filled.Payment,
+        FraudAlertType.ChargebackRisk => Icons.Material.Filled.CreditCard,
+        FraudAlertType.AccountTakeover => Icons.Material.Filled.Security,
+        FraudAlertType.IdentityTheft => Icons.Material.Filled.Person,
+        FraudAlertType.MoneyLaundering => Icons.Material.Filled.AccountBalance,
+        FraudAlertType.SuspiciousActivity => Icons.Material.Filled.Warning,
+        FraudAlertType.UnusualPattern => Icons.Material.Filled.TrendingUp,
+        _ => Icons.Material.Filled.ReportProblem
+    };
+
+    private string GetAlertTitle() => Alert?.Type switch
+    {
+        FraudAlertType.VelocityLimit => "Transaction Velocity Alert",
+        FraudAlertType.SuspiciousPayment => "Suspicious Payment Activity",
+        FraudAlertType.ChargebackRisk => "Chargeback Risk Detected",
+        FraudAlertType.AccountTakeover => "Account Security Alert",
+        FraudAlertType.IdentityTheft => "Identity Verification Alert",
+        FraudAlertType.MoneyLaundering => "Anti-Money Laundering Alert",
+        FraudAlertType.SuspiciousActivity => "Suspicious Activity Detected",
+        FraudAlertType.UnusualPattern => "Unusual Pattern Detected",
+        _ => "Security Alert"
+    };
+
+    private Color GetRiskLevelColor() => Alert?.RiskLevel switch
+    {
+        FraudRiskLevel.Critical => Color.Error,
+        FraudRiskLevel.High => Color.Warning,
+        FraudRiskLevel.Medium => Color.Info,
+        FraudRiskLevel.Low => Color.Success,
+        _ => Color.Default
+    };
+
+    private double GetRiskLevelProgress() => Alert?.RiskLevel switch
+    {
+        FraudRiskLevel.Critical => 100,
+        FraudRiskLevel.High => 75,
+        FraudRiskLevel.Medium => 50,
+        FraudRiskLevel.Low => 25,
+        _ => 0
+    };
+
+    private async Task OnReviewClick()
+    {
+        if (Alert != null && OnReview.HasDelegate)
+        {
+            await OnReview.InvokeAsync(Alert);
+        }
+    }
+
+    private async Task OnMoreInfoClick()
+    {
+        if (Alert != null && OnMoreInfo.HasDelegate)
+        {
+            await OnMoreInfo.InvokeAsync(Alert);
+        }
+    }
+
+    private async Task OnDismiss()
+    {
+        if (Alert != null && OnDismissed.HasDelegate)
+        {
+            await OnDismissed.InvokeAsync(Alert);
+        }
+    }
+
+    private async Task OnStatusChange(FraudAlertStatus newStatus)
+    {
+        if (Alert != null && OnStatusChanged.HasDelegate)
+        {
+            await OnStatusChanged.InvokeAsync((Alert, newStatus));
+        }
+    }
+}

@@ -54,6 +54,18 @@ public enum EmailNotificationType
     NewReview,
     ReviewResponse,
     
+    // Payments
+    PaymentProcessed,
+    PaymentFailed,
+    PayoutSent,
+    PayoutFailed,
+    RefundProcessed,
+    
+    // Disputes
+    DisputeCreated,
+    DisputeResolved,
+    DisputeEscalated,
+    
     // Marketing
     Newsletter,
     Promotion,
@@ -62,7 +74,8 @@ public enum EmailNotificationType
     // System
     SystemMaintenance,
     TermsUpdate,
-    PrivacyUpdate
+    PrivacyUpdate,
+    GeneralNotification
 }
 
 public enum EmailPriority

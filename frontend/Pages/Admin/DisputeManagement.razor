@@ -1,0 +1,560 @@
+@page "/admin/disputes"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Dispute Management - NeighborTools Admin</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
+    <div class="d-flex align-center mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Color="Color.Warning" Size="Size.Large" Class="mr-3" />
+        <MudText Typo="Typo.h3">Dispute Management Center</MudText>
+    </div>
+    
+    @if (isLoading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (loadError != null)
+    {
+        <MudAlert Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else
+    {
+        <!-- Quick Stats -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.NewReleases" Color="Color.Warning" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Open Disputes</MudText>
+                                <MudText Typo="Typo.h4">@openDisputes</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Warning">Awaiting review</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Assignment" Color="Color.Info" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Under Review</MudText>
+                                <MudText Typo="Typo.h4">@underReviewDisputes</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Info">Being investigated</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Error" Color="Color.Error" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Escalated</MudText>
+                                <MudText Typo="Typo.h4">@escalatedDisputes</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Error">PayPal involvement</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Resolved This Month</MudText>
+                                <MudText Typo="Typo.h4">@resolvedThisMonth</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Success">Successfully closed</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Filters -->
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">Filter Disputes</MudText>
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="DisputeStatus?" @bind-Value="selectedStatus" Label="Status" Clearable="true">
+                        <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.Open">Open</MudSelectItem>
+                        <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.InProgress">In Progress</MudSelectItem>
+                        <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.EscalatedToPayPal">Escalated to PayPal</MudSelectItem>
+                        <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.Resolved">Resolved</MudSelectItem>
+                        <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.Closed">Closed</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="DisputeType?" @bind-Value="selectedType" Label="Type" Clearable="true">
+                        <MudSelectItem T="DisputeType?" Value="@DisputeType.PaymentDispute">Payment Dispute</MudSelectItem>
+                        <MudSelectItem T="DisputeType?" Value="@DisputeType.ServiceDispute">Service Dispute</MudSelectItem>
+                        <MudSelectItem T="DisputeType?" Value="@DisputeType.Damage">Damage</MudSelectItem>
+                        <MudSelectItem T="DisputeType?" Value="@DisputeType.NoShow">No Show</MudSelectItem>
+                        <MudSelectItem T="DisputeType?" Value="@DisputeType.Chargeback">Chargeback</MudSelectItem>
+                        <MudSelectItem T="DisputeType?" Value="@DisputeType.Refund">Refund</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudDateRangePicker @bind-DateRange="dateRange" Label="Date Range" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3" Class="d-flex align-end">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Search"
+                               OnClick="LoadDisputes"
+                               FullWidth="true">
+                        Apply Filters
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Quick Actions -->
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">Quick Actions</MudText>
+            <div class="d-flex flex-wrap gap-2">
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Warning" 
+                           StartIcon="@Icons.Material.Filled.NewReleases"
+                           OnClick="@(() => LoadDisputesByStatus(DisputeStatus.Open))">
+                    Review Open Disputes (@openDisputes)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Error" 
+                           StartIcon="@Icons.Material.Filled.Error"
+                           OnClick="@(() => LoadDisputesByStatus(DisputeStatus.EscalatedToPayPal))">
+                    Handle Escalated (@escalatedDisputes)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Info" 
+                           StartIcon="@Icons.Material.Filled.Assignment"
+                           OnClick="@(() => LoadDisputesByStatus(DisputeStatus.InProgress))">
+                    In Progress (@underReviewDisputes)
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Success" 
+                           StartIcon="@Icons.Material.Filled.FileDownload"
+                           OnClick="ExportDisputes">
+                    Export Report
+                </MudButton>
+            </div>
+        </MudPaper>
+
+        <!-- Disputes Table -->
+        <MudPaper Class="pa-4">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <MudText Typo="Typo.h6">Disputes (@totalCount)</MudText>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Secondary" 
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="LoadDisputes">
+                    Refresh
+                </MudButton>
+            </div>
+            
+            @if (disputes?.Any() == true)
+            {
+                <MudTable T="Dispute" Items="@disputes" Hover="true" Dense="true" FixedHeader="true" Height="600px">
+                    <HeaderContent>
+                        <MudTh>Dispute ID</MudTh>
+                        <MudTh>Rental/Tool</MudTh>
+                        <MudTh>Parties</MudTh>
+                        <MudTh>Type</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Created</MudTh>
+                        <MudTh>Amount</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Dispute ID">
+                            <div>
+                                <MudText Typo="Typo.body2">@context.Id.Substring(0, 8)...</MudText>
+                                @if (!string.IsNullOrEmpty(context.ExternalDisputeId))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">PayPal: @context.ExternalDisputeId.Substring(0, 8)...</MudText>
+                                }
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Rental/Tool">
+                            <div>
+                                <MudText Typo="Typo.body2">@(context.Rental?.Tool?.Name ?? "Unknown Tool")</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Rental: @context.RentalId.Substring(0, 8)...</MudText>
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Parties">
+                            <div>
+                                <MudText Typo="Typo.body2">@context.InitiatedByName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">vs @(context.Rental?.OwnerName ?? "Owner")</MudText>
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Type">
+                            <MudChip T="string" Color="@GetTypeColor(context.Type)" Size="Size.Small">
+                                @context.Type.ToString()
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Status">
+                            <MudChip T="string" Color="@GetStatusColor(context.Status)" Size="Size.Small">
+                                @context.Status.ToString()
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Created">
+                            <div>
+                                <MudText Typo="Typo.body2">@context.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.CreatedAt.ToString("HH:mm")</MudText>
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Amount">
+                            @if (context.DisputedAmount.HasValue)
+                            {
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">$@context.DisputedAmount.Value.ToString("N2")</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">N/A</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <div class="d-flex gap-1">
+                                <MudButton Size="Size.Small" 
+                                           Variant="Variant.Text" 
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Visibility"
+                                           OnClick="@(() => ViewDisputeDetails(context.Id))">
+                                    View
+                                </MudButton>
+                                @if (context.Status == DisputeStatus.Open)
+                                {
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Text" 
+                                               Color="Color.Info"
+                                               StartIcon="@Icons.Material.Filled.PlayArrow"
+                                               OnClick="@(() => StartReview(context.Id))">
+                                        Start Review
+                                    </MudButton>
+                                }
+                                @if (context.Status == DisputeStatus.InProgress)
+                                {
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Text" 
+                                               Color="Color.Warning"
+                                               StartIcon="@Icons.Material.Filled.TrendingUp"
+                                               OnClick="@(() => EscalateDispute(context.Id))">
+                                        Escalate
+                                    </MudButton>
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Text" 
+                                               Color="Color.Success"
+                                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                                               OnClick="@(() => ResolveDispute(context.Id))">
+                                        Resolve
+                                    </MudButton>
+                                }
+                                @if (context.Status == DisputeStatus.EscalatedToPayPal)
+                                {
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Text" 
+                                               Color="Color.Secondary"
+                                               StartIcon="@Icons.Material.Filled.Sync"
+                                               OnClick="@(() => SyncWithPayPal(context.Id))">
+                                        Sync PayPal
+                                    </MudButton>
+                                }
+                                <MudButton Size="Size.Small" 
+                                           Variant="Variant.Text" 
+                                           Color="Color.Info"
+                                           StartIcon="@Icons.Material.Filled.Message"
+                                           OnClick="@(() => AddAdminNote(context.Id))">
+                                    Note
+                                </MudButton>
+                            </div>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+                
+                <!-- Pagination -->
+                @if (totalPages > 1)
+                {
+                    <div class="d-flex justify-center mt-4">
+                        <MudPagination Count="@totalPages" 
+                                       Selected="@currentPage" 
+                                       SelectedChanged="@((page) => OnPageChanged(page))" />
+                    </div>
+                }
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">
+                    <MudText>No disputes found with the current filters.</MudText>
+                </MudAlert>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Inject] private HttpClient HttpClient { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private bool isLoading = true;
+    private string? loadError = null;
+    private List<Dispute>? disputes = null;
+    
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 20;
+    private int totalPages = 1;
+    private int totalCount = 0;
+    
+    // Filters
+    private DisputeStatus? selectedStatus = null;
+    private DisputeType? selectedType = null;
+    private DateRange? dateRange = null;
+    
+    // Stats
+    private int openDisputes = 0;
+    private int underReviewDisputes = 0;
+    private int escalatedDisputes = 0;
+    private int resolvedThisMonth = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDisputes();
+        await LoadStats();
+    }
+
+    private async Task LoadDisputes()
+    {
+        try
+        {
+            isLoading = true;
+            loadError = null;
+
+            var queryParams = new List<string>();
+            queryParams.Add($"page={currentPage}");
+            queryParams.Add($"pageSize={pageSize}");
+            
+            if (selectedStatus.HasValue)
+                queryParams.Add($"status={selectedStatus}");
+            if (selectedType.HasValue)
+                queryParams.Add($"type={selectedType}");
+
+            var queryString = string.Join("&", queryParams);
+            var response = await HttpClient.GetAsync($"api/disputes?{queryString}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<DisputeApiResponse>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    disputes = result.Data;
+                    totalCount = result.TotalCount;
+                    totalPages = (int)Math.Ceiling(totalCount / (double)pageSize);
+                }
+            }
+            else
+            {
+                loadError = "Failed to load disputes";
+            }
+        }
+        catch (Exception ex)
+        {
+            loadError = $"Error loading disputes: {ex.Message}";
+            Snackbar.Add(loadError, Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadStats()
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync("api/admin/dashboard/overview");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<AdminDashboardOverview>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    openDisputes = result.Data.Disputes.Open;
+                    underReviewDisputes = result.Data.Disputes.InReview;
+                    escalatedDisputes = result.Data.Disputes.Escalated;
+                    resolvedThisMonth = result.Data.Disputes.ResolvedThisMonth;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading stats: {ex.Message}");
+        }
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        currentPage = page;
+        await LoadDisputes();
+    }
+
+    private async Task LoadDisputesByStatus(DisputeStatus status)
+    {
+        selectedStatus = status;
+        currentPage = 1;
+        await LoadDisputes();
+    }
+
+    private async Task StartReview(string disputeId)
+    {
+        try
+        {
+            var response = await HttpClient.PostAsync($"api/disputes/{disputeId}/start-review", null);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Dispute review started", Severity.Success);
+                await LoadDisputes();
+                await LoadStats();
+            }
+            else
+            {
+                Snackbar.Add("Failed to start dispute review", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task EscalateDispute(string disputeId)
+    {
+        try
+        {
+            var response = await HttpClient.PostAsync($"api/disputes/{disputeId}/escalate", null);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Dispute escalated to PayPal", Severity.Success);
+                await LoadDisputes();
+                await LoadStats();
+            }
+            else
+            {
+                Snackbar.Add("Failed to escalate dispute", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ResolveDispute(string disputeId)
+    {
+        try
+        {
+            var response = await HttpClient.PostAsync($"api/disputes/{disputeId}/resolve", null);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Dispute resolved successfully", Severity.Success);
+                await LoadDisputes();
+                await LoadStats();
+            }
+            else
+            {
+                Snackbar.Add("Failed to resolve dispute", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SyncWithPayPal(string disputeId)
+    {
+        try
+        {
+            var response = await HttpClient.PostAsync($"api/disputes/{disputeId}/sync-paypal", null);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("PayPal sync completed", Severity.Success);
+                await LoadDisputes();
+            }
+            else
+            {
+                Snackbar.Add("Failed to sync with PayPal", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task AddAdminNote(string disputeId)
+    {
+        // This would open a dialog for adding admin notes
+        Navigation.NavigateTo($"/disputes/{disputeId}");
+    }
+
+    private void ViewDisputeDetails(string disputeId)
+    {
+        Navigation.NavigateTo($"/disputes/{disputeId}");
+    }
+
+    private async Task ExportDisputes()
+    {
+        try
+        {
+            Snackbar.Add("Export functionality coming soon", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Export failed: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetTypeColor(DisputeType type)
+    {
+        return type switch
+        {
+            DisputeType.PaymentDispute => Color.Error,
+            DisputeType.ServiceDispute => Color.Warning,
+            DisputeType.Damage => Color.Error,
+            DisputeType.NoShow => Color.Warning,
+            DisputeType.Chargeback => Color.Error,
+            DisputeType.Refund => Color.Info,
+            DisputeType.Other => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetStatusColor(DisputeStatus status)
+    {
+        return status switch
+        {
+            DisputeStatus.Open => Color.Warning,
+            DisputeStatus.InProgress => Color.Info,
+            DisputeStatus.EscalatedToPayPal => Color.Error,
+            DisputeStatus.Resolved => Color.Success,
+            DisputeStatus.Closed => Color.Secondary,
+            DisputeStatus.Cancelled => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+}

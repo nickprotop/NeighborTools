@@ -8,6 +8,7 @@ public interface IRentalService
 {
     Task<ApiResponse<List<Rental>>> GetRentalsAsync(string? status = null, int? page = null, int? pageSize = null);
     Task<ApiResponse<Rental>> GetRentalAsync(string id);
+    Task<ApiResponse<Rental>> GetRentalByIdAsync(Guid id);
     Task<ApiResponse<Rental>> CreateRentalAsync(CreateRentalRequest request);
     Task<ApiResponse> ApproveRentalAsync(string id, RentalApprovalRequest request);
     Task<ApiResponse> RejectRentalAsync(string id, RentalApprovalRequest request);
@@ -198,5 +199,10 @@ public class RentalService : IRentalService
                 Message = $"Failed to retrieve my tool rentals: {ex.Message}" 
             };
         }
+    }
+
+    public async Task<ApiResponse<Rental>> GetRentalByIdAsync(Guid id)
+    {
+        return await GetRentalAsync(id.ToString());
     }
 }

@@ -1,0 +1,679 @@
+@page "/disputes/{DisputeId}"
+@using frontend.Models
+@using frontend.Components.Disputes
+@using frontend.Services
+@using Microsoft.AspNetCore.Components.Authorization
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+@inject IDisputeService DisputeService
+@inject IAuthService AuthService
+@inject AuthenticationStateProvider AuthStateProvider
+
+<PageTitle>Dispute Details - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-center align-center" style="min-height: 400px;">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true"/>
+        </div>
+    }
+    else if (Dispute == null)
+    {
+        <MudAlert Severity="Severity.Error">
+            <MudText Typo="Typo.h6" Class="mb-2">Dispute Not Found</MudText>
+            <MudText Typo="Typo.body1">
+                The dispute you're looking for doesn't exist or you don't have permission to view it.
+            </MudText>
+            <MudButton Variant="Variant.Text" 
+                       Color="Color.Primary" 
+                       StartIcon="@Icons.Material.Filled.ArrowBack"
+                       OnClick="GoBackToDisputes"
+                       Class="mt-2">
+                Back to Disputes
+            </MudButton>
+        </MudAlert>
+    }
+    else
+    {
+        <!-- Header -->
+        <div class="d-flex align-center mb-4">
+            <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" 
+                           Color="Color.Primary" 
+                           OnClick="GoBackToDisputes"
+                           Class="mr-2"/>
+            <div class="flex-grow-1">
+                <MudText Typo="Typo.h4">
+                    @Dispute.Subject
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Dispute #@Dispute.Id.Substring(0, 8) • Created @Dispute.CreatedAt.ToString("MMM dd, yyyy")
+                </MudText>
+            </div>
+            <MudMenu Icon="@Icons.Material.Filled.MoreVert" 
+                     AnchorOrigin="Origin.BottomRight" 
+                     TransformOrigin="Origin.TopRight">
+                <MudMenuItem Icon="@Icons.Material.Filled.Print" 
+                             OnClick="PrintDispute">
+                    Print Details
+                </MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Download" 
+                             OnClick="ExportDispute">
+                    Export to PDF
+                </MudMenuItem>
+                <MudDivider/>
+                @if (CanCloseDispute())
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.Close" 
+                                 OnClick="CloseDispute">
+                        Close Dispute
+                    </MudMenuItem>
+                }
+                @if (CanEscalateDispute())
+                {
+                    <MudMenuItem Icon="@Icons.Material.Filled.ArrowUpward" 
+                                 OnClick="EscalateDispute">
+                        Escalate to PayPal
+                    </MudMenuItem>
+                }
+            </MudMenu>
+        </div>
+
+        <!-- Status Banner -->
+        @if (ShowStatusBanner())
+        {
+            <MudAlert Severity="@GetStatusSeverity()" 
+                      Class="mb-4" 
+                      Variant="Variant.Filled">
+                <div class="d-flex align-center">
+                    <MudIcon Icon="@GetStatusIcon()" Class="mr-3"/>
+                    <div class="flex-grow-1">
+                        <MudText Typo="Typo.subtitle1" Class="mb-1">
+                            @GetStatusTitle()
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            @GetStatusDescription()
+                        </MudText>
+                    </div>
+                    @if (HasStatusActions())
+                    {
+                        <div class="ml-4">
+                            @foreach (var action in GetStatusActions())
+                            {
+                                <MudButton Variant="Variant.Text" 
+                                           Color="Color.Inherit" 
+                                           StartIcon="@action.Icon"
+                                           OnClick="() => PerformStatusAction(action)"
+                                           Class="ml-2">
+                                    @action.Label
+                                </MudButton>
+                            }
+                        </div>
+                    }
+                </div>
+            </MudAlert>
+        }
+
+        <MudGrid>
+            <!-- Main Content -->
+            <MudItem xs="12" lg="8">
+                <!-- Dispute Overview -->
+                <MudPaper Elevation="2" Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2"/>
+                        Dispute Information
+                    </MudText>
+                    
+                    <MudGrid>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Type</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2">
+                                @Dispute.Type.ToString().Replace("Dispute", "")
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Category</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2">
+                                @Dispute.Category.ToString()
+                            </MudText>
+                        </MudItem>
+                        @if (Dispute.DisputedAmount.HasValue)
+                        {
+                            <MudItem xs="12" sm="6">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Disputed Amount</MudText>
+                                <MudText Typo="Typo.body1" Class="mb-2">
+                                    @Dispute.DisputedAmount.Value.ToString("C")
+                                </MudText>
+                            </MudItem>
+                        }
+                        <MudItem xs="12" sm="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Initiated By</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2">
+                                @Dispute.InitiatedByName
+                            </MudText>
+                        </MudItem>
+                    </MudGrid>
+                    
+                    <MudDivider Class="my-3"/>
+                    
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Description</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-3">
+                        @Dispute.Description
+                    </MudText>
+                    
+                    @if (Dispute.Rental != null)
+                    {
+                        <MudDivider Class="my-3"/>
+                        <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Related Rental</MudText>
+                        <MudCard Elevation="1" Class="mt-2">
+                            <MudCardContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-3"/>
+                                    <div class="flex-grow-1">
+                                        <MudText Typo="Typo.subtitle1">@Dispute.Rental.ToolName</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            @Dispute.Rental.StartDate.ToString("MMM dd") - @Dispute.Rental.EndDate.ToString("MMM dd, yyyy")
+                                        </MudText>
+                                    </div>
+                                    <MudButton Variant="Variant.Text" 
+                                               Color="Color.Primary" 
+                                               StartIcon="@Icons.Material.Filled.OpenInNew"
+                                               OnClick="() => ViewRental(Guid.Parse(Dispute.Rental.Id))">
+                                        View Rental
+                                    </MudButton>
+                                </div>
+                            </MudCardContent>
+                        </MudCard>
+                    }
+                </MudPaper>
+
+                <!-- Timeline -->
+                <DisputeTimelineComponent Dispute="Dispute" 
+                                          TimelineEvents="TimelineEvents"
+                                          OnTimelineAction="HandleTimelineAction"
+                                          OnAddMessage="OpenMessageComposer"/>
+
+                <!-- Messaging -->
+                <DisputeMessagingComponent DisputeId="@DisputeId" 
+                                           Messages="Messages"
+                                           CurrentUserId="@CurrentUserId"
+                                           CurrentUserRole="@CurrentUserRole"
+                                           CanSendMessages="@CanSendMessages()"
+                                           ShowInternalOption="@IsAdminOrSupport()"
+                                           DisputeStatus="@Dispute.Status"
+                                           OnMessageSent="HandleMessageSent"
+                                           OnAttachmentDownload="HandleAttachmentDownload"/>
+            </MudItem>
+
+            <!-- Sidebar -->
+            <MudItem xs="12" lg="4">
+                <!-- Quick Actions -->
+                <MudPaper Elevation="2" Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.FlashOn" Class="mr-2"/>
+                        Quick Actions
+                    </MudText>
+                    
+                    <MudStack Spacing="2">
+                        @foreach (var action in GetQuickActions())
+                        {
+                            <MudButton Variant="@GetVariantFromString(action.Variant)" 
+                                       Color="@GetColorFromString(action.Color)" 
+                                       StartIcon="@action.Icon"
+                                       FullWidth="true"
+                                       OnClick="() => PerformQuickAction(action)"
+                                       Disabled="@action.Disabled">
+                                @action.Label
+                            </MudButton>
+                        }
+                    </MudStack>
+                </MudPaper>
+
+                <!-- Dispute Stats -->
+                <MudPaper Elevation="2" Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-2"/>
+                        Dispute Statistics
+                    </MudText>
+                    
+                    <MudStack Spacing="2">
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.body2">Duration</MudText>
+                            <MudText Typo="Typo.body2">@GetDisputeDuration()</MudText>
+                        </div>
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.body2">Messages</MudText>
+                            <MudText Typo="Typo.body2">@Messages.Count</MudText>
+                        </div>
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.body2">Participants</MudText>
+                            <MudText Typo="Typo.body2">@GetParticipantCount()</MudText>
+                        </div>
+                        @if (Dispute.ResolvedAt.HasValue)
+                        {
+                            <div class="d-flex justify-space-between">
+                                <MudText Typo="Typo.body2">Resolution Time</MudText>
+                                <MudText Typo="Typo.body2">@GetResolutionTime()</MudText>
+                            </div>
+                        }
+                    </MudStack>
+                </MudPaper>
+
+                <!-- Related Information -->
+                @if (HasRelatedInformation())
+                {
+                    <MudPaper Elevation="2" Class="pa-4">
+                        <MudText Typo="Typo.h6" Class="mb-3">
+                            <MudIcon Icon="@Icons.Material.Filled.Link" Class="mr-2"/>
+                            Related Information
+                        </MudText>
+                        
+                        @if (!string.IsNullOrEmpty(Dispute.ExternalDisputeId))
+                        {
+                            <div class="mb-2">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">PayPal Dispute ID</MudText>
+                                <MudText Typo="Typo.body2">@Dispute.ExternalDisputeId</MudText>
+                            </div>
+                        }
+                        
+                        @if (!string.IsNullOrEmpty(Dispute.ResolutionNotes))
+                        {
+                            <div class="mb-2">
+                                <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Resolution Notes</MudText>
+                                <MudText Typo="Typo.body2">@Dispute.ResolutionNotes</MudText>
+                            </div>
+                        }
+                    </MudPaper>
+                }
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public string DisputeId { get; set; } = string.Empty;
+
+    private Dispute? Dispute;
+    private List<DisputeMessage> Messages = new();
+    private List<DisputeTimelineEvent> TimelineEvents = new();
+    private bool IsLoading = true;
+    private string CurrentUserId = string.Empty;
+    private string CurrentUserRole = "User";
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Get current user info
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            CurrentUserId = authState.User.FindFirst("sub")?.Value ?? string.Empty;
+            CurrentUserRole = DetermineUserRole(authState);
+        }
+        
+        await LoadDisputeDetails();
+    }
+
+    private async Task LoadDisputeDetails()
+    {
+        IsLoading = true;
+        try
+        {
+            // Load dispute details
+            var disputeResult = await DisputeService.GetDisputeAsync(DisputeId);
+            if (!disputeResult.Success || disputeResult.Data == null)
+            {
+                Snackbar.Add(disputeResult.Message ?? "Failed to load dispute", Severity.Error);
+                return;
+            }
+            
+            Dispute = disputeResult.Data;
+            
+            // Load dispute messages
+            var messagesResult = await DisputeService.GetDisputeMessagesAsync(DisputeId);
+            if (messagesResult.Success && messagesResult.Data != null)
+            {
+                Messages = messagesResult.Data;
+            }
+            
+            // Load dispute timeline
+            var timelineResult = await DisputeService.GetDisputeTimelineAsync(DisputeId);
+            if (timelineResult.Success && timelineResult.Data != null)
+            {
+                TimelineEvents = timelineResult.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load dispute details: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void GoBackToDisputes()
+    {
+        Navigation.NavigateTo("/disputes");
+    }
+
+    private bool ShowStatusBanner() => Dispute?.Status switch
+    {
+        DisputeStatus.EscalatedToPayPal => true,
+        DisputeStatus.Resolved => true,
+        DisputeStatus.Closed => true,
+        _ => false
+    };
+
+    private Severity GetStatusSeverity() => Dispute?.Status switch
+    {
+        DisputeStatus.EscalatedToPayPal => Severity.Error,
+        DisputeStatus.Resolved => Severity.Success,
+        DisputeStatus.Closed => Severity.Info,
+        _ => Severity.Normal
+    };
+
+    private string GetStatusIcon() => Dispute?.Status switch
+    {
+        DisputeStatus.EscalatedToPayPal => Icons.Material.Filled.ArrowUpward,
+        DisputeStatus.Resolved => Icons.Material.Filled.CheckCircle,
+        DisputeStatus.Closed => Icons.Material.Filled.Lock,
+        _ => Icons.Material.Filled.Info
+    };
+
+    private string GetStatusTitle() => Dispute?.Status switch
+    {
+        DisputeStatus.EscalatedToPayPal => "Escalated to PayPal",
+        DisputeStatus.Resolved => "Dispute Resolved",
+        DisputeStatus.Closed => "Dispute Closed",
+        _ => "Status Update"
+    };
+
+    private string GetStatusDescription() => Dispute?.Status switch
+    {
+        DisputeStatus.EscalatedToPayPal => "This dispute has been escalated to PayPal for external resolution. You will receive updates as the case progresses.",
+        DisputeStatus.Resolved => "This dispute has been successfully resolved. All parties have been notified of the resolution.",
+        DisputeStatus.Closed => "This dispute has been closed and no further action is required.",
+        _ => ""
+    };
+
+    private bool CanSendMessages() => Dispute?.Status switch
+    {
+        DisputeStatus.Closed => false,
+        DisputeStatus.Cancelled => false,
+        _ => true
+    };
+
+    private bool IsAdminOrSupport() => CurrentUserRole == "Admin" || CurrentUserRole == "Support";
+
+    private async Task HandleMessageSent(DisputeMessage message)
+    {
+        try
+        {
+            var request = new AddDisputeMessageRequest
+            {
+                DisputeId = DisputeId,
+                Message = message.Message,
+                IsInternal = message.IsInternal,
+                Attachments = message.Attachments
+            };
+            
+            var result = await DisputeService.AddDisputeMessageAsync(request);
+            if (result.Success)
+            {
+                Snackbar.Add("Message sent successfully", Severity.Success);
+                await LoadDisputeDetails(); // Refresh to get latest data
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to send message", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to send message: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task HandleAttachmentDownload(string attachment)
+    {
+        // TODO: Implement file download
+        Snackbar.Add($"Downloading {attachment}...", Severity.Info);
+    }
+
+    private async Task HandleTimelineAction((DisputeTimelineEvent Event, TimelineAction Action) args)
+    {
+        try
+        {
+            switch (args.Action.ActionType.ToLower())
+            {
+                case "escalate":
+                    await EscalateDispute();
+                    break;
+                case "resolve":
+                    // Open resolve dialog
+                    await OpenResolveDialog();
+                    break;
+                case "close":
+                    await CloseDispute();
+                    break;
+                default:
+                    Snackbar.Add($"Action not implemented: {args.Action.Label}", Severity.Info);
+                    break;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to perform action: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void OpenMessageComposer()
+    {
+        // The messaging component will handle this
+    }
+
+    // Helper methods for sidebar
+    private string GetDisputeDuration()
+    {
+        if (Dispute == null) return "N/A";
+        var duration = (Dispute.ResolvedAt ?? DateTime.UtcNow) - Dispute.CreatedAt;
+        return $"{duration.Days} days";
+    }
+
+    private int GetParticipantCount()
+    {
+        return Messages.Select(m => m.SenderId).Distinct().Count();
+    }
+
+    private string GetResolutionTime()
+    {
+        if (Dispute?.ResolvedAt == null) return "N/A";
+        var duration = Dispute.ResolvedAt.Value - Dispute.CreatedAt;
+        return $"{duration.Days} days, {duration.Hours} hours";
+    }
+
+    private bool HasRelatedInformation()
+    {
+        return Dispute != null && (!string.IsNullOrEmpty(Dispute.ExternalDisputeId) || !string.IsNullOrEmpty(Dispute.ResolutionNotes));
+    }
+
+    // Quick actions and other methods will be implemented next...
+    private List<QuickAction> GetQuickActions()
+    {
+        var actions = new List<QuickAction>();
+        
+        if (Dispute?.Status == DisputeStatus.Open || Dispute?.Status == DisputeStatus.InProgress)
+        {
+            actions.Add(new QuickAction
+            {
+                Label = "Add Evidence",
+                Icon = Icons.Material.Filled.AttachFile,
+                Color = "primary",
+                Variant = "outlined"
+            });
+            
+            if (CanEscalateDispute())
+            {
+                actions.Add(new QuickAction
+                {
+                    Label = "Escalate to PayPal",
+                    Icon = Icons.Material.Filled.ArrowUpward,
+                    Color = "warning",
+                    Variant = "outlined"
+                });
+            }
+        }
+        
+        return actions;
+    }
+
+    private bool CanCloseDispute() => Dispute?.Status == DisputeStatus.Resolved;
+    private bool CanEscalateDispute() => Dispute?.Status == DisputeStatus.InProgress;
+    private bool HasStatusActions() => false; // TODO: Implement status-specific actions
+
+    private List<TimelineAction> GetStatusActions() => new();
+
+    private async Task PerformStatusAction(TimelineAction action) 
+    {
+        await HandleTimelineAction((new DisputeTimelineEvent(), action));
+    }
+    
+    private async Task PerformQuickAction(QuickAction action) 
+    {
+        switch (action.ActionType.ToLower())
+        {
+            case "evidence":
+                await ShowAttachmentDialog();
+                break;
+            case "escalate":
+                await EscalateDispute();
+                break;
+            default:
+                Snackbar.Add($"Quick action not implemented: {action.Label}", Severity.Info);
+                break;
+        }
+    }
+    
+    private async Task CloseDispute() 
+    {
+        try
+        {
+            var request = new CloseDisputeRequest
+            {
+                Reason = "Dispute closed by user request",
+                NotifyParties = true
+            };
+            
+            var result = await DisputeService.CloseDisputeAsync(DisputeId, request);
+            if (result.Success)
+            {
+                Snackbar.Add("Dispute closed successfully", Severity.Success);
+                await LoadDisputeDetails();
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to close dispute", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to close dispute: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task EscalateDispute() 
+    {
+        try
+        {
+            var result = await DisputeService.EscalateDisputeAsync(DisputeId);
+            if (result.Success)
+            {
+                Snackbar.Add("Dispute escalated to PayPal successfully", Severity.Success);
+                await LoadDisputeDetails();
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to escalate dispute", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to escalate dispute: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task PrintDispute() 
+    {
+        // TODO: Implement print functionality
+        Snackbar.Add("Print functionality not yet implemented", Severity.Info);
+    }
+    
+    private async Task ExportDispute() 
+    {
+        // TODO: Implement export functionality
+        Snackbar.Add("Export functionality not yet implemented", Severity.Info);
+    }
+    
+    private async Task OpenResolveDialog()
+    {
+        // TODO: Open resolve dispute dialog
+        Snackbar.Add("Resolve dialog not yet implemented", Severity.Info);
+    }
+    
+    private async Task ShowAttachmentDialog()
+    {
+        // TODO: Open file upload dialog
+        Snackbar.Add("File upload not yet implemented", Severity.Info);
+    }
+    private void ViewRental(Guid rentalId) => Navigation.NavigateTo($"/rentals/{rentalId}");
+
+    private string DetermineUserRole(AuthenticationState authState)
+    {
+        // Determine user role based on claims or context
+        // This is a simplified implementation - in production you might check claims
+        if (authState.User.Claims?.Any(c => c.Type == "role" && c.Value == "Admin") == true)
+            return "Admin";
+        if (authState.User.Claims?.Any(c => c.Type == "role" && c.Value == "Support") == true)
+            return "Support";
+            
+        // For now, determine Owner vs Renter based on dispute context
+        // In a real implementation, you'd check if the user is the owner or renter of the disputed item
+        return "User";
+    }
+
+    private Color GetColorFromString(string colorString) => colorString?.ToLower() switch
+    {
+        "primary" => Color.Primary,
+        "secondary" => Color.Secondary,
+        "tertiary" => Color.Tertiary,
+        "info" => Color.Info,
+        "success" => Color.Success,
+        "warning" => Color.Warning,
+        "error" => Color.Error,
+        "dark" => Color.Dark,
+        "inherit" => Color.Inherit,
+        "surface" => Color.Surface,
+        _ => Color.Default
+    };
+
+    private Variant GetVariantFromString(string variantString) => variantString?.ToLower() switch
+    {
+        "text" => Variant.Text,
+        "filled" => Variant.Filled,
+        "outlined" => Variant.Outlined,
+        _ => Variant.Text
+    };
+}
+
+public class QuickAction
+{
+    public string Label { get; set; } = string.Empty;
+    public string Icon { get; set; } = string.Empty;
+    public Color Color { get; set; } = Color.Primary;
+    public Variant Variant { get; set; } = Variant.Filled;
+    public bool Disabled { get; set; } = false;
+    public string ActionType { get; set; } = string.Empty;
+}

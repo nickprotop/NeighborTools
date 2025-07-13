@@ -40,6 +40,12 @@ public class User : IdentityUser
     public ICollection<Review> ReviewsReceived { get; set; } = new List<Review>();
     public UserSettings? Settings { get; set; }
     
+    // Payment navigation properties
+    public ICollection<Payment> PaymentsMade { get; set; } = new List<Payment>();
+    public ICollection<Payment> PaymentsReceived { get; set; } = new List<Payment>();
+    public ICollection<Payout> Payouts { get; set; } = new List<Payout>();
+    public PaymentSettings? PaymentSettings { get; set; }
+    
     // GDPR navigation properties
     public ICollection<UserConsent> Consents { get; set; } = new List<UserConsent>();
     public ICollection<DataProcessingLog> ProcessingLogs { get; set; } = new List<DataProcessingLog>();

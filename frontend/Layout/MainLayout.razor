@@ -1,6 +1,9 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using MudBlazor
 @using frontend.Components
+@using frontend.Shared
+@using frontend.Models
+@using frontend.Services
 @inherits LayoutComponentBase
 @implements IDisposable
 
@@ -44,6 +47,15 @@
                                        StartIcon="@Icons.Material.Filled.Assignment">
                                 My Rentals
                             </MudButton>
+                            @if (hasOpenDisputes)
+                            {
+                                <MudButton Variant="Variant.Text" 
+                                           Href="/disputes" 
+                                           Class="nav-button"
+                                           StartIcon="@Icons.Material.Filled.ReportProblem">
+                                    Disputes
+                                </MudButton>
+                            }
                         </Authorized>
                     </AuthorizeView>
                 </nav>
@@ -82,9 +94,22 @@
                                     <MudMenuItem Icon="@Icons.Material.Filled.Inventory" Href="/my-tools">
                                         My Tools
                                     </MudMenuItem>
+                                    <MudMenuItem Icon="@Icons.Material.Filled.ReportProblem" Href="/disputes">
+                                        Disputes
+                                    </MudMenuItem>
+                                    @if (isAdmin)
+                                    {
+                                        <MudDivider />
+                                        <MudMenuItem Icon="@Icons.Material.Filled.AdminPanelSettings" Href="/admin">
+                                            Admin Dashboard
+                                        </MudMenuItem>
+                                    }
                                     <MudDivider />
                                     <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="/settings">
                                         Settings
+                                    </MudMenuItem>
+                                    <MudMenuItem Icon="@Icons.Material.Filled.Payment" Href="/settings/payments">
+                                        Payment Settings
                                     </MudMenuItem>
                                     <MudMenuItem Icon="@Icons.Material.Filled.PrivacyTip" Href="/privacy-dashboard">
                                         Privacy Dashboard
@@ -160,6 +185,25 @@
                                    OnClick="CloseMobileMenu">
                             My Rentals
                         </MudButton>
+                        @if (hasOpenDisputes)
+                        {
+                            <MudButton Variant="Variant.Text" 
+                                       Href="/disputes" 
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.ReportProblem"
+                                       Class="mobile-nav-item"
+                                       OnClick="CloseMobileMenu">
+                                Disputes
+                            </MudButton>
+                        }
+                        <MudButton Variant="Variant.Text" 
+                                   Href="/settings/payments" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Payment"
+                                   Class="mobile-nav-item"
+                                   OnClick="CloseMobileMenu">
+                            Payment Settings
+                        </MudButton>
                         <MudButton Variant="Variant.Filled" 
                                    Href="/tools/create" 
                                    FullWidth="true"
@@ -203,6 +247,13 @@
 
     <!-- Main Content -->
     <main class="main-content">
+        <!-- Payment Setup Notification for Tool Owners -->
+        <AuthorizeView>
+            <Authorized>
+                <PaymentSetupNotification />
+            </Authorized>
+        </AuthorizeView>
+        
         <div class="content-wrapper">
             @Body
         </div>
@@ -312,6 +363,11 @@
 
     .nav-button:hover {
         background-color: #f7f7f7 !important;
+    }
+
+    .admin-button {
+        color: var(--mud-palette-warning) !important;
+        font-weight: 600;
     }
 
     .header-actions {
@@ -486,12 +542,15 @@
 </style>
 
 @code {
-    [Inject] private frontend.Services.IAuthService AuthService { get; set; } = default!;
+    [Inject] private IAuthService AuthService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+    [Inject] private IDisputeService DisputeService { get; set; } = default!;
 
     private bool mobileMenuOpen = false;
     private string? currentUserId = null;
+    private bool isAdmin = false;
+    private bool hasOpenDisputes = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -518,15 +577,54 @@
                                 ?? authState.User.FindFirst("sub")?.Value 
                                 ?? authState.User.FindFirst("id")?.Value;
                 currentUserId = userIdClaim;
+                
+                // Check if user is admin
+                isAdmin = authState.User.IsInRole("Admin") || 
+                         authState.User.HasClaim(c => c.Type == "IsAdmin" && c.Value == "true");
+                
+                // Check for open disputes
+                await CheckOpenDisputesAsync();
             }
             else
             {
                 currentUserId = null;
+                isAdmin = false;
+                hasOpenDisputes = false;
             }
         }
         catch
         {
             currentUserId = null;
+            isAdmin = false;
+            hasOpenDisputes = false;
+        }
+    }
+
+    private async Task CheckOpenDisputesAsync()
+    {
+        try
+        {
+            var disputesResponse = await DisputeService.GetDisputesAsync(new GetDisputesRequest 
+            { 
+                PageSize = 50 // Get recent disputes to check for open ones
+            });
+            
+            if (disputesResponse.Success && disputesResponse.Data != null)
+            {
+                // Check if there are any disputes with open status
+                hasOpenDisputes = disputesResponse.Data.Any(d => 
+                    d.Status == DisputeStatus.Open || 
+                    d.Status == DisputeStatus.InProgress || 
+                    d.Status == DisputeStatus.EscalatedToPayPal);
+            }
+            else
+            {
+                hasOpenDisputes = false;
+            }
+        }
+        catch
+        {
+            hasOpenDisputes = false;
         }
     }
 

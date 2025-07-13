@@ -1,0 +1,557 @@
+@page "/rentals/{RentalId:guid}"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Services
+@using frontend.Models
+@using frontend.Shared
+@using frontend.Components.Disputes
+@using frontend.Components.Fraud
+@inject IRentalService RentalService
+@inject IPaymentService PaymentService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IDialogService DialogService
+@attribute [Authorize]
+
+<PageTitle>Rental Details - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    @if (isLoading)
+    {
+        <div class="d-flex justify-center align-center" style="min-height: 400px;">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+        </div>
+    }
+    else if (rental == null)
+    {
+        <MudAlert Severity="Severity.Error">
+            Rental not found or you don't have permission to view it.
+        </MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            <MudItem xs="12" md="8">
+                <MudPaper Elevation="4" Class="pa-6" Style="border-radius: 16px;">
+                    <div class="d-flex align-center mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" Class="mr-3" Style="font-size: 2.5rem;" />
+                        <div>
+                            <MudText Typo="Typo.h4" Color="Color.Primary">Rental Details</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@rental.Tool?.Name</MudText>
+                        </div>
+                    </div>
+
+                    @* Fraud and Security Alerts *@
+                    @if (fraudAlerts.Any())
+                    {
+                        <div class="mb-4">
+                            @foreach (var alert in fraudAlerts)
+                            {
+                                <FraudAlertComponent Alert="alert" 
+                                                     ShowActions="true" 
+                                                     ShowRiskScore="true"
+                                                     Class="mb-2"/>
+                            }
+                        </div>
+                    }
+
+                    @* Show if payment is under manual review *@
+                    @if (transaction?.Status == "UnderReview")
+                    {
+                        <MudAlert Severity="Severity.Warning" Class="mb-4">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">
+                                <MudIcon Icon="@Icons.Material.Filled.Security" Class="mr-2"/>
+                                Payment Under Security Review
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                This payment is currently under security review. Our team will complete the review within 24-48 hours.
+                                You'll be notified once the review is complete.
+                            </MudText>
+                        </MudAlert>
+                    }
+
+                    <MudGrid Class="mb-4">
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Rental Period</MudText>
+                            <MudText Typo="Typo.body1">
+                                @rental.StartDate.ToString("MMM dd, yyyy") - @rental.EndDate.ToString("MMM dd, yyyy")
+                            </MudText>
+                            <MudText Typo="Typo.caption">@GetRentalDuration() days</MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Status</MudText>
+                            <MudChip T="string" Color="@GetStatusColor(rental.Status)" Icon="@GetStatusIcon(rental.Status)">
+                                @rental.Status
+                            </MudChip>
+                        </MudItem>
+                    </MudGrid>
+
+                    @if (!string.IsNullOrEmpty(rental.Notes))
+                    {
+                        <div class="mb-4">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Notes</MudText>
+                            <MudText Typo="Typo.body1">@rental.Notes</MudText>
+                        </div>
+                    }
+
+                    @if (transaction != null)
+                    {
+                        <MudDivider Class="my-4" />
+                        <MudText Typo="Typo.h6" Class="mb-3">Financial Summary</MudText>
+                        <MudSimpleTable Elevation="0" Bordered="true">
+                            <tbody>
+                                <tr>
+                                    <td>Rental Amount</td>
+                                    <td class="text-right">$@transaction.RentalAmount.ToString("F2")</td>
+                                </tr>
+                                @if (transaction.SecurityDeposit > 0)
+                                {
+                                    <tr>
+                                        <td>Security Deposit</td>
+                                        <td class="text-right">$@transaction.SecurityDeposit.ToString("F2")</td>
+                                    </tr>
+                                }
+                                <tr>
+                                    <td><strong>Total Amount</strong></td>
+                                    <td class="text-right"><strong>$@transaction.TotalAmount.ToString("F2")</strong></td>
+                                </tr>
+                                @if (isOwner)
+                                {
+                                    <tr>
+                                        <td>Platform Commission (@((transaction.CommissionRate * 100).ToString("F1"))%)</td>
+                                        <td class="text-right">-$@transaction.CommissionAmount.ToString("F2")</td>
+                                    </tr>
+                                    <tr>
+                                        <td><strong>Your Payout</strong></td>
+                                        <td class="text-right"><strong>$@transaction.OwnerPayoutAmount.ToString("F2")</strong></td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </MudSimpleTable>
+
+                        <div class="mt-3">
+                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Payment Status</MudText>
+                            <MudChip T="string" Color="@GetPaymentStatusColor(transaction.Status)" 
+                                     Icon="@GetPaymentStatusIcon(transaction.Status)">
+                                @GetPaymentStatusText(transaction.Status)
+                            </MudChip>
+                        </div>
+                    }
+
+                    <div class="mt-4">
+                        @if (isRenter && rental.Status == "Approved" && (transaction == null || transaction.Status == "Pending"))
+                        {
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       StartIcon="@Icons.Material.Filled.Payment"
+                                       OnClick="InitiatePayment"
+                                       Disabled="isProcessingPayment">
+                                @if (isProcessingPayment)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                }
+                                Pay Now
+                            </MudButton>
+                        }
+                        
+                        @if (isOwner && rental.Status == "Pending")
+                        {
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Success" 
+                                       StartIcon="@Icons.Material.Filled.Check"
+                                       OnClick="@(() => UpdateRentalStatus("Approved"))"
+                                       Class="mr-2">
+                                Approve
+                            </MudButton>
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Error" 
+                                       StartIcon="@Icons.Material.Filled.Close"
+                                       OnClick="@(() => UpdateRentalStatus("Rejected"))">
+                                Reject
+                            </MudButton>
+                        }
+
+                        @if ((isRenter || isOwner) && rental.Status == "Active" && transaction?.Status == "Completed")
+                        {
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Primary" 
+                                       StartIcon="@Icons.Material.Filled.CheckCircle"
+                                       OnClick="@(() => UpdateRentalStatus("Completed"))">
+                                Mark as Completed
+                            </MudButton>
+                        }
+
+                        @* Report Issue button - show for active or completed rentals *@
+                        @if ((isRenter || isOwner) && (rental.Status == "Active" || rental.Status == "Completed" || transaction?.Status == "Disputed"))
+                        {
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Warning" 
+                                       StartIcon="@Icons.Material.Filled.ReportProblem"
+                                       OnClick="OpenReportIssueDialog"
+                                       Class="ml-2">
+                                Report Issue
+                            </MudButton>
+                        }
+                    </div>
+                </MudPaper>
+            </MudItem>
+
+            <MudItem xs="12" md="4">
+                <MudPaper Elevation="4" Class="pa-4" Style="border-radius: 16px;">
+                    <MudText Typo="Typo.h6" Class="mb-3">Tool Information</MudText>
+                    @if (rental.Tool != null)
+                    {
+                        <div class="mb-3">
+                            @if (rental.Tool.ImageUrls.Any())
+                            {
+                                <img src="@rental.Tool.ImageUrls.First()" 
+                                     alt="@rental.Tool.Name" 
+                                     style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;" />
+                            }
+                        </div>
+                        <MudText Typo="Typo.subtitle1" GutterBottom="true">@rental.Tool.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" GutterBottom="true">
+                            @rental.Tool.Description
+                        </MudText>
+                        <MudDivider Class="my-3" />
+                        <MudText Typo="Typo.body2">
+                            <strong>Owner:</strong> @rental.Tool.OwnerName
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            <strong>Location:</strong> @rental.Tool.Location
+                        </MudText>
+                    }
+                </MudPaper>
+
+                <MudPaper Elevation="4" Class="pa-4 mt-4" Style="border-radius: 16px;">
+                    <MudText Typo="Typo.h6" Class="mb-3">Contact Information</MudText>
+                    @if (isRenter)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Tool Owner</MudText>
+                        <MudText Typo="Typo.body1">@rental.Tool?.OwnerName</MudText>
+                        @if (rental.Status == "Approved" || rental.Status == "Active")
+                        {
+                            <MudButton Variant="Variant.Text" 
+                                       Color="Color.Primary" 
+                                       StartIcon="@Icons.Material.Filled.Message"
+                                       Class="mt-2">
+                                Contact Owner
+                            </MudButton>
+                        }
+                    }
+                    else if (isOwner)
+                    {
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Renter</MudText>
+                        <MudText Typo="Typo.body1">@rental.RenterName</MudText>
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Message"
+                                   Class="mt-2">
+                            Contact Renter
+                        </MudButton>
+                    }
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public Guid RentalId { get; set; }
+
+    private Rental? rental;
+    private Transaction? transaction;
+    private bool isLoading = true;
+    private bool isRenter = false;
+    private bool isOwner = false;
+    private bool isProcessingPayment = false;
+    private string? currentUserId;
+    private List<FraudAlert> fraudAlerts = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+
+        await LoadRentalDetails();
+    }
+
+    private async Task LoadRentalDetails()
+    {
+        try
+        {
+            isLoading = true;
+            var result = await RentalService.GetRentalByIdAsync(RentalId);
+            
+            if (result.Success && result.Data != null)
+            {
+                rental = result.Data;
+                isRenter = rental.RenterId == currentUserId;
+                isOwner = rental.Tool?.OwnerId == currentUserId;
+
+                // Load transaction details if available
+                if (rental.Status != "Pending" && rental.Status != "Rejected")
+                {
+                    var transactionResult = await PaymentService.GetTransactionDetailsAsync(RentalId);
+                    if (transactionResult.Success && transactionResult.Data?.Transaction != null)
+                    {
+                        transaction = transactionResult.Data.Transaction;
+                    }
+                }
+
+                // Load fraud alerts for this rental/payment
+                LoadFraudAlerts();
+            }
+            else
+            {
+                Snackbar.Add("Failed to load rental details", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading rental: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task InitiatePayment()
+    {
+        if (rental?.Tool == null)
+        {
+            Snackbar.Add("Rental information is missing", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            isProcessingPayment = true;
+            
+            // Calculate rental cost based on the period
+            var rentalDays = (int)(rental.EndDate - rental.StartDate).TotalDays;
+            var rentalAmount = CalculateRentalCost(rental.Tool, rentalDays);
+            var securityDeposit = rental.Tool.DepositRequired > 0 ? rental.Tool.DepositRequired : 0;
+            
+            var parameters = new DialogParameters 
+            { 
+                { "RentalId", RentalId },
+                { "Tool", rental.Tool },
+                { "RentalAmount", rentalAmount },
+                { "SecurityDeposit", securityDeposit },
+                { "StartDate", rental.StartDate },
+                { "EndDate", rental.EndDate }
+            };
+            
+            var options = new DialogOptions 
+            { 
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true
+            };
+            
+            var dialog = await DialogService.ShowAsync<PaymentConfirmationDialog>("Confirm Payment", parameters, options);
+            var result = await dialog.Result;
+            
+            if (!result.Canceled)
+            {
+                // Payment was initiated successfully, refresh the page
+                await LoadRentalDetails();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error opening payment dialog: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessingPayment = false;
+        }
+    }
+
+    private async Task UpdateRentalStatus(string newStatus)
+    {
+        // TODO: Implement rental status update
+        Snackbar.Add($"Status update to {newStatus} - Coming soon!", Severity.Info);
+    }
+
+    private int GetRentalDuration()
+    {
+        return rental != null ? (int)(rental.EndDate - rental.StartDate).TotalDays : 0;
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "Pending" => Color.Warning,
+        "Approved" => Color.Info,
+        "Active" => Color.Success,
+        "Completed" => Color.Primary,
+        "Cancelled" => Color.Error,
+        "Rejected" => Color.Error,
+        _ => Color.Default
+    };
+
+    private string GetStatusIcon(string status) => status switch
+    {
+        "Pending" => Icons.Material.Filled.Schedule,
+        "Approved" => Icons.Material.Filled.Check,
+        "Active" => Icons.Material.Filled.PlayArrow,
+        "Completed" => Icons.Material.Filled.CheckCircle,
+        "Cancelled" => Icons.Material.Filled.Cancel,
+        "Rejected" => Icons.Material.Filled.Block,
+        _ => Icons.Material.Filled.Info
+    };
+
+    private Color GetPaymentStatusColor(string status) => status switch
+    {
+        "Pending" => Color.Warning,
+        "PaymentInitiated" => Color.Info,
+        "PaymentCompleted" => Color.Success,
+        "PayoutScheduled" => Color.Info,
+        "PayoutCompleted" => Color.Success,
+        "PartiallyRefunded" => Color.Warning,
+        "FullyRefunded" => Color.Error,
+        "Failed" => Color.Error,
+        "Disputed" => Color.Error,
+        "UnderReview" => Color.Warning,
+        _ => Color.Default
+    };
+
+    private string GetPaymentStatusIcon(string status) => status switch
+    {
+        "Pending" => Icons.Material.Filled.Schedule,
+        "PaymentInitiated" => Icons.Material.Filled.Payment,
+        "PaymentCompleted" => Icons.Material.Filled.CheckCircle,
+        "PayoutScheduled" => Icons.Material.Filled.Schedule,
+        "PayoutCompleted" => Icons.Material.Filled.AccountBalance,
+        "PartiallyRefunded" => Icons.Material.Filled.RemoveCircle,
+        "FullyRefunded" => Icons.Material.Filled.MoneyOff,
+        "Failed" => Icons.Material.Filled.Error,
+        "Disputed" => Icons.Material.Filled.ReportProblem,
+        "UnderReview" => Icons.Material.Filled.Security,
+        _ => Icons.Material.Filled.Info
+    };
+
+    private string GetPaymentStatusText(string status) => status switch
+    {
+        "Pending" => "Awaiting Payment",
+        "PaymentInitiated" => "Payment In Progress",
+        "PaymentCompleted" => "Payment Completed",
+        "PayoutScheduled" => "Payout Scheduled",
+        "PayoutCompleted" => "Payout Completed",
+        "PartiallyRefunded" => "Partially Refunded",
+        "FullyRefunded" => "Fully Refunded",
+        "Failed" => "Payment Failed",
+        "Disputed" => "Payment Disputed",
+        "UnderReview" => "Under Security Review",
+        _ => status
+    };
+
+    private decimal CalculateRentalCost(Tool tool, int rentalDays)
+    {
+        // Calculate best rate (similar to backend logic)
+        decimal dailyCost = tool.DailyRate * rentalDays;
+        decimal weeklyCost = tool.WeeklyRate.HasValue && rentalDays >= 7 ? 
+            tool.WeeklyRate.Value * (rentalDays / 7) + tool.DailyRate * (rentalDays % 7) : decimal.MaxValue;
+        decimal monthlyCost = tool.MonthlyRate.HasValue && rentalDays >= 30 ? 
+            tool.MonthlyRate.Value * (rentalDays / 30) + tool.DailyRate * (rentalDays % 30) : decimal.MaxValue;
+
+        if (monthlyCost < dailyCost && monthlyCost < weeklyCost)
+        {
+            return monthlyCost;
+        }
+        else if (weeklyCost < dailyCost)
+        {
+            return weeklyCost;
+        }
+        else
+        {
+            return dailyCost;
+        }
+    }
+
+    private void LoadFraudAlerts()
+    {
+        try
+        {
+            // TODO: Call actual fraud alert service when available
+            // For now, create mock alerts based on transaction status
+            fraudAlerts.Clear();
+            
+            if (transaction?.Status == "UnderReview")
+            {
+                fraudAlerts.Add(new FraudAlert
+                {
+                    Id = Guid.NewGuid().ToString(),
+                    Type = FraudAlertType.SuspiciousPayment,
+                    RiskLevel = FraudRiskLevel.Medium,
+                    Status = FraudAlertStatus.UnderReview,
+                    Description = "Payment flagged for manual review due to unusual transaction pattern.",
+                    Details = "This payment was automatically flagged by our fraud detection system and requires manual verification.",
+                    DetectedAt = DateTime.Now.AddMinutes(-30),
+                    RequiresManualReview = true,
+                    PaymentId = transaction?.Id,
+                    RentalId = RentalId.ToString()
+                });
+            }
+            
+            // Example: Add velocity alert for demonstration
+            if (rental?.Status == "Active" && transaction?.Status == "Completed")
+            {
+                // Mock: Show fraud alert if user has made multiple rapid transactions
+                var random = new Random();
+                if (random.Next(1, 10) <= 2) // 20% chance to show demo alert
+                {
+                    fraudAlerts.Add(new FraudAlert
+                    {
+                        Id = Guid.NewGuid().ToString(),
+                        Type = FraudAlertType.VelocityLimit,
+                        RiskLevel = FraudRiskLevel.Low,
+                        Status = FraudAlertStatus.Resolved,
+                        Description = "Transaction velocity alert - multiple rapid payments detected.",
+                        Details = "User exceeded normal transaction frequency. Alert was automatically resolved after verification.",
+                        DetectedAt = DateTime.Now.AddHours(-2),
+                        ReviewedAt = DateTime.Now.AddHours(-1),
+                        RequiresManualReview = false,
+                        PaymentId = transaction?.Id,
+                        RentalId = RentalId.ToString()
+                    });
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Silently fail for fraud alerts to not disrupt main functionality
+            Console.WriteLine($"Failed to load fraud alerts: {ex.Message}");
+        }
+    }
+
+    private async Task OpenReportIssueDialog()
+    {
+        var parameters = new DialogParameters
+        {
+            { "RentalId", rental?.Id.ToString() ?? "" },
+            { "RentalTitle", $"{rental?.ToolName} - {rental?.RenterName}" }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Medium, 
+            FullWidth = true 
+        };
+        
+        var dialog = DialogService.Show<CreateDisputeDialog>("Report an Issue", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Issue reported successfully. Our support team will review your case.", Severity.Success);
+            
+            // Refresh the rental data to show any status changes
+            await LoadRentalDetails();
+        }
+    }
+}

@@ -50,6 +50,21 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
                 new("LastName", user.LastName)
             };
 
+            // Add role claims
+            if (user.Roles != null)
+            {
+                foreach (var role in user.Roles)
+                {
+                    claims.Add(new Claim(ClaimTypes.Role, role));
+                }
+            }
+
+            // Add IsAdmin claim for easier frontend checking
+            if (user.IsAdmin)
+            {
+                claims.Add(new Claim("IsAdmin", "true"));
+            }
+
             var identity = new ClaimsIdentity(claims, "jwt");
             var principal = new ClaimsPrincipal(identity);
 
@@ -72,6 +87,21 @@ public class CustomAuthenticationStateProvider : AuthenticationStateProvider
             new("FirstName", user.FirstName),
             new("LastName", user.LastName)
         };
+
+        // Add role claims
+        if (user.Roles != null)
+        {
+            foreach (var role in user.Roles)
+            {
+                claims.Add(new Claim(ClaimTypes.Role, role));
+            }
+        }
+
+        // Add IsAdmin claim for easier frontend checking
+        if (user.IsAdmin)
+        {
+            claims.Add(new Claim("IsAdmin", "true"));
+        }
 
         var identity = new ClaimsIdentity(claims, "jwt");
         var principal = new ClaimsPrincipal(identity);

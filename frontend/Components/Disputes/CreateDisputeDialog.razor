@@ -1,0 +1,255 @@
+@using frontend.Models
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Class="mr-3 mb-n1"/>
+            Report an Issue
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudContainer Style="max-width: 600px;">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+                        Reporting an issue will create a dispute case. Our support team will review and help resolve the matter.
+                    </MudAlert>
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudSelect @bind-Value="Request.Type" 
+                              Label="Issue Type" 
+                              Variant="Variant.Outlined"
+                              T="DisputeType"
+                              Required="true"
+                              HelperText="Select the type of issue you're experiencing">
+                        <MudSelectItem T="DisputeType" Value="DisputeType.PaymentDispute">Payment Issue</MudSelectItem>
+                        <MudSelectItem T="DisputeType" Value="DisputeType.ServiceDispute">Service Problem</MudSelectItem>
+                        <MudSelectItem T="DisputeType" Value="DisputeType.Damage">Damage Claim</MudSelectItem>
+                        <MudSelectItem T="DisputeType" Value="DisputeType.NoShow">No-Show</MudSelectItem>
+                        <MudSelectItem T="DisputeType" Value="DisputeType.Refund">Refund Request</MudSelectItem>
+                        <MudSelectItem T="DisputeType" Value="DisputeType.Other">Other</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudSelect @bind-Value="Request.Category" 
+                              Label="Issue Category" 
+                              Variant="Variant.Outlined"
+                              T="DisputeCategory"
+                              Required="true"
+                              HelperText="Select the specific category">
+                        <MudSelectItem T="DisputeCategory" Value="DisputeCategory.PaymentNotReceived">Payment Not Received</MudSelectItem>
+                        <MudSelectItem T="DisputeCategory" Value="DisputeCategory.ItemNotReceived">Tool Not Received</MudSelectItem>
+                        <MudSelectItem T="DisputeCategory" Value="DisputeCategory.ItemNotAsDescribed">Tool Not As Described</MudSelectItem>
+                        <MudSelectItem T="DisputeCategory" Value="DisputeCategory.UnauthorizedPayment">Unauthorized Payment</MudSelectItem>
+                        <MudSelectItem T="DisputeCategory" Value="DisputeCategory.Damage">Damage to Tool</MudSelectItem>
+                        <MudSelectItem T="DisputeCategory" Value="DisputeCategory.LateReturn">Late Return</MudSelectItem>
+                        <MudSelectItem T="DisputeCategory" Value="DisputeCategory.NoShow">No-Show</MudSelectItem>
+                        <MudSelectItem T="DisputeCategory" Value="DisputeCategory.Other">Other</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Request.Subject" 
+                                  Label="Subject" 
+                                  Variant="Variant.Outlined"
+                                  Required="true"
+                                  Counter="100"
+                                  MaxLength="100"
+                                  HelperText="Brief summary of the issue"/>
+                </MudItem>
+
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="Request.Description" 
+                                  Label="Description" 
+                                  Variant="Variant.Outlined"
+                                  Lines="5"
+                                  Required="true"
+                                  Counter="1000"
+                                  MaxLength="1000"
+                                  HelperText="Detailed description of what happened"/>
+                </MudItem>
+
+                @if (ShowDisputedAmount())
+                {
+                    <MudItem xs="12">
+                        <MudNumericField @bind-Value="Request.DisputedAmount" 
+                                       Label="Disputed Amount ($)" 
+                                       Variant="Variant.Outlined"
+                                       Min="0"
+                                       Step="0.01M"
+                                       Format="F2"
+                                       HelperText="Amount in dispute (optional)"/>
+                    </MudItem>
+                }
+
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle2" Class="mb-2">Evidence (Optional)</MudText>
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Primary"
+                               StartIcon="@Icons.Material.Filled.CloudUpload"
+                               Class="mb-2">
+                        Upload Evidence
+                    </MudButton>
+                    
+                    @if (UploadedFiles.Any())
+                    {
+                        <MudList T="string" Dense="true">
+                            @foreach (var file in UploadedFiles)
+                            {
+                                <MudListItem T="string">
+                                    <MudIcon Icon="@Icons.Material.Filled.AttachFile" Class="mr-2"/>
+                                    @file.Name (@GetFileSize(file.Size))
+                                    <MudIconButton Icon="@Icons.Material.Filled.Delete" 
+                                                   Size="Size.Small" 
+                                                   OnClick="() => RemoveFile(file)"
+                                                   Class="ml-auto"/>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+                    
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Supported formats: JPG, PNG, PDF, DOC. Max 5 files, 10MB each.
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                        File upload functionality will be available in a future update.
+                    </MudText>
+                </MudItem>
+
+                @if (IsSubmitting)
+                {
+                    <MudItem xs="12">
+                        <MudProgressLinear Color="Color.Primary" Indeterminate="true" Class="my-2"/>
+                        <MudText Typo="Typo.caption" Align="Align.Center">
+                            Creating dispute case...
+                        </MudText>
+                    </MudItem>
+                }
+
+                @if (!string.IsNullOrEmpty(ErrorMessage))
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Error" Dense="true">
+                            @ErrorMessage
+                        </MudAlert>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" 
+                   StartIcon="@Icons.Material.Filled.Cancel"
+                   Disabled="IsSubmitting">
+            Cancel
+        </MudButton>
+        <MudButton Color="Color.Primary" 
+                   OnClick="Submit" 
+                   StartIcon="@Icons.Material.Filled.ReportProblem"
+                   Disabled="!IsFormValid() || IsSubmitting">
+            Create Dispute
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string RentalId { get; set; } = string.Empty;
+    [Parameter] public string RentalTitle { get; set; } = string.Empty;
+
+    private CreateDisputeRequest Request = new();
+    private List<IBrowserFile> UploadedFiles = new();
+    private bool IsSubmitting = false;
+    private string ErrorMessage = string.Empty;
+
+    protected override void OnInitialized()
+    {
+        Request.RentalId = RentalId;
+    }
+
+    private void OnFileChanged(IReadOnlyList<IBrowserFile> files)
+    {
+        // File upload functionality to be implemented
+        StateHasChanged();
+    }
+
+    private void RemoveFile(IBrowserFile file)
+    {
+        UploadedFiles.Remove(file);
+        StateHasChanged();
+    }
+
+    private string GetFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private bool ShowDisputedAmount()
+    {
+        return Request.Type == DisputeType.PaymentDispute || 
+               Request.Type == DisputeType.Refund || 
+               Request.Type == DisputeType.Damage;
+    }
+
+    private bool IsFormValid()
+    {
+        return !string.IsNullOrWhiteSpace(Request.Subject) &&
+               !string.IsNullOrWhiteSpace(Request.Description) &&
+               Request.Type != default &&
+               Request.Category != default;
+    }
+
+    private async Task Submit()
+    {
+        if (!IsFormValid()) return;
+
+        IsSubmitting = true;
+        ErrorMessage = string.Empty;
+
+        try
+        {
+            // TODO: Upload files and get URLs
+            if (UploadedFiles.Any())
+            {
+                // Request.Evidence = await UploadFiles();
+            }
+
+            // TODO: Call dispute service to create dispute
+            // var response = await DisputeService.CreateDisputeAsync(Request);
+            
+            // Simulate API call for now
+            await Task.Delay(2000);
+            
+            // TODO: Handle response
+            // if (response.Success)
+            // {
+                MudDialog.Close(DialogResult.Ok(Request));
+            // }
+            // else
+            // {
+            //     ErrorMessage = response.ErrorMessage ?? "Failed to create dispute";
+            // }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = "An error occurred while creating the dispute. Please try again.";
+        }
+        finally
+        {
+            IsSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel() => MudDialog.Cancel();
+}

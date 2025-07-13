@@ -1,0 +1,361 @@
+@page "/disputes-old"
+@using frontend.Models
+@using frontend.Components.Disputes
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<PageTitle>Disputes & Issues</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <div class="d-flex justify-space-between align-center mb-4">
+        <MudText Typo="Typo.h4">
+            <MudIcon Icon="@Icons.Material.Filled.ReportProblem" Class="mr-3 mb-n1"/>
+            Disputes & Issues
+        </MudText>
+        
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   OnClick="CreateNewDispute">
+            Report Issue
+        </MudButton>
+    </div>
+
+    @if (IsLoading)
+    {
+        <div class="d-flex justify-center pa-4">
+            <MudProgressCircular Color="Color.Primary" Indeterminate="true"/>
+        </div>
+    }
+    else
+    {
+        <!-- Filters and Search -->
+        <MudCard Class="mb-4">
+            <MudCardContent>
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudSelect @bind-Value="Filter.Status" 
+                                   Label="Status" 
+                                   Clearable="true"
+                                   T="DisputeStatus?"
+                                   OnClearButtonClick="() => Filter.Status = null">
+                            <MudSelectItem T="DisputeStatus?" Value="DisputeStatus.Open">Open</MudSelectItem>
+                            <MudSelectItem T="DisputeStatus?" Value="DisputeStatus.InProgress">In Progress</MudSelectItem>
+                            <MudSelectItem T="DisputeStatus?" Value="DisputeStatus.EscalatedToPayPal">Escalated</MudSelectItem>
+                            <MudSelectItem T="DisputeStatus?" Value="DisputeStatus.Resolved">Resolved</MudSelectItem>
+                            <MudSelectItem T="DisputeStatus?" Value="DisputeStatus.Closed">Closed</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudSelect @bind-Value="Filter.Type" 
+                                   Label="Type" 
+                                   Clearable="true"
+                                   T="DisputeType?"
+                                   OnClearButtonClick="() => Filter.Type = null">
+                            <MudSelectItem T="DisputeType?" Value="DisputeType.PaymentDispute">Payment Issue</MudSelectItem>
+                            <MudSelectItem T="DisputeType?" Value="DisputeType.ServiceDispute">Service Problem</MudSelectItem>
+                            <MudSelectItem T="DisputeType?" Value="DisputeType.Damage">Damage</MudSelectItem>
+                            <MudSelectItem T="DisputeType?" Value="DisputeType.NoShow">No-Show</MudSelectItem>
+                            <MudSelectItem T="DisputeType?" Value="DisputeType.Refund">Refund</MudSelectItem>
+                        </MudSelect>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudTextField @bind-Value="Filter.SearchTerm" 
+                                      Label="Search" 
+                                      Variant="Variant.Outlined"
+                                      Adornment="Adornment.End"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      Clearable="true"/>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="2" Class="d-flex align-center">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   FullWidth="true"
+                                   OnClick="ApplyFilters">
+                            Filter
+                        </MudButton>
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Disputes List -->
+        @if (Disputes.Any())
+        {
+            <MudGrid>
+                @foreach (var dispute in Disputes)
+                {
+                    <MudItem xs="12">
+                        <MudCard Class="mb-3 dispute-card" @onclick="() => ViewDispute(dispute)" Style="cursor: pointer;">
+                            <MudCardContent>
+                                <div class="d-flex justify-space-between align-start">
+                                    <div class="flex-grow-1">
+                                        <div class="d-flex align-center mb-2">
+                                            <MudIcon Icon="@GetDisputeTypeIcon(dispute.Type)" 
+                                                     Color="@GetDisputeStatusColor(dispute.Status)" 
+                                                     Class="mr-2"/>
+                                            <MudText Typo="Typo.h6" Class="mr-3">
+                                                @dispute.Subject
+                                            </MudText>
+                                            <MudChip T="string" 
+                                                     Color="@GetDisputeStatusColor(dispute.Status)" 
+                                                     Size="Size.Small" 
+                                                     Text="@dispute.Status.ToString()" />
+                                        </div>
+                                        
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                                            @GetTruncatedDescription(dispute.Description)
+                                        </MudText>
+                                        
+                                        <div class="d-flex align-center">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                Type: @dispute.Type.ToString().Replace("Dispute", "")
+                                            </MudText>
+                                            <MudDivider Vertical="true" FlexItem="true" Class="mx-3" Style="height: 16px;"/>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                Created: @dispute.CreatedAt.ToString("MMM dd, yyyy")
+                                            </MudText>
+                                            @if (dispute.DisputedAmount.HasValue)
+                                            {
+                                                <MudDivider Vertical="true" FlexItem="true" Class="mx-3" Style="height: 16px;"/>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    Amount: @dispute.DisputedAmount.Value.ToString("C")
+                                                </MudText>
+                                            }
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="ml-4">
+                                        @if (dispute.Messages.Any())
+                                        {
+                                            <MudBadge Content="@dispute.Messages.Count" 
+                                                      Color="Color.Primary" 
+                                                      Overlap="true" 
+                                                      Class="mr-2">
+                                                <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Primary"/>
+                                            </MudBadge>
+                                        }
+                                        
+                                        @if (RequiresAction(dispute))
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.NotificationImportant" 
+                                                     Color="Color.Warning" 
+                                                     Title="Requires your attention"/>
+                                        }
+                                    </div>
+                                </div>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+            
+            <!-- Pagination -->
+            @if (TotalPages > 1)
+            {
+                <div class="d-flex justify-center mt-4">
+                    <MudPagination Count="@TotalPages" 
+                                   Selected="@CurrentPage" 
+                                   SelectedChanged="OnPageChanged"
+                                   Color="Color.Primary"/>
+                </div>
+            }
+        }
+        else
+        {
+            <MudCard>
+                <MudCardContent Class="text-center pa-8">
+                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                             Color="Color.Success" 
+                             Size="Size.Large" 
+                             Class="mb-4"/>
+                    <MudText Typo="Typo.h5" Class="mb-2">No disputes found</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                        @if (HasActiveFilters())
+                        {
+                            @("No disputes match your current filters.")
+                        }
+                        else
+                        {
+                            @("You don't have any active disputes. That's great!")
+                        }
+                    </MudText>
+                    
+                    @if (HasActiveFilters())
+                    {
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   OnClick="ClearFilters">
+                            Clear Filters
+                        </MudButton>
+                    }
+                </MudCardContent>
+            </MudCard>
+        }
+    }
+</MudContainer>
+
+<style>
+    .dispute-card:hover {
+        box-shadow: 0 8px 16px rgba(0,0,0,0.12);
+        transform: translateY(-2px);
+        transition: all 0.2s ease;
+    }
+</style>
+
+@code {
+    private List<Dispute> Disputes = new();
+    private DisputeFilter Filter = new();
+    private bool IsLoading = true;
+    private int CurrentPage = 1;
+    private int PageSize = 10;
+    private int TotalPages = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDisputes();
+    }
+
+    private async Task LoadDisputes()
+    {
+        IsLoading = true;
+        
+        try
+        {
+            // TODO: Call actual dispute service
+            // var response = await DisputeService.GetUserDisputesAsync(Filter, CurrentPage, PageSize);
+            
+            // Mock data for now
+            Disputes = GetMockDisputes();
+            TotalPages = (int)Math.Ceiling(Disputes.Count / (double)PageSize);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("Failed to load disputes", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CreateNewDispute()
+    {
+        var parameters = new DialogParameters();
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        
+        var dialog = DialogService.Show<CreateDisputeDialog>("Report an Issue", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Dispute case created successfully", Severity.Success);
+            await LoadDisputes();
+        }
+    }
+
+    private async Task ViewDispute(Dispute dispute)
+    {
+        // TODO: Navigate to dispute details page or open dialog
+        // NavigationManager.NavigateTo($"/disputes/{dispute.Id}");
+        Snackbar.Add($"Viewing dispute: {dispute.Subject}", Severity.Info);
+    }
+
+    private async Task ApplyFilters()
+    {
+        CurrentPage = 1;
+        await LoadDisputes();
+    }
+
+    private async Task ClearFilters()
+    {
+        Filter = new DisputeFilter();
+        CurrentPage = 1;
+        await LoadDisputes();
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        CurrentPage = page;
+        await LoadDisputes();
+    }
+
+    private bool HasActiveFilters()
+    {
+        return Filter.Status.HasValue || 
+               Filter.Type.HasValue || 
+               !string.IsNullOrEmpty(Filter.SearchTerm);
+    }
+
+    private bool RequiresAction(Dispute dispute)
+    {
+        return dispute.Status == DisputeStatus.Open && 
+               dispute.Messages.Any(m => !m.SenderId.Equals("current-user-id"));
+    }
+
+    private Color GetDisputeStatusColor(DisputeStatus status) => status switch
+    {
+        DisputeStatus.Open => Color.Warning,
+        DisputeStatus.InProgress => Color.Info,
+        DisputeStatus.EscalatedToPayPal => Color.Error,
+        DisputeStatus.Resolved => Color.Success,
+        DisputeStatus.Closed => Color.Secondary,
+        DisputeStatus.Cancelled => Color.Secondary,
+        _ => Color.Default
+    };
+
+    private string GetDisputeTypeIcon(DisputeType type) => type switch
+    {
+        DisputeType.PaymentDispute => Icons.Material.Filled.Payment,
+        DisputeType.ServiceDispute => Icons.Material.Filled.RoomService,
+        DisputeType.Damage => Icons.Material.Filled.BrokenImage,
+        DisputeType.NoShow => Icons.Material.Filled.EventBusy,
+        DisputeType.Refund => Icons.Material.Filled.MoneyOff,
+        DisputeType.Chargeback => Icons.Material.Filled.CreditCard,
+        _ => Icons.Material.Filled.ReportProblem
+    };
+
+    private string GetTruncatedDescription(string description)
+    {
+        return description.Length > 150 ? description.Substring(0, 150) + "..." : description;
+    }
+
+    // Mock data - TODO: Remove when real service is implemented
+    private List<Dispute> GetMockDisputes()
+    {
+        return new List<Dispute>
+        {
+            new Dispute
+            {
+                Id = "1",
+                Subject = "Tool not as described",
+                Description = "The power drill I rented was missing several attachments that were shown in the photos.",
+                Type = DisputeType.ServiceDispute,
+                Status = DisputeStatus.Open,
+                Category = DisputeCategory.ItemNotAsDescribed,
+                CreatedAt = DateTime.Now.AddDays(-2),
+                DisputedAmount = 25.50m,
+                Messages = new List<DisputeMessage>
+                {
+                    new DisputeMessage { SenderId = "other-user", CreatedAt = DateTime.Now.AddHours(-4) }
+                }
+            },
+            new Dispute
+            {
+                Id = "2",
+                Subject = "Payment not received",
+                Description = "Completed the rental 5 days ago but haven't received payment yet.",
+                Type = DisputeType.PaymentDispute,
+                Status = DisputeStatus.InProgress,
+                Category = DisputeCategory.PaymentNotReceived,
+                CreatedAt = DateTime.Now.AddDays(-5),
+                DisputedAmount = 75.00m,
+                Messages = new List<DisputeMessage>()
+            }
+        };
+    }
+}

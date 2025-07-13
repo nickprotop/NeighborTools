@@ -5,6 +5,8 @@ using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using ToolsSharing.Infrastructure;
 using ToolsSharing.Infrastructure.Extensions;
+using ToolsSharing.Infrastructure.Security;
+using ToolsSharing.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -116,6 +118,9 @@ builder.Services.AddSession(options =>
 builder.Services.AddHealthChecks()
     .AddDbContextCheck<ToolsSharing.Infrastructure.Data.ApplicationDbContext>();
 
+// Add Background Services
+builder.Services.AddHostedService<PayoutBackgroundService>();
+
 // Add YARP
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
@@ -133,6 +138,9 @@ app.UseCors("AllowFrontend");
 // DEVELOPMENT ONLY: HTTPS redirection disabled for local development with self-signed certificates
 // PRODUCTION WARNING: Enable HTTPS redirection in production or when behind a proxy that handles SSL
 // app.UseHttpsRedirection();
+
+// Add PayPal webhook validation middleware (must be before authentication)
+app.UseMiddleware<PayPalWebhookValidationMiddleware>();
 
 app.UseSession();
 app.UseAuthentication();

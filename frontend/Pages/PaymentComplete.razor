@@ -1,0 +1,256 @@
+@page "/payments/complete"
+@using MudBlazor
+@using Microsoft.AspNetCore.WebUtilities
+@using frontend.Services
+@using frontend.Models
+@inject IPaymentService PaymentService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Complete Payment - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+    @if (isProcessing)
+    {
+        <MudPaper Class="pa-8 text-center" Elevation="4" Style="border-radius: 16px;">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h5" Class="mt-4">Processing Your Payment</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
+                Please wait while we confirm your payment with PayPal...
+            </MudText>
+        </MudPaper>
+    }
+    else if (paymentSuccessful)
+    {
+        <MudPaper Class="pa-8 text-center" Elevation="4" Style="border-radius: 16px; background: rgba(76, 175, 80, 0.1);">
+            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" 
+                     Color="Color.Success" 
+                     Style="font-size: 5rem;" 
+                     Class="mb-4" />
+            <MudText Typo="Typo.h4" Color="Color.Success" GutterBottom="true">
+                Payment Successful!
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mb-6">
+                Your payment has been processed successfully. The tool owner has been notified and will contact you about pickup arrangements.
+            </MudText>
+            
+            @if (transactionDetails != null)
+            {
+                <MudPaper Class="pa-4 mt-6 mb-6" Elevation="2" Style="background: var(--mud-palette-surface);">
+                    <MudText Typo="Typo.h6" Class="mb-3">Transaction Summary</MudText>
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Rental Amount:</MudText>
+                        </MudItem>
+                        <MudItem xs="6" Class="text-right">
+                            <MudText Typo="Typo.body1">$@transactionDetails.RentalAmount.ToString("F2")</MudText>
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Security Deposit:</MudText>
+                        </MudItem>
+                        <MudItem xs="6" Class="text-right">
+                            <MudText Typo="Typo.body1">$@transactionDetails.SecurityDeposit.ToString("F2")</MudText>
+                        </MudItem>
+                        
+                        <MudItem xs="12">
+                            <MudDivider Class="my-2" />
+                        </MudItem>
+                        
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body1"><strong>Total Paid:</strong></MudText>
+                        </MudItem>
+                        <MudItem xs="6" Class="text-right">
+                            <MudText Typo="Typo.h6" Color="Color.Primary">$@transactionDetails.TotalAmount.ToString("F2")</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            }
+            
+            <div class="d-flex justify-center gap-3">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           Size="Size.Large"
+                           Href="/my-rentals"
+                           StartIcon="@Icons.Material.Filled.Receipt">
+                    View My Rentals
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           Size="Size.Large"
+                           Href="/tools"
+                           StartIcon="@Icons.Material.Filled.Search">
+                    Browse More Tools
+                </MudButton>
+            </div>
+        </MudPaper>
+    }
+    else
+    {
+        <MudPaper Class="pa-8 text-center" Elevation="4" Style="border-radius: 16px; background: rgba(244, 67, 54, 0.1);">
+            <MudIcon Icon="@Icons.Material.Filled.Error" 
+                     Color="Color.Error" 
+                     Style="font-size: 5rem;" 
+                     Class="mb-4" />
+            <MudText Typo="Typo.h4" Color="Color.Error" GutterBottom="true">
+                Payment Failed
+            </MudText>
+            <MudText Typo="Typo.body1" Class="mb-4">
+                @(errorMessage ?? "We were unable to process your payment. Please try again or contact support if the problem persists.")
+            </MudText>
+            
+            @if (!string.IsNullOrEmpty(rentalId))
+            {
+                <div class="d-flex justify-center gap-3 mt-6">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Secondary" 
+                               Size="Size.Large"
+                               Href="@($"/rentals/{rentalId}")"
+                               StartIcon="@Icons.Material.Filled.ArrowBack">
+                        Back to Rental
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               Size="Size.Large"
+                               OnClick="RetryPayment"
+                               StartIcon="@Icons.Material.Filled.Refresh">
+                        Try Again
+                    </MudButton>
+                </div>
+            }
+            else
+            {
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           Size="Size.Large"
+                           Href="/my-rentals"
+                           StartIcon="@Icons.Material.Filled.List">
+                    View My Rentals
+                </MudButton>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    private bool isProcessing = true;
+    private bool paymentSuccessful = false;
+    private string? errorMessage;
+    private string? rentalId;
+    private string? paymentId;
+    private string? payerId;
+    private Transaction? transactionDetails;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Parse query parameters
+        var uri = Navigation.ToAbsoluteUri(Navigation.Uri);
+        var queryParams = QueryHelpers.ParseQuery(uri.Query);
+
+        if (queryParams.TryGetValue("rentalId", out var rentalIdValue))
+        {
+            rentalId = rentalIdValue.ToString();
+        }
+
+        if (queryParams.TryGetValue("token", out var tokenValue))
+        {
+            paymentId = tokenValue.ToString();
+        }
+
+        if (queryParams.TryGetValue("PayerID", out var payerIdValue))
+        {
+            payerId = payerIdValue.ToString();
+        }
+
+        // Check if this is a cancellation
+        if (queryParams.ContainsKey("cancelled") || string.IsNullOrEmpty(paymentId) || string.IsNullOrEmpty(payerId))
+        {
+            isProcessing = false;
+            paymentSuccessful = false;
+            errorMessage = "Payment was cancelled. You can try again when you're ready.";
+            return;
+        }
+
+        // Complete the payment
+        await CompletePayment();
+    }
+
+    private async Task CompletePayment()
+    {
+        try
+        {
+            isProcessing = true;
+            StateHasChanged();
+
+            var result = await PaymentService.CompletePaymentAsync(paymentId!, payerId!);
+
+            if (result.Success)
+            {
+                paymentSuccessful = true;
+                
+                // Load transaction details if we have a rental ID
+                if (!string.IsNullOrEmpty(rentalId) && Guid.TryParse(rentalId, out var rentalGuid))
+                {
+                    var transactionResult = await PaymentService.GetTransactionDetailsAsync(rentalGuid);
+                    if (transactionResult.Success)
+                    {
+                        transactionDetails = transactionResult.Data?.Transaction;
+                    }
+                }
+                
+                Snackbar.Add("Payment completed successfully!", Severity.Success);
+            }
+            else
+            {
+                paymentSuccessful = false;
+                errorMessage = result.Message ?? "Payment processing failed.";
+                Snackbar.Add(errorMessage, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            paymentSuccessful = false;
+            errorMessage = $"An error occurred: {ex.Message}";
+            Snackbar.Add(errorMessage, Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RetryPayment()
+    {
+        if (!string.IsNullOrEmpty(rentalId) && Guid.TryParse(rentalId, out var rentalGuid))
+        {
+            isProcessing = true;
+            StateHasChanged();
+
+            try
+            {
+                var result = await PaymentService.InitiatePaymentAsync(rentalGuid);
+                
+                if (result.Success && !string.IsNullOrEmpty(result.Data?.ApprovalUrl))
+                {
+                    // Redirect to PayPal for approval
+                    Navigation.NavigateTo(result.Data.ApprovalUrl, true);
+                }
+                else
+                {
+                    isProcessing = false;
+                    errorMessage = result.Message ?? "Failed to initiate payment. Please try again.";
+                    Snackbar.Add(errorMessage, Severity.Error);
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                isProcessing = false;
+                errorMessage = $"An error occurred: {ex.Message}";
+                Snackbar.Add(errorMessage, Severity.Error);
+                StateHasChanged();
+            }
+        }
+    }
+}

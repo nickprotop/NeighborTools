@@ -1,0 +1,158 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject IPaymentService PaymentService
+@inject ISnackbar Snackbar
+
+<MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px; background: var(--mud-palette-surface-variant);">
+    <div class="d-flex align-center mb-3">
+        <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" Class="mr-2" />
+        <MudText Typo="Typo.h6">Payment Breakdown</MudText>
+    </div>
+
+    @if (isLoading)
+    {
+        <div class="d-flex justify-center py-4">
+            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+        </div>
+    }
+    else if (feeBreakdown != null)
+    {
+        <MudGrid>
+            <MudItem xs="8">
+                <MudText Typo="Typo.body2">Rental Amount:</MudText>
+            </MudItem>
+            <MudItem xs="4" Class="text-right">
+                <MudText Typo="Typo.body1">$@feeBreakdown.RentalAmount.ToString("F2")</MudText>
+            </MudItem>
+
+            @if (feeBreakdown.SecurityDeposit > 0)
+            {
+                <MudItem xs="8">
+                    <MudText Typo="Typo.body2">Security Deposit:</MudText>
+                </MudItem>
+                <MudItem xs="4" Class="text-right">
+                    <MudText Typo="Typo.body1">$@feeBreakdown.SecurityDeposit.ToString("F2")</MudText>
+                </MudItem>
+            }
+
+            @if (ShowCommissionForRenter)
+            {
+                <MudItem xs="8">
+                    <MudText Typo="Typo.body2">Platform Fee (@((feeBreakdown.CommissionRate * 100).ToString("F1"))%):</MudText>
+                </MudItem>
+                <MudItem xs="4" Class="text-right">
+                    <MudText Typo="Typo.body1">$@feeBreakdown.CommissionAmount.ToString("F2")</MudText>
+                </MudItem>
+            }
+
+            <MudItem xs="12">
+                <MudDivider Class="my-2" />
+            </MudItem>
+
+            <MudItem xs="8">
+                <MudText Typo="Typo.h6" Color="Color.Primary"><strong>Total Amount:</strong></MudText>
+            </MudItem>
+            <MudItem xs="4" Class="text-right">
+                <MudText Typo="Typo.h6" Color="Color.Primary"><strong>$@feeBreakdown.TotalPayerAmount.ToString("F2")</strong></MudText>
+            </MudItem>
+
+            @if (ShowOwnerPayout)
+            {
+                <MudItem xs="12">
+                    <MudDivider Class="my-2" />
+                </MudItem>
+                <MudItem xs="8">
+                    <MudText Typo="Typo.body2" Color="Color.Success">Your Payout:</MudText>
+                </MudItem>
+                <MudItem xs="4" Class="text-right">
+                    <MudText Typo="Typo.h6" Color="Color.Success"><strong>$@feeBreakdown.OwnerPayoutAmount.ToString("F2")</strong></MudText>
+                </MudItem>
+            }
+
+            @if (feeBreakdown.SecurityDeposit > 0)
+            {
+                <MudItem xs="12" Class="mt-3">
+                    <MudAlert Severity="Severity.Info" Dense="true">
+                        <MudText Typo="Typo.caption">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" /> 
+                            Security deposit will be refunded after the rental is completed and the tool is returned in good condition.
+                        </MudText>
+                    </MudAlert>
+                </MudItem>
+            }
+
+            <MudItem xs="12" Class="mt-2">
+                <MudAlert Severity="Severity.Info" Dense="true">
+                    <MudText Typo="Typo.caption">
+                        <MudIcon Icon="@Icons.Material.Filled.Payment" Size="Size.Small" /> 
+                        Payment will be processed securely via PayPal.
+                    </MudText>
+                </MudAlert>
+            </MudItem>
+        </MudGrid>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" Dense="true">
+            @errorMessage
+        </MudAlert>
+    }
+</MudPaper>
+
+@code {
+    [Parameter] public decimal RentalAmount { get; set; }
+    [Parameter] public decimal SecurityDeposit { get; set; }
+    [Parameter] public bool ShowCommissionForRenter { get; set; } = true;
+    [Parameter] public bool ShowOwnerPayout { get; set; } = false;
+    [Parameter] public EventCallback<CalculateFeesResponse> OnFeesCalculated { get; set; }
+
+    private CalculateFeesResponse? feeBreakdown;
+    private bool isLoading = true;
+    private string errorMessage = string.Empty;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (RentalAmount > 0)
+        {
+            await CalculateFees();
+        }
+    }
+
+    private async Task CalculateFees()
+    {
+        try
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+            
+            var result = await PaymentService.CalculateFeesAsync(RentalAmount, SecurityDeposit);
+            
+            if (result.Success && result.Data != null)
+            {
+                feeBreakdown = result.Data;
+                await OnFeesCalculated.InvokeAsync(feeBreakdown);
+            }
+            else
+            {
+                errorMessage = result.Message ?? "Failed to calculate fees.";
+                Snackbar.Add(errorMessage, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error calculating fees: {ex.Message}";
+            Snackbar.Add(errorMessage, Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    public async Task RefreshCalculation()
+    {
+        await CalculateFees();
+    }
+}

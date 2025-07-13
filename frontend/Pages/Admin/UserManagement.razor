@@ -1,0 +1,485 @@
+@page "/admin/users"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>User Management - NeighborTools Admin</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
+    <div class="d-flex align-center mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" Size="Size.Large" Class="mr-3" />
+        <MudText Typo="Typo.h3">User Management</MudText>
+    </div>
+    
+    @if (isLoading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (loadError != null)
+    {
+        <MudAlert Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else
+    {
+        <!-- Quick Stats -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Users</MudText>
+                                <MudText Typo="Typo.h4">@totalUsers</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Success">@newUsersThisMonth new this month</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.VerifiedUser" Color="Color.Success" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Verified Users</MudText>
+                                <MudText Typo="Typo.h4">@verifiedUsers</MudText>
+                                <MudText Typo="Typo.caption">@unverifiedUsers unverified</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Block" Color="Color.Error" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Suspended Users</MudText>
+                                <MudText Typo="Typo.h4">@suspendedUsers</MudText>
+                                <MudText Typo="Typo.caption" Color="@(suspendedUsers > 0 ? Color.Error : Color.Success)">
+                                    @(suspendedUsers > 0 ? "Active suspensions" : "No suspensions")
+                                </MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Info" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Active Users</MudText>
+                                <MudText Typo="Typo.h4">@activeUsers</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Info">Last 30 days</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Search and Filters -->
+        <MudPaper Class="pa-4 mb-4">
+            <MudText Typo="Typo.h6" Class="mb-3">Search and Filter Users</MudText>
+            <MudGrid>
+                <MudItem xs="12" sm="6" md="4">
+                    <MudTextField @bind-Value="searchTerm" 
+                                  Label="Search Users" 
+                                  Placeholder="Name, email, or user ID"
+                                  AdornmentIcon="@Icons.Material.Filled.Search" 
+                                  Adornment="Adornment.End"
+                                  OnAdornmentClick="LoadUsers"
+                                  OnKeyDown="@((e) => { if (e.Key == "Enter") LoadUsers(); })" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudSelect T="string?" @bind-Value="selectedStatus" Label="Status" Clearable="true">
+                        <MudSelectItem T="string?" Value="@null">All</MudSelectItem>
+                        <MudSelectItem T="string?" Value="@("active")">Active</MudSelectItem>
+                        <MudSelectItem T="string?" Value="@("unverified")">Unverified</MudSelectItem>
+                        <MudSelectItem T="string?" Value="@("suspended")">Suspended</MudSelectItem>
+                    </MudSelect>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudDatePicker @bind-Date="registeredAfter" Label="Registered After" Clearable="true" />
+                </MudItem>
+                <MudItem xs="12" sm="6" md="2" Class="d-flex align-end">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Search"
+                               OnClick="LoadUsers"
+                               FullWidth="true">
+                        Search
+                    </MudButton>
+                </MudItem>
+            </MudGrid>
+        </MudPaper>
+
+        <!-- Users Table -->
+        <MudPaper Class="pa-4">
+            <div class="d-flex justify-space-between align-center mb-4">
+                <MudText Typo="Typo.h6">Users (@totalCount)</MudText>
+                <div class="d-flex gap-2">
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Info" 
+                               StartIcon="@Icons.Material.Filled.FileDownload"
+                               OnClick="ExportUsers">
+                        Export
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Secondary" 
+                               StartIcon="@Icons.Material.Filled.Refresh"
+                               OnClick="LoadUsers">
+                        Refresh
+                    </MudButton>
+                </div>
+            </div>
+            
+            @if (users?.Any() == true)
+            {
+                <MudTable T="AdminUserDto" Items="@users" Hover="true" Dense="true" FixedHeader="true" Height="600px">
+                    <HeaderContent>
+                        <MudTh>User</MudTh>
+                        <MudTh>Email</MudTh>
+                        <MudTh>Status</MudTh>
+                        <MudTh>Location</MudTh>
+                        <MudTh>Activity</MudTh>
+                        <MudTh>Registered</MudTh>
+                        <MudTh>Actions</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="User">
+                            <div class="d-flex align-center">
+                                <MudAvatar Color="Color.Primary" Size="Size.Small">
+                                    @context.FirstName[0]@context.LastName[0]
+                                </MudAvatar>
+                                <div class="ml-2">
+                                    <MudText Typo="Typo.body2">@context.FirstName @context.LastName</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">ID: @context.Id.Substring(0, 8)...</MudText>
+                                </div>
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Email">
+                            <div>
+                                <MudText Typo="Typo.body2">@context.Email</MudText>
+                                @if (!string.IsNullOrEmpty(context.PhoneNumber))
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@context.PhoneNumber</MudText>
+                                }
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Status">
+                            <div class="d-flex flex-column gap-1">
+                                @if (context.IsDeleted)
+                                {
+                                    <MudChip T="string" Color="Color.Error" Size="Size.Small">Suspended</MudChip>
+                                }
+                                else if (!context.EmailConfirmed)
+                                {
+                                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">Unverified</MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Color="Color.Success" Size="Size.Small">Active</MudChip>
+                                }
+                                @if (context.Roles?.Contains("Admin") == true)
+                                {
+                                    <MudChip T="string" Color="Color.Info" Size="Size.Small">Admin</MudChip>
+                                }
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Location">
+                            @if (!string.IsNullOrEmpty(context.City) || !string.IsNullOrEmpty(context.Country))
+                            {
+                                <MudText Typo="Typo.body2">@context.City</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Country</MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Not provided</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Activity">
+                            <div>
+                                <MudText Typo="Typo.body2">@context.ToolCount tools</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.RentalCount rentals</MudText>
+                            </div>
+                        </MudTd>
+                        <MudTd DataLabel="Registered">
+                            <MudText Typo="Typo.body2">@context.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Actions">
+                            <div class="d-flex gap-1">
+                                <MudButton Size="Size.Small" 
+                                           Variant="Variant.Text" 
+                                           Color="Color.Primary"
+                                           StartIcon="@Icons.Material.Filled.Visibility"
+                                           OnClick="@(() => ViewUserDetails(context.Id))">
+                                    View
+                                </MudButton>
+                                @if (!context.EmailConfirmed)
+                                {
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Text" 
+                                               Color="Color.Success"
+                                               StartIcon="@Icons.Material.Filled.VerifiedUser"
+                                               OnClick="@(() => VerifyUser(context.Id))">
+                                        Verify
+                                    </MudButton>
+                                }
+                                @if (context.IsDeleted)
+                                {
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Text" 
+                                               Color="Color.Success"
+                                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                                               OnClick="@(() => UnsuspendUser(context.Id))">
+                                        Unsuspend
+                                    </MudButton>
+                                }
+                                else
+                                {
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Text" 
+                                               Color="Color.Error"
+                                               StartIcon="@Icons.Material.Filled.Block"
+                                               OnClick="@(() => SuspendUser(context.Id))">
+                                        Suspend
+                                    </MudButton>
+                                }
+                            </div>
+                        </MudTd>
+                    </RowTemplate>
+                </MudTable>
+                
+                <!-- Pagination -->
+                @if (totalPages > 1)
+                {
+                    <div class="d-flex justify-center mt-4">
+                        <MudPagination Count="@totalPages" 
+                                       Selected="@currentPage" 
+                                       SelectedChanged="@((page) => OnPageChanged(page))" />
+                    </div>
+                }
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Info">
+                    <MudText>No users found with the current search criteria.</MudText>
+                </MudAlert>
+            }
+        </MudPaper>
+    }
+</MudContainer>
+
+@code {
+    [Inject] private HttpClient HttpClient { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private bool isLoading = true;
+    private string? loadError = null;
+    private List<AdminUserDto>? users = null;
+    
+    // Pagination
+    private int currentPage = 1;
+    private int pageSize = 20;
+    private int totalPages = 1;
+    private int totalCount = 0;
+    
+    // Search and filters
+    private string? searchTerm = null;
+    private string? selectedStatus = null;
+    private DateTime? registeredAfter = null;
+    
+    // Stats
+    private int totalUsers = 0;
+    private int newUsersThisMonth = 0;
+    private int verifiedUsers = 0;
+    private int unverifiedUsers = 0;
+    private int suspendedUsers = 0;
+    private int activeUsers = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUsers();
+        await LoadStats();
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            isLoading = true;
+            loadError = null;
+
+            var queryParams = new List<string>();
+            queryParams.Add($"page={currentPage}");
+            queryParams.Add($"pageSize={pageSize}");
+            
+            if (!string.IsNullOrWhiteSpace(searchTerm))
+                queryParams.Add($"search={Uri.EscapeDataString(searchTerm)}");
+            if (!string.IsNullOrWhiteSpace(selectedStatus))
+                queryParams.Add($"status={selectedStatus}");
+
+            var queryString = string.Join("&", queryParams);
+            var response = await HttpClient.GetAsync($"api/admin/users/manage?{queryString}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<PaginatedResult<AdminUserDto>>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    users = result.Data.Items;
+                    totalCount = result.Data.TotalCount;
+                    totalPages = result.Data.TotalPages;
+                    currentPage = result.Data.Page;
+                }
+            }
+            else
+            {
+                loadError = "Failed to load users";
+            }
+        }
+        catch (Exception ex)
+        {
+            loadError = $"Error loading users: {ex.Message}";
+            Snackbar.Add(loadError, Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadStats()
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync("api/admin/dashboard/overview");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<AdminDashboardOverview>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    totalUsers = result.Data.Users.Total;
+                    newUsersThisMonth = result.Data.Users.NewThisMonth;
+                    verifiedUsers = result.Data.Users.Active;
+                    unverifiedUsers = totalUsers - verifiedUsers;
+                    activeUsers = result.Data.Users.Active;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading stats: {ex.Message}");
+        }
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        currentPage = page;
+        await LoadUsers();
+    }
+
+    private async Task SuspendUser(string userId)
+    {
+        try
+        {
+            var request = new SuspendUserRequest { Suspend = true };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/users/{userId}/suspend", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("User suspended successfully", Severity.Success);
+                await LoadUsers();
+                await LoadStats();
+            }
+            else
+            {
+                Snackbar.Add("Failed to suspend user", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task UnsuspendUser(string userId)
+    {
+        try
+        {
+            var request = new SuspendUserRequest { Suspend = false };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/users/{userId}/suspend", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("User unsuspended successfully", Severity.Success);
+                await LoadUsers();
+                await LoadStats();
+            }
+            else
+            {
+                Snackbar.Add("Failed to unsuspend user", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task VerifyUser(string userId)
+    {
+        try
+        {
+            var response = await HttpClient.PostAsync($"api/admin/users/{userId}/verify", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("User verified successfully", Severity.Success);
+                await LoadUsers();
+                await LoadStats();
+            }
+            else
+            {
+                Snackbar.Add("Failed to verify user", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ViewUserDetails(string userId)
+    {
+        Navigation.NavigateTo($"/admin/users/{userId}");
+    }
+
+    private async Task ExportUsers()
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync("api/admin/users/export");
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Export functionality coming soon", Severity.Info);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Export failed: {ex.Message}", Severity.Error);
+        }
+    }
+}

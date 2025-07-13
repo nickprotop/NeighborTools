@@ -216,6 +216,9 @@ public class AuthService : IAuthService
             var accessToken = await _jwtTokenService.GenerateAccessTokenAsync(user, sessionTimeoutMinutes);
             var refreshToken = _jwtTokenService.GenerateRefreshToken();
 
+            // Get user roles
+            var roles = await _userManager.GetRolesAsync(user);
+
             var authResult = new AuthResult
             {
                 UserId = user.Id,
@@ -224,7 +227,9 @@ public class AuthService : IAuthService
                 LastName = user.LastName,
                 AccessToken = accessToken,
                 RefreshToken = refreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(sessionTimeoutMinutes) // Match JWT expiration with user preference
+                ExpiresAt = DateTime.UtcNow.AddMinutes(sessionTimeoutMinutes), // Match JWT expiration with user preference
+                Roles = roles.ToList(),
+                IsAdmin = roles.Contains("Admin")
             };
 
             return ApiResponse<AuthResult>.CreateSuccess(authResult, "Login successful");
@@ -278,6 +283,9 @@ public class AuthService : IAuthService
             var newAccessToken = await _jwtTokenService.GenerateAccessTokenAsync(user, sessionTimeoutMinutes);
             var newRefreshToken = _jwtTokenService.GenerateRefreshToken();
 
+            // Get user roles
+            var roles = await _userManager.GetRolesAsync(user);
+
             var authResult = new AuthResult
             {
                 UserId = user.Id,
@@ -286,7 +294,9 @@ public class AuthService : IAuthService
                 LastName = user.LastName,
                 AccessToken = newAccessToken,
                 RefreshToken = newRefreshToken,
-                ExpiresAt = DateTime.UtcNow.AddMinutes(sessionTimeoutMinutes)
+                ExpiresAt = DateTime.UtcNow.AddMinutes(sessionTimeoutMinutes),
+                Roles = roles.ToList(),
+                IsAdmin = roles.Contains("Admin")
             };
 
             return ApiResponse<AuthResult>.CreateSuccess(authResult, "Token refreshed successfully");

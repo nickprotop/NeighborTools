@@ -92,6 +92,13 @@ public class EmailNotificationService : IEmailNotificationService
             RentalReminderNotification rentalReminder => GenerateRentalReminderTemplate(rentalReminder, frontendUrl),
             LoginAlertNotification loginAlert => GenerateLoginAlertTemplate(loginAlert, frontendUrl),
             SecurityAlertNotification securityAlert => GenerateSecurityAlertTemplate(securityAlert, frontendUrl),
+            DisputeCreatedNotification disputeCreated => GenerateDisputeCreatedTemplate(disputeCreated, frontendUrl),
+            DisputeMessageNotification disputeMessage => GenerateDisputeMessageTemplate(disputeMessage, frontendUrl),
+            DisputeStatusChangeNotification disputeStatusChange => GenerateDisputeStatusChangeTemplate(disputeStatusChange, frontendUrl),
+            DisputeEscalationNotification disputeEscalation => GenerateDisputeEscalationTemplate(disputeEscalation, frontendUrl),
+            DisputeResolutionNotification disputeResolution => GenerateDisputeResolutionTemplate(disputeResolution, frontendUrl),
+            DisputeEvidenceNotification disputeEvidence => GenerateDisputeEvidenceTemplate(disputeEvidence, frontendUrl),
+            DisputeOverdueNotification disputeOverdue => GenerateDisputeOverdueTemplate(disputeOverdue, frontendUrl),
             _ => GenerateGenericTemplate(notification, frontendUrl)
         };
     }
@@ -828,5 +835,311 @@ public class EmailNotificationService : IEmailNotificationService
     {
         // Not implemented in simple version
         return Task.FromResult(0);
+    }
+
+    // Dispute notification template methods
+    private string GenerateDisputeCreatedTemplate(DisputeCreatedNotification notification, string frontendUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #dc3545; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+        .dispute-details {{ background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>⚠️ New Dispute Created</h1>
+        </div>
+        <div class=""content"">
+            <h2>Hello {notification.RecipientName},</h2>
+            <p>A new dispute has been created by <strong>{notification.InitiatorName}</strong>.</p>
+            <div class=""dispute-details"">
+                <h3>{notification.DisputeTitle}</h3>
+                <p><strong>Tool:</strong> {notification.RentalToolName}</p>
+                <p><strong>Created:</strong> {notification.DisputeCreatedAt:f}</p>
+                <p><strong>Dispute ID:</strong> {notification.DisputeId}</p>
+            </div>
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.DisputeUrl}"" class=""button"">View Dispute Details</a>
+            </p>
+            <p>Please review the dispute and respond appropriately. Our team is here to help facilitate a fair resolution.</p>
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+
+    private string GenerateDisputeMessageTemplate(DisputeMessageNotification notification, string frontendUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #17a2b8; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+        .message-preview {{ background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #17a2b8; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>💬 New Dispute Message</h1>
+        </div>
+        <div class=""content"">
+            <h2>Hello {notification.RecipientName},</h2>
+            <p>You have received a new message in dispute: <strong>{notification.DisputeTitle}</strong></p>
+            <div class=""message-preview"">
+                <p><strong>From:</strong> {notification.SenderName}</p>
+                <p><strong>Message:</strong></p>
+                <p style=""font-style: italic;"">""{notification.MessagePreview}""</p>
+                <p><strong>Sent:</strong> {notification.MessageCreatedAt:f}</p>
+            </div>
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.DisputeUrl}"" class=""button"">View Full Message</a>
+            </p>
+            <p>Please respond promptly to help resolve this dispute efficiently.</p>
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+
+    private string GenerateDisputeStatusChangeTemplate(DisputeStatusChangeNotification notification, string frontendUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #ffc107; color: #212529; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+        .status-change {{ background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>📋 Dispute Status Updated</h1>
+        </div>
+        <div class=""content"">
+            <h2>Hello {notification.RecipientName},</h2>
+            <p>The status of dispute <strong>{notification.DisputeTitle}</strong> has been updated.</p>
+            <div class=""status-change"">
+                <p><strong>Previous Status:</strong> {notification.OldStatus}</p>
+                <p><strong>New Status:</strong> {notification.NewStatus}</p>
+                <p><strong>Updated:</strong> {notification.UpdatedAt:f}</p>
+                {(string.IsNullOrEmpty(notification.Notes) ? "" : $"<p><strong>Notes:</strong> {notification.Notes}</p>")}
+            </div>
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.DisputeUrl}"" class=""button"">View Dispute</a>
+            </p>
+            <p>Thank you for your patience as we work to resolve this matter.</p>
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+
+    private string GenerateDisputeEscalationTemplate(DisputeEscalationNotification notification, string frontendUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #dc3545; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+        .escalation-info {{ background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #dc3545; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>🚨 Dispute Escalated</h1>
+        </div>
+        <div class=""content"">
+            <h2>Hello {notification.RecipientName},</h2>
+            <p>The dispute <strong>{notification.DisputeTitle}</strong> has been escalated to our support team.</p>
+            <div class=""escalation-info"">
+                <p><strong>Escalated by:</strong> {notification.EscalatedBy}</p>
+                <p><strong>Escalated on:</strong> {notification.EscalatedAt:f}</p>
+                {(string.IsNullOrEmpty(notification.ExternalDisputeId) ? "" : $"<p><strong>External Case ID:</strong> {notification.ExternalDisputeId}</p>")}
+            </div>
+            <p>Our support team will now review the case and work towards a resolution. You may be contacted for additional information.</p>
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.DisputeUrl}"" class=""button"">View Dispute</a>
+            </p>
+            <p>We appreciate your patience as we work to resolve this matter fairly.</p>
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+
+    private string GenerateDisputeResolutionTemplate(DisputeResolutionNotification notification, string frontendUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #28a745; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+        .resolution-details {{ background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>✅ Dispute Resolved</h1>
+        </div>
+        <div class=""content"">
+            <h2>Hello {notification.RecipientName},</h2>
+            <p>Good news! The dispute <strong>{notification.DisputeTitle}</strong> has been resolved.</p>
+            <div class=""resolution-details"">
+                <p><strong>Resolution:</strong> {notification.Resolution}</p>
+                <p><strong>Resolved on:</strong> {notification.ResolvedAt:f}</p>
+                {(notification.RefundAmount.HasValue ? $"<p><strong>Refund Amount:</strong> ${notification.RefundAmount:F2}</p>" : "")}
+                {(string.IsNullOrEmpty(notification.ResolutionNotes) ? "" : $"<p><strong>Notes:</strong> {notification.ResolutionNotes}</p>")}
+            </div>
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.DisputeUrl}"" class=""button"">View Final Details</a>
+            </p>
+            <p>Thank you for your patience throughout this process. If you have any questions about the resolution, please don't hesitate to contact us.</p>
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+
+    private string GenerateDisputeEvidenceTemplate(DisputeEvidenceNotification notification, string frontendUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #6f42c1; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+        .evidence-info {{ background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>📎 New Evidence Uploaded</h1>
+        </div>
+        <div class=""content"">
+            <h2>Hello {notification.RecipientName},</h2>
+            <p>New evidence has been uploaded for dispute: <strong>{notification.DisputeTitle}</strong></p>
+            <div class=""evidence-info"">
+                <p><strong>Uploaded by:</strong> {notification.UploadedBy}</p>
+                <p><strong>Number of files:</strong> {notification.FileCount}</p>
+                <p><strong>Uploaded on:</strong> {notification.UploadedAt:f}</p>
+            </div>
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.DisputeUrl}"" class=""button"">Review Evidence</a>
+            </p>
+            <p>Please review the new evidence and provide any response if necessary.</p>
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+
+    private string GenerateDisputeOverdueTemplate(DisputeOverdueNotification notification, string frontendUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #fd7e14; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+        .overdue-info {{ background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0; border-left: 4px solid #fd7e14; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>⏰ Dispute Response Overdue</h1>
+        </div>
+        <div class=""content"">
+            <h2>Hello {notification.RecipientName},</h2>
+            <p>This is a reminder that your response is overdue for dispute: <strong>{notification.DisputeTitle}</strong></p>
+            <div class=""overdue-info"">
+                <p><strong>Original due date:</strong> {notification.DueDate:f}</p>
+                <p><strong>Days overdue:</strong> {notification.DaysOverdue}</p>
+            </div>
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.DisputeUrl}"" class=""button"">Respond Now</a>
+            </p>
+            <p>Please respond as soon as possible to avoid further delays in resolving this dispute. If you need assistance, please contact our support team.</p>
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
     }
 }
