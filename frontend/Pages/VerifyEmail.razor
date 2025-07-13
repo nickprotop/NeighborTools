@@ -152,7 +152,7 @@
 
             if (!string.IsNullOrEmpty(userId) && !string.IsNullOrEmpty(token))
             {
-                await VerifyEmail(userId, token);
+                await VerifyEmailAsync(userId, token);
             }
             else
             {
@@ -167,7 +167,7 @@
         }
     }
 
-    private async Task VerifyEmail(string userId, string token)
+    private async Task VerifyEmailAsync(string userId, string token)
     {
         isLoading = true;
         StateHasChanged();

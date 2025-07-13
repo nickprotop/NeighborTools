@@ -18,7 +18,6 @@ public class AuthService : IAuthService
 {
     private readonly UserManager<User> _userManager;
     private readonly IJwtTokenService _jwtTokenService;
-    private readonly IEmailService _emailService;
     private readonly IEmailNotificationService _emailNotificationService;
     private readonly IConsentService _consentService;
     private readonly ISettingsService _settingsService;
@@ -28,7 +27,6 @@ public class AuthService : IAuthService
     public AuthService(
         UserManager<User> userManager, 
         IJwtTokenService jwtTokenService, 
-        IEmailService emailService,
         IEmailNotificationService emailNotificationService,
         IConsentService consentService,
         ISettingsService settingsService,
@@ -37,7 +35,6 @@ public class AuthService : IAuthService
     {
         _userManager = userManager;
         _jwtTokenService = jwtTokenService;
-        _emailService = emailService;
         _emailNotificationService = emailNotificationService;
         _consentService = consentService;
         _settingsService = settingsService;

@@ -1,11 +1,9 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Mapster;
 using MapsterMapper;
 using ToolsSharing.Core.Common.Interfaces;
-using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Core.Interfaces;
 using ToolsSharing.Infrastructure.Data;
 using ToolsSharing.Infrastructure.Features.Auth;
@@ -15,8 +13,6 @@ using ToolsSharing.Infrastructure.Features.Users;
 using ToolsSharing.Infrastructure.Features.Settings;
 using ToolsSharing.Infrastructure.Repositories;
 using ToolsSharing.Infrastructure.Services;
-using ToolsSharing.Infrastructure.Services.Email;
-using ToolsSharing.Infrastructure.Services.Email.Providers;
 using ToolsSharing.Infrastructure.Mappings;
 
 namespace ToolsSharing.Infrastructure;
@@ -45,7 +41,6 @@ public static class DependencyInjection
 
         // Services
         services.AddScoped<IJwtTokenService, JwtTokenService>();
-        services.AddScoped<IEmailService, EmailService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IToolsService, ToolsService>();
         services.AddScoped<IRentalsService, RentalsService>();
@@ -53,47 +48,8 @@ public static class DependencyInjection
         services.AddScoped<ISettingsService, SettingsService>();
         services.AddScoped<IPublicProfileService, PublicProfileService>();
 
-        // Email Notification System
-        services.Configure<EmailSettings>(configuration.GetSection(EmailSettings.SectionName));
-        
-        // Register email template engine
-        services.AddSingleton<IEmailTemplateEngine, RazorEmailTemplateEngine>();
-        
-        // Register email providers based on configuration
-        var emailSettings = configuration.GetSection(EmailSettings.SectionName).Get<EmailSettings>();
-        switch (emailSettings?.Provider ?? EmailProvider.Smtp)
-        {
-            case EmailProvider.Smtp:
-                services.AddScoped<IEmailProvider, SmtpEmailProvider>();
-                break;
-            case EmailProvider.SendGrid:
-                services.AddScoped<IEmailProvider, SendGridEmailProvider>();
-                break;
-            case EmailProvider.Mailgun:
-                // TODO: Implement MailgunEmailProvider
-                services.AddScoped<IEmailProvider, SmtpEmailProvider>(); // Fallback to SMTP
-                break;
-            case EmailProvider.AmazonSes:
-                // TODO: Implement AmazonSesEmailProvider
-                services.AddScoped<IEmailProvider, SmtpEmailProvider>(); // Fallback to SMTP
-                break;
-            default:
-                services.AddScoped<IEmailProvider, SmtpEmailProvider>();
-                break;
-        }
-        
-        // Register email notification service
+        // Email Notification Service
         services.AddScoped<IEmailNotificationService, EmailNotificationService>();
-        
-        // Register email queue processor as a hosted service if queue is enabled
-        if (emailSettings?.EnableQueue ?? true)
-        {
-            services.AddHostedService<EmailQueueProcessor>();
-            services.AddSingleton<IEmailQueueProcessor>(provider => 
-                provider.GetServices<IHostedService>()
-                    .OfType<EmailQueueProcessor>()
-                    .FirstOrDefault()!);
-        }
 
         return services;
     }
