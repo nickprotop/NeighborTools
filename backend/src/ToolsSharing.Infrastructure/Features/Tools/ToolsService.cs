@@ -208,6 +208,7 @@ public class ToolsService : IToolsService
                 Condition = command.Condition,
                 Location = command.Location,
                 IsAvailable = true,
+                LeadTimeHours = command.LeadTimeHours,
                 OwnerId = command.OwnerId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
@@ -277,6 +278,7 @@ public class ToolsService : IToolsService
             tool.Condition = command.Condition;
             tool.Location = command.Location;
             tool.IsAvailable = command.IsAvailable;
+            tool.LeadTimeHours = command.LeadTimeHours;
             tool.UpdatedAt = DateTime.UtcNow;
 
             // Update images if provided

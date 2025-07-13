@@ -4,6 +4,7 @@
 @using frontend.Services
 @using frontend.Components
 @inject IRentalService RentalService
+@inject IToolService ToolService
 @inject ISnackbar Snackbar
 
 <MudDialog>
@@ -42,8 +43,9 @@
                                    @bind-Date:after="CalculateCost"
                                    Label="Start Date" 
                                    Variant="Variant.Outlined"
-                                   MinDate="DateTime.Today"
-                                   Required="true" />
+                                   MinDate="@GetMinimumStartDate()"
+                                   Required="true"
+                                   HelperText="@GetStartDateHelperText()" />
                 </MudItem>
                 
                 <MudItem xs="12" md="6">
@@ -64,6 +66,37 @@
                                   AdornmentIcon="@Icons.Material.Filled.Notes" 
                                   Adornment="Adornment.Start" />
                 </MudItem>
+
+                @if (settingsLoaded)
+                {
+                    <MudItem xs="12">
+                        <MudPaper Elevation="1" Class="pa-3" Style="border-radius: 8px; background: var(--mud-palette-surface-variant);">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">Rental Information</MudText>
+                            <div class="d-flex flex-column gap-1">
+                                <div class="d-flex align-center gap-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" Color="Color.Primary" />
+                                    <MudText Typo="Typo.body2">Lead time required: <strong>@ownerLeadTimeHours hours</strong></MudText>
+                                </div>
+                                @if (autoApprovalEnabled)
+                                {
+                                    <div class="d-flex align-center gap-2">
+                                        <MudIcon Icon="@Icons.Material.Filled.AutoAwesome" Size="Size.Small" Color="Color.Success" />
+                                        <MudText Typo="Typo.body2" Color="Color.Success">
+                                            <strong>Auto-approval enabled</strong> - Your rental will be confirmed automatically!
+                                        </MudText>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <div class="d-flex align-center gap-2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Secondary" />
+                                        <MudText Typo="Typo.body2">Owner approval required - You'll receive an email notification once reviewed</MudText>
+                                    </div>
+                                }
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+                }
 
                 @if (totalCost > 0)
                 {
@@ -141,10 +174,19 @@
     private string rateType = "";
     private int rentalDays = 0;
 
-    protected override void OnInitialized()
+    // Lead time validation
+    private int ownerLeadTimeHours = 24; // Default 24 hours, will be fetched from API
+    private bool autoApprovalEnabled = false;
+    private bool settingsLoaded = false;
+
+    protected override async Task OnInitializedAsync()
     {
         startDate = DateTime.Today.AddDays(1);
         endDate = DateTime.Today.AddDays(2);
+        
+        // Load owner settings for lead time and auto-approval info
+        await LoadOwnerSettings();
+        
         CalculateCost();
     }
 
@@ -184,17 +226,101 @@
             rateType = "per day";
         }
 
+        ValidateLeadTime();
         StateHasChanged();
+    }
+
+    private async Task LoadOwnerSettings()
+    {
+        if (Tool?.Id == null)
+        {
+            // Use defaults if no tool
+            ownerLeadTimeHours = 24;
+            autoApprovalEnabled = false;
+            settingsLoaded = true;
+            return;
+        }
+
+        try
+        {
+            var result = await ToolService.GetToolRentalPreferencesAsync(Tool.Id);
+            
+            if (result.Success && result.Data != null)
+            {
+                ownerLeadTimeHours = result.Data.LeadTimeHours;
+                autoApprovalEnabled = result.Data.AutoApprovalEnabled;
+            }
+            else
+            {
+                // Use defaults if API fails
+                ownerLeadTimeHours = 24;
+                autoApprovalEnabled = false;
+            }
+        }
+        catch (Exception)
+        {
+            // Use defaults if exception occurs
+            ownerLeadTimeHours = 24;
+            autoApprovalEnabled = false;
+        }
+        finally
+        {
+            settingsLoaded = true;
+            StateHasChanged(); // Refresh UI with loaded settings
+        }
+    }
+
+    private void ValidateLeadTime()
+    {
+        if (startDate.HasValue && settingsLoaded)
+        {
+            var minimumStartTime = DateTime.Now.AddHours(ownerLeadTimeHours);
+            
+            if (startDate.Value < minimumStartTime)
+            {
+                errorMessage = $"Rental requests must be made at least {ownerLeadTimeHours} hours in advance. " +
+                              $"Earliest available start time: {minimumStartTime:yyyy-MM-dd HH:mm}";
+            }
+            else if (errorMessage.Contains("must be made at least"))
+            {
+                errorMessage = string.Empty; // Clear lead time error if now valid
+            }
+        }
     }
 
     private bool IsFormValid()
     {
-        return Tool != null && 
-               startDate.HasValue && 
-               endDate.HasValue && 
-               startDate < endDate && 
-               startDate >= DateTime.Today &&
-               totalCost > 0;
+        if (Tool == null || !startDate.HasValue || !endDate.HasValue || startDate >= endDate || totalCost <= 0)
+            return false;
+
+        // Check lead time requirement
+        if (settingsLoaded)
+        {
+            var minimumStartTime = DateTime.Now.AddHours(ownerLeadTimeHours);
+            if (startDate.Value < minimumStartTime)
+                return false;
+        }
+
+        return true;
+    }
+
+    private DateTime GetMinimumStartDate()
+    {
+        if (settingsLoaded)
+        {
+            var minimumStartTime = DateTime.Now.AddHours(ownerLeadTimeHours);
+            return minimumStartTime.Date; // Return just the date part for the date picker
+        }
+        return DateTime.Today.AddDays(1);
+    }
+
+    private string GetStartDateHelperText()
+    {
+        if (settingsLoaded && ownerLeadTimeHours > 24)
+        {
+            return $"Minimum {ownerLeadTimeHours} hours advance notice required";
+        }
+        return "Select start date for your rental";
     }
 
     private async Task SubmitRequest()
@@ -219,7 +345,11 @@
 
             if (result.Success)
             {
-                Snackbar.Add("Rental request submitted successfully!", Severity.Success);
+                // Show appropriate success message based on response
+                var successMessage = result.Message ?? "Rental request submitted successfully!";
+                var severity = result.Message?.Contains("automatically approved") == true ? Severity.Success : Severity.Info;
+                
+                Snackbar.Add(successMessage, severity);
                 MudDialog.Close(DialogResult.Ok(result.Data));
             }
             else

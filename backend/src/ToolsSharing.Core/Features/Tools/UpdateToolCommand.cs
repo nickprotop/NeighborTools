@@ -16,6 +16,7 @@ public record UpdateToolCommand(
     string Condition,
     string Location,
     bool IsAvailable,
+    int? LeadTimeHours,
     string OwnerId,
     List<string> ImageUrls
 );

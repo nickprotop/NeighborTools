@@ -13,6 +13,7 @@ public interface IToolService
     Task<ApiResponse<Tool>> UpdateToolAsync(string id, UpdateToolRequest request);
     Task<ApiResponse> DeleteToolAsync(string id);
     Task<ApiResponse<List<Tool>>> SearchToolsAsync(string query);
+    Task<ApiResponse<ToolRentalPreferences>> GetToolRentalPreferencesAsync(string toolId);
 }
 
 public class ToolService : IToolService
@@ -206,6 +207,30 @@ public class ToolService : IToolService
             { 
                 Success = false, 
                 Message = $"Failed to search tools: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<ToolRentalPreferences>> GetToolRentalPreferencesAsync(string toolId)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/tools/{toolId}/rental-preferences");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<ToolRentalPreferences>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<ToolRentalPreferences> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ToolRentalPreferences> 
+            { 
+                Success = false, 
+                Message = $"Failed to retrieve rental preferences: {ex.Message}" 
             };
         }
     }

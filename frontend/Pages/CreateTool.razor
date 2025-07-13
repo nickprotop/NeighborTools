@@ -236,6 +236,19 @@
                                                  HelperText="Refundable deposit to cover potential damages"
                                                  Class="mb-4" />
                             </MudItem>
+                            
+                            <MudItem xs="12" sm="6">
+                                <MudNumericField @bind-Value="createToolRequest.LeadTimeHours"
+                                                 Label="Lead Time Hours (Optional)"
+                                                 Variant="Variant.Outlined"
+                                                 FullWidth="true"
+                                                 Adornment="Adornment.Start"
+                                                 AdornmentText="hrs"
+                                                 Min="0"
+                                                 Step="1"
+                                                 HelperText="Minimum hours advance notice required for bookings (leave empty to use your default setting)"
+                                                 Class="mb-4" />
+                            </MudItem>
                         </MudGrid>
                     </div>
                 </MudTabPanel>

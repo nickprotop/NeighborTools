@@ -15,6 +15,7 @@ public class Tool
     public string Condition { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty;
     public bool IsAvailable { get; set; }
+    public int? LeadTimeHours { get; set; }
     public string OwnerId { get; set; } = string.Empty;
     public string OwnerName { get; set; } = string.Empty;
     public List<string> ImageUrls { get; set; } = new();
@@ -38,6 +39,7 @@ public class ToolRequestBase
     public decimal DepositRequired { get; set; }
     public string Condition { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty;
+    public int? LeadTimeHours { get; set; }
     public List<string> ImageUrls { get; set; } = new();
 }
 
@@ -48,6 +50,14 @@ public class CreateToolRequest : ToolRequestBase
 public class UpdateToolRequest : ToolRequestBase
 {
     public bool IsAvailable { get; set; } = true;
+}
+
+public class ToolRentalPreferences
+{
+    public int LeadTimeHours { get; set; } = 24;
+    public bool AutoApprovalEnabled { get; set; } = false;
+    public bool RequireDeposit { get; set; } = true;
+    public decimal DefaultDepositPercentage { get; set; } = 0.20m;
 }
 
 public class Rental

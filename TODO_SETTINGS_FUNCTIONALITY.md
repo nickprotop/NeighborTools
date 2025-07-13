@@ -186,38 +186,58 @@ This document outlines all the functionality that needs to be implemented to mak
 ---
 
 ### 6. Auto-Approval Rental System
-**Status**: Pending  
+**Status**: ✅ **COMPLETED**  
 **Priority**: High  
 **Effort**: Medium  
-**Timeline**: 1 week
+**Timeline**: ✅ Completed in 1 week
 
-**Description**: Automatic rental request approval based on user settings
-- Skip manual approval when UserSettings.Rental.AutoApproveRentals is true
-- Implement approval workflow logic
-- Send appropriate notifications
+**Description**: ✅ Automatic rental request approval based on user settings
+- ✅ Skip manual approval when UserSettings.Rental.AutoApproveRentals is true
+- ✅ Implement approval workflow logic
+- ✅ Send appropriate notifications
 
-**Implementation Areas**:
-- Backend: Rental request workflow, auto-approval logic
-- Frontend: Clear indication of auto-approval status
-- Notifications: Different messaging for auto vs manual approval
+**Implementation Completed**:
+- ✅ Backend: Enhanced RentalsService.cs with auto-approval logic checking UserSettings.Rental.AutoApproveRentals
+- ✅ Backend: Automatic status setting to RentalStatus.Approved when auto-approval enabled
+- ✅ Frontend: RentalRequestDialog.razor displays auto-approval status to users
+- ✅ Notifications: Different email templates for auto-approved vs manual approval workflows
+- ✅ API: Public endpoint `/api/tools/{toolId}/rental-preferences` to fetch owner preferences
+- ✅ Integration: Frontend fetches real owner settings instead of using hardcoded defaults
+
+**Key Features**:
+- ✅ Dynamic approval workflow based on tool owner's UserSettings.Rental.AutoApproveRentals
+- ✅ Instant approval and notification for auto-approved rentals
+- ✅ Clear UI indication to renters when auto-approval is enabled
+- ✅ Public API endpoint exposes non-sensitive rental preferences to potential renters
+- ✅ Email notifications automatically sent with appropriate messaging based on approval type
 
 ---
 
 ### 7. Rental Lead Time Enforcement
-**Status**: Pending  
+**Status**: ✅ **COMPLETED**  
 **Priority**: High  
 **Effort**: Medium  
-**Timeline**: 3-5 days
+**Timeline**: ✅ Completed in 3-5 days
 
-**Description**: Prevent bookings within configured hours of start time
-- Validate rental requests against UserSettings.Rental.RentalLeadTime
-- Block UI and API requests that violate lead time
-- Clear error messaging for users
+**Description**: ✅ Prevent bookings within configured hours of start time
+- ✅ Validate rental requests against UserSettings.Rental.RentalLeadTime
+- ✅ Block UI and API requests that violate lead time
+- ✅ Clear error messaging for users
 
-**Implementation Areas**:
-- Frontend: Date picker validation, availability calendar
-- Backend: Rental request validation rules
-- Business Logic: Lead time calculations with timezone handling
+**Implementation Completed**:
+- ✅ Backend: Enhanced RentalsService.cs with lead time enforcement checking UserSettings.Rental.RentalLeadTime
+- ✅ Backend: Validation logic that prevents rentals within owner's configured lead time hours
+- ✅ Frontend: RentalRequestDialog.razor with real-time lead time validation
+- ✅ Frontend: Dynamic minimum date setting on date picker based on owner's lead time
+- ✅ API: Public endpoint to fetch lead time preferences from tool owner settings
+- ✅ UX: Clear error messaging and helper text indicating lead time requirements
+
+**Key Features**:
+- ✅ Dynamic lead time enforcement based on tool owner's UserSettings.Rental.RentalLeadTime setting
+- ✅ Real-time validation in both frontend UI and backend API
+- ✅ Date picker automatically sets minimum selectable date based on lead time
+- ✅ Clear error messages showing exact minimum start time when lead time violated
+- ✅ Public API integration allows renters to see lead time requirements before submitting requests
 
 ---
 
@@ -581,8 +601,8 @@ This document outlines all the functionality that needs to be implemented to mak
 - ✅ **Profile visibility** - COMPLETED
 - ✅ **Email notification system** - COMPLETED
 - ✅ **Email verification system** - COMPLETED
-- Auto-approval system
-- Lead time enforcement
+- ✅ **Auto-approval system** - COMPLETED
+- ✅ **Lead time enforcement** - COMPLETED
 - Deposit requirements
 
 ### Phase 2: Notifications & Authentication (Weeks 5-8)
