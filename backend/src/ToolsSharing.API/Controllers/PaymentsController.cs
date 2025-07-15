@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using ToolsSharing.Core.DTOs.Payment;
 using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Interfaces;
+using ToolsSharing.Core.Common.Models;
 
 namespace ToolsSharing.API.Controllers;
 
@@ -398,31 +399,28 @@ public class PaymentsController : ControllerBase
 
             var settings = await _paymentService.GetOrCreatePaymentSettingsAsync(userId);
 
-            return Ok(new
+            var response = new
             {
-                success = true,
-                settings = new
+                Settings = new
                 {
-                    payPalEmail = settings.PayPalEmail,
-                    customCommissionRate = settings.CustomCommissionRate,
-                    isCommissionEnabled = settings.IsCommissionEnabled,
-                    payoutSchedule = settings.PayoutSchedule.ToString(),
-                    minimumPayoutAmount = settings.MinimumPayoutAmount,
-                    notifyOnPaymentReceived = settings.NotifyOnPaymentReceived,
-                    notifyOnPayoutSent = settings.NotifyOnPayoutSent,
-                    notifyOnPayoutFailed = settings.NotifyOnPayoutFailed,
-                    isPayoutVerified = settings.IsPayoutVerified
+                    PayPalEmail = settings.PayPalEmail,
+                    CustomCommissionRate = settings.CustomCommissionRate,
+                    IsCommissionEnabled = settings.IsCommissionEnabled,
+                    PayoutSchedule = settings.PayoutSchedule.ToString(),
+                    MinimumPayoutAmount = settings.MinimumPayoutAmount,
+                    NotifyOnPaymentReceived = settings.NotifyOnPaymentReceived,
+                    NotifyOnPayoutSent = settings.NotifyOnPayoutSent,
+                    NotifyOnPayoutFailed = settings.NotifyOnPayoutFailed,
+                    IsPayoutVerified = settings.IsPayoutVerified
                 }
-            });
+            };
+
+            return Ok(ApiResponse<object>.SuccessResult(response));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error getting payment settings");
-            return StatusCode(500, new
-            {
-                success = false,
-                message = "An error occurred while retrieving settings"
-            });
+            return StatusCode(500, ApiResponse<object>.ErrorResult("An error occurred while retrieving settings"));
         }
     }
 
@@ -439,20 +437,12 @@ public class PaymentsController : ControllerBase
 
             await _paymentService.UpdatePaymentSettingsAsync(userId, settings);
 
-            return Ok(new
-            {
-                success = true,
-                message = "Payment settings updated successfully"
-            });
+            return Ok(ApiResponse<object>.SuccessResult(new { }, "Payment settings updated successfully"));
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating payment settings");
-            return StatusCode(500, new
-            {
-                success = false,
-                message = "An error occurred while updating settings"
-            });
+            return StatusCode(500, ApiResponse<object>.ErrorResult("An error occurred while updating settings"));
         }
     }
 

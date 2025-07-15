@@ -1,0 +1,72 @@
+{
+  "_instructions": "Copy this file to 'config.json' and update with your actual values",
+  "_comment": "This file contains all user-configurable settings including secrets, business logic, and environment-specific configurations",
+  "JwtSettings": {
+    "SecretKey": "GENERATE_A_SECURE_256_BIT_JWT_SECRET_KEY_HERE_MINIMUM_32_CHARACTERS_LONG"
+  },
+  "ConnectionStrings": {
+    "DefaultConnection": "server=localhost;port=3306;database=toolssharing;uid=toolsuser;pwd=YOUR_MYSQL_PASSWORD_HERE"
+  },
+  "Payment": {
+    "DefaultCommissionRate": 0.10,
+    "MinimumPayoutAmount": 10.00,
+    "DefaultCurrency": "USD",
+    "PayPal": {
+      "ClientId": "YOUR_PAYPAL_SANDBOX_CLIENT_ID_HERE",
+      "ClientSecret": "YOUR_PAYPAL_SANDBOX_CLIENT_SECRET_HERE",
+      "Mode": "sandbox",
+      "WebhookId": "YOUR_PAYPAL_WEBHOOK_ID_HERE",
+      "IsEnabled": true
+    }
+  },
+  "EmailSettings": {
+    "_Comment": "Configure your SMTP server settings. Leave SmtpServer empty to disable email sending (useful for development).",
+    "_Examples": {
+      "_Gmail": "SmtpServer: smtp.gmail.com, SmtpPort: 587, SmtpUsername: your-email@gmail.com, SmtpPassword: your-app-password",
+      "_Outlook": "SmtpServer: smtp-mail.outlook.com, SmtpPort: 587, SmtpUsername: your-email@outlook.com, SmtpPassword: your-password",
+      "_Other": "SmtpServer: your-smtp-server.com, SmtpPort: 587 (or 465 for SSL), SmtpUsername: your-username, SmtpPassword: your-password"
+    },
+    "SmtpServer": "",
+    "SmtpPort": "587",
+    "SmtpUsername": "",
+    "SmtpPassword": "",
+    "FromEmail": "noreply@neighbortools.com",
+    "FromName": "NeighborTools"
+  },
+  "Frontend": {
+    "BaseUrl": "http://localhost:5000"
+  },
+  "FraudDetection": {
+    "DailyAmountLimit": 5000.00,
+    "WeeklyAmountLimit": 15000.00,
+    "MonthlyAmountLimit": 50000.00,
+    "DailyTransactionLimit": 20,
+    "WeeklyTransactionLimit": 100,
+    "MonthlyTransactionLimit": 300,
+    "HighRiskAmountThreshold": 2000.00,
+    "CriticalRiskAmountThreshold": 5000.00,
+    "BackAndForthThreshold": 3,
+    "BackAndForthTimeWindow": "1.00:00:00",
+    "RapidTransactionThreshold": 5,
+    "RapidTransactionWindow": "00:15:00",
+    "RoundAmountTolerance": 0.01,
+    "StructuringThreshold": 10,
+    "StructuringAmountThreshold": 10000.00,
+    "VelocityRiskWeight": 0.30,
+    "PatternRiskWeight": 0.25,
+    "AmountRiskWeight": 0.20,
+    "NetworkRiskWeight": 0.15,
+    "BehaviorRiskWeight": 0.10,
+    "AutoBlockRiskScore": 85.0,
+    "ManualReviewRiskScore": 60.0,
+    "MaxNetworkDepth": 3,
+    "CircularTransactionMinCount": 3,
+    "CircularTransactionWindow": "7.00:00:00"
+  },
+  "GDPR": {
+    "ExportPath": "./exports",
+    "DataRetentionPeriodYears": 7,
+    "CookieConsentExpiryDays": 365,
+    "PrivacyPolicyVersion": "1.0"
+  }
+}

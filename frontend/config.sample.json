@@ -1,0 +1,17 @@
+{
+  "_instructions": "Copy this file to 'config.json' and update with your actual values",
+  "_comment": "This file contains frontend configuration including API endpoints and feature flags",
+  "ApiSettings": {
+    "BaseUrl": "http://localhost:5002",
+    "TimeoutSeconds": 30,
+    "RetryAttempts": 3
+  },
+  "Environment": "Development",
+  "Features": {
+    "EnableAdvancedSearch": true,
+    "EnableNotifications": true,
+    "EnablePayments": true,
+    "EnableDisputes": true,
+    "EnableAnalytics": false
+  }
+}

@@ -1,0 +1,15 @@
+{
+  "ApiSettings": {
+    "BaseUrl": "http://localhost:5002",
+    "TimeoutSeconds": 30,
+    "RetryAttempts": 3
+  },
+  "Environment": "Development",
+  "Features": {
+    "EnableAdvancedSearch": true,
+    "EnableNotifications": true,
+    "EnablePayments": true,
+    "EnableDisputes": true,
+    "EnableAnalytics": false
+  }
+}

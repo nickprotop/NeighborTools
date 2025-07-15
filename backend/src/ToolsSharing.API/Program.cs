@@ -10,6 +10,28 @@ using ToolsSharing.API.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
+// Load configuration from config.json
+var configPath = Path.Combine(builder.Environment.ContentRootPath, "config.json");
+var configSamplePath = Path.Combine(builder.Environment.ContentRootPath, "config.sample.json");
+
+if (File.Exists(configPath))
+{
+    builder.Configuration.AddJsonFile("config.json", optional: false, reloadOnChange: true);
+    Console.WriteLine("✅ Using config.json");
+}
+else if (File.Exists(configSamplePath))
+{
+    builder.Configuration.AddJsonFile("config.sample.json", optional: false, reloadOnChange: true);
+    Console.WriteLine("⚠️  Using config.sample.json - Please create config.json with your actual values");
+}
+else
+{
+    throw new InvalidOperationException("Neither config.json nor config.sample.json found. Please create config.json with your configuration.");
+}
+
+// Environment variables override everything (for production)
+builder.Configuration.AddEnvironmentVariables();
+
 // Configure URLs to bind to all interfaces
 builder.WebHost.UseUrls("https://0.0.0.0:5003", "http://0.0.0.0:5002");
 

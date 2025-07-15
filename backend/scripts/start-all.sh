@@ -8,6 +8,26 @@ set -e  # Exit on any error
 echo "🚀 Starting NeighborTools Development Environment"
 echo "================================================="
 
+# Load environment variables from .env file
+DOCKER_DIR="$(dirname "$0")/../docker"
+ENV_FILE="$DOCKER_DIR/.env"
+
+if [ -f "$ENV_FILE" ]; then
+    echo "📝 Loading configuration from .env file..."
+    set -a  # Automatically export variables
+    source "$ENV_FILE"
+    set +a  # Stop auto-export
+    echo "✅ Configuration loaded from .env file"
+else
+    echo "⚠️  No .env file found. Using default passwords."
+    echo "   Run ./install.sh to configure custom passwords."
+    # Create .env file with defaults
+    if [ -f "$DOCKER_DIR/.env.sample" ]; then
+        cp "$DOCKER_DIR/.env.sample" "$ENV_FILE"
+        echo "✅ Created .env file from sample"
+    fi
+fi
+
 # Check if infrastructure is already running
 cd "$(dirname "$0")/../docker"
 

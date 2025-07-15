@@ -73,8 +73,20 @@ fi
 
 cd frontend
 
+echo "🔄 Building frontend with configuration..."
+echo "   This will create config.json and build the Blazor WebAssembly application"
+echo ""
+
+# Build frontend with development configuration
+if [ -f "build.sh" ]; then
+    ./build.sh "http://localhost:5002" "Development"
+else
+    echo "⚠️  build.sh not found, using default dotnet build"
+    dotnet build
+fi
+
+echo ""
 echo "🔄 Starting frontend..."
-echo "   This will start the Blazor WebAssembly application"
 echo "   Press Ctrl+C to stop both services"
 echo ""
 

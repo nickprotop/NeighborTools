@@ -4,19 +4,55 @@ using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor.Services;
 using frontend;
 using frontend.Services;
+using ToolsSharing.Frontend.Configuration;
+using System.Text.Json;
 
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
 
+// Load configuration from config.json
+var http = new HttpClient { BaseAddress = new Uri(builder.HostEnvironment.BaseAddress) };
+AppSettings appSettings;
+
+try
+{
+    var configJson = await http.GetStringAsync("config.json");
+    appSettings = JsonSerializer.Deserialize<AppSettings>(configJson, new JsonSerializerOptions
+    {
+        PropertyNameCaseInsensitive = true
+    }) ?? new AppSettings();
+    Console.WriteLine("✅ Using config.json");
+}
+catch (Exception ex)
+{
+    Console.WriteLine($"⚠️ Failed to load config.json: {ex.Message}");
+    try
+    {
+        var configSampleJson = await http.GetStringAsync("config.sample.json");
+        appSettings = JsonSerializer.Deserialize<AppSettings>(configSampleJson, new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true
+        }) ?? new AppSettings();
+        Console.WriteLine("⚠️ Using config.sample.json - Please create config.json with your actual values");
+    }
+    catch (Exception fallbackEx)
+    {
+        Console.WriteLine($"❌ Failed to load config.sample.json: {fallbackEx.Message}");
+        Console.WriteLine("⚠️ Using default configuration");
+        appSettings = new AppSettings();
+    }
+}
+
+// Register configuration in DI
+builder.Services.AddSingleton(appSettings);
+
 // Configure HttpClient for API communication
 builder.Services.AddScoped<AuthenticatedHttpClientHandler>();
 builder.Services.AddHttpClient("api", client =>
 {
-    // PRODUCTION WARNING: Change this to the actual API server location in production
-    // Use the same host as the frontend, but point to API port
-    var apiBaseUrl = builder.HostEnvironment.BaseAddress.Replace(":5000", ":5002").Replace(":5001", ":5002");
-    client.BaseAddress = new Uri(apiBaseUrl);
+    client.BaseAddress = new Uri(appSettings.ApiSettings.BaseUrl);
+    client.Timeout = TimeSpan.FromSeconds(appSettings.ApiSettings.TimeoutSeconds);
 })
 .AddHttpMessageHandler<AuthenticatedHttpClientHandler>();
 

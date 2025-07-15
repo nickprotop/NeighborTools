@@ -5,10 +5,10 @@ services:
     image: mysql:8.0
     container_name: tools-sharing-mysql
     environment:
-      MYSQL_ROOT_PASSWORD: RootPassword123!
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: toolssharing
       MYSQL_USER: toolsuser
-      MYSQL_PASSWORD: ToolsPassword123!
+      MYSQL_PASSWORD: ${MYSQL_USER_PASSWORD}
     ports:
       - "3306:3306"
     volumes:
@@ -44,7 +44,7 @@ services:
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=https://+:5003;http://+:5002
-      - ConnectionStrings__DefaultConnection=server=mysql;port=3306;database=toolssharing;uid=toolsuser;pwd=ToolsPassword123!
+      - ConnectionStrings__DefaultConnection=server=mysql;port=3306;database=toolssharing;uid=toolsuser;pwd=${MYSQL_USER_PASSWORD}
       - Redis__ConnectionString=redis:6379
     restart: unless-stopped
     profiles:
