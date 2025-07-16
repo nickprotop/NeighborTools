@@ -212,6 +212,17 @@
                                    OnClick="CloseMobileMenu">
                             Share Tool
                         </MudButton>
+                        
+                        <!-- Help Center Link -->
+                        <MudDivider Class="my-3" />
+                        <MudButton Variant="Variant.Text" 
+                                   Href="/help" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Help"
+                                   Class="mobile-nav-item help-center-link"
+                                   OnClick="CloseMobileMenu">
+                            Help Center
+                        </MudButton>
                     </div>
                 </Authorized>
                 <NotAuthorized>
@@ -231,6 +242,17 @@
                                    Class="mobile-add-button"
                                    OnClick="CloseMobileMenu">
                             Sign up
+                        </MudButton>
+                        
+                        <!-- Help Center Link -->
+                        <MudDivider Class="my-3" />
+                        <MudButton Variant="Variant.Text" 
+                                   Href="/help" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Help"
+                                   Class="mobile-nav-item help-center-link"
+                                   OnClick="CloseMobileMenu">
+                            Help Center
                         </MudButton>
                     </div>
                 </NotAuthorized>
@@ -448,6 +470,17 @@
         margin-top: 16px;
         padding: 12px 16px;
         border-radius: 8px;
+    }
+
+    .help-center-link {
+        color: #757575 !important;
+        opacity: 0.8;
+        font-size: 0.875rem !important;
+    }
+
+    .help-center-link:hover {
+        opacity: 1;
+        background-color: rgba(117, 117, 117, 0.1) !important;
     }
 
     .mobile-menu-toggle {

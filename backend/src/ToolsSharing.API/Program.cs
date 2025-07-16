@@ -142,6 +142,8 @@ builder.Services.AddHealthChecks()
 
 // Add Background Services
 builder.Services.AddHostedService<PayoutBackgroundService>();
+builder.Services.AddHostedService<RentalLifecycleService>();
+builder.Services.AddHostedService<RentalCompletionService>();
 
 // Add YARP
 builder.Services.AddReverseProxy()

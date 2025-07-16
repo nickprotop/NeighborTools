@@ -1,0 +1,297 @@
+@using MudBlazor
+@using frontend.Services
+@using frontend.Models
+@using Microsoft.AspNetCore.Authorization
+@inject IRentalService RentalService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@attribute [Authorize(Roles = "Admin")]
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudPaper Elevation="4" Class="pa-6" Style="border-radius: 16px;">
+        <div class="d-flex align-center justify-space-between mb-4">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" Color="Color.Error" Class="mr-3" Style="font-size: 2.5rem;" />
+                <div>
+                    <MudText Typo="Typo.h4" Color="Color.Error">Overdue Rentals Management</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Monitor and manage overdue rental returns
+                    </MudText>
+                </div>
+            </div>
+            <div class="d-flex align-center">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Refresh"
+                           OnClick="LoadOverdueRentals"
+                           Class="mr-2">
+                    Refresh
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Secondary" 
+                           StartIcon="@Icons.Material.Filled.CheckCircle"
+                           OnClick="CheckForOverdueRentals">
+                    Check Overdue
+                </MudButton>
+            </div>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="d-flex justify-center align-center" style="min-height: 400px;">
+                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            </div>
+        }
+        else if (!overdueRentals.Any())
+        {
+            <MudAlert Severity="Severity.Success" Class="mb-4">
+                <MudText Typo="Typo.h6">No Overdue Rentals Found</MudText>
+                <MudText Typo="Typo.body2">All rentals are on time or have been returned.</MudText>
+            </MudAlert>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Error" Class="mb-4">
+                <MudText Typo="Typo.h6">@overdueRentals.Count Overdue Rental(s) Found</MudText>
+                <MudText Typo="Typo.body2">Immediate attention required.</MudText>
+            </MudAlert>
+
+            <MudTable Items="@overdueRentals" 
+                      Hover="true" 
+                      Breakpoint="Breakpoint.Sm" 
+                      Class="mb-4"
+                      Dense="true"
+                      Filter="FilterOverdueRentals">
+                <ToolBarContent>
+                    <MudText Typo="Typo.h6">Overdue Rentals</MudText>
+                    <MudSpacer />
+                    <MudTextField @bind-Value="searchString" 
+                                  Placeholder="Search rentals..." 
+                                  Adornment="Adornment.Start" 
+                                  AdornmentIcon="@Icons.Material.Filled.Search" 
+                                  IconSize="Size.Medium" 
+                                  Class="mt-0"
+                                  Clearable="true" />
+                </ToolBarContent>
+                <HeaderContent>
+                    <MudTh>Tool</MudTh>
+                    <MudTh>Renter</MudTh>
+                    <MudTh>Owner</MudTh>
+                    <MudTh>Expected Return</MudTh>
+                    <MudTh>Days Overdue</MudTh>
+                    <MudTh>Status</MudTh>
+                    <MudTh>Actions</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd DataLabel="Tool">
+                        <div class="d-flex align-center">
+                            @if (context.Tool?.ImageUrls?.Any() == true)
+                            {
+                                <MudAvatar Image="@context.Tool.ImageUrls.First()" Size="Size.Small" Class="mr-2" />
+                            }
+                            <div>
+                                <MudText Typo="Typo.body2">@(!string.IsNullOrEmpty(context.ToolName) ? context.ToolName : context.Tool?.Name)</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@context.Tool?.Location</MudText>
+                            </div>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Renter">
+                        <div>
+                            <MudText Typo="Typo.body2">@context.RenterName</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@context.RenterId</MudText>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Owner">
+                        <div>
+                            <MudText Typo="Typo.body2">@(!string.IsNullOrEmpty(context.OwnerName) ? context.OwnerName : context.Tool?.OwnerName)</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@(!string.IsNullOrEmpty(context.OwnerId) ? context.OwnerId : context.Tool?.OwnerId)</MudText>
+                        </div>
+                    </MudTd>
+                    <MudTd DataLabel="Expected Return">
+                        <MudText Typo="Typo.body2">@context.EndDate.ToString("MMM dd, yyyy")</MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@context.EndDate.ToString("HH:mm")</MudText>
+                    </MudTd>
+                    <MudTd DataLabel="Days Overdue">
+                        <MudChip T="string" 
+                                 Color="@GetOverdueSeverityColor(GetDaysOverdue(context.EndDate))" 
+                                 Size="Size.Small">
+                            @GetDaysOverdue(context.EndDate) day(s)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Status">
+                        <MudChip T="string" 
+                                 Color="@GetStatusColor(context.Status)" 
+                                 Icon="@GetStatusIcon(context.Status)" 
+                                 Size="Size.Small">
+                            @context.Status
+                        </MudChip>
+                    </MudTd>
+                    <MudTd DataLabel="Actions">
+                        <div class="d-flex">
+                            <MudTooltip Text="View Details">
+                                <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                               Color="Color.Primary" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => ViewRentalDetails(Guid.Parse(context.Id)))" />
+                            </MudTooltip>
+                            <MudTooltip Text="Contact Renter">
+                                <MudIconButton Icon="@Icons.Material.Filled.Email" 
+                                               Color="Color.Secondary" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => ContactRenter(context))" />
+                            </MudTooltip>
+                            <MudTooltip Text="Escalate">
+                                <MudIconButton Icon="@Icons.Material.Filled.ReportProblem" 
+                                               Color="Color.Warning" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => EscalateRental(context))" />
+                            </MudTooltip>
+                            <MudTooltip Text="Mark as Returned">
+                                <MudIconButton Icon="@Icons.Material.Filled.CheckCircle" 
+                                               Color="Color.Success" 
+                                               Size="Size.Small"
+                                               OnClick="@(() => MarkAsReturned(context))" />
+                            </MudTooltip>
+                        </div>
+                    </MudTd>
+                </RowTemplate>
+                <PagerContent>
+                    <MudTablePager />
+                </PagerContent>
+            </MudTable>
+        }
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private List<Rental> overdueRentals = new();
+    private bool isLoading = true;
+    private string searchString = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadOverdueRentals();
+    }
+
+    private async Task LoadOverdueRentals()
+    {
+        try
+        {
+            isLoading = true;
+            var result = await RentalService.GetOverdueRentalsAsync();
+            
+            if (result.Success && result.Data != null)
+            {
+                overdueRentals = result.Data;
+                Snackbar.Add($"Loaded {overdueRentals.Count} overdue rentals", Severity.Info);
+            }
+            else
+            {
+                Snackbar.Add("Failed to load overdue rentals", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading overdue rentals: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task CheckForOverdueRentals()
+    {
+        try
+        {
+            // TODO: Call API to check and update overdue rentals
+            Snackbar.Add("Checking for overdue rentals...", Severity.Info);
+            await LoadOverdueRentals();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error checking overdue rentals: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private bool FilterOverdueRentals(Rental rental)
+    {
+        if (string.IsNullOrWhiteSpace(searchString))
+            return true;
+        
+        return rental.ToolName?.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true ||
+               rental.RenterName?.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true ||
+               rental.OwnerName?.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true ||
+               rental.Tool?.Location?.Contains(searchString, StringComparison.OrdinalIgnoreCase) == true;
+    }
+
+    private int GetDaysOverdue(DateTime endDate)
+    {
+        return (int)(DateTime.UtcNow - endDate).TotalDays;
+    }
+
+    private Color GetOverdueSeverityColor(int daysOverdue)
+    {
+        return daysOverdue switch
+        {
+            <= 2 => Color.Warning,
+            <= 7 => Color.Error,
+            _ => Color.Dark
+        };
+    }
+
+    private Color GetStatusColor(string status) => status switch
+    {
+        "PickedUp" => Color.Success,
+        "Overdue" => Color.Error,
+        "Returned" => Color.Primary,
+        _ => Color.Default
+    };
+
+    private string GetStatusIcon(string status) => status switch
+    {
+        "PickedUp" => Icons.Material.Filled.LocalShipping,
+        "Overdue" => Icons.Material.Filled.Warning,
+        "Returned" => Icons.Material.Filled.Assignment,
+        _ => Icons.Material.Filled.Info
+    };
+
+    private void ViewRentalDetails(Guid rentalId)
+    {
+        // TODO: Navigate to rental details page or open in dialog
+        Snackbar.Add($"Viewing rental details for {rentalId}", Severity.Info);
+    }
+
+    private void ContactRenter(Rental rental)
+    {
+        // TODO: Open contact renter dialog
+        Snackbar.Add($"Contacting renter {rental.RenterName}", Severity.Info);
+    }
+
+    private void EscalateRental(Rental rental)
+    {
+        // TODO: Open escalation dialog
+        Snackbar.Add($"Escalating rental for {rental.ToolName}", Severity.Warning);
+    }
+
+    private async Task MarkAsReturned(Rental rental)
+    {
+        try
+        {
+            var result = await RentalService.ConfirmReturnAsync(Guid.Parse(rental.Id));
+            if (result.Success)
+            {
+                Snackbar.Add($"Rental marked as returned successfully", Severity.Success);
+                await LoadOverdueRentals();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to mark rental as returned: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error marking rental as returned: {ex.Message}", Severity.Error);
+        }
+    }
+}

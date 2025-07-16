@@ -14,6 +14,10 @@ public interface IRentalService
     Task<ApiResponse> RejectRentalAsync(string id, RentalApprovalRequest request);
     Task<ApiResponse<List<Rental>>> GetMyRentalsAsync(string? status = null);
     Task<ApiResponse<List<Rental>>> GetMyToolRentalsAsync(string? status = null);
+    Task<ApiResponse> ConfirmPickupAsync(Guid rentalId, string? notes = null);
+    Task<ApiResponse> ConfirmReturnAsync(Guid rentalId, string? notes = null, string? conditionNotes = null);
+    Task<ApiResponse> ExtendRentalAsync(Guid rentalId, DateTime newEndDate, string? notes = null);
+    Task<ApiResponse<List<Rental>>> GetOverdueRentalsAsync();
 }
 
 public class RentalService : IRentalService
@@ -204,5 +208,103 @@ public class RentalService : IRentalService
     public async Task<ApiResponse<Rental>> GetRentalByIdAsync(Guid id)
     {
         return await GetRentalAsync(id.ToString());
+    }
+
+    public async Task<ApiResponse> ConfirmPickupAsync(Guid rentalId, string? notes = null)
+    {
+        try
+        {
+            var response = await _httpClient.PatchAsJsonAsync($"/api/rentals/{rentalId}/pickup", notes);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse 
+            { 
+                Success = false, 
+                Message = $"Failed to confirm pickup: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse> ConfirmReturnAsync(Guid rentalId, string? notes = null, string? conditionNotes = null)
+    {
+        try
+        {
+            var requestData = new { Notes = notes, ConditionNotes = conditionNotes };
+            var response = await _httpClient.PatchAsJsonAsync($"/api/rentals/{rentalId}/return", requestData);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse 
+            { 
+                Success = false, 
+                Message = $"Failed to confirm return: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse> ExtendRentalAsync(Guid rentalId, DateTime newEndDate, string? notes = null)
+    {
+        try
+        {
+            var request = new { NewEndDate = newEndDate, Notes = notes };
+            var response = await _httpClient.PatchAsJsonAsync($"/api/rentals/{rentalId}/extend", request);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse 
+            { 
+                Success = false, 
+                Message = $"Failed to extend rental: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<List<Rental>>> GetOverdueRentalsAsync()
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync("/api/rentals/overdue");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<List<Rental>>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<List<Rental>> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<Rental>> 
+            { 
+                Success = false, 
+                Message = $"Failed to retrieve overdue rentals: {ex.Message}" 
+            };
+        }
     }
 }

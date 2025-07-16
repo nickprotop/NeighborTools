@@ -6,6 +6,7 @@
 @using frontend.Shared
 @using frontend.Components.Disputes
 @using frontend.Components.Fraud
+@using frontend.Components.Rentals
 @inject IRentalService RentalService
 @inject IPaymentService PaymentService
 @inject ISnackbar Snackbar
@@ -86,6 +87,24 @@
                             </MudChip>
                         </MudItem>
                     </MudGrid>
+
+                    @* Dispute Window Information *@
+                    @if (ShouldShowDisputeInfo())
+                    {
+                        <MudAlert Severity="@GetDisputeInfoSeverity()" Class="mb-4">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="mr-2"/>
+                                <div>
+                                    <MudText Typo="Typo.subtitle2" Class="mb-1">
+                                        @GetDisputeInfoTitle()
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        @GetDisputeInfoMessage()
+                                    </MudText>
+                                </div>
+                            </div>
+                        </MudAlert>
+                    }
 
                     @if (!string.IsNullOrEmpty(rental.Notes))
                     {
@@ -172,13 +191,51 @@
                             </MudButton>
                         }
 
-                        @if ((isRenter || isOwner) && rental.Status == "Active" && transaction?.Status == "Completed")
+                        @* Pickup Confirmation Button *@
+                        @if ((isRenter || isOwner) && rental.Status == "Approved" && rental.IsPaid)
+                        {
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Success" 
+                                       StartIcon="@Icons.Material.Filled.LocalShipping"
+                                       OnClick="ConfirmPickup"
+                                       Class="mr-2">
+                                Confirm Pickup
+                            </MudButton>
+                        }
+
+                        @* Return Confirmation Button *@
+                        @if ((isRenter || isOwner) && (rental.Status == "PickedUp" || rental.Status == "Overdue"))
+                        {
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       StartIcon="@Icons.Material.Filled.Assignment"
+                                       OnClick="ConfirmReturn"
+                                       Class="mr-2">
+                                Confirm Return
+                            </MudButton>
+                        }
+
+                        @* Extend Rental Button *@
+                        @if (isRenter && (rental.Status == "Approved" || rental.Status == "PickedUp") && rental.IsPaid)
                         {
                             <MudButton Variant="Variant.Outlined" 
-                                       Color="Color.Primary" 
-                                       StartIcon="@Icons.Material.Filled.CheckCircle"
-                                       OnClick="@(() => UpdateRentalStatus("Completed"))">
-                                Mark as Completed
+                                       Color="Color.Secondary" 
+                                       StartIcon="@Icons.Material.Filled.Schedule"
+                                       OnClick="ExtendRental"
+                                       Class="mr-2">
+                                Extend Rental
+                            </MudButton>
+                        }
+
+                        @* Create Dispute Button *@
+                        @if (ShouldShowDisputeButton())
+                        {
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Warning" 
+                                       StartIcon="@Icons.Material.Filled.Report"
+                                       OnClick="CreateDispute"
+                                       Class="mr-2">
+                                Create Dispute
                             </MudButton>
                         }
 
@@ -377,6 +434,83 @@
         Snackbar.Add($"Status update to {newStatus} - Coming soon!", Severity.Info);
     }
 
+    private async Task ConfirmPickup()
+    {
+        try
+        {
+            var result = await RentalService.ConfirmPickupAsync(RentalId);
+            if (result.Success)
+            {
+                Snackbar.Add("Pickup confirmed successfully!", Severity.Success);
+                await LoadRentalDetails();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to confirm pickup: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error confirming pickup: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ConfirmReturn()
+    {
+        try
+        {
+            var parameters = new DialogParameters 
+            { 
+                { "RentalId", RentalId },
+                { "ToolName", rental?.ToolName ?? "Unknown Tool" }
+            };
+            
+            var options = new DialogOptions 
+            { 
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true
+            };
+            
+            var dialog = DialogService.Show<ReturnConditionDialog>("Confirm Return", parameters, options);
+            var result = await dialog.Result;
+            
+            if (!result.Canceled)
+            {
+                await LoadRentalDetails();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error opening return dialog: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ExtendRental()
+    {
+        var parameters = new DialogParameters 
+        { 
+            { "RentalId", RentalId },
+            { "CurrentEndDate", rental?.EndDate ?? DateTime.Today },
+            { "ToolName", rental?.Tool?.Name ?? "Unknown" }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+        
+        var dialog = DialogService.Show<ExtendRentalDialog>("Extend Rental", parameters, options);
+        var result = await dialog.Result;
+        
+        if (result != null && !result.Canceled)
+        {
+            await LoadRentalDetails();
+        }
+    }
+
     private int GetRentalDuration()
     {
         return rental != null ? (int)(rental.EndDate - rental.StartDate).TotalDays : 0;
@@ -386,8 +520,9 @@
     {
         "Pending" => Color.Warning,
         "Approved" => Color.Info,
-        "Active" => Color.Success,
-        "Completed" => Color.Primary,
+        "PickedUp" => Color.Success,
+        "Returned" => Color.Primary,
+        "Overdue" => Color.Error,
         "Cancelled" => Color.Error,
         "Rejected" => Color.Error,
         _ => Color.Default
@@ -397,8 +532,9 @@
     {
         "Pending" => Icons.Material.Filled.Schedule,
         "Approved" => Icons.Material.Filled.Check,
-        "Active" => Icons.Material.Filled.PlayArrow,
-        "Completed" => Icons.Material.Filled.CheckCircle,
+        "PickedUp" => Icons.Material.Filled.LocalShipping,
+        "Returned" => Icons.Material.Filled.Assignment,
+        "Overdue" => Icons.Material.Filled.Warning,
         "Cancelled" => Icons.Material.Filled.Cancel,
         "Rejected" => Icons.Material.Filled.Block,
         _ => Icons.Material.Filled.Info
@@ -553,5 +689,116 @@
             // Refresh the rental data to show any status changes
             await LoadRentalDetails();
         }
+    }
+
+    private bool ShouldShowDisputeButton()
+    {
+        // Show dispute button if:
+        // 1. User is involved in the rental (renter or owner)
+        // 2. Rental is overdue OR within dispute window after return
+        
+        if (!isRenter && !isOwner)
+            return false;
+
+        // For overdue rentals, always show dispute button
+        if (rental.Status == "Overdue" || (rental.Status == "PickedUp" && rental.EndDate < DateTime.UtcNow))
+            return true;
+
+        // For returned rentals, show if within dispute window
+        if (rental.Status == "Returned" && rental.DisputeDeadline.HasValue)
+            return DateTime.UtcNow <= rental.DisputeDeadline.Value;
+
+        return false;
+    }
+
+    private async Task CreateDispute()
+    {
+        try
+        {
+            var parameters = new DialogParameters 
+            { 
+                { "RentalId", rental.Id.ToString() },
+                { "RentalTitle", rental.Tool?.Name ?? "Unknown Tool" }
+            };
+            
+            var options = new DialogOptions 
+            { 
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true
+            };
+            
+            var dialog = DialogService.Show<CreateDisputeDialog>("Create Dispute", parameters, options);
+            var result = await dialog.Result;
+            
+            if (!result.Canceled)
+            {
+                await LoadRentalDetails(); // Refresh the rental data
+                Snackbar.Add("Dispute created successfully", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating dispute: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private bool ShouldShowDisputeInfo()
+    {
+        // Show dispute info for overdue rentals or recently returned rentals with active dispute window
+        return (rental.Status == "Overdue" || 
+                (rental.Status == "PickedUp" && rental.EndDate < DateTime.UtcNow) ||
+                (rental.Status == "Returned" && rental.DisputeDeadline.HasValue));
+    }
+
+    private Severity GetDisputeInfoSeverity()
+    {
+        if (rental.Status == "Overdue" || (rental.Status == "PickedUp" && rental.EndDate < DateTime.UtcNow))
+            return Severity.Warning;
+        
+        if (rental.Status == "Returned" && rental.DisputeDeadline.HasValue)
+        {
+            var timeLeft = rental.DisputeDeadline.Value - DateTime.UtcNow;
+            return timeLeft.TotalHours <= 12 ? Severity.Warning : Severity.Info;
+        }
+        
+        return Severity.Info;
+    }
+
+    private string GetDisputeInfoTitle()
+    {
+        if (rental.Status == "Overdue" || (rental.Status == "PickedUp" && rental.EndDate < DateTime.UtcNow))
+            return "Tool is Overdue - Dispute Available";
+        
+        if (rental.Status == "Returned" && rental.DisputeDeadline.HasValue)
+        {
+            var timeLeft = rental.DisputeDeadline.Value - DateTime.UtcNow;
+            var hoursLeft = (int)timeLeft.TotalHours;
+            return $"Dispute Window Active - {hoursLeft} hours remaining";
+        }
+        
+        return "Dispute Information";
+    }
+
+    private string GetDisputeInfoMessage()
+    {
+        if (rental.Status == "Overdue" || (rental.Status == "PickedUp" && rental.EndDate < DateTime.UtcNow))
+        {
+            var daysOverdue = (int)(DateTime.UtcNow - rental.EndDate).TotalDays;
+            return $"This rental is {daysOverdue} day{(daysOverdue > 1 ? "s" : "")} overdue. You can create a dispute to report issues like late returns, damage, or missing items.";
+        }
+        
+        if (rental.Status == "Returned" && rental.DisputeDeadline.HasValue)
+        {
+            var timeLeft = rental.DisputeDeadline.Value - DateTime.UtcNow;
+            var hoursLeft = (int)timeLeft.TotalHours;
+            
+            if (hoursLeft <= 12)
+                return $"The tool has been returned. You have {hoursLeft} hours remaining to create a dispute if there are any issues with the condition or return process.";
+            else
+                return $"The tool has been returned. You have {hoursLeft} hours to create a dispute if there are any issues. After this window expires, the rental will be automatically completed.";
+        }
+        
+        return "Dispute information is available for this rental.";
     }
 }

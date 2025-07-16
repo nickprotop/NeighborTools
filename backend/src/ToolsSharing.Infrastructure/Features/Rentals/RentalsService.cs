@@ -497,6 +497,359 @@ public class RentalsService : IRentalsService
         }
     }
 
+    public async Task<ApiResponse<bool>> MarkRentalPickedUpAsync(MarkRentalPickedUpCommand command)
+    {
+        try
+        {
+            var rental = await _context.Rentals
+                .Include(r => r.Tool)
+                    .ThenInclude(t => t.Owner)
+                .Include(r => r.Renter)
+                .FirstOrDefaultAsync(r => r.Id == command.RentalId);
+
+            if (rental == null)
+            {
+                return ApiResponse<bool>.CreateFailure("Rental not found");
+            }
+
+            // Check if the user is authorized (either renter or owner)
+            if (rental.RenterId != command.UserId && rental.Tool.OwnerId != command.UserId)
+            {
+                return ApiResponse<bool>.CreateFailure("Only the renter or tool owner can mark a rental as picked up");
+            }
+
+            // Check if rental is in approved status and payment is completed
+            if (rental.Status != RentalStatus.Approved)
+            {
+                return ApiResponse<bool>.CreateFailure("Only approved rentals can be marked as picked up");
+            }
+
+            // Verify payment is completed
+            var isPaid = await _context.Transactions
+                .AnyAsync(t => t.RentalId == rental.Id && 
+                          (t.Status == TransactionStatus.PaymentCompleted || 
+                           t.Status == TransactionStatus.PayoutPending || 
+                           t.Status == TransactionStatus.PayoutCompleted));
+
+            if (!isPaid)
+            {
+                return ApiResponse<bool>.CreateFailure("Payment must be completed before pickup");
+            }
+
+            rental.Status = RentalStatus.PickedUp;
+            rental.PickupDate = DateTime.UtcNow;
+            rental.UpdatedAt = DateTime.UtcNow;
+            
+            if (!string.IsNullOrEmpty(command.Notes))
+            {
+                rental.Notes = string.IsNullOrEmpty(rental.Notes) 
+                    ? $"Pickup notes: {command.Notes}" 
+                    : $"{rental.Notes}\n\nPickup notes: {command.Notes}";
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Send pickup confirmation emails
+            try
+            {
+                var pickupNotification = new RentalReminderNotification
+                {
+                    RecipientEmail = rental.Renter.Email!,
+                    RecipientName = $"{rental.Renter.FirstName} {rental.Renter.LastName}",
+                    UserId = rental.RenterId,
+                    RenterName = $"{rental.Renter.FirstName} {rental.Renter.LastName}",
+                    OwnerName = $"{rental.Tool.Owner.FirstName} {rental.Tool.Owner.LastName}",
+                    ToolName = rental.Tool.Name,
+                    StartDate = rental.StartDate,
+                    EndDate = rental.EndDate,
+                    ReminderType = "pickup_confirmed",
+                    RentalDetailsUrl = $"/rentals/{rental.Id}",
+                    Priority = EmailPriority.Normal
+                };
+                
+                await _emailNotificationService.SendNotificationAsync(pickupNotification);
+            }
+            catch (Exception emailEx)
+            {
+                Console.WriteLine($"Email notification failed: {emailEx.Message}");
+            }
+
+            return ApiResponse<bool>.CreateSuccess(true, "Rental marked as picked up successfully");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<bool>.CreateFailure($"Error marking rental as picked up: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> MarkRentalReturnedAsync(MarkRentalReturnedCommand command)
+    {
+        try
+        {
+            var rental = await _context.Rentals
+                .Include(r => r.Tool)
+                    .ThenInclude(t => t.Owner)
+                .Include(r => r.Renter)
+                .FirstOrDefaultAsync(r => r.Id == command.RentalId);
+
+            if (rental == null)
+            {
+                return ApiResponse<bool>.CreateFailure("Rental not found");
+            }
+
+            // Check if the user is authorized (either renter or owner)
+            if (rental.RenterId != command.UserId && rental.Tool.OwnerId != command.UserId)
+            {
+                return ApiResponse<bool>.CreateFailure("Only the renter or tool owner can mark a rental as returned");
+            }
+
+            // Check if rental is in picked up status
+            if (rental.Status != RentalStatus.PickedUp && rental.Status != RentalStatus.Overdue)
+            {
+                return ApiResponse<bool>.CreateFailure("Only picked up or overdue rentals can be marked as returned");
+            }
+
+            rental.Status = RentalStatus.Returned;
+            rental.ReturnDate = DateTime.UtcNow;
+            rental.ReturnedByUserId = command.UserId;
+            rental.DisputeDeadline = DateTime.UtcNow.AddHours(48); // 48-hour dispute window
+            rental.UpdatedAt = DateTime.UtcNow;
+            
+            if (!string.IsNullOrEmpty(command.Notes))
+            {
+                rental.Notes = string.IsNullOrEmpty(rental.Notes) 
+                    ? $"Return notes: {command.Notes}" 
+                    : $"{rental.Notes}\n\nReturn notes: {command.Notes}";
+            }
+            
+            if (!string.IsNullOrEmpty(command.ConditionNotes))
+            {
+                rental.ReturnConditionNotes = command.ConditionNotes;
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Send return confirmation emails
+            try
+            {
+                var returnNotification = new RentalReminderNotification
+                {
+                    RecipientEmail = rental.Renter.Email!,
+                    RecipientName = $"{rental.Renter.FirstName} {rental.Renter.LastName}",
+                    UserId = rental.RenterId,
+                    RenterName = $"{rental.Renter.FirstName} {rental.Renter.LastName}",
+                    OwnerName = $"{rental.Tool.Owner.FirstName} {rental.Tool.Owner.LastName}",
+                    ToolName = rental.Tool.Name,
+                    StartDate = rental.StartDate,
+                    EndDate = rental.EndDate,
+                    ReminderType = "return_confirmed",
+                    RentalDetailsUrl = $"/rentals/{rental.Id}",
+                    Priority = EmailPriority.Normal
+                };
+                
+                await _emailNotificationService.SendNotificationAsync(returnNotification);
+
+                // Also notify owner
+                var ownerNotification = new RentalReminderNotification
+                {
+                    RecipientEmail = rental.Tool.Owner.Email!,
+                    RecipientName = $"{rental.Tool.Owner.FirstName} {rental.Tool.Owner.LastName}",
+                    UserId = rental.Tool.OwnerId,
+                    RenterName = $"{rental.Renter.FirstName} {rental.Renter.LastName}",
+                    OwnerName = $"{rental.Tool.Owner.FirstName} {rental.Tool.Owner.LastName}",
+                    ToolName = rental.Tool.Name,
+                    StartDate = rental.StartDate,
+                    EndDate = rental.EndDate,
+                    ReminderType = "tool_returned",
+                    RentalDetailsUrl = $"/rentals/{rental.Id}",
+                    Priority = EmailPriority.Normal
+                };
+                
+                await _emailNotificationService.SendNotificationAsync(ownerNotification);
+            }
+            catch (Exception emailEx)
+            {
+                Console.WriteLine($"Email notification failed: {emailEx.Message}");
+            }
+
+            return ApiResponse<bool>.CreateSuccess(true, "Rental marked as returned successfully");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<bool>.CreateFailure($"Error marking rental as returned: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> ExtendRentalAsync(ExtendRentalCommand command)
+    {
+        try
+        {
+            var rental = await _context.Rentals
+                .Include(r => r.Tool)
+                    .ThenInclude(t => t.Owner)
+                .Include(r => r.Renter)
+                .FirstOrDefaultAsync(r => r.Id == command.RentalId);
+
+            if (rental == null)
+            {
+                return ApiResponse<bool>.CreateFailure("Rental not found");
+            }
+
+            // Check if the user is the renter
+            if (rental.RenterId != command.UserId)
+            {
+                return ApiResponse<bool>.CreateFailure("Only the renter can extend a rental");
+            }
+
+            // Check if rental can be extended (must be approved or picked up)
+            if (rental.Status != RentalStatus.Approved && rental.Status != RentalStatus.PickedUp)
+            {
+                return ApiResponse<bool>.CreateFailure("Only approved or picked up rentals can be extended");
+            }
+
+            // Validate new end date
+            if (command.NewEndDate <= rental.EndDate)
+            {
+                return ApiResponse<bool>.CreateFailure("New end date must be after the current end date");
+            }
+
+            // Check for conflicting rentals
+            var hasConflictingRental = await _context.Rentals
+                .AnyAsync(r => r.ToolId == rental.ToolId &&
+                          r.Id != rental.Id &&
+                          r.Status != RentalStatus.Returned &&
+                          r.Status != RentalStatus.Cancelled &&
+                          ((rental.EndDate < r.StartDate && command.NewEndDate >= r.StartDate) ||
+                           (command.NewEndDate >= r.StartDate && command.NewEndDate <= r.EndDate)));
+
+            if (hasConflictingRental)
+            {
+                return ApiResponse<bool>.CreateFailure("Extension conflicts with existing rental bookings");
+            }
+
+            // Calculate additional cost
+            var additionalCost = CalculateRentalCost(rental.Tool, rental.EndDate.AddDays(1), command.NewEndDate);
+            
+            rental.EndDate = command.NewEndDate;
+            rental.TotalCost += additionalCost;
+            rental.UpdatedAt = DateTime.UtcNow;
+            
+            if (!string.IsNullOrEmpty(command.Notes))
+            {
+                rental.Notes = string.IsNullOrEmpty(rental.Notes) 
+                    ? $"Extension notes: {command.Notes}" 
+                    : $"{rental.Notes}\n\nExtension notes: {command.Notes}";
+            }
+
+            await _context.SaveChangesAsync();
+
+            // Send extension notification
+            try
+            {
+                var extensionNotification = new RentalReminderNotification
+                {
+                    RecipientEmail = rental.Tool.Owner.Email!,
+                    RecipientName = $"{rental.Tool.Owner.FirstName} {rental.Tool.Owner.LastName}",
+                    UserId = rental.Tool.OwnerId,
+                    RenterName = $"{rental.Renter.FirstName} {rental.Renter.LastName}",
+                    OwnerName = $"{rental.Tool.Owner.FirstName} {rental.Tool.Owner.LastName}",
+                    ToolName = rental.Tool.Name,
+                    StartDate = rental.StartDate,
+                    EndDate = rental.EndDate,
+                    ReminderType = "rental_extended",
+                    RentalDetailsUrl = $"/rentals/{rental.Id}",
+                    Priority = EmailPriority.Normal
+                };
+                
+                await _emailNotificationService.SendNotificationAsync(extensionNotification);
+            }
+            catch (Exception emailEx)
+            {
+                Console.WriteLine($"Email notification failed: {emailEx.Message}");
+            }
+
+            return ApiResponse<bool>.CreateSuccess(true, $"Rental extended successfully. Additional cost: ${additionalCost:F2}");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<bool>.CreateFailure($"Error extending rental: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<List<RentalDto>>> GetOverdueRentalsAsync(GetOverdueRentalsQuery query)
+    {
+        try
+        {
+            var asOfDate = query.AsOfDate ?? DateTime.UtcNow;
+            
+            var overdueQuery = _context.Rentals
+                .Include(r => r.Tool)
+                    .ThenInclude(t => t.Owner)
+                .Include(r => r.Tool.Images)
+                .Include(r => r.Renter)
+                .Where(r => (r.Status == RentalStatus.PickedUp || r.Status == RentalStatus.Overdue) && 
+                           r.EndDate < asOfDate);
+
+            // Apply sorting
+            overdueQuery = query.SortBy?.ToLower() switch
+            {
+                "enddate" => overdueQuery.OrderBy(r => r.EndDate),
+                "overdue_days" => overdueQuery.OrderByDescending(r => EF.Functions.DateDiffDay(r.EndDate, asOfDate)),
+                "tool" => overdueQuery.OrderBy(r => r.Tool.Name),
+                "renter" => overdueQuery.OrderBy(r => r.Renter.FirstName),
+                _ => overdueQuery.OrderBy(r => r.EndDate)
+            };
+
+            // Apply pagination
+            if (query.PageSize > 0)
+            {
+                overdueQuery = overdueQuery
+                    .Skip((query.PageNumber - 1) * query.PageSize)
+                    .Take(query.PageSize);
+            }
+
+            var overdueRentals = await overdueQuery.ToListAsync();
+            var overdueDtos = _mapper.Map<List<RentalDto>>(overdueRentals);
+
+            return ApiResponse<List<RentalDto>>.CreateSuccess(overdueDtos, "Overdue rentals retrieved successfully");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<List<RentalDto>>.CreateFailure($"Error retrieving overdue rentals: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<int>> CheckAndUpdateOverdueRentalsAsync()
+    {
+        try
+        {
+            var currentDate = DateTime.UtcNow;
+            var overdueRentals = await _context.Rentals
+                .Where(r => r.Status == RentalStatus.PickedUp && 
+                           r.EndDate < currentDate)
+                .ToListAsync();
+
+            int updatedCount = 0;
+            foreach (var rental in overdueRentals)
+            {
+                rental.Status = RentalStatus.Overdue;
+                rental.UpdatedAt = currentDate;
+                updatedCount++;
+            }
+
+            if (updatedCount > 0)
+            {
+                await _context.SaveChangesAsync();
+            }
+
+            return ApiResponse<int>.CreateSuccess(updatedCount, $"Updated {updatedCount} overdue rentals");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<int>.CreateFailure($"Error checking overdue rentals: {ex.Message}");
+        }
+    }
+
     private decimal CalculateRentalCost(Tool tool, DateTime startDate, DateTime endDate)
     {
         var totalDays = (endDate - startDate).Days + 1;

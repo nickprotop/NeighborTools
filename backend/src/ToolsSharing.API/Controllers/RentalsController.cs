@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.Features.Rentals;
+using ToolsSharing.API.Models;
 
 namespace ToolsSharing.API.Controllers;
 
@@ -77,6 +78,68 @@ public class RentalsController : ControllerBase
         if (!result.Success)
             return BadRequest(result);
             
+        return Ok(result);
+    }
+
+    [HttpPatch("{id}/pickup")]
+    public async Task<IActionResult> MarkRentalPickedUp(Guid id, [FromBody] string? notes = null)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+            
+        var command = new MarkRentalPickedUpCommand(id, userId, notes);
+        var result = await _rentalsService.MarkRentalPickedUpAsync(command);
+        
+        if (!result.Success)
+            return BadRequest(result);
+            
+        return Ok(result);
+    }
+
+    [HttpPatch("{id}/return")]
+    public async Task<IActionResult> MarkRentalReturned(Guid id, [FromBody] MarkRentalReturnedRequest request)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+            
+        var command = new MarkRentalReturnedCommand(id, userId, request.Notes, request.ConditionNotes);
+        var result = await _rentalsService.MarkRentalReturnedAsync(command);
+        
+        if (!result.Success)
+            return BadRequest(result);
+            
+        return Ok(result);
+    }
+
+    [HttpPatch("{id}/extend")]
+    public async Task<IActionResult> ExtendRental(Guid id, [FromBody] ExtendRentalRequest request)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+            
+        var command = new ExtendRentalCommand(id, userId, request.NewEndDate, request.Notes);
+        var result = await _rentalsService.ExtendRentalAsync(command);
+        
+        if (!result.Success)
+            return BadRequest(result);
+            
+        return Ok(result);
+    }
+
+    [HttpGet("overdue")]
+    public async Task<IActionResult> GetOverdueRentals([FromQuery] GetOverdueRentalsQuery query)
+    {
+        var result = await _rentalsService.GetOverdueRentalsAsync(query);
+        return Ok(result);
+    }
+
+    [HttpPost("check-overdue")]
+    public async Task<IActionResult> CheckAndUpdateOverdueRentals()
+    {
+        var result = await _rentalsService.CheckAndUpdateOverdueRentalsAsync();
         return Ok(result);
     }
 }

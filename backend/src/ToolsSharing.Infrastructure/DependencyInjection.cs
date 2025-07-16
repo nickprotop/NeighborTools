@@ -84,6 +84,10 @@ public static class DependencyInjection
         // Dispute Notification Service
         services.AddScoped<IDisputeNotificationService, DisputeNotificationService>();
 
+        // Mobile and SMS Notification Services
+        services.AddScoped<IMobileNotificationService, MobileNotificationService>();
+        services.AddScoped<ISmsNotificationService, SmsNotificationService>();
+
         return services;
     }
 }

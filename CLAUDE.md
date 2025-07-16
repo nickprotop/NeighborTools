@@ -496,6 +496,11 @@ The project includes detailed TODO files with prioritized roadmap:
   - WSL compatibility issues resolved with Directory.Build.props
   - Docker images updated to .NET 9
   - All documentation and scripts updated
+- ✅ Frontend compilation fixes (completed January 2025)
+  - Fixed Tool.Images property access in OverdueRentalsManagement.razor (changed to ImageUrls)
+  - Resolved Guid conversion errors in admin components
+  - Fixed MudBlazor 8.x filter lambda expression issues
+  - Resolved nullable reference warnings in ExtendRentalDialog.razor
 - ✅ AutoMapper to Mapster migration
   - Resolved commercial licensing concerns
   - Improved performance and maintained functionality
@@ -547,6 +552,26 @@ The project includes detailed TODO files with prioritized roadmap:
   - Payment receipt service with detailed breakdowns
   - Background services for automated payout processing
   - Fraud detection service with configurable rules
+- ✅ Comprehensive Rental Workflow System (completed January 2025)
+  - Pickup/return confirmation API endpoints with PATCH /api/rentals/{id}/pickup and /api/rentals/{id}/return
+  - RentalLifecycleService background service for automated rental state transitions and overdue detection
+  - Enhanced RentalDetails.razor with 'Confirm Pickup', 'Confirm Return', and 'Extend Rental' buttons
+  - Progressive return reminder email notifications (2 days before, 1 day before, same day, and overdue escalation)
+  - Overdue rental detection with 1-day, 3-day, 7-day, and weekly notification escalation
+  - Rental extension functionality with conflict detection and additional cost calculation
+  - Admin overdue rental management UI with comprehensive filtering and actions
+  - Mobile push notification infrastructure with device token management (placeholder implementation)
+  - SMS notification infrastructure with Twilio/AWS SNS integration points (placeholder implementation)
+- ✅ Overdue Rental UI Alert System (completed January 2025)
+  - OverdueRentalAlertComponent.razor - Comprehensive overdue alert component with 295 lines of code
+  - Progressive severity levels based on days overdue (Recent -> Moderate -> Severe -> Critical)
+  - Integrated alerts on Home.razor, MyRentals.razor, and MyTools.razor pages
+  - Auto-refresh functionality every 5 minutes with Timer-based updates
+  - Differentiated alerts for renters (need to return) vs owners (tools are overdue)
+  - Action buttons for quick resolution (Mark as Returned, Contact Renter, View Details)
+  - Dismissible alerts with local state management for user experience
+  - Professional styling with CSS classes and progress indicators
+  - Real-time overdue progress calculation with maximum 14-day scale
 
 See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 

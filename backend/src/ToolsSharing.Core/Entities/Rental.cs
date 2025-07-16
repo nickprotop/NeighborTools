@@ -13,6 +13,9 @@ public class Rental : BaseEntity
     public string? Notes { get; set; }
     public DateTime? PickupDate { get; set; }
     public DateTime? ReturnDate { get; set; }
+    public string? ReturnConditionNotes { get; set; }
+    public string? ReturnedByUserId { get; set; }
+    public DateTime? DisputeDeadline { get; set; }
     public DateTime? ApprovedAt { get; set; }
     public DateTime? CancelledAt { get; set; }
     public string? CancellationReason { get; set; }
@@ -32,6 +35,7 @@ public enum RentalStatus
     Rejected,
     PickedUp,
     Returned,
+    Completed,
     Cancelled,
     Overdue
 }

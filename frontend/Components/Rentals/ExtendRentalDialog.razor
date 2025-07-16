@@ -1,0 +1,144 @@
+@using MudBlazor
+@using frontend.Services
+@inject IRentalService RentalService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="mr-3" />
+            Extend Rental
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudContainer Style="max-width: 500px;">
+            <MudText Class="mb-4">
+                Extend the rental period for <strong>@ToolName</strong>
+            </MudText>
+            
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Current End Date</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-3">
+                        @CurrentEndDate.ToString("MMM dd, yyyy")
+                    </MudText>
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudDatePicker @bind-Date="newEndDate" 
+                                   Label="New End Date" 
+                                   MinDate="@CurrentEndDate.AddDays(1)"
+                                   MaxDate="@CurrentEndDate.AddDays(30)"
+                                   Class="mb-3"
+                                   Required="true" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="notes" 
+                                  Label="Extension Notes (Optional)" 
+                                  Variant="Variant.Outlined" 
+                                  Lines="3" 
+                                  MaxLength="500"
+                                  Class="mb-3" />
+                </MudItem>
+                
+                @if (additionalCost > 0)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Info" Class="mb-3">
+                            <MudText Typo="Typo.body2">
+                                <strong>Additional Cost:</strong> $@additionalCost.ToString("F2")
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                Extension Period: @extensionDays day(s)
+                            </MudText>
+                        </MudAlert>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudContainer>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" StartIcon="@Icons.Material.Filled.Cancel">
+            Cancel
+        </MudButton>
+        <MudButton Color="Color.Primary" 
+                   OnClick="ExtendRental" 
+                   StartIcon="@Icons.Material.Filled.Schedule"
+                   Disabled="@(!IsFormValid || isProcessing)">
+            @if (isProcessing)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+            }
+            Extend Rental
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public Guid RentalId { get; set; }
+    [Parameter] public DateTime CurrentEndDate { get; set; }
+    [Parameter] public string ToolName { get; set; } = "";
+
+    private DateTime? newEndDate;
+    private string notes = "";
+    private bool isProcessing = false;
+    private decimal additionalCost = 0;
+    private int extensionDays = 0;
+
+    private bool IsFormValid => newEndDate.HasValue && newEndDate.Value > CurrentEndDate;
+
+    protected override void OnInitialized()
+    {
+        newEndDate = CurrentEndDate.AddDays(1);
+    }
+
+    private void OnDateChanged()
+    {
+        if (newEndDate.HasValue)
+        {
+            extensionDays = (int)(newEndDate.Value - CurrentEndDate).TotalDays;
+            // TODO: Calculate actual additional cost based on tool rates
+            additionalCost = extensionDays * 10; // Placeholder calculation
+        }
+    }
+
+    private async Task ExtendRental()
+    {
+        if (!IsFormValid || !newEndDate.HasValue)
+        {
+            Snackbar.Add("Please select a valid end date", Severity.Error);
+            return;
+        }
+
+        try
+        {
+            isProcessing = true;
+            var result = await RentalService.ExtendRentalAsync(RentalId, newEndDate.Value, notes);
+            
+            if (result.Success)
+            {
+                Snackbar.Add("Rental extended successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add($"Failed to extend rental: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error extending rental: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

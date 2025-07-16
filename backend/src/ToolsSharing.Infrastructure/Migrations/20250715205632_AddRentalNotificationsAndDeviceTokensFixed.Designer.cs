@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ToolsSharing.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using ToolsSharing.Infrastructure.Data;
 namespace ToolsSharing.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250715205632_AddRentalNotificationsAndDeviceTokensFixed")]
+    partial class AddRentalNotificationsAndDeviceTokensFixed
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1163,9 +1166,6 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.Property<decimal>("DepositAmount")
                         .HasColumnType("decimal(10,2)");
 
-                    b.Property<DateTime?>("DisputeDeadline")
-                        .HasColumnType("datetime(6)");
-
                     b.Property<DateTime>("EndDate")
                         .HasColumnType("datetime(6)");
 
@@ -1187,14 +1187,8 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
-                    b.Property<string>("ReturnConditionNotes")
-                        .HasColumnType("longtext");
-
                     b.Property<DateTime?>("ReturnDate")
                         .HasColumnType("datetime(6)");
-
-                    b.Property<string>("ReturnedByUserId")
-                        .HasColumnType("longtext");
 
                     b.Property<DateTime>("StartDate")
                         .HasColumnType("datetime(6)");

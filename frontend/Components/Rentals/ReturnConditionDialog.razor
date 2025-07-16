@@ -1,0 +1,111 @@
+@using frontend.Services
+@inject IRentalService RentalService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-3" />
+            <MudText Typo="Typo.h6">Confirm Tool Return</MudText>
+        </div>
+    </TitleContent>
+    <DialogContent>
+        <div class="mb-4">
+            <MudText Typo="Typo.body1" Class="mb-2">
+                You are about to mark <strong>@ToolName</strong> as returned.
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Please provide any relevant notes about the return process and the condition of the tool.
+            </MudText>
+        </div>
+
+        <MudTextField @bind-Value="notes"
+                      Label="Return Notes (Optional)"
+                      Lines="3"
+                      Variant="Variant.Outlined"
+                      HelperText="Any additional notes about the return process"
+                      Class="mb-4" />
+
+        <MudTextField @bind-Value="conditionNotes"
+                      Label="Tool Condition Notes"
+                      Lines="3"
+                      Variant="Variant.Outlined"
+                      HelperText="Please describe the condition of the tool (any damage, issues, or concerns)"
+                      Class="mb-4" />
+
+        <MudAlert Severity="Severity.Info" Dense="true" Class="mb-4">
+            <MudText Typo="Typo.body2">
+                <strong>Important:</strong> Once marked as returned, there is a 48-hour window for either party to 
+                report any issues or disputes. After this period, the rental will be automatically completed.
+            </MudText>
+        </MudAlert>
+
+        @if (isProcessing)
+        {
+            <div class="d-flex justify-center align-center pa-4">
+                <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                <MudText Class="ml-3">Processing return...</MudText>
+            </div>
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" 
+                   StartIcon="@Icons.Material.Filled.Cancel"
+                   Disabled="isProcessing">
+            Cancel
+        </MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled"
+                   OnClick="ConfirmReturn"
+                   StartIcon="@Icons.Material.Filled.CheckCircle"
+                   Disabled="isProcessing">
+            Confirm Return
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid RentalId { get; set; }
+    [Parameter] public string ToolName { get; set; } = "";
+
+    private string notes = "";
+    private string conditionNotes = "";
+    private bool isProcessing = false;
+
+    private async Task ConfirmReturn()
+    {
+        isProcessing = true;
+        try
+        {
+            var result = await RentalService.ConfirmReturnAsync(
+                RentalId, 
+                string.IsNullOrWhiteSpace(notes) ? null : notes,
+                string.IsNullOrWhiteSpace(conditionNotes) ? null : conditionNotes
+            );
+
+            if (result.Success)
+            {
+                Snackbar.Add("Tool return confirmed successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(true));
+            }
+            else
+            {
+                Snackbar.Add($"Failed to confirm return: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error confirming return: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

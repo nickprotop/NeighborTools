@@ -1,0 +1,433 @@
+@using frontend.Models
+@using frontend.Services
+@using frontend.Components.Disputes
+@using Microsoft.AspNetCore.Components.Authorization
+@inject IRentalService RentalService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+<div class="overdue-alerts-container">
+    @if (overdueRentals != null && overdueRentals.Any())
+    {
+        @foreach (var rental in overdueRentals)
+        {
+            <MudAlert Severity="@GetAlertSeverity(rental)" 
+                      Dense="@Dense" 
+                      Class="@($"overdue-alert {GetAlertClass(rental)} {Class}")"
+                      Icon="@GetAlertIcon(rental)"
+                      ShowCloseIcon="@Dismissible"
+                      CloseIconClicked="@(() => DismissAlert(rental.Id))">
+                
+                <div class="d-flex align-center">
+                    <div class="flex-grow-1">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">
+                            <strong>@GetAlertTitle(rental)</strong>
+                        </MudText>
+                        
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            @GetAlertDescription(rental)
+                        </MudText>
+                        
+                        @if (ShowDetails)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                @GetAlertDetails(rental)
+                            </MudText>
+                        }
+                    </div>
+                    
+                    @if (ShowActions)
+                    {
+                        <div class="ml-4">
+                            <MudButton Variant="Variant.Filled" 
+                                       Size="Size.Small" 
+                                       Color="Color.Error"
+                                       StartIcon="@Icons.Material.Filled.Assignment"
+                                       OnClick="@(() => ViewRentalDetails(rental.Id))"
+                                       Class="mr-2">
+                                View Details
+                            </MudButton>
+                            
+                            @if (IsUserRenter(rental) || IsUserOwner(rental))
+                            {
+                                <MudButton Variant="Variant.Outlined" 
+                                           Size="Size.Small" 
+                                           Color="Color.Success"
+                                           StartIcon="@Icons.Material.Filled.CheckCircle"
+                                           OnClick="@(() => MarkAsReturned(rental))">
+                                    @(IsUserOwner(rental) ? "Confirm Return" : "Mark as Returned")
+                                </MudButton>
+                            }
+                            
+                            @if (IsUserOwner(rental))
+                            {
+                                <MudButton Variant="Variant.Outlined" 
+                                           Size="Size.Small" 
+                                           Color="Color.Info"
+                                           StartIcon="@Icons.Material.Filled.Phone"
+                                           OnClick="@(() => ContactRenter(rental))"
+                                           Class="mr-2">
+                                    Contact Renter
+                                </MudButton>
+                            }
+                            
+                            @if (ShouldShowDisputeButton(rental))
+                            {
+                                <MudButton Variant="Variant.Outlined" 
+                                           Size="Size.Small" 
+                                           Color="Color.Warning"
+                                           StartIcon="@Icons.Material.Filled.Report"
+                                           OnClick="@(() => CreateDispute(rental))"
+                                           Class="mr-2">
+                                    Create Dispute
+                                </MudButton>
+                            }
+                        </div>
+                    }
+                </div>
+                
+                @if (ShowOverdueProgress)
+                {
+                    <div class="mt-3">
+                        <MudText Typo="Typo.caption" Class="mb-1">
+                            Days Overdue: <strong>@GetDaysOverdue(rental)</strong>
+                        </MudText>
+                        <MudProgressLinear Color="@GetOverdueColor(rental)" 
+                                           Value="@GetOverdueProgress(rental)" 
+                                           Size="Size.Small"/>
+                    </div>
+                }
+            </MudAlert>
+        }
+    }
+</div>
+
+<style>
+    .overdue-alerts-container {
+        margin-bottom: 1rem;
+    }
+    
+    .overdue-alert {
+        border-left: 4px solid;
+        margin-bottom: 12px;
+    }
+    
+    .overdue-alert.critical {
+        border-left-color: #d32f2f;
+        background-color: rgba(211, 47, 47, 0.08);
+    }
+    
+    .overdue-alert.severe {
+        border-left-color: #f57c00;
+        background-color: rgba(245, 124, 0, 0.08);
+    }
+    
+    .overdue-alert.moderate {
+        border-left-color: #ed6c02;
+        background-color: rgba(237, 108, 2, 0.08);
+    }
+    
+    .overdue-alert.recent {
+        border-left-color: #ff9800;
+        background-color: rgba(255, 152, 0, 0.08);
+    }
+</style>
+
+@code {
+    [Parameter] public bool Dense { get; set; } = false;
+    [Parameter] public bool Dismissible { get; set; } = true;
+    [Parameter] public bool ShowDetails { get; set; } = true;
+    [Parameter] public bool ShowActions { get; set; } = true;
+    [Parameter] public bool ShowOverdueProgress { get; set; } = true;
+    [Parameter] public bool AutoRefresh { get; set; } = true;
+    [Parameter] public string Class { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> OnRentalDismissed { get; set; }
+    [Parameter] public EventCallback<Rental> OnRentalAction { get; set; }
+    
+    private List<Rental>? overdueRentals;
+    private string? currentUserId;
+    private HashSet<string> dismissedAlerts = new();
+    private Timer? refreshTimer;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCurrentUser();
+        await LoadOverdueRentals();
+        
+        if (AutoRefresh)
+        {
+            // Refresh every 5 minutes
+            refreshTimer = new Timer(async _ => await InvokeAsync(async () => await LoadOverdueRentals()), 
+                                   null, TimeSpan.FromMinutes(5), TimeSpan.FromMinutes(5));
+        }
+    }
+
+    private async Task LoadCurrentUser()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+    }
+
+    private async Task LoadOverdueRentals()
+    {
+        try
+        {
+            var allOverdueRentals = new List<Rental>();
+            
+            // Get rentals where user is renter
+            var renterResult = await RentalService.GetMyRentalsAsync("Overdue");
+            if (renterResult.Success && renterResult.Data != null)
+            {
+                var renterOverdueRentals = renterResult.Data
+                    .Where(r => (r.Status == "PickedUp" || r.Status == "Overdue") && 
+                               r.EndDate < DateTime.UtcNow &&
+                               !dismissedAlerts.Contains(r.Id))
+                    .ToList();
+                
+                allOverdueRentals.AddRange(renterOverdueRentals);
+            }
+            
+            // Get rentals where user is owner
+            var ownerResult = await RentalService.GetMyToolRentalsAsync("Overdue");
+            if (ownerResult.Success && ownerResult.Data != null)
+            {
+                var ownerOverdueRentals = ownerResult.Data
+                    .Where(r => (r.Status == "PickedUp" || r.Status == "Overdue") && 
+                               r.EndDate < DateTime.UtcNow &&
+                               !dismissedAlerts.Contains(r.Id))
+                    .ToList();
+                
+                allOverdueRentals.AddRange(ownerOverdueRentals);
+            }
+            
+            // Remove duplicates by rental ID
+            overdueRentals = allOverdueRentals
+                .GroupBy(r => r.Id)
+                .Select(g => g.First())
+                .ToList();
+                
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            // Silent error handling for alerts
+            Console.WriteLine($"Error loading overdue rentals: {ex.Message}");
+        }
+    }
+
+    private Severity GetAlertSeverity(Rental rental)
+    {
+        var daysOverdue = GetDaysOverdue(rental);
+        return daysOverdue switch
+        {
+            >= 7 => Severity.Error,
+            >= 3 => Severity.Warning,
+            >= 1 => Severity.Warning,
+            _ => Severity.Info
+        };
+    }
+
+    private string GetAlertClass(Rental rental)
+    {
+        var daysOverdue = GetDaysOverdue(rental);
+        return daysOverdue switch
+        {
+            >= 14 => "critical",
+            >= 7 => "severe",
+            >= 3 => "moderate",
+            _ => "recent"
+        };
+    }
+
+    private string GetAlertIcon(Rental rental)
+    {
+        var daysOverdue = GetDaysOverdue(rental);
+        return daysOverdue switch
+        {
+            >= 7 => Icons.Material.Filled.Error,
+            >= 3 => Icons.Material.Filled.Warning,
+            _ => Icons.Material.Filled.Schedule
+        };
+    }
+
+    private string GetAlertTitle(Rental rental)
+    {
+        var daysOverdue = GetDaysOverdue(rental);
+        var isOwner = IsUserOwner(rental);
+        
+        return daysOverdue switch
+        {
+            >= 14 => isOwner ? "Critical: Tool Severely Overdue" : "Critical: You Must Return This Tool",
+            >= 7 => isOwner ? "Urgent: Tool Overdue for 1+ Week" : "Urgent: Tool Return Overdue",
+            >= 3 => isOwner ? "Tool Overdue for 3+ Days" : "Tool Return Overdue",
+            _ => isOwner ? "Renter Has Overdue Tool" : "Tool Return is Overdue"
+        };
+    }
+
+    private string GetAlertDescription(Rental rental)
+    {
+        var daysOverdue = GetDaysOverdue(rental);
+        var isOwner = IsUserOwner(rental);
+        
+        if (isOwner)
+        {
+            return $"{rental.RenterName} has had your {rental.ToolName} for {daysOverdue} day{(daysOverdue > 1 ? "s" : "")} past the return date.";
+        }
+        else
+        {
+            return $"You need to return {rental.ToolName} to {rental.OwnerName}. It was due {daysOverdue} day{(daysOverdue > 1 ? "s" : "")} ago.";
+        }
+    }
+
+    private string GetAlertDetails(Rental rental)
+    {
+        return $"Original return date: {rental.EndDate:MMM dd, yyyy 'at' h:mm tt}";
+    }
+
+    private int GetDaysOverdue(Rental rental)
+    {
+        return (int)(DateTime.UtcNow - rental.EndDate).TotalDays;
+    }
+
+    private bool IsUserRenter(Rental rental)
+    {
+        return rental.RenterId == currentUserId;
+    }
+
+    private bool IsUserOwner(Rental rental)
+    {
+        return rental.OwnerId == currentUserId;
+    }
+
+    private Color GetOverdueColor(Rental rental)
+    {
+        var daysOverdue = GetDaysOverdue(rental);
+        return daysOverdue switch
+        {
+            >= 14 => Color.Error,
+            >= 7 => Color.Warning,
+            >= 3 => Color.Warning,
+            _ => Color.Info
+        };
+    }
+
+    private double GetOverdueProgress(Rental rental)
+    {
+        var daysOverdue = GetDaysOverdue(rental);
+        return Math.Min(100, (daysOverdue / 14.0) * 100); // Max progress at 14 days
+    }
+
+    private void ViewRentalDetails(string rentalId)
+    {
+        Navigation.NavigateTo($"/rentals/{rentalId}");
+    }
+
+    private async Task MarkAsReturned(Rental rental)
+    {
+        try
+        {
+            var parameters = new DialogParameters 
+            { 
+                { "RentalId", Guid.Parse(rental.Id) },
+                { "ToolName", rental.ToolName }
+            };
+            
+            var options = new DialogOptions 
+            { 
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true
+            };
+            
+            var dialog = DialogService.Show<ReturnConditionDialog>("Confirm Return", parameters, options);
+            var result = await dialog.Result;
+            
+            if (!result.Canceled)
+            {
+                await LoadOverdueRentals(); // Refresh the list
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error opening return dialog: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ContactRenter(Rental rental)
+    {
+        // TODO: Implement contact renter functionality
+        Snackbar.Add($"Contacting {rental.RenterName} about overdue return", Severity.Info);
+    }
+    
+    private bool ShouldShowDisputeButton(Rental rental)
+    {
+        // Show dispute button if:
+        // 1. Rental is overdue or returned
+        // 2. User is involved in the rental (renter or owner)
+        // 3. Within dispute window (if returned) or anytime (if overdue)
+        
+        if (!IsUserRenter(rental) && !IsUserOwner(rental))
+            return false;
+            
+        // For overdue rentals, always show dispute button
+        if (rental.Status == "Overdue" || (rental.Status == "PickedUp" && rental.EndDate < DateTime.UtcNow))
+            return true;
+            
+        // For returned rentals, show if within dispute window
+        if (rental.Status == "Returned" && rental.DisputeDeadline.HasValue)
+            return DateTime.UtcNow <= rental.DisputeDeadline.Value;
+            
+        return false;
+    }
+    
+    private async Task CreateDispute(Rental rental)
+    {
+        try
+        {
+            var parameters = new DialogParameters 
+            { 
+                { "RentalId", rental.Id },
+                { "RentalTitle", rental.ToolName }
+            };
+            
+            var options = new DialogOptions 
+            { 
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true
+            };
+            
+            var dialog = DialogService.Show<CreateDisputeDialog>("Create Dispute", parameters, options);
+            var result = await dialog.Result;
+            
+            if (!result.Canceled)
+            {
+                await LoadOverdueRentals(); // Refresh the list
+                Snackbar.Add("Dispute created successfully", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating dispute: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void DismissAlert(string rentalId)
+    {
+        dismissedAlerts.Add(rentalId);
+        overdueRentals = overdueRentals?.Where(r => r.Id != rentalId).ToList();
+        StateHasChanged();
+        
+        if (OnRentalDismissed.HasDelegate)
+        {
+            OnRentalDismissed.InvokeAsync(rentalId);
+        }
+    }
+
+    public void Dispose()
+    {
+        refreshTimer?.Dispose();
+    }
+}

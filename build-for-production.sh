@@ -1,9 +1,58 @@
 #!/bin/bash
 
 # Production build script for NeighborTools
-API_URL=${1:-"https://api.neighbortools.com"}
-ENVIRONMENT=${2:-"Production"}
-OUTPUT_DIR=${3:-"./publish"}
+# Usage: ./build-for-production.sh [OPTIONS]
+# 
+# Options:
+#   --api-url URL          API base URL (default: https://api.neighbortools.com)
+#   --environment ENV      Environment name (default: Production)
+#   --output-dir DIR       Output directory (default: ./publish)
+#   --help                 Show this help message
+
+# Set defaults
+API_URL="https://api.neighbortools.com"
+ENVIRONMENT="Production"
+OUTPUT_DIR="./publish"
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --api-url)
+            API_URL="$2"
+            shift 2
+            ;;
+        --environment)
+            ENVIRONMENT="$2"
+            shift 2
+            ;;
+        --output-dir)
+            OUTPUT_DIR="$2"
+            shift 2
+            ;;
+        --help|-h)
+            echo "Production build script for NeighborTools"
+            echo ""
+            echo "Usage: ./build-for-production.sh [OPTIONS]"
+            echo ""
+            echo "Options:"
+            echo "  --api-url URL          API base URL (default: https://api.neighbortools.com)"
+            echo "  --environment ENV      Environment name (default: Production)"
+            echo "  --output-dir DIR       Output directory (default: ./publish)"
+            echo "  --help, -h             Show this help message"
+            echo ""
+            echo "Examples:"
+            echo "  ./build-for-production.sh"
+            echo "  ./build-for-production.sh --api-url \"https://api.yourapp.com\""
+            echo "  ./build-for-production.sh --environment \"Staging\" --output-dir \"./staging\""
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
 echo "========================================="
 echo "Building NeighborTools for Production"
@@ -16,7 +65,7 @@ echo "========================================="
 # Validate API URL format
 if [[ ! "$API_URL" =~ ^https?:// ]]; then
     echo "❌ Error: API URL must start with http:// or https://"
-    echo "   Example: ./build-for-production.sh \"https://api.yourapp.com\""
+    echo "   Example: ./build-for-production.sh --api-url \"https://api.yourapp.com\""
     exit 1
 fi
 
@@ -69,11 +118,15 @@ fi
 
 cd frontend
 
-echo "🔨 Building frontend with production configuration..."
-if [ -f "build.sh" ]; then
-    ./build.sh "$API_URL" "$ENVIRONMENT" "Release"
+echo "🔧 Configuring frontend..."
+if [ -f "configure.sh" ]; then
+    ./configure.sh --api-url "$API_URL" --environment "$ENVIRONMENT"
+    if [ $? -ne 0 ]; then
+        echo "❌ Frontend configuration failed!"
+        exit 1
+    fi
 else
-    echo "❌ build.sh not found in frontend directory"
+    echo "❌ configure.sh not found in frontend directory"
     exit 1
 fi
 

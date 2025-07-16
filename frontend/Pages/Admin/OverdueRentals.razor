@@ -1,0 +1,8 @@
+@page "/admin/overdue-rentals"
+@using Microsoft.AspNetCore.Authorization
+@using frontend.Components.Admin
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Overdue Rentals Management - Admin - NeighborTools</PageTitle>
+
+<OverdueRentalsManagement />

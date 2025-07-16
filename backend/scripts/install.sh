@@ -65,9 +65,40 @@ MYSQL_ROOT_PASSWORD=$(read_password "MySQL root password" "RootPassword123!")
 MYSQL_USER_PASSWORD=$(read_password "MySQL toolsuser password" "ToolsPassword123!")
 
 echo ""
-echo "✅ Database configuration complete"
+echo "🌐 Frontend Configuration"
+echo "========================"
+echo "Configure the frontend base URL for development."
+echo ""
+
+# Function to read text input with default
+read_input() {
+    local prompt="$1"
+    local default="$2"
+    local input
+    
+    echo -n "$prompt"
+    if [ -n "$default" ]; then
+        echo -n " [default: $default]: "
+    else
+        echo -n ": "
+    fi
+    
+    read input
+    
+    if [ -z "$input" ] && [ -n "$default" ]; then
+        input="$default"
+    fi
+    
+    echo "$input"
+}
+
+FRONTEND_BASE_URL=$(read_input "Frontend base URL" "http://localhost:5000")
+
+echo ""
+echo "✅ Configuration complete"
 echo "   Root password: $(echo "$MYSQL_ROOT_PASSWORD" | sed 's/./*/g')"
 echo "   User password: $(echo "$MYSQL_USER_PASSWORD" | sed 's/./*/g')"
+echo "   Frontend URL: $FRONTEND_BASE_URL"
 
 # Create .env file for docker-compose
 DOCKER_DIR="$(dirname "$0")/../docker"
@@ -150,17 +181,20 @@ if [ ! -f "config.json" ]; then
     fi
 fi
 
-# Update the database connection string in config.json
+# Update the database connection string and frontend base URL in config.json
 CONNECTION_STRING="server=localhost;port=3306;database=toolssharing;uid=toolsuser;pwd=${MYSQL_USER_PASSWORD}"
 if command -v jq &> /dev/null; then
     # Use jq if available for proper JSON manipulation
     tmp=$(mktemp)
-    jq --arg conn "$CONNECTION_STRING" '.ConnectionStrings.DefaultConnection = $conn' config.json > "$tmp" && mv "$tmp" config.json
-    echo "✅ Updated database connection string in config.json (using jq)"
+    jq --arg conn "$CONNECTION_STRING" --arg frontend "$FRONTEND_BASE_URL" \
+       '.ConnectionStrings.DefaultConnection = $conn | .Frontend.BaseUrl = $frontend' \
+       config.json > "$tmp" && mv "$tmp" config.json
+    echo "✅ Updated database connection string and frontend base URL in config.json (using jq)"
 else
     # Fallback to sed for basic replacement
     sed -i "s|\"DefaultConnection\": \".*\"|\"DefaultConnection\": \"$CONNECTION_STRING\"|g" config.json
-    echo "✅ Updated database connection string in config.json (using sed)"
+    sed -i "s|\"BaseUrl\": \".*\"|\"BaseUrl\": \"$FRONTEND_BASE_URL\"|g" config.json
+    echo "✅ Updated database connection string and frontend base URL in config.json (using sed)"
 fi
 
 cd ../..
@@ -180,11 +214,12 @@ echo "Next steps:"
 echo "  • Run './start-all.sh' to start development environment"
 echo "  • Or run './start-infrastructure.sh' + 'dotnet run' for API debugging"
 echo "  • Access Swagger UI at: http://localhost:5002/swagger"
+echo "  • Frontend will be available at: $FRONTEND_BASE_URL"
 echo "  • MySQL: localhost:3306 (user: toolsuser, password: [configured above])"
 echo "  • Redis: localhost:6379"
 echo ""
 echo "Configuration Files Updated:"
 echo "  • Docker Compose: Uses environment variables with fallback to defaults"
-echo "  • Backend config.json: Updated with your database password"
+echo "  • Backend config.json: Updated with database password and frontend base URL"
 echo ""
 echo "Happy coding! 🚀"

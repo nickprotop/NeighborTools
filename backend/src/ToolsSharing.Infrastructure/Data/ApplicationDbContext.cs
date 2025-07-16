@@ -40,6 +40,10 @@ public class ApplicationDbContext : IdentityDbContext<User>
     public DbSet<Dispute> Disputes { get; set; }
     public DbSet<DisputeMessage> DisputeMessages { get; set; }
     public DbSet<DisputeEvidence> DisputeEvidence { get; set; }
+    
+    // Rental notification entities
+    public DbSet<RentalNotification> RentalNotifications { get; set; }
+    public DbSet<UserDeviceToken> UserDeviceTokens { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

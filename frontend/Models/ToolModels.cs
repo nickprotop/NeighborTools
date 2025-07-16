@@ -77,10 +77,14 @@ public class Rental
     public string? Notes { get; set; }
     public DateTime? PickupDate { get; set; }
     public DateTime? ReturnDate { get; set; }
+    public string? ReturnConditionNotes { get; set; }
+    public string? ReturnedByUserId { get; set; }
+    public DateTime? DisputeDeadline { get; set; }
     public DateTime? ApprovedAt { get; set; }
     public DateTime? CancelledAt { get; set; }
     public string? CancellationReason { get; set; }
     public DateTime CreatedAt { get; set; }
+    public DateTime UpdatedAt { get; set; }
     public Tool? Tool { get; set; }
     public bool IsPaid { get; set; }
 }

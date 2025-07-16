@@ -1,0 +1,830 @@
+@page "/help"
+@using MudBlazor
+@inject IJSRuntime JSRuntime
+
+<PageTitle>Help Center - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <div class="d-flex align-center mb-6">
+        <MudIcon Icon="@Icons.Material.Filled.Help" Color="Color.Primary" Class="mr-3" Style="font-size: 3rem;" />
+        <div>
+            <MudText Typo="Typo.h3" Color="Color.Primary">Help Center</MudText>
+            <MudText Typo="Typo.subtitle1" Color="Color.Secondary">Everything you need to know about NeighborTools</MudText>
+        </div>
+    </div>
+
+    <MudGrid>
+        <MudItem xs="12" md="3">
+            <MudPaper Elevation="2" Class="pa-4" Style="position: sticky; top: 20px;">
+                <MudText Typo="Typo.h6" Class="mb-3">Quick Navigation</MudText>
+                <MudNavMenu>
+                    <MudNavLink OnClick="@(() => ScrollToSection("getting-started"))" Icon="@Icons.Material.Filled.PlayArrow">Getting Started</MudNavLink>
+                    <MudNavLink OnClick="@(() => ScrollToSection("for-renters"))" Icon="@Icons.Material.Filled.Person">For Renters</MudNavLink>
+                    <MudNavLink OnClick="@(() => ScrollToSection("for-owners"))" Icon="@Icons.Material.Filled.HomeWork">For Tool Owners</MudNavLink>
+                    <MudNavLink OnClick="@(() => ScrollToSection("payments"))" Icon="@Icons.Material.Filled.Payment">Payments & Billing</MudNavLink>
+                    <MudNavLink OnClick="@(() => ScrollToSection("disputes"))" Icon="@Icons.Material.Filled.Report">Disputes & Issues</MudNavLink>
+                    <MudNavLink OnClick="@(() => ScrollToSection("safety"))" Icon="@Icons.Material.Filled.Security">Safety & Trust</MudNavLink>
+                    <MudNavLink OnClick="@(() => ScrollToSection("legal"))" Icon="@Icons.Material.Filled.Gavel">Legal & Terms</MudNavLink>
+                    <MudNavLink OnClick="@(() => ScrollToSection("faq"))" Icon="@Icons.Material.Filled.QuestionAnswer">FAQ</MudNavLink>
+                </MudNavMenu>
+            </MudPaper>
+        </MudItem>
+
+        <MudItem xs="12" md="9">
+            <!-- Getting Started Section -->
+            <div id="getting-started">
+                <MudPaper Elevation="4" Class="pa-6 mb-6">
+                    <div class="d-flex align-center mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.PlayArrow" Color="Color.Primary" Class="mr-3" Style="font-size: 2rem;" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">Getting Started</MudText>
+                    </div>
+
+                    <MudText Typo="Typo.h6" Class="mb-3">What is NeighborTools?</MudText>
+                    <MudText Typo="Typo.body1" Class="mb-4">
+                        NeighborTools is a peer-to-peer tool sharing platform that connects tool owners with people who need to borrow tools. 
+                        Whether you're a homeowner with a garage full of tools or someone who needs a specific tool for a weekend project, 
+                        NeighborTools makes it easy to share and access tools in your community.
+                    </MudText>
+
+                    <MudText Typo="Typo.h6" Class="mb-3">How It Works</MudText>
+                    <MudTimeline>
+                        <MudTimelineItem Color="Color.Primary" Icon="@Icons.Material.Filled.Search">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">1. Browse & Search</MudText>
+                            <MudText Typo="Typo.body2">Find the tools you need using our search and filter features</MudText>
+                        </MudTimelineItem>
+                        <MudTimelineItem Color="Color.Primary" Icon="@Icons.Material.Filled.CalendarToday">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">2. Request & Book</MudText>
+                            <MudText Typo="Typo.body2">Send a rental request with your desired dates and message</MudText>
+                        </MudTimelineItem>
+                        <MudTimelineItem Color="Color.Primary" Icon="@Icons.Material.Filled.Payment">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">3. Pay Securely</MudText>
+                            <MudText Typo="Typo.body2">Complete payment through our secure PayPal integration</MudText>
+                        </MudTimelineItem>
+                        <MudTimelineItem Color="Color.Primary" Icon="@Icons.Material.Filled.LocalShipping">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">4. Pickup & Use</MudText>
+                            <MudText Typo="Typo.body2">Coordinate pickup with the owner and use the tool safely</MudText>
+                        </MudTimelineItem>
+                        <MudTimelineItem Color="Color.Primary" Icon="@Icons.Material.Filled.AssignmentReturn">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">5. Return & Review</MudText>
+                            <MudText Typo="Typo.body2">Return the tool on time and leave a review for the community</MudText>
+                        </MudTimelineItem>
+                    </MudTimeline>
+                </MudPaper>
+            </div>
+
+            <!-- For Renters Section -->
+            <div id="for-renters">
+                <MudPaper Elevation="4" Class="pa-6 mb-6">
+                    <div class="d-flex align-center mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Color="Color.Primary" Class="mr-3" Style="font-size: 2rem;" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">For Renters</MudText>
+                    </div>
+
+                    <MudExpansionPanels Elevation="2" Class="mb-4">
+                        <MudExpansionPanel IsInitiallyExpanded="true">
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Search" Class="mr-3" />
+                                    <MudText>Finding Tools</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Search by Category:</strong> Use the category filters to browse tools by type (Power Tools, Hand Tools, Garden Tools, etc.)
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Location-Based Results:</strong> Tools are sorted by proximity to ensure convenient pickup
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Advanced Filters:</strong> Filter by price range, availability dates, and tool condition
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Detailed Listings:</strong> Each tool includes photos, specifications, owner ratings, and pickup location
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="mr-3" />
+                                    <MudText>Making Rental Requests</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Rental Dates:</strong> Select your pickup and return dates carefully, considering the tool owner's lead time requirements
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Personal Message:</strong> Include details about your project and demonstrate responsibility
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Auto-Approval:</strong> Some owners enable automatic approval for faster booking
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Response Time:</strong> Most owners respond within 24 hours. You'll receive notifications via email
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Class="mr-3" />
+                                    <MudText>Pickup & Return Process</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Pickup Coordination:</strong> Contact the owner to arrange pickup time and location details
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Tool Inspection:</strong> Check the tool's condition before pickup and report any issues immediately
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Usage Guidelines:</strong> Follow all safety instructions and use tools only for intended purposes
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Return on Time:</strong> Return tools by the agreed date to avoid late fees and maintain good standing
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Return Condition:</strong> Clean tools and return in the same condition as received
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Extension" Class="mr-3" />
+                                    <MudText>Extending Rentals</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>When to Extend:</strong> If you need more time, request an extension before the return date
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Availability Check:</strong> Extensions are subject to the tool's availability for the additional period
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Additional Payment:</strong> Extension fees are calculated automatically and charged immediately
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+
+                    <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Lightbulb" Class="mb-4">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Renter Tips for Success</MudText>
+                        <ul>
+                            <li>Build a complete profile with photo and verification to increase approval rates</li>
+                            <li>Read tool descriptions and owner requirements carefully</li>
+                            <li>Communicate clearly and promptly with tool owners</li>
+                            <li>Take photos of tool condition before and after use</li>
+                            <li>Leave honest reviews to help the community</li>
+                        </ul>
+                    </MudAlert>
+                </MudPaper>
+            </div>
+
+            <!-- For Tool Owners Section -->
+            <div id="for-owners">
+                <MudPaper Elevation="4" Class="pa-6 mb-6">
+                    <div class="d-flex align-center mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.HomeWork" Color="Color.Primary" Class="mr-3" Style="font-size: 2rem;" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">For Tool Owners</MudText>
+                    </div>
+
+                    <MudExpansionPanels Elevation="2" Class="mb-4">
+                        <MudExpansionPanel IsInitiallyExpanded="true">
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Add" Class="mr-3" />
+                                    <MudText>Listing Your Tools</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Tool Information:</strong> Provide detailed descriptions including brand, model, condition, and specifications
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>High-Quality Photos:</strong> Upload clear photos from multiple angles to showcase your tools
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Competitive Pricing:</strong> Set fair daily/weekly rates based on tool value and local market
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Security Deposits:</strong> Set appropriate deposits to protect against damage or loss
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Availability Calendar:</strong> Keep your availability updated to avoid booking conflicts
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-3" />
+                                    <MudText>Rental Settings & Preferences</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Lead Time:</strong> Set minimum notice required for bookings (default 24 hours)
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Auto-Approval:</strong> Enable automatic approval for trusted renters or all requests
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Deposit Requirements:</strong> Configure security deposit amounts and policies
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Usage Restrictions:</strong> Specify any limitations or special requirements for your tools
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Pickup Preferences:</strong> Set your preferred pickup times and location details
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-3" />
+                                    <MudText>Managing Rental Requests</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Request Review:</strong> Evaluate renter profiles, project details, and rental history
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Quick Responses:</strong> Respond to requests promptly to maintain high service ratings
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Clear Communication:</strong> Provide pickup instructions and any special requirements
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Rejection Guidelines:</strong> If declining, provide helpful alternative suggestions when possible
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.AccountBalance" Class="mr-3" />
+                                    <MudText>Earning & Payouts</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Platform Commission:</strong> NeighborTools takes a 5% platform fee from successful rentals
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Automatic Payouts:</strong> Earnings are automatically transferred after successful rental completion
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>PayPal Integration:</strong> Set up your PayPal account for secure payment processing
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Deposit Handling:</strong> Security deposits are held and released automatically upon safe return
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Tax Reporting:</strong> Track your earnings for tax purposes through your dashboard
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+
+                    <MudAlert Severity="Severity.Success" Icon="@Icons.Material.Filled.TrendingUp" Class="mb-4">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Owner Tips for Maximum Earnings</MudText>
+                        <ul>
+                            <li>Keep tools well-maintained and clean for better reviews</li>
+                            <li>Respond quickly to rental requests to boost your rating</li>
+                            <li>Offer competitive pricing while protecting your investment</li>
+                            <li>Use detailed photos and descriptions to attract more renters</li>
+                            <li>Build relationships with reliable repeat customers</li>
+                        </ul>
+                    </MudAlert>
+                </MudPaper>
+            </div>
+
+            <!-- Payments & Billing Section -->
+            <div id="payments">
+                <MudPaper Elevation="4" Class="pa-6 mb-6">
+                    <div class="d-flex align-center mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Payment" Color="Color.Primary" Class="mr-3" Style="font-size: 2rem;" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">Payments & Billing</MudText>
+                    </div>
+
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.h6" Class="mb-3">Payment Security</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-3">
+                                All payments are processed securely through PayPal, ensuring your financial information is protected. 
+                                We never store payment details on our servers.
+                            </MudText>
+
+                            <MudText Typo="Typo.h6" Class="mb-3">Payment Structure</MudText>
+                            <MudList T="string">
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.AttachMoney">
+                                    <MudText><strong>Rental Fee:</strong> Based on daily/weekly rates set by owners</MudText>
+                                </MudListItem>
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Security">
+                                    <MudText><strong>Security Deposit:</strong> Refundable deposit to protect against damage</MudText>
+                                </MudListItem>
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Business">
+                                    <MudText><strong>Platform Fee:</strong> 5% service fee for secure transactions and support</MudText>
+                                </MudListItem>
+                            </MudList>
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.h6" Class="mb-3">Refund Policy</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-3">
+                                <strong>Security Deposits:</strong> Automatically refunded within 48 hours after successful return
+                            </MudText>
+                            <MudText Typo="Typo.body1" Class="mb-3">
+                                <strong>Cancellations:</strong> Full refund if cancelled 24+ hours before pickup
+                            </MudText>
+                            <MudText Typo="Typo.body1" Class="mb-3">
+                                <strong>Owner Cancellations:</strong> Full refund with additional credit for inconvenience
+                            </MudText>
+
+                            <MudText Typo="Typo.h6" Class="mb-3">Payment Timeline</MudText>
+                            <MudTimeline Orientation="Orientation.Vertical" TimelineAlign="TimelineAlign.Start">
+                                <MudTimelineItem Size="Size.Small" Color="Color.Primary">
+                                    <MudText Typo="Typo.caption">Payment due upon booking approval</MudText>
+                                </MudTimelineItem>
+                                <MudTimelineItem Size="Size.Small" Color="Color.Primary">
+                                    <MudText Typo="Typo.caption">Security deposit held during rental</MudText>
+                                </MudTimelineItem>
+                                <MudTimelineItem Size="Size.Small" Color="Color.Primary">
+                                    <MudText Typo="Typo.caption">Owner payout after successful return</MudText>
+                                </MudTimelineItem>
+                                <MudTimelineItem Size="Size.Small" Color="Color.Primary">
+                                    <MudText Typo="Typo.caption">Deposit refund within 48 hours</MudText>
+                                </MudTimelineItem>
+                            </MudTimeline>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </div>
+
+            <!-- Disputes & Issues Section -->
+            <div id="disputes">
+                <MudPaper Elevation="4" Class="pa-6 mb-6">
+                    <div class="d-flex align-center mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Report" Color="Color.Primary" Class="mr-3" Style="font-size: 2rem;" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">Disputes & Issues</MudText>
+                    </div>
+
+                    <MudText Typo="Typo.h6" Class="mb-3">When to Create a Dispute</MudText>
+                    <MudGrid Class="mb-4">
+                        <MudItem xs="12" md="4">
+                            <MudPaper Elevation="2" Class="pa-4" Style="height: 100%;">
+                                <div class="d-flex align-center mb-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Warning" Class="mr-2" />
+                                    <MudText Typo="Typo.subtitle1">Late Returns</MudText>
+                                </div>
+                                <MudText Typo="Typo.body2">
+                                    When tools are not returned by the agreed date, create a dispute to document the issue and seek resolution.
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudPaper Elevation="2" Class="pa-4" Style="height: 100%;">
+                                <div class="d-flex align-center mb-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.BrokenImage" Color="Color.Error" Class="mr-2" />
+                                    <MudText Typo="Typo.subtitle1">Damage Issues</MudText>
+                                </div>
+                                <MudText Typo="Typo.body2">
+                                    If tools are damaged during rental or returned in poor condition, disputes help resolve compensation.
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                        <MudItem xs="12" md="4">
+                            <MudPaper Elevation="2" Class="pa-4" Style="height: 100%;">
+                                <div class="d-flex align-center mb-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.ThumbDown" Color="Color.Info" Class="mr-2" />
+                                    <MudText Typo="Typo.subtitle1">Service Issues</MudText>
+                                </div>
+                                <MudText Typo="Typo.body2">
+                                    For communication problems, inaccurate listings, or other service-related concerns.
+                                </MudText>
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+
+                    <MudText Typo="Typo.h6" Class="mb-3">Dispute Process</MudText>
+                    <MudStepper HeaderBadgeView="BadgeView.All" DisableAnimation="true">
+                        <MudStep Title="Create Dispute">
+                            <MudText>File a dispute within 48 hours of the incident with detailed description and evidence</MudText>
+                        </MudStep>
+                        <MudStep Title="Communication">
+                            <MudText>Both parties can communicate through the dispute system to resolve issues directly</MudText>
+                        </MudStep>
+                        <MudStep Title="Admin Review">
+                            <MudText>If needed, our support team reviews evidence and mediates a fair resolution</MudText>
+                        </MudStep>
+                        <MudStep Title="Resolution">
+                            <MudText>Final decision implemented with appropriate refunds, compensation, or other remedies</MudText>
+                        </MudStep>
+                    </MudStepper>
+
+                    <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Timer" Class="mt-4">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Important Timing</MudText>
+                        <MudText Typo="Typo.body2">
+                            Disputes must be created within 48 hours after return confirmation. This window ensures 
+                            timely resolution while memories and evidence are fresh.
+                        </MudText>
+                    </MudAlert>
+                </MudPaper>
+            </div>
+
+            <!-- Safety & Trust Section -->
+            <div id="safety">
+                <MudPaper Elevation="4" Class="pa-6 mb-6">
+                    <div class="d-flex align-center mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Primary" Class="mr-3" Style="font-size: 2rem;" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">Safety & Trust</MudText>
+                    </div>
+
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.h6" Class="mb-3">User Verification</MudText>
+                            <MudList T="string">
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Email">
+                                    <MudText>Email verification required for all users</MudText>
+                                </MudListItem>
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Phone">
+                                    <MudText>Phone number verification for enhanced security</MudText>
+                                </MudListItem>
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Badge">
+                                    <MudText>Profile completion scoring and badges</MudText>
+                                </MudListItem>
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Reviews">
+                                    <MudText>Community-driven rating and review system</MudText>
+                                </MudListItem>
+                            </MudList>
+
+                            <MudText Typo="Typo.h6" Class="mb-3 mt-4">Tool Safety</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2">
+                                <strong>Safety First:</strong> Always read tool manuals and follow safety guidelines
+                            </MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2">
+                                <strong>Proper Equipment:</strong> Use appropriate safety gear (goggles, gloves, etc.)
+                            </MudText>
+                            <MudText Typo="Typo.body1">
+                                <strong>Report Issues:</strong> Immediately report any safety concerns or malfunctions
+                            </MudText>
+                        </MudItem>
+
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.h6" Class="mb-3">Fraud Prevention</MudText>
+                            <MudList T="string">
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Shield">
+                                    <MudText>Advanced fraud detection algorithms</MudText>
+                                </MudListItem>
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Speed">
+                                    <MudText>Velocity limits on rental activity</MudText>
+                                </MudListItem>
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.MonitorHeart">
+                                    <MudText>Continuous monitoring of suspicious patterns</MudText>
+                                </MudListItem>
+                                <MudListItem T="string" Icon="@Icons.Material.Filled.Support">
+                                    <MudText>24/7 support for security concerns</MudText>
+                                </MudListItem>
+                            </MudList>
+
+                            <MudText Typo="Typo.h6" Class="mb-3 mt-4">Insurance & Protection</MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2">
+                                <strong>Security Deposits:</strong> Financial protection for tool owners
+                            </MudText>
+                            <MudText Typo="Typo.body1" Class="mb-2">
+                                <strong>Secure Payments:</strong> PayPal buyer/seller protection applies
+                            </MudText>
+                            <MudText Typo="Typo.body1">
+                                <strong>Dispute Resolution:</strong> Fair mediation process for conflicts
+                            </MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
+            </div>
+
+            <!-- Legal & Terms Section -->
+            <div id="legal">
+                <MudPaper Elevation="4" Class="pa-6 mb-6">
+                    <div class="d-flex align-center mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Gavel" Color="Color.Primary" Class="mr-3" Style="font-size: 2rem;" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">Legal & Terms</MudText>
+                    </div>
+
+                    <MudAlert Severity="Severity.Warning" Icon="@Icons.Material.Filled.Gavel" Class="mb-4">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Important Legal Notice</MudText>
+                        <MudText Typo="Typo.body2">
+                            NeighborTools is a marketplace platform that facilitates connections between tool owners and renters. 
+                            We are not a party to rental agreements and do not own, rent, or lease tools directly.
+                        </MudText>
+                    </MudAlert>
+
+                    <MudExpansionPanels Elevation="2">
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Business" Class="mr-3" />
+                                    <MudText>Platform Role & Responsibilities</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Marketplace Facilitator:</strong> NeighborTools provides a platform for users to connect, 
+                                    communicate, and transact. We facilitate these interactions but do not participate as a contracting party.
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Technology Services:</strong> We provide software, payment processing, communication tools, 
+                                    and customer support to enable successful tool sharing experiences.
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>No Tool Ownership:</strong> NeighborTools does not own, maintain, or warranty any tools 
+                                    listed on the platform. Tool ownership and responsibility remain with individual users.
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Limited Liability:</strong> Our liability is limited to the service fees collected. 
+                                    We are not responsible for tool condition, safety, or rental agreement disputes.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-3" />
+                                    <MudText>User Responsibilities</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Tool Owners:</strong> Responsible for tool safety, maintenance, accurate descriptions, 
+                                    and compliance with local laws regarding tool rental and business licensing.
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Renters:</strong> Responsible for safe tool usage, timely returns, payment of fees, 
+                                    and compensation for any damage beyond normal wear and tear.
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>All Users:</strong> Must comply with local laws, platform terms of service, 
+                                    and maintain appropriate insurance coverage for their activities.
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Verification:</strong> Users must provide accurate information and may be required 
+                                    to verify identity for security and fraud prevention purposes.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Security" Class="mr-3" />
+                                    <MudText>Insurance & Liability</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>User Insurance:</strong> Users are strongly encouraged to maintain appropriate 
+                                    homeowners, renters, or business insurance that may cover tool-related activities.
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Platform Limitations:</strong> NeighborTools does not provide insurance coverage 
+                                    for tools, property damage, or personal injury related to tool usage.
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Risk Assumption:</strong> Users participate at their own risk and are responsible 
+                                    for evaluating the safety and suitability of tools and rental agreements.
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Third-Party Services:</strong> Payment processing through PayPal may provide 
+                                    certain buyer/seller protections subject to their terms and conditions.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Policy" Class="mr-3" />
+                                    <MudText>Dispute Resolution & Limitations</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Mediation Service:</strong> NeighborTools provides dispute resolution services 
+                                    as a convenience, but final decisions are made at our discretion based on available evidence.
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Limitation of Remedies:</strong> Platform remedies are limited to refunds, 
+                                    account actions, and service credits. We cannot compel specific performance or award damages.
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Legal Remedies:</strong> Users retain the right to pursue legal remedies directly 
+                                    with other parties, but NeighborTools is not a party to such proceedings.
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Governing Law:</strong> Platform terms are governed by [Jurisdiction] law, 
+                                    but rental agreements between users may be subject to different jurisdictions.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+
+                    <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Info" Class="mt-4">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Legal Advice Disclaimer</MudText>
+                        <MudText Typo="Typo.body2">
+                            This information is for general guidance only and does not constitute legal advice. 
+                            Users should consult with qualified legal professionals regarding their specific 
+                            circumstances, insurance needs, and local regulations.
+                        </MudText>
+                    </MudAlert>
+                </MudPaper>
+            </div>
+
+            <!-- FAQ Section -->
+            <div id="faq">
+                <MudPaper Elevation="4" Class="pa-6 mb-6">
+                    <div class="d-flex align-center mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.QuestionAnswer" Color="Color.Primary" Class="mr-3" Style="font-size: 2rem;" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">Frequently Asked Questions</MudText>
+                    </div>
+
+                    <MudExpansionPanels Elevation="2">
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudText>How do I get started on NeighborTools?</MudText>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1">
+                                    Simply create an account, verify your email, and complete your profile. You can immediately 
+                                    start browsing tools or list your own tools for rent. Adding a profile photo and description 
+                                    helps build trust with the community.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudText>What if a tool breaks while I'm using it?</MudText>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1">
+                                    Stop using the tool immediately and contact the owner. Document the issue with photos. 
+                                    Normal wear and tear is expected, but renters are responsible for damage beyond reasonable use. 
+                                    Security deposits help cover repair costs, and disputes can be filed for resolution.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudText>How are payments and deposits handled?</MudText>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1">
+                                    All payments are processed through PayPal for security. Renters pay the rental fee plus 
+                                    security deposit upfront. Owners receive payment after successful rental completion. 
+                                    Deposits are automatically refunded within 48 hours unless there are damage claims.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudText>What happens if I return a tool late?</MudText>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1">
+                                    Late returns may incur additional fees and affect your user rating. The system automatically 
+                                    marks rentals as overdue, and owners can create disputes. Communication is key - contact 
+                                    the owner immediately if you need an extension or encounter delays.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudText>Can I cancel a rental after booking?</MudText>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1">
+                                    Cancellations made 24+ hours before pickup receive full refunds. Later cancellations 
+                                    may be subject to fees. If the owner cancels, you receive a full refund plus inconvenience 
+                                    credit. Emergency cancellations are handled case-by-case.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudText>How do I report safety concerns or inappropriate behavior?</MudText>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1">
+                                    Safety is our top priority. Use the report feature on user profiles or rental pages, 
+                                    or contact support directly. We investigate all reports promptly and take appropriate 
+                                    action including account suspension when necessary.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudText>What makes a good tool listing?</MudText>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1">
+                                    Great listings include clear photos from multiple angles, detailed descriptions with 
+                                    brand/model information, honest condition assessments, competitive pricing, and specific 
+                                    pickup instructions. Responsive communication and fair policies also attract renters.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudText>Do I need special insurance to rent out my tools?</MudText>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1">
+                                    Check with your homeowners or renters insurance provider about coverage for tool rental activities. 
+                                    Some policies may require notification or additional coverage. Consider the value of your tools 
+                                    and potential liability when setting security deposits and rental terms.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+                </MudPaper>
+            </div>
+
+            <!-- Contact Support -->
+            <MudPaper Elevation="4" Class="pa-6 mb-6">
+                <div class="d-flex align-center mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Support" Color="Color.Primary" Class="mr-3" Style="font-size: 2rem;" />
+                    <MudText Typo="Typo.h4" Color="Color.Primary">Need More Help?</MudText>
+                </div>
+
+                <MudGrid>
+                    <MudItem xs="12" md="4">
+                        <MudPaper Elevation="2" Class="pa-4 text-center" Style="height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Filled.Email" Color="Color.Primary" Style="font-size: 3rem;" />
+                            <MudText Typo="Typo.h6" Class="mt-2 mb-2">Email Support</MudText>
+                            <MudText Typo="Typo.body2" Class="mb-3">Get help with any questions or issues</MudText>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Email">
+                                support@neighbortools.com
+                            </MudButton>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudPaper Elevation="2" Class="pa-4 text-center" Style="height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Filled.Chat" Color="Color.Primary" Style="font-size: 3rem;" />
+                            <MudText Typo="Typo.h6" Class="mt-2 mb-2">Live Chat</MudText>
+                            <MudText Typo="Typo.body2" Class="mb-3">Available Monday-Friday 9AM-6PM</MudText>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Chat">
+                                Start Chat
+                            </MudButton>
+                        </MudPaper>
+                    </MudItem>
+
+                    <MudItem xs="12" md="4">
+                        <MudPaper Elevation="2" Class="pa-4 text-center" Style="height: 100%;">
+                            <MudIcon Icon="@Icons.Material.Filled.Forum" Color="Color.Primary" Style="font-size: 3rem;" />
+                            <MudText Typo="Typo.h6" Class="mt-2 mb-2">Community Forum</MudText>
+                            <MudText Typo="Typo.body2" Class="mb-3">Connect with other users and share tips</MudText>
+                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Forum">
+                                Visit Forum
+                            </MudButton>
+                        </MudPaper>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private async Task ScrollToSection(string sectionId)
+    {
+        await JSRuntime.InvokeVoidAsync("scrollToElement", sectionId);
+    }
+}
+
+<script>
+    window.scrollToElement = (elementId) => {
+        const element = document.getElementById(elementId);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+</script>

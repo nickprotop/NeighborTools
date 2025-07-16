@@ -108,13 +108,17 @@ public class RentalRejectedNotification : EmailNotification
 public class RentalReminderNotification : EmailNotification
 {
     public string UserName { get; set; } = string.Empty;
+    public string RenterName { get; set; } = string.Empty;
+    public string OwnerName { get; set; } = string.Empty;
     public string ToolName { get; set; } = string.Empty;
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
     public DateTime PickupDate { get; set; }
     public DateTime ReturnDate { get; set; }
-    public string OwnerName { get; set; } = string.Empty;
     public string OwnerPhone { get; set; } = string.Empty;
     public string ToolLocation { get; set; } = string.Empty;
     public bool IsPickupReminder { get; set; }
+    public string ReminderType { get; set; } = string.Empty;
     public string RentalDetailsUrl { get; set; } = string.Empty;
     
     public RentalReminderNotification()
@@ -123,22 +127,38 @@ public class RentalReminderNotification : EmailNotification
         Priority = EmailPriority.Normal;
     }
     
-    public override string GetSubject() => IsPickupReminder 
-        ? $"Reminder: Pick up {ToolName} tomorrow" 
-        : $"Reminder: Return {ToolName} tomorrow";
+    public override string GetSubject() => ReminderType switch
+    {
+        "pickup_reminder" => $"Reminder: Pick up {ToolName} today",
+        "return_due_soon" => $"Reminder: Return {ToolName} in 2 days",
+        "return_due_tomorrow" => $"Reminder: Return {ToolName} tomorrow",
+        "return_due_today" => $"URGENT: Return {ToolName} today",
+        "overdue_day_1" => $"OVERDUE: {ToolName} was due yesterday",
+        "overdue_day_3" => $"OVERDUE: {ToolName} is 3 days overdue",
+        "overdue_day_7" => $"OVERDUE: {ToolName} is 1 week overdue",
+        "overdue_weekly" => $"OVERDUE: {ToolName} is seriously overdue",
+        "pickup_confirmed" => $"Pickup confirmed for {ToolName}",
+        "return_confirmed" => $"Return confirmed for {ToolName}",
+        "tool_returned" => $"Tool {ToolName} has been returned",
+        "rental_extended" => $"Rental extended for {ToolName}",
+        _ => IsPickupReminder ? $"Reminder: Pick up {ToolName} tomorrow" : $"Reminder: Return {ToolName} tomorrow"
+    };
         
     public override string GetTemplateName() => "RentalReminder";
     public override object GetTemplateData() => new
     {
         UserName,
+        RenterName,
+        OwnerName,
         ToolName,
+        StartDate,
+        EndDate,
         PickupDate,
         ReturnDate,
-        OwnerName,
         OwnerPhone,
         ToolLocation,
         IsPickupReminder,
-        ReminderType = IsPickupReminder ? "pickup" : "return",
+        ReminderType,
         RentalDetailsUrl,
         Year = DateTime.UtcNow.Year
     };
