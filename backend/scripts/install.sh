@@ -41,21 +41,27 @@ read_password() {
     local default="$2"
     local password
     
-    echo -n "$prompt"
-    if [ -n "$default" ]; then
-        echo -n " [default: $default]: "
-    else
-        echo -n ": "
-    fi
-    
-    read -s password
-    echo ""  # New line after hidden input
-    
-    if [ -z "$password" ] && [ -n "$default" ]; then
-        password="$default"
-    fi
-    
-    echo "$password"
+    while true; do
+        echo -n "$prompt" >&2
+        if [ -n "$default" ]; then
+            echo -n " [default: $default]: " >&2
+        else
+            echo -n ": " >&2
+        fi
+        
+        read -s password
+        echo "" >&2  # New line after hidden input
+        
+        if [ -z "$password" ] && [ -n "$default" ]; then
+            echo "$default"
+            return
+        elif [ -n "$password" ]; then
+            echo "$password"
+            return
+        else
+            echo "Please enter a password or press Enter for default." >&2
+        fi
+    done
 }
 
 # Get MySQL root password
@@ -76,29 +82,43 @@ read_input() {
     local default="$2"
     local input
     
-    echo -n "$prompt"
+    echo -n "$prompt" >&2
     if [ -n "$default" ]; then
-        echo -n " [default: $default]: "
+        echo -n " [default: $default]: " >&2
     else
-        echo -n ": "
+        echo -n ": " >&2
     fi
     
     read input
     
     if [ -z "$input" ] && [ -n "$default" ]; then
-        input="$default"
+        echo "$default"
+    else
+        echo "$input"
     fi
-    
-    echo "$input"
 }
 
 FRONTEND_BASE_URL=$(read_input "Frontend base URL" "http://localhost:5000")
 
 echo ""
 echo "✅ Configuration complete"
-echo "   Root password: $(echo "$MYSQL_ROOT_PASSWORD" | sed 's/./*/g')"
-echo "   User password: $(echo "$MYSQL_USER_PASSWORD" | sed 's/./*/g')"
-echo "   Frontend URL: $FRONTEND_BASE_URL"
+echo "================================================"
+echo "Review your configuration:"
+echo "   MySQL root password: $(echo "$MYSQL_ROOT_PASSWORD" | sed 's/./*/g')"
+echo "   MySQL user password: $(echo "$MYSQL_USER_PASSWORD" | sed 's/./*/g')"
+echo "   Frontend base URL: $FRONTEND_BASE_URL"
+echo "================================================"
+echo ""
+echo -n "Proceed with installation? [Y/n]: " >&2
+read -r confirm
+echo ""
+
+if [[ "$confirm" =~ ^[Nn]$ ]]; then
+    echo "❌ Installation cancelled by user."
+    exit 0
+fi
+
+echo "🚀 Starting installation..."
 
 # Create .env file for docker-compose
 DOCKER_DIR="$(dirname "$0")/../docker"
