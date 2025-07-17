@@ -1,6 +1,6 @@
 {
   "ApiSettings": {
-    "BaseUrl": "http://localhost:5002",
+    "BaseUrl": "https://api.neighbortools.com",
     "TimeoutSeconds": 30,
     "RetryAttempts": 3
   },

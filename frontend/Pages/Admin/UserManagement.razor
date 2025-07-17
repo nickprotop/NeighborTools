@@ -285,6 +285,7 @@
     [Inject] private HttpClient HttpClient { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private INavigationHelperService NavigationHelper { get; set; } = default!;
 
     private bool isLoading = true;
     private string? loadError = null;
@@ -464,7 +465,7 @@
 
     private void ViewUserDetails(string userId)
     {
-        Navigation.NavigateTo($"/admin/users/{userId}");
+        NavigationHelper.NavigateToRoute($"/admin/users/{userId}");
     }
 
     private async Task ExportUsers()

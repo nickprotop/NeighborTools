@@ -7,6 +7,7 @@
 @inject IToolService ToolService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject INavigationHelperService NavigationHelper
 @attribute [Authorize]
 
 <PageTitle>Browse Tools - NeighborTools</PageTitle>
@@ -343,7 +344,7 @@ else
 
     private void ViewTool(string toolId)
     {
-        Navigation.NavigateTo($"/tools/{toolId}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
+        NavigationHelper.NavigateToRoute($"/tools/{toolId}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
     }
 
     private void ToggleFavorite(string toolId)

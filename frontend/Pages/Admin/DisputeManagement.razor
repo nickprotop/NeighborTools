@@ -310,6 +310,7 @@
     [Inject] private HttpClient HttpClient { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private INavigationHelperService NavigationHelper { get; set; } = default!;
 
     private bool isLoading = true;
     private string? loadError = null;
@@ -509,12 +510,12 @@
     private async Task AddAdminNote(string disputeId)
     {
         // This would open a dialog for adding admin notes
-        Navigation.NavigateTo($"/disputes/{disputeId}");
+        NavigationHelper.NavigateToRoute($"/disputes/{disputeId}");
     }
 
     private void ViewDisputeDetails(string disputeId)
     {
-        Navigation.NavigateTo($"/disputes/{disputeId}");
+        NavigationHelper.NavigateToRoute($"/disputes/{disputeId}");
     }
 
     private async Task ExportDisputes()

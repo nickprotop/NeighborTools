@@ -5,6 +5,7 @@
 @using frontend.Services
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject INavigationHelperService NavigationHelper
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject ISnackbar Snackbar
 
@@ -242,7 +243,7 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
         if (authState.User.Identity?.IsAuthenticated == true)
         {
-            Navigation.NavigateTo("/");
+            NavigationHelper.NavigateToRoute("/");
         }
     }
 
@@ -305,7 +306,7 @@
                 {
                     // Normal registration flow for users who don't need verification
                     Snackbar.Add("Account created successfully! Welcome to NeighborTools.", Severity.Success);
-                    Navigation.NavigateTo("/");
+                    NavigationHelper.NavigateToRoute("/");
                 }
             }
             else

@@ -577,6 +577,7 @@
 @code {
     [Inject] private IAuthService AuthService { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private INavigationHelperService NavigationHelper { get; set; } = default!;
     [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
     [Inject] private IDisputeService DisputeService { get; set; } = default!;
 
@@ -679,7 +680,7 @@
     private async Task LogoutAsync()
     {
         await AuthService.LogoutAsync();
-        Navigation.NavigateTo("/login");
+        NavigationHelper.NavigateToRoute("/login");
     }
 
     private string GetUserDisplayName(AuthenticationState authState)

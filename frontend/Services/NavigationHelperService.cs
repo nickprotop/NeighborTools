@@ -9,6 +9,8 @@ public interface INavigationHelperService
     Task NavigateBack(string fallbackUrl = "/");
     string GetReturnUrl(string fallbackUrl = "/");
     void SetReturnUrl(string url);
+    void NavigateToRoute(string route);
+    void NavigateToRoute(string route, bool forceLoad);
 }
 
 public class NavigationHelperService : INavigationHelperService
@@ -84,6 +86,25 @@ public class NavigationHelperService : INavigationHelperService
         _storedReturnUrl = url;
     }
 
+    public void NavigateToRoute(string route)
+    {
+        NavigateToRoute(route, false);
+    }
+
+    public void NavigateToRoute(string route, bool forceLoad)
+    {
+        // Convert absolute paths to relative paths for base href compatibility
+        var relativeRoute = route.StartsWith("/") ? route.Substring(1) : route;
+        
+        // Handle empty route (root)
+        if (string.IsNullOrEmpty(relativeRoute))
+        {
+            relativeRoute = "";
+        }
+        
+        _navigationManager.NavigateTo(relativeRoute, forceLoad);
+    }
+
     private async Task<bool> CanUseHistoryBack()
     {
         try
@@ -102,13 +123,13 @@ public class NavigationHelperService : INavigationHelperService
     {
         return from.ToLower() switch
         {
-            "my-tools" => "/my-tools",
-            "tools" => "/tools",
-            "home" => "/",
-            "dashboard" => "/dashboard",
-            "rentals" => "/my-rentals",
-            "search" => "/tools",
-            _ => "/tools" // Default to tools page
+            "my-tools" => "my-tools",
+            "tools" => "tools",
+            "home" => "",
+            "dashboard" => "dashboard",
+            "rentals" => "my-rentals",
+            "search" => "tools",
+            _ => "tools" // Default to tools page
         };
     }
 
@@ -120,12 +141,12 @@ public class NavigationHelperService : INavigationHelperService
         // If we're viewing a tool detail and came from somewhere, make educated guesses
         if (currentPath.StartsWith("/tools/") && currentPath != "/tools")
         {
-            return "/tools"; // Viewing a specific tool, likely came from tools list
+            return "tools"; // Viewing a specific tool, likely came from tools list
         }
         
         if (currentPath.StartsWith("/edit-tool/"))
         {
-            return "/my-tools"; // Editing a tool, likely came from my tools
+            return "my-tools"; // Editing a tool, likely came from my tools
         }
 
         return null;

@@ -5,6 +5,7 @@
 @using frontend.Services
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject INavigationHelperService NavigationHelper
 @inject SettingsService SettingsService
 @inject ISessionTimeoutService SessionTimeoutService
 @attribute [Authorize]
@@ -978,11 +979,11 @@
 
     private void ExportData()
     {
-        Navigation.NavigateTo("/privacy-dashboard");
+        NavigationHelper.NavigateToRoute("/privacy-dashboard");
     }
 
     private void DeleteAccount()
     {
-        Navigation.NavigateTo("/privacy-dashboard");
+        NavigationHelper.NavigateToRoute("/privacy-dashboard");
     }
 }

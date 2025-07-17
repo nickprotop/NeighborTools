@@ -1,9 +1,11 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.AspNetCore.Components.WebAssembly.Authentication
+@using frontend.Services
 @inject NavigationManager Navigation
+@inject INavigationHelperService NavigationHelper
 @code {
     protected override void OnInitialized()
     {
-        Navigation.NavigateTo("/login");
+        NavigationHelper.NavigateToRoute("/login");
     }
 }

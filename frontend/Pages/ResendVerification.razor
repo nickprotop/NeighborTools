@@ -3,6 +3,7 @@
 @using frontend.Models
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
+@inject INavigationHelperService NavigationHelper
 @inject ISnackbar Snackbar
 
 <PageTitle>Resend Email Verification - NeighborTools</PageTitle>
@@ -156,6 +157,6 @@
 
     private void NavigateToLogin()
     {
-        Navigation.NavigateTo("/login");
+        NavigationHelper.NavigateToRoute("/login");
     }
 }

@@ -1,6 +1,8 @@
 @using Microsoft.AspNetCore.Components
 @using MudBlazor
+@using frontend.Services
 @inject NavigationManager Navigation
+@inject INavigationHelperService NavigationHelper
 @inject ISnackbar Snackbar
 
 <MudContainer>
@@ -41,16 +43,16 @@
         </MudText>
         
         <div class="d-flex justify-center flex-wrap gap-2">
-            <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Search" OnClick="@(() => Navigation.NavigateTo("/tools"))">
+            <MudChip T="string" Color="Color.Info" Size="Size.Small" Icon="@Icons.Material.Filled.Search" OnClick="@(() => NavigationHelper.NavigateToRoute("/tools"))">
                 Browse Tools
             </MudChip>
-            <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.Inventory" OnClick="@(() => Navigation.NavigateTo("/my-tools"))">
+            <MudChip T="string" Color="Color.Success" Size="Size.Small" Icon="@Icons.Material.Filled.Inventory" OnClick="@(() => NavigationHelper.NavigateToRoute("/my-tools"))">
                 My Tools
             </MudChip>
-            <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.CalendarToday" OnClick="@(() => Navigation.NavigateTo("/rentals"))">
+            <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.CalendarToday" OnClick="@(() => NavigationHelper.NavigateToRoute("/rentals"))">
                 My Rentals
             </MudChip>
-            <MudChip T="string" Color="Color.Secondary" Size="Size.Small" Icon="@Icons.Material.Filled.Person" OnClick="@(() => Navigation.NavigateTo("/profile"))">
+            <MudChip T="string" Color="Color.Secondary" Size="Size.Small" Icon="@Icons.Material.Filled.Person" OnClick="@(() => NavigationHelper.NavigateToRoute("/profile"))">
                 Profile
             </MudChip>
         </div>
@@ -66,11 +68,11 @@
 
     private void GoToDashboard()
     {
-        Navigation.NavigateTo("/");
+        NavigationHelper.NavigateToRoute("/");
     }
 
     private void GoBack()
     {
-        Navigation.NavigateTo("/");
+        NavigationHelper.NavigateToRoute("/");
     }
 }
