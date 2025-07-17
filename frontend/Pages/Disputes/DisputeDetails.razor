@@ -6,7 +6,6 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
-@inject INavigationHelperService NavigationHelper
 @inject IDisputeService DisputeService
 @inject IAuthService AuthService
 @inject AuthenticationStateProvider AuthStateProvider
@@ -357,7 +356,7 @@
 
     private void GoBackToDisputes()
     {
-        NavigationHelper.NavigateToRoute("/disputes");
+        Navigation.NavigateTo("/disputes");
     }
 
     private bool ShowStatusBanner() => Dispute?.Status switch
@@ -629,7 +628,7 @@
         // TODO: Open file upload dialog
         Snackbar.Add("File upload not yet implemented", Severity.Info);
     }
-    private void ViewRental(Guid rentalId) => NavigationHelper.NavigateToRoute($"/rentals/{rentalId}");
+    private void ViewRental(Guid rentalId) => Navigation.NavigateTo($"/rentals/{rentalId}");
 
     private string DetermineUserRole(AuthenticationState authState)
     {

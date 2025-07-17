@@ -4,7 +4,6 @@
 @inject IToolService ToolService
 @inject IPaymentService PaymentService
 @inject NavigationManager Navigation
-@inject INavigationHelperService NavigationHelper
 @inject AuthenticationStateProvider AuthStateProvider
 
 @if (showNotification)
@@ -106,7 +105,7 @@
 
     private void NavigateToPaymentSettings()
     {
-        NavigationHelper.NavigateToRoute("/settings/payments");
+        Navigation.NavigateTo("/settings/payments");
     }
 
     private void DismissNotification()

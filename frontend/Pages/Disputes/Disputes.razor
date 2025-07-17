@@ -5,7 +5,6 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
-@inject INavigationHelperService NavigationHelper
 
 <PageTitle>Disputes - NeighborTools</PageTitle>
 
@@ -216,14 +215,14 @@
 
     private void ViewDispute(string disputeId)
     {
-        NavigationHelper.NavigateToRoute($"/disputes/{disputeId}");
+        Navigation.NavigateTo($"/disputes/{disputeId}");
     }
 
     private void ManageDispute(Dispute dispute)
     {
         // For now, just navigate to view page
         // In the future, this could open a management dialog
-        NavigationHelper.NavigateToRoute($"/disputes/{dispute.Id}");
+        Navigation.NavigateTo($"/disputes/{dispute.Id}");
     }
 
     private bool CanManageDispute(Dispute dispute)

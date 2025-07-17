@@ -4,7 +4,6 @@
 @using frontend.Models
 @inject IAuthService AuthService
 @inject NavigationManager Navigation
-@inject INavigationHelperService NavigationHelper
 @inject IJSRuntime JSRuntime
 
 <PageTitle>Verify Email - NeighborTools</PageTitle>
@@ -246,11 +245,11 @@
 
     private void NavigateToLogin()
     {
-        NavigationHelper.NavigateToRoute("/login");
+        Navigation.NavigateTo("/login");
     }
 
     private void NavigateToHome()
     {
-        NavigationHelper.NavigateToRoute("/");
+        Navigation.NavigateTo("/");
     }
 }

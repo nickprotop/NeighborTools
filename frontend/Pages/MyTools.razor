@@ -7,7 +7,6 @@
 @inject IToolService ToolService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
-@inject INavigationHelperService NavigationHelper
 @attribute [Authorize]
 
 <PageTitle>My Tools - NeighborTools</PageTitle>
@@ -250,12 +249,12 @@
 
     private void EditTool(string toolId)
     {
-        NavigationHelper.NavigateToRoute($"/tools/edit/{toolId}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
+        Navigation.NavigateTo($"/tools/edit/{toolId}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
     }
 
     private void ViewTool(string toolId)
     {
-        NavigationHelper.NavigateToRoute($"/tools/{toolId}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
+        Navigation.NavigateTo($"/tools/{toolId}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
     }
 
     private void DeleteTool(string toolId, string toolName)

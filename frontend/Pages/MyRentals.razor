@@ -8,7 +8,6 @@
 @inject IPaymentService PaymentService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
-@inject INavigationHelperService NavigationHelper
 @inject IDialogService DialogService
 @attribute [Authorize]
 
@@ -375,7 +374,7 @@
 
     private void ViewRentalDetails(string rentalId)
     {
-        NavigationHelper.NavigateToRoute($"/rentals/{rentalId}");
+        Navigation.NavigateTo($"/rentals/{rentalId}");
     }
 
     private async Task ApproveRental(string rentalId)

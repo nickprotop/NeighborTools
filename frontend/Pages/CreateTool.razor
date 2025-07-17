@@ -7,7 +7,6 @@
 @inject UserService UserService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
-@inject INavigationHelperService NavigationHelper
 @attribute [Authorize]
 
 <PageTitle>Add Tool - NeighborTools</PageTitle>
@@ -363,7 +362,7 @@
             await Task.Delay(2000); // Simulate API call
             
             Snackbar.Add("Tool created successfully! It will be available for rent once approved.", Severity.Success);
-            NavigationHelper.NavigateToRoute("/my-tools");
+            Navigation.NavigateTo("/my-tools");
         }
         catch (Exception ex)
         {
@@ -377,6 +376,6 @@
 
     private void Cancel()
     {
-        NavigationHelper.NavigateToRoute("/my-tools");
+        Navigation.NavigateTo("/my-tools");
     }
 }

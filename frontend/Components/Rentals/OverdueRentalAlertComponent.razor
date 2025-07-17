@@ -5,7 +5,6 @@
 @inject IRentalService RentalService
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager Navigation
-@inject INavigationHelperService NavigationHelper
 @inject IDialogService DialogService
 @inject ISnackbar Snackbar
 
@@ -322,7 +321,7 @@
 
     private void ViewRentalDetails(string rentalId)
     {
-        NavigationHelper.NavigateToRoute($"/rentals/{rentalId}");
+        Navigation.NavigateTo($"/rentals/{rentalId}");
     }
 
     private async Task MarkAsReturned(Rental rental)
