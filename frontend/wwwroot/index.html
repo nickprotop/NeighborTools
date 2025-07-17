@@ -41,45 +41,6 @@
     <script src="js/cookieManager.js"></script>
     <script src="js/sessionTimeout.js"></script>
     
-    <!-- Dynamic Base Href Configuration -->
-    <script>
-        // Detect app deployment path more efficiently
-        (function() {
-            var currentPath = window.location.pathname;
-            var basePath = '/';
-            
-            // Quick heuristic: if we're not at root, try to detect app base more intelligently
-            if (currentPath !== '/') {
-                var segments = currentPath.split('/').filter(function(s) { return s; });
-                
-                // Test root first (most common case)
-                var testImg = new Image();
-                testImg.onload = function() {
-                    // Root has the assets, keep base as '/'
-                    updateBaseHref('/');
-                };
-                testImg.onerror = function() {
-                    // Root doesn't have assets, check if first segment might be app base
-                    if (segments.length > 0) {
-                        var possibleBase = '/' + segments[0] + '/';
-                        updateBaseHref(possibleBase);
-                    }
-                };
-                
-                // Test if blazor script exists at root (silent test using image)
-                testImg.src = '/_framework/blazor.webassembly.js?' + Date.now();
-            }
-            
-            function updateBaseHref(newBasePath) {
-                var baseElement = document.querySelector('base');
-                var currentHref = baseElement.getAttribute('href');
-                
-                if (currentHref !== newBasePath) {
-                    baseElement.setAttribute('href', newBasePath);
-                }
-            }
-        })();
-    </script>
     
     <script src="_framework/blazor.webassembly.js"></script>
     <script src="_content/MudBlazor/MudBlazor.min.js"></script>
