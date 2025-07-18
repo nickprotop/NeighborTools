@@ -16,34 +16,74 @@
                            AutoRefresh="true" 
                            Class="mb-4" />
 
-<!-- Modern Hero Section -->
-<MudPaper Elevation="0" Class="pa-8 mb-8 animate-fade-in-up" Style="background: var(--mud-gradient-hero); border-radius: var(--mud-radius-2xl); box-shadow: var(--mud-shadow-lg);">
-    <div class="d-flex flex-column align-center text-center">
-        <MudIcon Icon="@Icons.Material.Filled.Handyman" Size="Size.Large" Class="animate-float" Style="font-size: 5rem; color: white; margin-bottom: var(--mud-spacing-lg);" />
-        <MudText Typo="Typo.h2" Style="color: white; font-weight: var(--mud-font-weight-bold); font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-tight);" GutterBottom="true">
-            Welcome to NeighborTools
-        </MudText>
-        <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.9); max-width: 600px; margin-bottom: var(--mud-spacing-2xl); font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-relaxed);">
-            Share tools with your neighbors and borrow what you need. Building community one tool at a time.
-        </MudText>
-        <AuthorizeView>
-            <Authorized>
-                <MudText Typo="Typo.h6" Style="color: white; margin-bottom: var(--mud-spacing-xl); font-family: var(--mud-font-family-sans);">
-                    Welcome back, @context.User.Identity?.Name! 👋
+<!-- Modern Login/Register Banner for Non-Logged-In Users -->
+<AuthorizeView>
+    <NotAuthorized>
+        <MudPaper Elevation="0" Class="pa-8 mb-8 animate-fade-in-up" Style="background: var(--mud-gradient-hero); border-radius: var(--mud-radius-2xl); box-shadow: var(--mud-shadow-lg);">
+            <div class="d-flex flex-column align-center text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Handyman" Size="Size.Large" Class="animate-float" Style="font-size: 4rem; color: white; margin-bottom: var(--mud-spacing-lg);" />
+                <MudText Typo="Typo.h3" Style="color: white; font-weight: var(--mud-font-weight-bold); font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-tight);" GutterBottom="true">
+                    Join NeighborTools Today
                 </MudText>
-                <MudButton Variant="Variant.Filled"
-                           Color="Color.Surface"
-                           Size="Size.Large"
-                           Href="/tools"
-                           StartIcon="@Icons.Material.Filled.Search"
-                           Class="animate-glow"
-                           Style="color: var(--mud-palette-primary); font-weight: var(--mud-font-weight-bold); font-family: var(--mud-font-family-sans); border-radius: var(--mud-radius-full); padding: var(--mud-spacing-lg) var(--mud-spacing-2xl);">
-                    Browse Tools
-                </MudButton>
-            </Authorized>
-        </AuthorizeView>
-    </div>
-</MudPaper>
+                <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.9); max-width: 700px; margin-bottom: var(--mud-spacing-xl); font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-relaxed);">
+                    Start sharing and borrowing tools with your neighbors. Build stronger communities while saving money.
+                </MudText>
+                
+                <!-- Benefits Grid -->
+                <MudGrid Class="mb-6" Style="max-width: 800px;">
+                    <MudItem xs="12" sm="4">
+                        <div class="d-flex flex-column align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Style="color: rgba(255,255,255,0.9); font-size: 2rem; margin-bottom: var(--mud-spacing-sm);" />
+                            <MudText Typo="Typo.subtitle1" Style="color: white; font-weight: var(--mud-font-weight-semibold); font-family: var(--mud-font-family-sans);">Save Money</MudText>
+                            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); font-family: var(--mud-font-family-sans); text-align: center;">
+                                Rent tools instead of buying them
+                            </MudText>
+                        </div>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <div class="d-flex flex-column align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.People" Style="color: rgba(255,255,255,0.9); font-size: 2rem; margin-bottom: var(--mud-spacing-sm);" />
+                            <MudText Typo="Typo.subtitle1" Style="color: white; font-weight: var(--mud-font-weight-semibold); font-family: var(--mud-font-family-sans);">Build Community</MudText>
+                            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); font-family: var(--mud-font-family-sans); text-align: center;">
+                                Connect with your neighbors
+                            </MudText>
+                        </div>
+                    </MudItem>
+                    <MudItem xs="12" sm="4">
+                        <div class="d-flex flex-column align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Recycling" Style="color: rgba(255,255,255,0.9); font-size: 2rem; margin-bottom: var(--mud-spacing-sm);" />
+                            <MudText Typo="Typo.subtitle1" Style="color: white; font-weight: var(--mud-font-weight-semibold); font-family: var(--mud-font-family-sans);">Go Green</MudText>
+                            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); font-family: var(--mud-font-family-sans); text-align: center;">
+                                Reduce waste through sharing
+                            </MudText>
+                        </div>
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Action Buttons -->
+                <div class="d-flex gap-4 flex-wrap justify-center">
+                    <MudButton Variant="Variant.Filled"
+                               Color="Color.Surface"
+                               Size="Size.Large"
+                               Href="/login"
+                               StartIcon="@Icons.Material.Filled.Login"
+                               Class="animate-glow"
+                               Style="color: var(--mud-palette-primary); font-weight: var(--mud-font-weight-bold); font-family: var(--mud-font-family-sans); border-radius: var(--mud-radius-full); padding: var(--mud-spacing-lg) var(--mud-spacing-2xl);">
+                        Sign In
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined"
+                               Color="Color.Surface"
+                               Size="Size.Large"
+                               Href="/register"
+                               StartIcon="@Icons.Material.Filled.PersonAdd"
+                               Style="color: white; border-color: rgba(255,255,255,0.5); font-weight: var(--mud-font-weight-bold); font-family: var(--mud-font-family-sans); border-radius: var(--mud-radius-full); padding: var(--mud-spacing-lg) var(--mud-spacing-2xl);">
+                        Get Started
+                    </MudButton>
+                </div>
+            </div>
+        </MudPaper>
+    </NotAuthorized>
+</AuthorizeView>
 
 <!-- Modern Quick Actions -->
 <MudGrid Class="mb-8">
@@ -157,7 +197,7 @@ else if (featuredTools != null && featuredTools.Any())
                         <MudButton Variant="Variant.Filled" 
                                    Color="Color.Primary" 
                                    FullWidth="true"
-                                   Href="/tools"
+                                   Href="@($"/tools/{tool.Id}")"
                                    Disabled="@(!tool.IsAvailable)"
                                    StartIcon="@Icons.Material.Filled.Visibility"
                                    Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium); border-radius: var(--mud-radius-lg);">
