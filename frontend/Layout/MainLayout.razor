@@ -11,39 +11,43 @@
 <MudSnackbarProvider />
 
 <div class="main-layout">
-    <!-- Modern Header -->
-    <header class="header-container">
+    <!-- Modern Responsive Header -->
+    <header class="navbar">
         <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="pa-0">
-            <div class="header-content">
-                <!-- Logo and Brand -->
-                <div class="brand-section">
-                    <MudButton Variant="Variant.Text" 
-                               Href="/" 
-                               StartIcon="@Icons.Material.Filled.Handyman"
-                               Class="brand-button">
-                        <MudText Typo="Typo.h5" Class="brand-text">NeighborTools</MudText>
-                    </MudButton>
-                </div>
+            <div class="navbar-content">
+                <!-- Mobile Menu Toggle -->
+                <MudIconButton Icon="@Icons.Material.Filled.Menu" 
+                               OnClick="ToggleMobileMenu"
+                               Class="mobile-menu-btn d-md-none"
+                               Color="Color.Primary" />
 
-                <!-- Main Navigation -->
-                <nav class="main-nav d-none d-md-flex">
+                <!-- Logo/Brand -->
+                <MudButton Variant="Variant.Text" 
+                           Href="/" 
+                           StartIcon="@Icons.Material.Filled.Handyman"
+                           Class="navbar-brand">
+                    <MudText Typo="Typo.h5" Class="brand-text">NeighborTools</MudText>
+                </MudButton>
+
+                <!-- Desktop Navigation -->
+                <nav class="navbar-nav d-none d-md-flex">
                     <AuthorizeView>
                         <Authorized>
                             <MudButton Variant="Variant.Text" 
                                        Href="/tools" 
-                                       Class="nav-button"
+                                       Class="nav-link"
                                        StartIcon="@Icons.Material.Filled.Search">
                                 Browse Tools
                             </MudButton>
                             <MudButton Variant="Variant.Text" 
                                        Href="/my-tools" 
-                                       Class="nav-button"
+                                       Class="nav-link"
                                        StartIcon="@Icons.Material.Filled.Inventory">
                                 My Tools
                             </MudButton>
                             <MudButton Variant="Variant.Text" 
                                        Href="/my-rentals" 
-                                       Class="nav-button"
+                                       Class="nav-link"
                                        StartIcon="@Icons.Material.Filled.Assignment">
                                 My Rentals
                             </MudButton>
@@ -51,7 +55,7 @@
                             {
                                 <MudButton Variant="Variant.Text" 
                                            Href="/disputes" 
-                                           Class="nav-button"
+                                           Class="nav-link"
                                            StartIcon="@Icons.Material.Filled.ReportProblem">
                                     Disputes
                                 </MudButton>
@@ -60,51 +64,33 @@
                     </AuthorizeView>
                 </nav>
 
-                <!-- Right Section -->
-                <div class="header-actions">
+                <!-- Right Actions -->
+                <div class="navbar-actions">
                     <AuthorizeView>
                         <Authorized>
-                            <!-- Add Tool Button -->
-                            <MudButton Variant="Variant.Text" 
+                            <!-- Add Tool Button (Desktop) -->
+                            <MudButton Variant="Variant.Filled" 
                                        Href="/tools/create"
-                                       Class="add-tool-button d-none d-sm-flex"
-                                       StartIcon="@Icons.Material.Filled.Add">
+                                       Class="add-tool-btn d-none d-lg-flex"
+                                       StartIcon="@Icons.Material.Filled.Add"
+                                       Color="Color.Primary">
                                 Share Tool
                             </MudButton>
 
                             <!-- User Menu -->
                             <MudMenu AnchorOrigin="Origin.BottomLeft" 
-                                     TransformOrigin="Origin.TopLeft"
-                                     Class="user-menu">
+                                     TransformOrigin="Origin.TopLeft">
                                 <ActivatorContent>
                                     <MudButton Variant="Variant.Text" 
-                                               StartIcon="@Icons.Material.Filled.Menu"
-                                               EndIcon="@Icons.Material.Filled.AccountCircle"
-                                               Class="user-menu-button">
-                                        <span class="d-none d-sm-inline">@GetUserDisplayName(context)</span>
+                                               StartIcon="@Icons.Material.Filled.AccountCircle"
+                                               Class="user-menu-btn">
+                                        <span class="d-none d-md-inline">@GetUserDisplayName(context)</span>
                                     </MudButton>
                                 </ActivatorContent>
                                 <ChildContent>
                                     <MudMenuItem Icon="@Icons.Material.Filled.Person" Href="/profile">
                                         Profile
                                     </MudMenuItem>
-                                    <MudMenuItem Icon="@Icons.Material.Filled.Assignment" Href="/my-rentals">
-                                        My Rentals
-                                    </MudMenuItem>
-                                    <MudMenuItem Icon="@Icons.Material.Filled.Inventory" Href="/my-tools">
-                                        My Tools
-                                    </MudMenuItem>
-                                    <MudMenuItem Icon="@Icons.Material.Filled.ReportProblem" Href="/disputes">
-                                        Disputes
-                                    </MudMenuItem>
-                                    @if (isAdmin)
-                                    {
-                                        <MudDivider />
-                                        <MudMenuItem Icon="@Icons.Material.Filled.AdminPanelSettings" Href="/admin">
-                                            Admin Dashboard
-                                        </MudMenuItem>
-                                    }
-                                    <MudDivider />
                                     <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="/settings">
                                         Settings
                                     </MudMenuItem>
@@ -114,6 +100,13 @@
                                     <MudMenuItem Icon="@Icons.Material.Filled.PrivacyTip" Href="/privacy-dashboard">
                                         Privacy Dashboard
                                     </MudMenuItem>
+                                    @if (isAdmin)
+                                    {
+                                        <MudDivider />
+                                        <MudMenuItem Icon="@Icons.Material.Filled.AdminPanelSettings" Href="/admin">
+                                            Admin Dashboard
+                                        </MudMenuItem>
+                                    }
                                     <MudDivider />
                                     <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
                                         Logout
@@ -125,14 +118,15 @@
                             <div class="auth-buttons">
                                 <MudButton Variant="Variant.Text" 
                                            Href="/login" 
-                                           Class="login-button"
+                                           Class="login-btn"
                                            StartIcon="@Icons.Material.Filled.Login">
                                     Log in
                                 </MudButton>
                                 <MudButton Variant="Variant.Filled" 
                                            Href="/register" 
-                                           Class="signup-button"
-                                           StartIcon="@Icons.Material.Filled.PersonAdd">
+                                           Class="signup-btn"
+                                           StartIcon="@Icons.Material.Filled.PersonAdd"
+                                           Color="Color.Primary">
                                     Sign up
                                 </MudButton>
                             </div>
@@ -143,24 +137,26 @@
         </MudContainer>
     </header>
 
+    <!-- Mobile Navigation Overlay -->
+    <div class="mobile-nav-overlay @(mobileMenuOpen ? "active" : "")" @onclick="CloseMobileMenu"></div>
+
     <!-- Mobile Navigation Drawer -->
-    <MudDrawer @bind-Open="mobileMenuOpen" 
-               Anchor="Anchor.Top" 
-               Elevation="8" 
-               Variant="DrawerVariant.Temporary"
-               Class="mobile-drawer d-md-none">
-        <div class="mobile-menu-content">
-            <div class="mobile-menu-header">
-                <MudText Typo="Typo.h6" Class="pa-4">Menu</MudText>
-                <MudIconButton Icon="@Icons.Material.Filled.Close" 
-                               OnClick="ToggleMobileMenu" 
-                               Class="ma-2" />
+    <nav class="mobile-nav @(mobileMenuOpen ? "active" : "") d-md-none">
+        <div class="mobile-nav-header">
+            <div class="mobile-nav-brand">
+                <MudIcon Icon="@Icons.Material.Filled.Handyman" Color="Color.Primary" Class="mr-2" />
+                <MudText Typo="Typo.h6" Color="Color.Primary" Class="font-weight-bold">NeighborTools</MudText>
             </div>
-            <MudDivider />
-            
+            <MudIconButton Icon="@Icons.Material.Filled.Close" 
+                           OnClick="CloseMobileMenu" 
+                           Size="Size.Small" />
+        </div>
+        
+        <div class="mobile-nav-content">
             <AuthorizeView>
                 <Authorized>
-                    <div class="mobile-menu-items">
+                    <div class="mobile-nav-section">
+                        <MudText Typo="Typo.overline" Class="mobile-nav-title">Navigation</MudText>
                         <MudButton Variant="Variant.Text" 
                                    Href="/tools" 
                                    FullWidth="true"
@@ -196,37 +192,82 @@
                                 Disputes
                             </MudButton>
                         }
-                        <MudButton Variant="Variant.Text" 
-                                   Href="/settings/payments" 
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.Payment"
-                                   Class="mobile-nav-item"
-                                   OnClick="CloseMobileMenu">
-                            Payment Settings
-                        </MudButton>
+                    </div>
+
+                    <div class="mobile-nav-section">
+                        <MudText Typo="Typo.overline" Class="mobile-nav-title">Actions</MudText>
                         <MudButton Variant="Variant.Filled" 
                                    Href="/tools/create" 
                                    FullWidth="true"
                                    StartIcon="@Icons.Material.Filled.Add"
-                                   Class="mobile-add-button"
+                                   Class="mobile-nav-primary"
+                                   Color="Color.Primary"
                                    OnClick="CloseMobileMenu">
                             Share Tool
                         </MudButton>
-                        
-                        <!-- Help Center Link -->
-                        <MudDivider Class="my-3" />
+                    </div>
+
+                    <div class="mobile-nav-section">
+                        <MudText Typo="Typo.overline" Class="mobile-nav-title">Account</MudText>
+                        <MudButton Variant="Variant.Text" 
+                                   Href="/profile" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Person"
+                                   Class="mobile-nav-item"
+                                   OnClick="CloseMobileMenu">
+                            Profile
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" 
+                                   Href="/settings" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Settings"
+                                   Class="mobile-nav-item"
+                                   OnClick="CloseMobileMenu">
+                            Settings
+                        </MudButton>
+                        @if (isAdmin)
+                        {
+                            <MudButton Variant="Variant.Text" 
+                                       Href="/admin" 
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.AdminPanelSettings"
+                                       Class="mobile-nav-item"
+                                       OnClick="CloseMobileMenu">
+                                Admin Dashboard
+                            </MudButton>
+                        }
+                    </div>
+
+                    <div class="mobile-nav-footer">
                         <MudButton Variant="Variant.Text" 
                                    Href="/help" 
                                    FullWidth="true"
                                    StartIcon="@Icons.Material.Filled.Help"
-                                   Class="mobile-nav-item help-center-link"
+                                   Class="mobile-nav-item"
                                    OnClick="CloseMobileMenu">
                             Help Center
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Logout"
+                                   Class="mobile-nav-item"
+                                   OnClick="LogoutFromMobileMenu">
+                            Logout
                         </MudButton>
                     </div>
                 </Authorized>
                 <NotAuthorized>
-                    <div class="mobile-menu-items">
+                    <div class="mobile-nav-section">
+                        <MudText Typo="Typo.overline" Class="mobile-nav-title">Get Started</MudText>
+                        <MudButton Variant="Variant.Filled" 
+                                   Href="/register" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.PersonAdd"
+                                   Class="mobile-nav-primary"
+                                   Color="Color.Primary"
+                                   OnClick="CloseMobileMenu">
+                            Sign up
+                        </MudButton>
                         <MudButton Variant="Variant.Text" 
                                    Href="/login" 
                                    FullWidth="true"
@@ -235,22 +276,14 @@
                                    OnClick="CloseMobileMenu">
                             Log in
                         </MudButton>
-                        <MudButton Variant="Variant.Filled" 
-                                   Href="/register" 
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.PersonAdd"
-                                   Class="mobile-add-button"
-                                   OnClick="CloseMobileMenu">
-                            Sign up
-                        </MudButton>
-                        
-                        <!-- Help Center Link -->
-                        <MudDivider Class="my-3" />
+                    </div>
+
+                    <div class="mobile-nav-footer">
                         <MudButton Variant="Variant.Text" 
                                    Href="/help" 
                                    FullWidth="true"
                                    StartIcon="@Icons.Material.Filled.Help"
-                                   Class="mobile-nav-item help-center-link"
+                                   Class="mobile-nav-item"
                                    OnClick="CloseMobileMenu">
                             Help Center
                         </MudButton>
@@ -258,14 +291,8 @@
                 </NotAuthorized>
             </AuthorizeView>
         </div>
-    </MudDrawer>
+    </nav>
 
-    <!-- Mobile Menu Toggle (visible only on mobile) -->
-    <div class="mobile-menu-toggle d-md-none">
-        <MudIconButton Icon="@Icons.Material.Filled.Menu" 
-                       OnClick="ToggleMobileMenu"
-                       Class="mobile-toggle-button" />
-    </div>
 
     <!-- Main Content -->
     <main class="main-content">
@@ -338,8 +365,8 @@
         flex-direction: column;
     }
 
-    /* Modern Header Styles */
-    .header-container {
+    /* Modern Navbar Styles */
+    .navbar {
         background: rgba(255, 255, 255, 0.95);
         backdrop-filter: blur(12px);
         border-bottom: 1px solid var(--mud-border-primary);
@@ -349,24 +376,38 @@
         box-shadow: var(--mud-shadow-sm);
     }
 
-    .header-content {
+    .navbar-content {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: var(--mud-spacing-lg) var(--mud-spacing-2xl);
-        min-height: 72px;
+        padding: 0 var(--mud-spacing-lg);
+        min-height: 64px;
     }
 
-    .brand-section .brand-button {
+    /* Mobile Menu Toggle */
+    .mobile-menu-btn {
+        padding: var(--mud-spacing-sm);
+        border-radius: var(--mud-radius-md);
         color: var(--mud-palette-primary) !important;
-        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
-        border-radius: var(--mud-radius-lg);
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        transition: all 0.2s ease;
     }
 
-    .brand-section .brand-button:hover {
-        background: var(--mud-palette-surface-variant);
-        transform: translateY(-1px);
+    .mobile-menu-btn:hover {
+        background-color: var(--mud-palette-action-hover) !important;
+        transform: scale(1.05);
+    }
+
+    /* Brand/Logo */
+    .navbar-brand {
+        color: var(--mud-palette-primary) !important;
+        padding: var(--mud-spacing-sm) var(--mud-spacing-md);
+        border-radius: var(--mud-radius-md);
+        transition: all 0.2s ease;
+        margin-left: var(--mud-spacing-sm);
+    }
+
+    .navbar-brand:hover {
+        background: var(--mud-palette-action-hover) !important;
     }
 
     .brand-text {
@@ -375,169 +416,198 @@
         font-family: var(--mud-font-family-sans);
     }
 
-    .main-nav {
+    /* Desktop Navigation */
+    .navbar-nav {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: var(--mud-spacing-xs);
         flex: 1;
         justify-content: center;
         max-width: 600px;
     }
 
-    .nav-button {
+    .nav-link {
         color: var(--mud-text-primary) !important;
         font-weight: var(--mud-font-weight-medium);
-        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
-        border-radius: var(--mud-radius-full);
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        padding: var(--mud-spacing-sm) var(--mud-spacing-md);
+        border-radius: var(--mud-radius-md);
+        transition: all 0.2s ease;
         font-family: var(--mud-font-family-sans);
+        white-space: nowrap;
     }
 
-    .nav-button:hover {
-        background-color: var(--mud-palette-surface-variant) !important;
+    .nav-link:hover {
+        background-color: var(--mud-palette-action-hover) !important;
         transform: translateY(-1px);
-        box-shadow: var(--mud-shadow-sm);
     }
 
-    .admin-button {
-        color: var(--mud-palette-warning) !important;
-        font-weight: 600;
-    }
-
-    .header-actions {
+    /* Right Actions */
+    .navbar-actions {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: var(--mud-spacing-sm);
     }
 
-    .add-tool-button {
-        color: var(--mud-palette-primary) !important;
+    .add-tool-btn {
+        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
+        border-radius: var(--mud-radius-full);
         font-weight: var(--mud-font-weight-semibold);
-        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
-        border-radius: var(--mud-radius-full);
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        font-family: var(--mud-font-family-sans);
+        transition: all 0.2s ease;
+        white-space: nowrap;
     }
 
-    .add-tool-button:hover {
-        background: var(--mud-palette-surface-variant) !important;
+    .add-tool-btn:hover {
         transform: translateY(-1px);
         box-shadow: var(--mud-shadow-sm);
     }
 
-    .user-menu-button {
-        border: 1px solid var(--mud-border-primary);
+    .user-menu-btn {
+        padding: var(--mud-spacing-sm) var(--mud-spacing-md);
         border-radius: var(--mud-radius-full);
-        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
         color: var(--mud-text-primary) !important;
-        min-width: 76px;
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        font-family: var(--mud-font-family-sans);
+        transition: all 0.2s ease;
+        min-width: 48px;
     }
 
-    .user-menu-button:hover {
-        border-color: var(--mud-border-focus);
-        background: var(--mud-palette-surface-variant);
-        transform: translateY(-1px);
-        box-shadow: var(--mud-shadow-sm);
+    .user-menu-btn:hover {
+        background: var(--mud-palette-action-hover) !important;
     }
 
     .auth-buttons {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: var(--mud-spacing-sm);
     }
 
-    .login-button {
+    .login-btn {
         color: var(--mud-text-primary) !important;
-        font-weight: var(--mud-font-weight-medium);
+        padding: var(--mud-spacing-sm) var(--mud-spacing-md);
+        border-radius: var(--mud-radius-full);
+        transition: all 0.2s ease;
+    }
+
+    .login-btn:hover {
+        background: var(--mud-palette-action-hover) !important;
+    }
+
+    .signup-btn {
         padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
         border-radius: var(--mud-radius-full);
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        font-family: var(--mud-font-family-sans);
+        font-weight: var(--mud-font-weight-semibold);
+        transition: all 0.2s ease;
     }
 
-    .login-button:hover {
-        background: var(--mud-palette-surface-variant) !important;
+    .signup-btn:hover {
         transform: translateY(-1px);
         box-shadow: var(--mud-shadow-sm);
     }
 
-    .signup-button {
-        background: var(--mud-gradient-primary) !important;
-        color: white !important;
-        font-weight: var(--mud-font-weight-semibold);
-        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
-        border-radius: var(--mud-radius-full);
-        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        font-family: var(--mud-font-family-sans);
-    }
-
-    .signup-button:hover {
-        transform: translateY(-1px);
-        box-shadow: var(--mud-shadow-md);
-    }
-
     /* Mobile Navigation */
-    .mobile-drawer {
-        max-height: 80vh;
-    }
-
-    .mobile-menu-content {
+    .mobile-nav-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
         width: 100vw;
+        height: 100vh;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1299;
+        opacity: 0;
+        visibility: hidden;
+        transition: all 0.3s ease;
     }
 
-    .mobile-menu-header {
+    .mobile-nav-overlay.active {
+        opacity: 1;
+        visibility: visible;
+    }
+
+    .mobile-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 320px;
+        height: 100vh;
+        background: var(--mud-palette-surface);
+        z-index: 1300;
+        transform: translateX(-100%);
+        transition: transform 0.3s ease;
+        box-shadow: var(--mud-shadow-lg);
+        overflow-y: auto;
+    }
+
+    .mobile-nav.active {
+        transform: translateX(0);
+    }
+
+    .mobile-nav-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        border-bottom: 1px solid #e0e0e0;
+        padding: var(--mud-spacing-lg);
+        border-bottom: 1px solid var(--mud-border-divider);
+        background: var(--mud-palette-surface);
+        position: sticky;
+        top: 0;
+        z-index: 1;
     }
 
-    .mobile-menu-items {
-        padding: 16px;
+    .mobile-nav-brand {
         display: flex;
-        flex-direction: column;
-        gap: 8px;
+        align-items: center;
+    }
+
+    .mobile-nav-content {
+        padding: var(--mud-spacing-lg);
+    }
+
+    .mobile-nav-section {
+        margin-bottom: var(--mud-spacing-xl);
+    }
+
+    .mobile-nav-title {
+        color: var(--mud-text-secondary);
+        font-weight: var(--mud-font-weight-semibold);
+        margin-bottom: var(--mud-spacing-sm);
+        padding-left: var(--mud-spacing-sm);
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
     }
 
     .mobile-nav-item {
         justify-content: flex-start !important;
-        color: #484848 !important;
-        padding: 12px 16px;
-        border-radius: 8px;
+        color: var(--mud-text-primary) !important;
+        padding: var(--mud-spacing-md) var(--mud-spacing-lg);
+        border-radius: var(--mud-radius-md);
+        font-weight: var(--mud-font-weight-medium);
+        transition: all 0.2s ease;
+        width: 100%;
+        text-align: left;
+        margin-bottom: var(--mud-spacing-xs);
     }
 
-    .mobile-add-button {
-        background: var(--mud-palette-primary) !important;
-        color: white !important;
-        margin-top: 16px;
-        padding: 12px 16px;
-        border-radius: 8px;
+    .mobile-nav-item:hover {
+        background-color: var(--mud-palette-action-hover) !important;
+        transform: translateX(4px);
     }
 
-    .help-center-link {
-        color: #757575 !important;
-        opacity: 0.8;
-        font-size: 0.875rem !important;
+    .mobile-nav-primary {
+        padding: var(--mud-spacing-md) var(--mud-spacing-lg);
+        border-radius: var(--mud-radius-md);
+        font-weight: var(--mud-font-weight-semibold);
+        box-shadow: var(--mud-shadow-sm);
+        margin-bottom: var(--mud-spacing-sm);
     }
 
-    .help-center-link:hover {
-        opacity: 1;
-        background-color: rgba(117, 117, 117, 0.1) !important;
+    .mobile-nav-primary:hover {
+        box-shadow: var(--mud-shadow-md);
+        transform: translateY(-1px);
     }
 
-    .mobile-menu-toggle {
-        position: fixed;
-        top: 16px;
-        left: 16px;
-        z-index: 1001;
-    }
-
-    .mobile-toggle-button {
-        background: white;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-        border-radius: 50%;
+    .mobile-nav-footer {
+        margin-top: var(--mud-spacing-2xl);
+        padding-top: var(--mud-spacing-lg);
+        border-top: 1px solid var(--mud-border-divider);
     }
 
     /* Main Content */
@@ -589,8 +659,9 @@
         padding-bottom: 24px;
     }
 
+
     /* Responsive adjustments */
-    @@media (max-width: 960px) {
+    @@media (max-width: 1200px) {
         .content-wrapper {
             padding: 16px;
         }
@@ -598,16 +669,19 @@
         .header-content {
             padding: 12px 16px;
         }
+        
+        .brand-section {
+            margin-left: var(--mud-spacing-sm);
+        }
     }
 
     @@media (max-width: 600px) {
-        .mobile-menu-toggle {
-            top: 12px;
-            left: 12px;
+        .header-content {
+            gap: var(--mud-spacing-md);
         }
 
-        .brand-section {
-            margin-left: 56px;
+        .mobile-toggle-button {
+            padding: var(--mud-spacing-sm);
         }
 
         .footer-content {
@@ -724,6 +798,12 @@
     {
         await AuthService.LogoutAsync();
         Navigation.NavigateTo("/login");
+    }
+
+    private async Task LogoutFromMobileMenu()
+    {
+        CloseMobileMenu();
+        await LogoutAsync();
     }
 
     private string GetUserDisplayName(AuthenticationState authState)
