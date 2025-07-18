@@ -338,32 +338,41 @@
         flex-direction: column;
     }
 
-    /* Header Styles */
+    /* Modern Header Styles */
     .header-container {
-        background: white;
-        border-bottom: 1px solid #e0e0e0;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--mud-border-primary);
         position: sticky;
         top: 0;
         z-index: 1000;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        box-shadow: var(--mud-shadow-sm);
     }
 
     .header-content {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 12px 24px;
-        min-height: 64px;
+        padding: var(--mud-spacing-lg) var(--mud-spacing-2xl);
+        min-height: 72px;
     }
 
     .brand-section .brand-button {
         color: var(--mud-palette-primary) !important;
-        padding: 8px 12px;
+        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
+        border-radius: var(--mud-radius-lg);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    .brand-section .brand-button:hover {
+        background: var(--mud-palette-surface-variant);
+        transform: translateY(-1px);
     }
 
     .brand-text {
-        font-weight: 600;
-        margin-left: 8px;
+        font-weight: var(--mud-font-weight-bold);
+        margin-left: var(--mud-spacing-sm);
+        font-family: var(--mud-font-family-sans);
     }
 
     .main-nav {
@@ -376,15 +385,18 @@
     }
 
     .nav-button {
-        color: #484848 !important;
-        font-weight: 500;
-        padding: 8px 16px;
-        border-radius: 24px;
-        transition: all 0.2s ease;
+        color: var(--mud-text-primary) !important;
+        font-weight: var(--mud-font-weight-medium);
+        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
+        border-radius: var(--mud-radius-full);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: var(--mud-font-family-sans);
     }
 
     .nav-button:hover {
-        background-color: #f7f7f7 !important;
+        background-color: var(--mud-palette-surface-variant) !important;
+        transform: translateY(-1px);
+        box-shadow: var(--mud-shadow-sm);
     }
 
     .admin-button {
@@ -400,17 +412,34 @@
 
     .add-tool-button {
         color: var(--mud-palette-primary) !important;
-        font-weight: 600;
-        padding: 8px 16px;
-        border-radius: 24px;
+        font-weight: var(--mud-font-weight-semibold);
+        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
+        border-radius: var(--mud-radius-full);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: var(--mud-font-family-sans);
+    }
+
+    .add-tool-button:hover {
+        background: var(--mud-palette-surface-variant) !important;
+        transform: translateY(-1px);
+        box-shadow: var(--mud-shadow-sm);
     }
 
     .user-menu-button {
-        border: 1px solid #ddd;
-        border-radius: 24px;
-        padding: 8px 12px;
-        color: #484848 !important;
+        border: 1px solid var(--mud-border-primary);
+        border-radius: var(--mud-radius-full);
+        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
+        color: var(--mud-text-primary) !important;
         min-width: 76px;
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: var(--mud-font-family-sans);
+    }
+
+    .user-menu-button:hover {
+        border-color: var(--mud-border-focus);
+        background: var(--mud-palette-surface-variant);
+        transform: translateY(-1px);
+        box-shadow: var(--mud-shadow-sm);
     }
 
     .auth-buttons {
@@ -420,18 +449,33 @@
     }
 
     .login-button {
-        color: #484848 !important;
-        font-weight: 500;
-        padding: 8px 16px;
-        border-radius: 24px;
+        color: var(--mud-text-primary) !important;
+        font-weight: var(--mud-font-weight-medium);
+        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
+        border-radius: var(--mud-radius-full);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: var(--mud-font-family-sans);
+    }
+
+    .login-button:hover {
+        background: var(--mud-palette-surface-variant) !important;
+        transform: translateY(-1px);
+        box-shadow: var(--mud-shadow-sm);
     }
 
     .signup-button {
-        background: var(--mud-palette-primary) !important;
+        background: var(--mud-gradient-primary) !important;
         color: white !important;
-        font-weight: 600;
-        padding: 8px 16px;
-        border-radius: 24px;
+        font-weight: var(--mud-font-weight-semibold);
+        padding: var(--mud-spacing-sm) var(--mud-spacing-lg);
+        border-radius: var(--mud-radius-full);
+        transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+        font-family: var(--mud-font-family-sans);
+    }
+
+    .signup-button:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--mud-shadow-md);
     }
 
     /* Mobile Navigation */

@@ -16,19 +16,19 @@
                            AutoRefresh="true" 
                            Class="mb-4" />
 
-<!-- Hero Section -->
-<MudPaper Elevation="0" Class="pa-8 mb-8" Style="background: linear-gradient(135deg, var(--mud-palette-primary) 0%, var(--mud-palette-secondary) 100%); border-radius: 16px;">
+<!-- Modern Hero Section -->
+<MudPaper Elevation="0" Class="pa-8 mb-8 animate-fade-in-up" Style="background: var(--mud-gradient-hero); border-radius: var(--mud-radius-2xl); box-shadow: var(--mud-shadow-lg);">
     <div class="d-flex flex-column align-center text-center">
-        <MudIcon Icon="@Icons.Material.Filled.Handyman" Size="Size.Large" Style="font-size: 5rem; color: white; margin-bottom: 1rem;" />
-        <MudText Typo="Typo.h2" Style="color: white; font-weight: bold;" GutterBottom="true">
+        <MudIcon Icon="@Icons.Material.Filled.Handyman" Size="Size.Large" Class="animate-float" Style="font-size: 5rem; color: white; margin-bottom: var(--mud-spacing-lg);" />
+        <MudText Typo="Typo.h2" Style="color: white; font-weight: var(--mud-font-weight-bold); font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-tight);" GutterBottom="true">
             Welcome to NeighborTools
         </MudText>
-        <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.9); max-width: 600px; margin-bottom: 2rem;">
+        <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.9); max-width: 600px; margin-bottom: var(--mud-spacing-2xl); font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-relaxed);">
             Share tools with your neighbors and borrow what you need. Building community one tool at a time.
         </MudText>
         <AuthorizeView>
             <Authorized>
-                <MudText Typo="Typo.h6" Style="color: white; margin-bottom: 1.5rem;">
+                <MudText Typo="Typo.h6" Style="color: white; margin-bottom: var(--mud-spacing-xl); font-family: var(--mud-font-family-sans);">
                     Welcome back, @context.User.Identity?.Name! 👋
                 </MudText>
                 <MudButton Variant="Variant.Filled"
@@ -36,7 +36,8 @@
                            Size="Size.Large"
                            Href="/tools"
                            StartIcon="@Icons.Material.Filled.Search"
-                           Style="color: var(--mud-palette-primary); font-weight: bold;">
+                           Class="animate-glow"
+                           Style="color: var(--mud-palette-primary); font-weight: var(--mud-font-weight-bold); font-family: var(--mud-font-family-sans); border-radius: var(--mud-radius-full); padding: var(--mud-spacing-lg) var(--mud-spacing-2xl);">
                     Browse Tools
                 </MudButton>
             </Authorized>
@@ -44,18 +45,18 @@
     </div>
 </MudPaper>
 
-<!-- Quick Actions -->
+<!-- Modern Quick Actions -->
 <MudGrid Class="mb-8">
     <MudItem xs="12" sm="6" md="4">
-        <MudCard Elevation="4" Style="height: 100%; border-radius: 12px;">
+        <MudCard Elevation="0" Class="modern-card animate-fade-in-up animate-delay-100" Style="height: 100%;">
             <MudCardContent Class="d-flex flex-column align-center text-center pa-6">
-                <MudIcon Icon="@Icons.Material.Filled.Add" Color="Color.Primary" Size="Size.Large" Class="mb-4" Style="font-size: 3.5rem;" />
-                <MudText Typo="Typo.h5" Color="Color.Primary" GutterBottom="true">Share Your Tools</MudText>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Add" Color="Color.Primary" Size="Size.Large" Class="mb-4 animate-pulse" Style="font-size: 3.5rem;" />
+                <MudText Typo="Typo.h5" Color="Color.Primary" GutterBottom="true" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-semibold);">Share Your Tools</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4" Style="font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-relaxed);">
                     List your tools and earn money by sharing them with neighbors.
                 </MudText>
                 <MudSpacer />
-                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/my-tools" StartIcon="@Icons.Material.Filled.Inventory">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/my-tools" StartIcon="@Icons.Material.Filled.Inventory" Style="border-radius: var(--mud-radius-full); font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium);">
                     My Tools
                 </MudButton>
             </MudCardContent>
@@ -63,15 +64,15 @@
     </MudItem>
     
     <MudItem xs="12" sm="6" md="4">
-        <MudCard Elevation="4" Style="height: 100%; border-radius: 12px;">
+        <MudCard Elevation="0" Class="modern-card animate-fade-in-up animate-delay-200" Style="height: 100%;">
             <MudCardContent Class="d-flex flex-column align-center text-center pa-6">
-                <MudIcon Icon="@Icons.Material.Filled.Search" Color="Color.Success" Size="Size.Large" Class="mb-4" Style="font-size: 3.5rem;" />
-                <MudText Typo="Typo.h5" Color="Color.Success" GutterBottom="true">Find Tools</MudText>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Color="Color.Success" Size="Size.Large" Class="mb-4 animate-pulse" Style="font-size: 3.5rem;" />
+                <MudText Typo="Typo.h5" Color="Color.Success" GutterBottom="true" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-semibold);">Find Tools</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4" Style="font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-relaxed);">
                     Browse and rent tools from your neighbors when you need them.
                 </MudText>
                 <MudSpacer />
-                <MudButton Variant="Variant.Filled" Color="Color.Success" Href="/tools" StartIcon="@Icons.Material.Filled.Search">
+                <MudButton Variant="Variant.Filled" Color="Color.Success" Href="/tools" StartIcon="@Icons.Material.Filled.Search" Style="border-radius: var(--mud-radius-full); font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium);">
                     Browse Tools
                 </MudButton>
             </MudCardContent>
@@ -79,15 +80,15 @@
     </MudItem>
     
     <MudItem xs="12" sm="6" md="4">
-        <MudCard Elevation="4" Style="height: 100%; border-radius: 12px;">
+        <MudCard Elevation="0" Class="modern-card animate-fade-in-up animate-delay-300" Style="height: 100%;">
             <MudCardContent Class="d-flex flex-column align-center text-center pa-6">
-                <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Info" Size="Size.Large" Class="mb-4" Style="font-size: 3.5rem;" />
-                <MudText Typo="Typo.h5" Color="Color.Info" GutterBottom="true">Build Community</MudText>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Info" Size="Size.Large" Class="mb-4 animate-pulse" Style="font-size: 3.5rem;" />
+                <MudText Typo="Typo.h5" Color="Color.Info" GutterBottom="true" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-semibold);">Build Community</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4" Style="font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-relaxed);">
                     Connect with neighbors and build stronger community relationships.
                 </MudText>
                 <MudSpacer />
-                <MudButton Variant="Variant.Filled" Color="Color.Info" Href="/profile" StartIcon="@Icons.Material.Filled.Person">
+                <MudButton Variant="Variant.Filled" Color="Color.Info" Href="/profile" StartIcon="@Icons.Material.Filled.Person" Style="border-radius: var(--mud-radius-full); font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium);">
                     Your Profile
                 </MudButton>
             </MudCardContent>
@@ -98,14 +99,14 @@
 <!-- Featured Tools Section -->
 @if (isLoading)
 {
-    <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+    <MudPaper Class="pa-8 text-center animate-fade-in-scale" Elevation="0" Style="border-radius: var(--mud-radius-xl); background: var(--mud-palette-surface-container-low);">
         <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-        <MudText Typo="Typo.h6" Class="mt-4">Loading featured tools...</MudText>
+        <MudText Typo="Typo.h6" Class="mt-4" Style="font-family: var(--mud-font-family-sans); color: var(--mud-text-secondary);">Loading featured tools...</MudText>
     </MudPaper>
 }
 else if (featuredTools != null && featuredTools.Any())
 {
-    <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true" Class="mb-6">
+    <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true" Class="mb-6 animate-fade-in-up" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-bold);">
         <MudIcon Icon="@Icons.Material.Filled.Star" Class="mr-2" />
         Featured Tools
     </MudText>
@@ -114,32 +115,32 @@ else if (featuredTools != null && featuredTools.Any())
         @foreach (var tool in featuredTools.Take(6))
         {
             <MudItem xs="12" sm="6" md="4">
-                <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s;" Class="hover-card">
+                <MudCard Elevation="0" Class="modern-card hover-card animate-fade-in-up" Style="height: 100%;">
                     @if (tool.ImageUrls.Any())
                     {
-                        <MudCardMedia Image="@tool.ImageUrls.First()" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                        <MudCardMedia Image="@tool.ImageUrls.First()" Height="200" Style="border-radius: var(--mud-radius-xl) var(--mud-radius-xl) 0 0;" />
                     }
                     else
                     {
-                        <div class="d-flex align-center justify-center" style="height: 200px; background: var(--mud-palette-surface-variant); border-radius: 12px 12px 0 0;">
+                        <div class="d-flex align-center justify-center" style="height: 200px; background: var(--mud-palette-surface-variant); border-radius: var(--mud-radius-xl) var(--mud-radius-xl) 0 0;">
                             <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem;" />
                         </div>
                     }
                     
                     <MudCardContent>
-                        <MudText Typo="Typo.h6" GutterBottom="true">@tool.Name</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+                        <MudText Typo="Typo.h6" GutterBottom="true" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-semibold);">@tool.Name</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3" Style="font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-relaxed);">
                             @(tool.Description.Length > 100 ? tool.Description.Substring(0, 100) + "..." : tool.Description)
                         </MudText>
                         
                         <div class="d-flex justify-space-between align-center mb-3">
-                            <MudChip T="string" Color="Color.Primary" Size="Size.Small">@tool.Category</MudChip>
-                            <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Error)" Size="Size.Small">
+                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium);">@tool.Category</MudChip>
+                            <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Error)" Size="Size.Small" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium);">
                                 @(tool.IsAvailable ? "Available" : "Unavailable")
                             </MudChip>
                         </div>
                         
-                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">
+                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-bold);">
                             $@tool.DailyRate.ToString("F2") / day
                         </MudText>
                         
@@ -147,7 +148,7 @@ else if (featuredTools != null && featuredTools.Any())
                         {
                             <div class="d-flex align-center mb-3">
                                 <MudRating ReadOnly="true" SelectedValue="@((int)tool.Rating.Value)" MaxValue="5" Size="Size.Small" />
-                                <MudText Typo="Typo.caption" Class="ml-2">(@tool.ReviewCount reviews)</MudText>
+                                <MudText Typo="Typo.caption" Class="ml-2" Style="font-family: var(--mud-font-family-sans);">(@tool.ReviewCount reviews)</MudText>
                             </div>
                         }
                     </MudCardContent>
@@ -158,7 +159,8 @@ else if (featuredTools != null && featuredTools.Any())
                                    FullWidth="true"
                                    Href="/tools"
                                    Disabled="@(!tool.IsAvailable)"
-                                   StartIcon="@Icons.Material.Filled.Visibility">
+                                   StartIcon="@Icons.Material.Filled.Visibility"
+                                   Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium); border-radius: var(--mud-radius-lg);">
                             @(tool.IsAvailable ? "View Details" : "Unavailable")
                         </MudButton>
                     </MudCardActions>
@@ -172,20 +174,21 @@ else if (featuredTools != null && featuredTools.Any())
                    Color="Color.Primary" 
                    Size="Size.Large"
                    Href="/tools"
-                   StartIcon="@Icons.Material.Filled.ViewList">
+                   StartIcon="@Icons.Material.Filled.ViewList"
+                   Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium); border-radius: var(--mud-radius-full); padding: var(--mud-spacing-lg) var(--mud-spacing-2xl);">
             View All Tools
         </MudButton>
     </div>
 }
 else
 {
-    <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+    <MudPaper Class="pa-8 text-center animate-fade-in-scale" Elevation="0" Style="border-radius: var(--mud-radius-xl); background: var(--mud-palette-surface-container-low);">
         <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
-        <MudText Typo="Typo.h6" Color="Color.Secondary">No tools available yet</MudText>
-        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+        <MudText Typo="Typo.h6" Color="Color.Secondary" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-semibold);">No tools available yet</MudText>
+        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4" Style="font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-relaxed);">
             Be the first to share a tool with your community!
         </MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="@Icons.Material.Filled.Add">
+        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="@Icons.Material.Filled.Add" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium); border-radius: var(--mud-radius-full);">
             Add Your First Tool
         </MudButton>
     </MudPaper>
@@ -193,7 +196,9 @@ else
 
 <style>
     .hover-card:hover {
-        transform: translateY(-4px);
+        transform: translateY(-8px);
+        box-shadow: var(--mud-shadow-xl);
+        border-color: var(--mud-border-focus);
     }
 </style>
 
