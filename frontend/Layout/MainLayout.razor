@@ -51,6 +51,12 @@
                                        StartIcon="@Icons.Material.Filled.Assignment">
                                 My Rentals
                             </MudButton>
+                            <MudButton Variant="Variant.Text" 
+                                       Href="/messages" 
+                                       Class="nav-link"
+                                       StartIcon="@Icons.Material.Filled.Message">
+                                Messages
+                            </MudButton>
                             @if (hasOpenDisputes)
                             {
                                 <MudButton Variant="Variant.Text" 
@@ -180,6 +186,14 @@
                                    Class="mobile-nav-item"
                                    OnClick="CloseMobileMenu">
                             My Rentals
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" 
+                                   Href="/messages" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Message"
+                                   Class="mobile-nav-item"
+                                   OnClick="CloseMobileMenu">
+                            Messages
                         </MudButton>
                         @if (hasOpenDisputes)
                         {

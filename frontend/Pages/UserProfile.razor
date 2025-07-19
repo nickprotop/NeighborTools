@@ -2,10 +2,14 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using frontend.Components.Messages
 @inject IPublicProfileService PublicProfileService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject INavigationHelperService NavigationHelper
+@inject MessageService MessageService
+@inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>@GetPageTitle() - NeighborTools</PageTitle>
 
@@ -91,27 +95,40 @@
                         </MudText>
                     </div>
 
-                    <!-- Contact Information (if visible) -->
-                    <div class="d-flex flex-column flex-md-row gap-2">
-                        @if (!string.IsNullOrEmpty(profile.Email))
+                    <!-- Contact Information and Actions -->
+                    <div class="d-flex flex-column flex-md-row align-center gap-3">
+                        <div class="d-flex flex-column flex-md-row gap-2">
+                            @if (!string.IsNullOrEmpty(profile.Email))
+                            {
+                                <MudChip T="string"
+                                         Icon="@Icons.Material.Filled.Email" 
+                                         Color="Color.Secondary" 
+                                         Variant="Variant.Outlined"
+                                         Size="Size.Small">
+                                    @profile.Email
+                                </MudChip>
+                            }
+                            @if (!string.IsNullOrEmpty(profile.PhoneNumber))
+                            {
+                                <MudChip T="string"
+                                         Icon="@Icons.Material.Filled.Phone" 
+                                         Color="Color.Secondary" 
+                                         Variant="Variant.Outlined"
+                                         Size="Size.Small">
+                                    @profile.PhoneNumber
+                                </MudChip>
+                            }
+                        </div>
+                        
+                        @if (!isOwnProfile)
                         {
-                            <MudChip T="string"
-                                     Icon="@Icons.Material.Filled.Email" 
-                                     Color="Color.Secondary" 
-                                     Variant="Variant.Outlined"
-                                     Size="Size.Small">
-                                @profile.Email
-                            </MudChip>
-                        }
-                        @if (!string.IsNullOrEmpty(profile.PhoneNumber))
-                        {
-                            <MudChip T="string"
-                                     Icon="@Icons.Material.Filled.Phone" 
-                                     Color="Color.Secondary" 
-                                     Variant="Variant.Outlined"
-                                     Size="Size.Small">
-                                @profile.PhoneNumber
-                            </MudChip>
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Primary" 
+                                       Size="Size.Medium"
+                                       StartIcon="@Icons.Material.Filled.Message"
+                                       OnClick="SendMessage">
+                                Send Message
+                            </MudButton>
                         }
                     </div>
                 </div>
@@ -364,6 +381,8 @@
     
     private PublicUserProfileDto? profile;
     private bool isLoading = true;
+    private bool isOwnProfile = false;
+    private string? currentUserId;
     
     // Tools tab
     private List<PublicUserToolDto>? userTools;
@@ -382,6 +401,10 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Get current user
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        
         await LoadProfileAsync();
         await LoadToolsAsync();
         await LoadReviewsAsync();
@@ -413,6 +436,7 @@
             if (response?.Success == true)
             {
                 profile = response.Data;
+                isOwnProfile = UserId == currentUserId;
             }
             else
             {
@@ -635,5 +659,31 @@
     private async Task GoBack()
     {
         await NavigationHelper.NavigateBack("/tools");
+    }
+
+    private async Task SendMessage()
+    {
+        if (profile == null) return;
+
+        var parameters = new DialogParameters 
+        { 
+            { "RecipientId", UserId },
+            { "RecipientName", GetDisplayName() }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        
+        var dialog = DialogService.Show<NewMessageDialog>("Send Message", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Message sent successfully!", Severity.Success);
+        }
     }
 }

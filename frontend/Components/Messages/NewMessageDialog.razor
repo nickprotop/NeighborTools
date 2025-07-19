@@ -1,0 +1,403 @@
+@using frontend.Services
+@using frontend.Models
+@inject MessageService MessageService
+@inject UserService UserService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            @(IsReply ? "Reply to Message" : "New Message")
+        </MudText>
+    </TitleContent>
+    
+    <DialogContent>
+        <MudStack Spacing="4">
+            @if (!IsReply)
+            {
+                <!-- Recipient Selection -->
+                <MudAutocomplete T="UserSearchResult"
+                               Label="To"
+                               @bind-Value="selectedRecipient"
+                               SearchFunc="SearchUsers"
+                               ToStringFunc="@(user => user?.FullName ?? "")"
+                               Placeholder="Search for a user..."
+                               ShowProgressIndicator="true"
+                               MaxItems="10"
+                               Required="true"
+                               RequiredError="Please select a recipient"
+                               Disabled="@(!string.IsNullOrEmpty(RecipientId))">
+                    <ItemTemplate Context="user">
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                            <MudAvatar Size="Size.Small" Color="Color.Primary">
+                                @GetUserInitials(user.FullName)
+                            </MudAvatar>
+                            <MudStack Spacing="0">
+                                <MudText Typo="Typo.body1">@user.FullName</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@user.Email</MudText>
+                            </MudStack>
+                        </MudStack>
+                    </ItemTemplate>
+                </MudAutocomplete>
+
+                <!-- Subject -->
+                <MudTextField @bind-Value="messageSubject"
+                            Label="Subject"
+                            Required="true"
+                            RequiredError="Subject is required"
+                            MaxLength="200"
+                            Counter="200" />
+            }
+
+            <!-- Message Content -->
+            <MudTextField @bind-Value="messageContent"
+                        Label="Message"
+                        Lines="6"
+                        MaxLines="10"
+                        AutoGrow="true"
+                        Required="true"
+                        RequiredError="Message content is required"
+                        MaxLength="5000"
+                        Counter="5000" />
+
+            <!-- File Attachments -->
+            <MudStack>
+                <MudText Typo="Typo.subtitle2">Attachments (Optional)</MudText>
+                
+                <MudFileUpload T="IReadOnlyList<IBrowserFile>" 
+                             FilesChanged="HandleFilesChanged"
+                             Accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png,.gif,.zip"
+                             MaximumFileCount="5"
+                             Style="width: 100%;">
+                    <ActivatorContent>
+                        <MudButton Variant="Variant.Outlined"
+                                 StartIcon="@Icons.Material.Filled.AttachFile"
+                                 Style="width: 100%;">
+                            Choose Files (Max 5, 10MB each)
+                        </MudButton>
+                    </ActivatorContent>
+                </MudFileUpload>
+
+                @if (selectedFiles?.Any() == true)
+                {
+                    <MudList T="string" Dense="true">
+                        @foreach (var file in selectedFiles)
+                        {
+                            <MudListItem T="string">
+                                <div style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                        <MudIcon Icon="@GetFileIcon(file.ContentType)" />
+                                        <MudStack Spacing="0">
+                                            <MudText Typo="Typo.body2">@file.Name</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @FormatFileSize(file.Size)
+                                            </MudText>
+                                        </MudStack>
+                                    </MudStack>
+                                    
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                 Size="Size.Small"
+                                                 OnClick="() => RemoveFile(file)" />
+                                </div>
+                            </MudListItem>
+                        }
+                    </MudList>
+                }
+            </MudStack>
+
+            <!-- Context Information -->
+            @if (!string.IsNullOrEmpty(RentalId) || !string.IsNullOrEmpty(ToolId))
+            {
+                <MudStack>
+                    <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Message Context</MudText>
+                    <MudStack Row Spacing="2">
+                        @if (!string.IsNullOrEmpty(RentalId))
+                        {
+                            <MudChip T="string" 
+                                     Color="Color.Primary" 
+                                     Icon="@Icons.Material.Filled.Receipt"
+                                     Size="Size.Small"
+                                     Variant="Variant.Filled">
+                                About Rental
+                            </MudChip>
+                        }
+                        @if (!string.IsNullOrEmpty(ToolId))
+                        {
+                            <MudChip T="string" 
+                                     Color="Color.Secondary" 
+                                     Icon="@Icons.Material.Filled.Build"
+                                     Size="Size.Small"
+                                     Variant="Variant.Filled">
+                                @if (!string.IsNullOrEmpty(ToolName))
+                                {
+                                    <text>About: @ToolName</text>
+                                }
+                                else
+                                {
+                                    <text>About Tool</text>
+                                }
+                            </MudChip>
+                        }
+                    </MudStack>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        @if (!string.IsNullOrEmpty(RentalId) && !string.IsNullOrEmpty(ToolId))
+                        {
+                            <text>This message will be linked to the rental and tool for easy reference.</text>
+                        }
+                        else if (!string.IsNullOrEmpty(RentalId))
+                        {
+                            <text>This message will be linked to the rental for easy reference.</text>
+                        }
+                        else if (!string.IsNullOrEmpty(ToolId))
+                        {
+                            <text>This message will be linked to the tool listing for easy reference.</text>
+                        }
+                    </MudText>
+                </MudStack>
+            }
+        </MudStack>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancel" Disabled="isSending">Cancel</MudButton>
+        <MudButton Variant="Variant.Filled" 
+                 Color="Color.Primary"
+                 OnClick="SendMessage"
+                 Disabled="@(isSending || !IsFormValid())"
+                 StartIcon="@Icons.Material.Filled.Send">
+            @(isSending ? "Sending..." : "Send Message")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    
+    [Parameter] public bool IsReply { get; set; } = false;
+    [Parameter] public string? RecipientId { get; set; }
+    [Parameter] public string? RecipientName { get; set; }
+    [Parameter] public string? RentalId { get; set; }
+    [Parameter] public string? ToolId { get; set; }
+    [Parameter] public string? ToolName { get; set; }
+    [Parameter] public string? ConversationId { get; set; }
+    [Parameter] public string? ReplyToMessageId { get; set; }
+    [Parameter] public string? OriginalSubject { get; set; }
+
+    private UserSearchResult? selectedRecipient;
+    private string messageSubject = "";
+    private string messageContent = "";
+    private bool isSending = false;
+    private List<IBrowserFile>? selectedFiles;
+
+    protected override void OnInitialized()
+    {
+        // Populate recipient for both replies and new messages
+        if (!string.IsNullOrEmpty(RecipientId) && !string.IsNullOrEmpty(RecipientName))
+        {
+            var nameParts = RecipientName.Split(' ', 2);
+            selectedRecipient = new UserSearchResult
+            {
+                Id = RecipientId,
+                FirstName = nameParts.Length > 0 ? nameParts[0] : RecipientName,
+                LastName = nameParts.Length > 1 ? nameParts[1] : "",
+                Email = "" // We don't have email in reply context
+            };
+        }
+        
+        if (IsReply)
+        {
+            if (!string.IsNullOrEmpty(OriginalSubject))
+            {
+                messageSubject = OriginalSubject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase) 
+                    ? OriginalSubject 
+                    : $"Re: {OriginalSubject}";
+            }
+        }
+    }
+
+    private async Task<IEnumerable<UserSearchResult>> SearchUsers(string value, CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(value) || value.Length < 2)
+            return new List<UserSearchResult>();
+
+        try
+        {
+            // This would call a user search API endpoint
+            // For now, return empty list - implement when user search API is available
+            return new List<UserSearchResult>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error searching users: {ex.Message}");
+            return new List<UserSearchResult>();
+        }
+    }
+
+    private async Task SendMessage()
+    {
+        if (!IsFormValid()) return;
+
+        isSending = true;
+        StateHasChanged();
+
+        try
+        {
+            var attachments = new List<FileUploadRequest>();
+            
+            if (selectedFiles?.Any() == true)
+            {
+                foreach (var file in selectedFiles)
+                {
+                    if (file.Size > 10 * 1024 * 1024) // 10MB limit
+                    {
+                        Snackbar.Add($"File {file.Name} is too large. Maximum size is 10MB.", Severity.Error);
+                        return;
+                    }
+
+                    var fileContent = new byte[file.Size];
+                    using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
+                    await stream.ReadAsync(fileContent);
+                    
+                    attachments.Add(new FileUploadRequest
+                    {
+                        FileName = file.Name,
+                        ContentType = file.ContentType,
+                        FileData = fileContent
+                    });
+                }
+            }
+
+            if (IsReply && !string.IsNullOrEmpty(ReplyToMessageId))
+            {
+                var replyRequest = new ReplyToMessageRequest
+                {
+                    Content = messageContent.Trim(),
+                    Attachments = attachments.Any() ? attachments : null
+                };
+
+                var response = await MessageService.ReplyToMessageAsync(ReplyToMessageId, replyRequest);
+                if (response.Success)
+                {
+                    MudDialog.Close(DialogResult.Ok(response.Data));
+                }
+                else
+                {
+                    Snackbar.Add($"Failed to send reply: {response.Message}", Severity.Error);
+                }
+            }
+            else
+            {
+                var sendRequest = new SendMessageRequest
+                {
+                    RecipientId = selectedRecipient!.Id,
+                    Subject = messageSubject.Trim(),
+                    Content = messageContent.Trim(),
+                    ConversationId = string.IsNullOrEmpty(ConversationId) ? null : Guid.Parse(ConversationId),
+                    RentalId = string.IsNullOrEmpty(RentalId) ? null : Guid.Parse(RentalId),
+                    ToolId = string.IsNullOrEmpty(ToolId) ? null : Guid.Parse(ToolId),
+                    Priority = MessagePriority.Normal,
+                    Type = MessageType.Direct,
+                    Attachments = attachments.Any() ? attachments : null
+                };
+
+                var response = await MessageService.SendMessageAsync(sendRequest);
+                if (response.Success)
+                {
+                    MudDialog.Close(DialogResult.Ok(response.Data));
+                }
+                else
+                {
+                    Snackbar.Add($"Failed to send message: {response.Message}", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error sending message: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSending = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private bool IsFormValid()
+    {
+        if (IsReply)
+        {
+            return !string.IsNullOrWhiteSpace(messageContent);
+        }
+        else
+        {
+            return selectedRecipient != null && 
+                   !string.IsNullOrWhiteSpace(messageSubject) && 
+                   !string.IsNullOrWhiteSpace(messageContent);
+        }
+    }
+
+    private void HandleFilesChanged(IReadOnlyList<IBrowserFile> files)
+    {
+        selectedFiles = files.ToList();
+        StateHasChanged();
+    }
+
+    private void RemoveFile(IBrowserFile file)
+    {
+        selectedFiles?.Remove(file);
+        StateHasChanged();
+    }
+
+    private string GetFileIcon(string contentType)
+    {
+        return contentType.ToLower() switch
+        {
+            var ct when ct.StartsWith("image/") => Icons.Material.Filled.Image,
+            var ct when ct.Contains("pdf") => Icons.Material.Filled.PictureAsPdf,
+            var ct when ct.Contains("word") => Icons.Material.Filled.Description,
+            var ct when ct.Contains("text") => Icons.Material.Filled.TextSnippet,
+            var ct when ct.Contains("zip") => Icons.Material.Filled.FolderZip,
+            _ => Icons.Material.Filled.AttachFile
+        };
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    private string GetUserInitials(string name)
+    {
+        if (string.IsNullOrEmpty(name)) return "?";
+        
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return name[0].ToString().ToUpper();
+    }
+}
+
+@code {
+    public class UserSearchResult
+    {
+        public string Id { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string Email { get; set; } = "";
+        
+        public string FullName => $"{FirstName} {LastName}".Trim();
+    }
+}

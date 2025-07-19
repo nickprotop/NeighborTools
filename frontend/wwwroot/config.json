@@ -1,15 +1,15 @@
 {
   "ApiSettings": {
-    "BaseUrl": "https://api.neighbortools.com",
+    "BaseUrl": "http://localhost:5002",
     "TimeoutSeconds": 30,
     "RetryAttempts": 3
   },
-  "Environment": "Production",
+  "Environment": "Development",
   "Features": {
     "EnableAdvancedSearch": true,
     "EnableNotifications": true,
     "EnablePayments": true,
     "EnableDisputes": true,
-    "EnableAnalytics": true
+    "EnableAnalytics": false
   }
 }

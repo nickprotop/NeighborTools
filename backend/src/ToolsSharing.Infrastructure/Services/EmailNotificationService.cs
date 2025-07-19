@@ -99,6 +99,10 @@ public class EmailNotificationService : IEmailNotificationService
             DisputeResolutionNotification disputeResolution => GenerateDisputeResolutionTemplate(disputeResolution, frontendUrl),
             DisputeEvidenceNotification disputeEvidence => GenerateDisputeEvidenceTemplate(disputeEvidence, frontendUrl),
             DisputeOverdueNotification disputeOverdue => GenerateDisputeOverdueTemplate(disputeOverdue, frontendUrl),
+            NewMessageNotification newMessage => GenerateNewMessageTemplate(newMessage, frontendUrl),
+            MessageReplyNotification messageReply => GenerateMessageReplyTemplate(messageReply, frontendUrl),
+            MessageModerationNotification messageModeration => GenerateMessageModerationTemplate(messageModeration, frontendUrl),
+            ConversationDigestNotification conversationDigest => GenerateConversationDigestTemplate(conversationDigest, frontendUrl),
             _ => GenerateGenericTemplate(notification, frontendUrl)
         };
     }
@@ -696,6 +700,7 @@ public class EmailNotificationService : IEmailNotificationService
                 
                 // Messages
                 EmailNotificationType.NewMessage => userSettings.Notifications.EmailMessages,
+                EmailNotificationType.MessageReceived => userSettings.Notifications.EmailMessages,
                 EmailNotificationType.MessageDigest => userSettings.Notifications.EmailMessages,
                 
                 // Marketing
@@ -1137,6 +1142,224 @@ public class EmailNotificationService : IEmailNotificationService
         </div>
         <div class=""footer"">
             <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+    
+    private string GenerateNewMessageTemplate(NewMessageNotification notification, string frontendUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #594AE2; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .message-preview {{ background-color: white; padding: 15px; border-left: 4px solid #594AE2; margin: 20px 0; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+        .meta {{ color: #666; font-size: 14px; margin-bottom: 10px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>New Message Received</h1>
+        </div>
+        <div class=""content"">
+            <h2>Hello {notification.RecipientName}!</h2>
+            <p>You have received a new message from <strong>{notification.SenderName}</strong>.</p>
+            
+            <div class=""message-preview"">
+                <div class=""meta"">
+                    <strong>From:</strong> {notification.SenderName} ({notification.SenderEmail})<br>
+                    <strong>Subject:</strong> {notification.MessageSubject}
+                    {(notification.HasAttachments ? $"<br><strong>Attachments:</strong> {notification.AttachmentCount} file(s)" : "")}
+                    {(!string.IsNullOrEmpty(notification.RentalToolName) ? $"<br><strong>Regarding:</strong> {notification.RentalToolName}" : "")}
+                </div>
+                <p><strong>Message Preview:</strong></p>
+                <p>{notification.MessagePreview}</p>
+            </div>
+            
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.MessageUrl}"" class=""button"">Read Full Message</a>
+                <a href=""{notification.ConversationUrl}"" class=""button"" style=""margin-left: 10px; background-color: #6c757d;"">View Conversation</a>
+            </p>
+            
+            <p>You can reply directly from the message page or manage your notification preferences in your account settings.</p>
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+            <p><a href=""{frontendUrl}/settings/notifications"">Unsubscribe from message notifications</a></p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+    
+    private string GenerateMessageReplyTemplate(MessageReplyNotification notification, string frontendUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #594AE2; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .reply-preview {{ background-color: white; padding: 15px; border-left: 4px solid #28a745; margin: 20px 0; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+        .meta {{ color: #666; font-size: 14px; margin-bottom: 10px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>New Reply Received</h1>
+        </div>
+        <div class=""content"">
+            <h2>Hello {notification.RecipientName}!</h2>
+            <p><strong>{notification.SenderName}</strong> has replied to your conversation.</p>
+            
+            <div class=""reply-preview"">
+                <div class=""meta"">
+                    <strong>Reply to:</strong> {notification.OriginalMessageSubject}
+                    {(notification.HasAttachments ? "<br><strong>Includes attachments</strong>" : "")}
+                    {(!string.IsNullOrEmpty(notification.RentalToolName) ? $"<br><strong>Regarding:</strong> {notification.RentalToolName}" : "")}
+                </div>
+                <p><strong>Reply:</strong></p>
+                <p>{notification.ReplyContent}</p>
+            </div>
+            
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.ConversationUrl}"" class=""button"">View Conversation & Reply</a>
+            </p>
+            
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+            <p><a href=""{frontendUrl}/settings/notifications"">Manage notification preferences</a></p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+    
+    private string GenerateMessageModerationTemplate(MessageModerationNotification notification, string frontendUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: {(notification.IsBlocked ? "#dc3545" : "#ffc107")}; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .alert {{ background-color: {(notification.IsBlocked ? "#f8d7da" : "#fff3cd")}; border: 1px solid {(notification.IsBlocked ? "#f5c6cb" : "#ffeaa7")}; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>Message {(notification.IsBlocked ? "Blocked" : "Modified")}</h1>
+        </div>
+        <div class=""content"">
+            <h2>Hello {notification.RecipientName}!</h2>
+            
+            <div class=""alert"">
+                <h3>{(notification.IsBlocked ? "Your message was blocked" : "Your message was modified")}</h3>
+                <p><strong>Subject:</strong> {notification.MessageSubject}</p>
+                <p><strong>Reason:</strong> {notification.ModerationReason}</p>
+            </div>
+            
+            {(notification.IsBlocked ? 
+                "<p>Your message could not be delivered due to a violation of our community guidelines. Please review our terms of service and try sending a revised message.</p>" :
+                "<p>Your message has been modified to comply with our community guidelines and has been delivered.</p>")}
+            
+            {(!notification.IsBlocked ? $"<p><strong>Modified content:</strong><br>{notification.ModeratedContent}</p>" : "")}
+            
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.AppealUrl}"" class=""button"">Appeal This Decision</a>
+                <a href=""{frontendUrl}/terms"" class=""button"" style=""margin-left: 10px; background-color: #6c757d;"">Review Guidelines</a>
+            </p>
+            
+            <p>If you believe this was an error, you can appeal this decision using the button above.</p>
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>";
+    }
+    
+    private string GenerateConversationDigestTemplate(ConversationDigestNotification notification, string frontendUrl)
+    {
+        var messagesList = string.Join("", notification.RecentMessages.Select(m => 
+            $@"<li style=""margin-bottom: 15px; padding: 10px; background-color: white; border-radius: 5px;"">
+                <strong>{m.SenderName}</strong> <span style=""color: #666; font-size: 12px;"">({m.SentAt:MMM d, yyyy 'at' h:mm tt})</span>
+                <br>{m.Content.Substring(0, Math.Min(100, m.Content.Length))}{(m.Content.Length > 100 ? "..." : "")}
+                {(m.HasAttachments ? "<br><em style=\"color: #666; font-size: 12px;\">📎 Has attachments</em>" : "")}
+            </li>"));
+            
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #594AE2; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+        .messages-list {{ margin: 20px 0; }}
+        .messages-list ul {{ list-style: none; padding: 0; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>Unread Messages Summary</h1>
+        </div>
+        <div class=""content"">
+            <h2>Hello {notification.RecipientName}!</h2>
+            <p>You have <strong>{notification.UnreadMessageCount} unread message{(notification.UnreadMessageCount > 1 ? "s" : "")}</strong> from <strong>{notification.OtherParticipantName}</strong>.</p>
+            
+            <p><strong>Most recent message:</strong><br>
+            <em>""{notification.LastMessagePreview}""</em><br>
+            <small>Sent on {notification.LastMessageAt:MMMM d, yyyy 'at' h:mm tt}</small></p>
+            
+            {(notification.RecentMessages.Any() ? $@"
+            <div class=""messages-list"">
+                <h3>Recent Messages:</h3>
+                <ul>
+                    {messagesList}
+                </ul>
+            </div>" : "")}
+            
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.ConversationUrl}"" class=""button"">Read All Messages</a>
+            </p>
+            
+            <p>Stay connected with your NeighborTools community!</p>
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+            <p><a href=""{frontendUrl}/settings/notifications"">Change email frequency</a></p>
         </div>
     </div>
 </body>

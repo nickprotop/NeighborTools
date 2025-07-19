@@ -95,6 +95,21 @@ public class UserReviewDto
     public string ReviewType { get; set; } = "";
 }
 
+public class UserSearchResult
+{
+    public string Id { get; set; } = "";
+    public string Email { get; set; } = "";
+    public string FirstName { get; set; } = "";
+    public string LastName { get; set; } = "";
+    public string FullName => $"{FirstName} {LastName}".Trim();
+    public string DisplayName => FullName;
+    public string? ProfilePictureUrl { get; set; }
+    public string? PublicLocation { get; set; }
+    public bool IsVerified { get; set; }
+    public double AverageRating { get; set; }
+    public int ReviewCount { get; set; }
+}
+
 public class PagedResult<T>
 {
     public List<T> Items { get; set; } = new();

@@ -219,4 +219,33 @@ public class UserService
             };
         }
     }
+
+    public async Task<ApiResponse<List<UserSearchResult>>?> SearchUsersAsync(string query, int limit = 10)
+    {
+        try
+        {
+            var encodedQuery = System.Web.HttpUtility.UrlEncode(query);
+            var response = await _httpClient.GetAsync($"/api/users/search?query={encodedQuery}&limit={limit}");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            if (response.IsSuccessStatusCode)
+            {
+                return JsonSerializer.Deserialize<ApiResponse<List<UserSearchResult>>>(content, _jsonOptions);
+            }
+            
+            return new ApiResponse<List<UserSearchResult>>
+            {
+                Success = false,
+                Message = $"Failed to search users: {response.StatusCode}"
+            };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<UserSearchResult>>
+            {
+                Success = false,
+                Message = $"Error searching users: {ex.Message}"
+            };
+        }
+    }
 }

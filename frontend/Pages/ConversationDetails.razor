@@ -1,0 +1,506 @@
+@page "/messages/conversation/{ConversationId}"
+@using Microsoft.AspNetCore.Authorization
+@using frontend.Services
+@using frontend.Models
+@attribute [Authorize]
+@inject MessageService MessageService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+
+<PageTitle>Conversation</PageTitle>
+
+@if (conversation != null)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        <MudPaper Class="pa-0" Elevation="2" Style="height: 80vh; display: flex; flex-direction: column;">
+            <!-- Header -->
+            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="pa-4 border-bottom">
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" 
+                                 OnClick="@(() => Navigation.NavigateTo("/messages"))" />
+                    
+                    <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                        @GetOtherParticipantInitials()
+                    </MudAvatar>
+                    
+                    <MudStack Spacing="0">
+                        <MudText Typo="Typo.h6">@GetOtherParticipantName()</MudText>
+                        @if (!string.IsNullOrEmpty(conversation.Title))
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@conversation.Title</MudText>
+                        }
+                    </MudStack>
+                </MudStack>
+                
+                <MudStack Row Spacing="2">
+                    <MudIconButton Icon="@Icons.Material.Filled.Archive" 
+                                 OnClick="ArchiveConversation"
+                                 Disabled="isProcessing" />
+                    <MudIconButton Icon="@Icons.Material.Filled.MoreVert" 
+                                 OnClick="ShowConversationOptions" />
+                </MudStack>
+            </MudStack>
+
+            <!-- Messages Area -->
+            <div style="flex: 1; overflow-y: auto; padding: 16px;" id="messages-container">
+                @if (isLoading)
+                {
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                        <MudProgressCircular Indeterminate="true" />
+                        <MudText>Loading conversation...</MudText>
+                    </MudStack>
+                }
+                else if (conversation.Messages?.Any() == true)
+                {
+                    <MudStack Spacing="3">
+                        @foreach (var message in conversation.Messages.OrderBy(m => m.CreatedAt))
+                        {
+                            var isFromCurrentUser = message.SenderId == currentUserId;
+                            
+                            <div style="@GetMessageContainerStyle(isFromCurrentUser)">
+                                <MudCard Style="@GetMessageCardStyle(isFromCurrentUser)" Elevation="1">
+                                    <MudCardContent Class="pa-3">
+                                        @if (!isFromCurrentUser)
+                                        {
+                                            <MudText Typo="Typo.caption" Color="Color.Primary" Style="font-weight: 500; margin-bottom: 4px;">
+                                                @message.SenderName
+                                            </MudText>
+                                        }
+                                        
+                                        @if (!string.IsNullOrEmpty(message.Subject) && !IsReplySubject(message.Subject))
+                                        {
+                                            <MudText Typo="Typo.subtitle2" Style="font-weight: 500; margin-bottom: 8px;">
+                                                @message.Subject
+                                            </MudText>
+                                        }
+                                        
+                                        <MudText Typo="Typo.body1" Style="white-space: pre-wrap; word-break: break-word;">
+                                            @message.Content
+                                        </MudText>
+                                        
+                                        @if (message.Attachments?.Any() == true)
+                                        {
+                                            <MudStack Class="mt-2" Spacing="1">
+                                                @foreach (var attachment in message.Attachments)
+                                                {
+                                                    <MudChip T="string" Icon="@Icons.Material.Filled.AttachFile" 
+                                                           Size="Size.Small" 
+                                                           Color="Color.Secondary"
+                                                           OnClick="() => DownloadAttachment(attachment)">
+                                                        @attachment.OriginalFileName
+                                                    </MudChip>
+                                                }
+                                            </MudStack>
+                                        }
+                                        
+                                        @if (message.IsModerated && !string.IsNullOrEmpty(message.ModerationReason))
+                                        {
+                                            <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                                                <MudText Typo="Typo.caption">
+                                                    This message was moderated: @message.ModerationReason
+                                                </MudText>
+                                            </MudAlert>
+                                        }
+                                        
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary" 
+                                               Style="@GetTimestampStyle(isFromCurrentUser)">
+                                            @FormatMessageTimestamp(message.CreatedAt)
+                                            @if (isFromCurrentUser)
+                                            {
+                                                @if (message.ReadAt.HasValue)
+                                                {
+                                                    <MudIcon Icon="@Icons.Material.Filled.DoneAll" Size="Size.Small" Color="Color.Primary" Style="margin-left: 4px;" />
+                                                }
+                                                else
+                                                {
+                                                    <MudIcon Icon="@Icons.Material.Filled.Done" Size="Size.Small" Color="Color.Secondary" Style="margin-left: 4px;" />
+                                                }
+                                            }
+                                        </MudText>
+                                    </MudCardContent>
+                                </MudCard>
+                            </div>
+                        }
+                    </MudStack>
+                }
+                else
+                {
+                    <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 100%;">
+                        <MudIcon Icon="@Icons.Material.Filled.Message" Size="Size.Large" Color="Color.Secondary" />
+                        <MudText Typo="Typo.h6" Color="Color.Secondary">No messages yet</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Start the conversation!</MudText>
+                    </MudStack>
+                }
+            </div>
+
+            <!-- Reply Input Area -->
+            <MudStack Class="pa-4 border-top" Spacing="2">
+                <MudTextField @bind-Value="replyContent"
+                            Placeholder="Type your message..."
+                            Lines="3"
+                            MaxLines="6"
+                            AutoGrow="true"
+                            Disabled="isProcessing"
+                            OnKeyDown="HandleKeyDown"
+                            @ref="replyTextFieldRef" />
+                
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudStack Row Spacing="2">
+                        <MudFileUpload T="IBrowserFile" FilesChanged="@(async (file) => await HandleFileSelected(new[] { file }))" Accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png">
+                            <ActivatorContent>
+                                <MudIconButton Icon="@Icons.Material.Filled.AttachFile" 
+                                             Color="Color.Secondary"
+                                             Disabled="isProcessing" />
+                            </ActivatorContent>
+                        </MudFileUpload>
+                        
+                        @if (selectedFiles?.Any() == true)
+                        {
+                            <MudChip T="string" Text="@($"{selectedFiles.Count} file(s) selected")"
+                                   OnClose="@(() => ClearSelectedFiles())"
+                                   Color="Color.Info"
+                                   Size="Size.Small" />
+                        }
+                    </MudStack>
+                    
+                    <MudButton Variant="Variant.Filled" 
+                             Color="Color.Primary"
+                             StartIcon="@Icons.Material.Filled.Send"
+                             OnClick="SendReply"
+                             Disabled="@(isProcessing || string.IsNullOrWhiteSpace(replyContent))">
+                        @(isProcessing ? "Sending..." : "Send")
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    </MudContainer>
+}
+else if (isLoading)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 50vh;">
+            <MudProgressCircular Indeterminate="true" />
+            <MudText>Loading conversation...</MudText>
+        </MudStack>
+    </MudContainer>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        <MudAlert Severity="Severity.Error">
+            Conversation not found or you don't have permission to view it.
+        </MudAlert>
+    </MudContainer>
+}
+
+<style>
+    .border-bottom {
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+    
+    .border-top {
+        border-top: 1px solid var(--mud-palette-divider);
+    }
+    
+    #messages-container::-webkit-scrollbar {
+        width: 6px;
+    }
+    
+    #messages-container::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    
+    #messages-container::-webkit-scrollbar-thumb {
+        background-color: var(--mud-palette-action-disabled);
+        border-radius: 3px;
+    }
+</style>
+
+@code {
+    [Parameter] public string ConversationId { get; set; } = "";
+    
+    private ConversationDetailsDto? conversation;
+    private string currentUserId = "";
+    private string replyContent = "";
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private List<IBrowserFile>? selectedFiles;
+    private MudTextField<string> replyTextFieldRef = null!;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User?.FindFirst("sub")?.Value ?? 
+                       authState.User?.FindFirst("nameid")?.Value ?? "";
+        
+        await LoadConversation();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && conversation?.Messages?.Any() == true)
+        {
+            await ScrollToBottom();
+            await MarkConversationAsRead();
+        }
+    }
+
+    private async Task LoadConversation()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            var response = await MessageService.GetConversationByIdAsync(ConversationId);
+            if (response.Success && response.Data != null)
+            {
+                conversation = response.Data;
+            }
+            else
+            {
+                Snackbar.Add($"Failed to load conversation: {response.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading conversation: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SendReply()
+    {
+        if (string.IsNullOrWhiteSpace(replyContent) || conversation == null)
+            return;
+
+        isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            var attachments = new List<FileUploadRequest>();
+            
+            if (selectedFiles?.Any() == true)
+            {
+                foreach (var file in selectedFiles)
+                {
+                    var fileContent = new byte[file.Size];
+                    using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB limit
+                    await stream.ReadAsync(fileContent);
+                    
+                    attachments.Add(new FileUploadRequest
+                    {
+                        FileName = file.Name,
+                        ContentType = file.ContentType,
+                        FileData = fileContent
+                    });
+                }
+            }
+
+            var request = new ReplyToMessageRequest
+            {
+                Content = replyContent.Trim(),
+                Attachments = attachments.Any() ? attachments : null
+            };
+
+            // Get the last message ID to reply to
+            var lastMessage = conversation.Messages?.OrderBy(m => m.CreatedAt).LastOrDefault();
+            if (lastMessage == null)
+            {
+                Snackbar.Add("No message found to reply to", Severity.Error);
+                return;
+            }
+
+            var response = await MessageService.ReplyToMessageAsync(lastMessage.Id.ToString(), request);
+            if (response.Success)
+            {
+                replyContent = "";
+                selectedFiles?.Clear();
+                await LoadConversation(); // Refresh conversation
+                await ScrollToBottom();
+                Snackbar.Add("Reply sent successfully!", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Failed to send reply: {response.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error sending reply: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task MarkConversationAsRead()
+    {
+        try
+        {
+            await MessageService.MarkConversationAsReadAsync(ConversationId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to mark conversation as read: {ex.Message}");
+        }
+    }
+
+    private async Task ArchiveConversation()
+    {
+        if (conversation == null) return;
+
+        isProcessing = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await MessageService.ArchiveConversationAsync(ConversationId);
+            if (response.Success)
+            {
+                Snackbar.Add("Conversation archived successfully", Severity.Success);
+                Navigation.NavigateTo("/messages");
+            }
+            else
+            {
+                Snackbar.Add($"Failed to archive conversation: {response.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error archiving conversation: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ShowConversationOptions()
+    {
+        // Implementation for conversation options menu
+        Snackbar.Add("Conversation options coming soon!", Severity.Info);
+    }
+
+    private async Task HandleKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter" && !e.ShiftKey)
+        {
+            await SendReply();
+        }
+    }
+
+    private async Task HandleFileSelected(IReadOnlyList<IBrowserFile> files)
+    {
+        selectedFiles = files.ToList();
+        StateHasChanged();
+    }
+
+    private void ClearSelectedFiles()
+    {
+        selectedFiles?.Clear();
+        StateHasChanged();
+    }
+
+    private async Task DownloadAttachment(MessageAttachmentDto attachment)
+    {
+        try
+        {
+            // Implementation for downloading attachments
+            Snackbar.Add($"Downloading {attachment.OriginalFileName}...", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to download attachment: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ScrollToBottom()
+    {
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("scrollToBottom", "messages-container");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to scroll to bottom: {ex.Message}");
+        }
+    }
+
+    // Helper methods
+    private string GetOtherParticipantName()
+    {
+        if (conversation == null) return "";
+        
+        if (conversation.Participant1Id == currentUserId)
+            return conversation.Participant2Name;
+        else
+            return conversation.Participant1Name;
+    }
+
+    private string GetOtherParticipantInitials()
+    {
+        var name = GetOtherParticipantName();
+        if (string.IsNullOrEmpty(name)) return "?";
+        
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return name[0].ToString().ToUpper();
+    }
+
+    private string GetMessageContainerStyle(bool isFromCurrentUser)
+    {
+        return isFromCurrentUser 
+            ? "display: flex; justify-content: flex-end; margin-bottom: 8px;"
+            : "display: flex; justify-content: flex-start; margin-bottom: 8px;";
+    }
+
+    private string GetMessageCardStyle(bool isFromCurrentUser)
+    {
+        var maxWidth = "max-width: 70%;";
+        var background = isFromCurrentUser 
+            ? "background-color: var(--mud-palette-primary); color: white;"
+            : "background-color: var(--mud-palette-surface);";
+        
+        return $"{maxWidth} {background}";
+    }
+
+    private string GetTimestampStyle(bool isFromCurrentUser)
+    {
+        return isFromCurrentUser 
+            ? "text-align: right; margin-top: 8px; display: flex; align-items: center; justify-content: flex-end;"
+            : "text-align: left; margin-top: 8px;";
+    }
+
+    private string FormatMessageTimestamp(DateTime timestamp)
+    {
+        var now = DateTime.Now;
+        var diff = now - timestamp;
+        
+        if (diff.Days == 0)
+            return timestamp.ToString("HH:mm");
+        else if (diff.Days == 1)
+            return $"Yesterday {timestamp:HH:mm}";
+        else if (diff.Days < 7)
+            return timestamp.ToString("ddd HH:mm");
+        else
+            return timestamp.ToString("MM/dd/yyyy HH:mm");
+    }
+
+    private bool IsReplySubject(string subject)
+    {
+        return subject.StartsWith("Re:", StringComparison.OrdinalIgnoreCase);
+    }
+}

@@ -25,6 +25,7 @@ public static class DataSeeder
             await SeedToolsAsync(context, logger);
             await SeedRentalsAsync(context, logger);
             await SeedReviewsAsync(context, logger);
+            await SeedMessagesAsync(context, logger);
             
             logger.LogInformation("Database seeding completed successfully");
         }
@@ -397,5 +398,245 @@ public static class DataSeeder
         await context.SaveChangesAsync();
         
         logger.LogInformation("Seeded {Count} reviews", reviews.Length);
+    }
+    
+    private static async Task SeedMessagesAsync(ApplicationDbContext context, ILogger logger)
+    {
+        // Check if messages already exist
+        if (await context.Messages.AnyAsync())
+        {
+            logger.LogInformation("Messages already exist, skipping message seeding");
+            return;
+        }
+        
+        // Check if seeded conversations exist - if not, create them
+        var conversationsExist = await context.Conversations.AnyAsync(c => 
+            c.Id == Guid.Parse("00000000-0000-0000-0000-000000000001") ||
+            c.Id == Guid.Parse("00000000-0000-0000-0000-000000000002") ||
+            c.Id == Guid.Parse("00000000-0000-0000-0000-000000000003"));
+            
+        if (conversationsExist)
+        {
+            logger.LogInformation("Seeded conversations already exist, only adding messages");
+        }
+        
+        logger.LogInformation("Seeding messages...");
+        
+        // Create conversations first (only if they don't exist)
+        var conversations = new[]
+        {
+            new Conversation
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                Participant1Id = "user1-guid-1234-5678-9012345678901", // John
+                Participant2Id = "user2-guid-1234-5678-9012345678902", // Jane
+                Title = "Drill Rental Discussion",
+                RentalId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                CreatedAt = DateTime.UtcNow.AddDays(-30),
+                UpdatedAt = DateTime.UtcNow.AddDays(-25)
+            },
+            new Conversation
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                Participant1Id = "user2-guid-1234-5678-9012345678902", // Jane
+                Participant2Id = "user1-guid-1234-5678-9012345678901", // John
+                Title = "Ladder Rental Questions",
+                RentalId = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                CreatedAt = DateTime.UtcNow.AddDays(-15),
+                UpdatedAt = DateTime.UtcNow.AddDays(-10)
+            },
+            new Conversation
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                Participant1Id = "user1-guid-1234-5678-9012345678901", // John
+                Participant2Id = "user2-guid-1234-5678-9012345678902", // Jane
+                Title = "General Chat",
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                UpdatedAt = DateTime.UtcNow.AddDays(-1)
+            }
+        };
+        
+        // Only add conversations that don't already exist
+        if (!conversationsExist)
+        {
+            context.Conversations.AddRange(conversations);
+            await context.SaveChangesAsync();
+            logger.LogInformation("Seeded {ConversationCount} conversations", conversations.Length);
+        }
+        else
+        {
+            // Load existing conversations for message relationships
+            var existingConversations = await context.Conversations
+                .Where(c => c.Id == Guid.Parse("00000000-0000-0000-0000-000000000001") ||
+                           c.Id == Guid.Parse("00000000-0000-0000-0000-000000000002") ||
+                           c.Id == Guid.Parse("00000000-0000-0000-0000-000000000003"))
+                .ToArrayAsync();
+            conversations = existingConversations;
+        }
+        
+        // Now create messages
+        var messages = new[]
+        {
+            // Conversation 1: Drill Rental Discussion
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+                SenderId = "user2-guid-1234-5678-9012345678902", // Jane
+                RecipientId = "user1-guid-1234-5678-9012345678901", // John
+                ConversationId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                RentalId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                Subject = "Question about your Professional Drill",
+                Content = "Hi John! I'm interested in renting your DeWalt drill for a home improvement project. Is it available for this weekend? Also, does it come with drill bits?",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.ToolInquiry,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-30).AddMinutes(45),
+                CreatedAt = DateTime.UtcNow.AddDays(-30),
+                UpdatedAt = DateTime.UtcNow.AddDays(-30)
+            },
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000002"),
+                SenderId = "user1-guid-1234-5678-9012345678901", // John
+                RecipientId = "user2-guid-1234-5678-9012345678902", // Jane
+                ConversationId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                RentalId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                Subject = "Re: Question about your Professional Drill",
+                Content = "Hi Jane! Yes, the drill is available this weekend. It comes with a basic set of drill bits and driver bits. The battery is fully charged and I have a spare one too. Let me know what dates work for you!",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-29).AddHours(2),
+                CreatedAt = DateTime.UtcNow.AddDays(-29),
+                UpdatedAt = DateTime.UtcNow.AddDays(-29)
+            },
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000003"),
+                SenderId = "user2-guid-1234-5678-9012345678902", // Jane
+                RecipientId = "user1-guid-1234-5678-9012345678901", // John
+                ConversationId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                RentalId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                Subject = "Re: Question about your Professional Drill",
+                Content = "Perfect! Saturday to Monday would work great for me. I'll pick it up Saturday morning and return it Monday evening. Thanks for including the extra battery - that's very helpful!",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-28).AddHours(1),
+                CreatedAt = DateTime.UtcNow.AddDays(-28),
+                UpdatedAt = DateTime.UtcNow.AddDays(-28)
+            },
+            
+            // Conversation 2: Ladder Rental Questions
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000004"),
+                SenderId = "user1-guid-1234-5678-9012345678901", // John
+                RecipientId = "user2-guid-1234-5678-9012345678902", // Jane
+                ConversationId = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                RentalId = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                Subject = "Ladder rental request",
+                Content = "Hi Jane! I saw your 8ft Werner ladder listing. I need it for cleaning gutters this weekend. Is it still available? Also, what's the weight limit?",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.ToolInquiry,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-15).AddMinutes(30),
+                CreatedAt = DateTime.UtcNow.AddDays(-15),
+                UpdatedAt = DateTime.UtcNow.AddDays(-15)
+            },
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000005"),
+                SenderId = "user2-guid-1234-5678-9012345678902", // Jane
+                RecipientId = "user1-guid-1234-5678-9012345678901", // John
+                ConversationId = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                RentalId = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                ToolId = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                Subject = "Re: Ladder rental request",
+                Content = "Hi John! Yes, the ladder is available. It's rated for 300 lbs and is perfect for gutter cleaning. I can have it ready for pickup Friday evening or Saturday morning. Safety tip: make sure you have someone spot you when using it!",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-14).AddHours(3),
+                CreatedAt = DateTime.UtcNow.AddDays(-14),
+                UpdatedAt = DateTime.UtcNow.AddDays(-14)
+            },
+            
+            // Conversation 3: General Chat
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000006"),
+                SenderId = "user2-guid-1234-5678-9012345678902", // Jane
+                RecipientId = "user1-guid-1234-5678-9012345678901", // John
+                ConversationId = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                Subject = "Thanks for being a great neighbor!",
+                Content = "Hey John! I just wanted to say thanks for all the tool rentals. It's been so helpful having access to quality tools without having to buy everything. You're making this neighborhood sharing economy really work!",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-3).AddHours(2),
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                UpdatedAt = DateTime.UtcNow.AddDays(-5)
+            },
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000007"),
+                SenderId = "user1-guid-1234-5678-9012345678901", // John
+                RecipientId = "user2-guid-1234-5678-9012345678902", // Jane
+                ConversationId = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                Subject = "Re: Thanks for being a great neighbor!",
+                Content = "Aw, thank you Jane! That really means a lot. I love that we can help each other out. Your pressure washer saved me a ton of money on my deck cleaning project. Looking forward to more tool sharing adventures! 😊",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-2).AddHours(1),
+                CreatedAt = DateTime.UtcNow.AddDays(-3),
+                UpdatedAt = DateTime.UtcNow.AddDays(-3)
+            },
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000008"),
+                SenderId = "user2-guid-1234-5678-9012345678902", // Jane
+                RecipientId = "user1-guid-1234-5678-9012345678901", // John
+                ConversationId = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                Subject = "Re: Thanks for being a great neighbor!",
+                Content = "By the way, I'm thinking of organizing a neighborhood tool share meetup. Maybe we could get more neighbors involved? What do you think?",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = false, // Unread message for testing
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                UpdatedAt = DateTime.UtcNow.AddDays(-1)
+            }
+        };
+        
+        context.Messages.AddRange(messages);
+        await context.SaveChangesAsync();
+        
+        // Update conversation last message info
+        foreach (var conversation in conversations)
+        {
+            var lastMessage = messages
+                .Where(m => m.ConversationId == conversation.Id)
+                .OrderByDescending(m => m.CreatedAt)
+                .FirstOrDefault();
+                
+            if (lastMessage != null)
+            {
+                conversation.LastMessageId = lastMessage.Id;
+                conversation.LastMessageAt = lastMessage.CreatedAt;
+                conversation.UpdatedAt = lastMessage.CreatedAt;
+            }
+        }
+        
+        await context.SaveChangesAsync();
+        
+        logger.LogInformation("Seeded {MessageCount} messages in {ConversationCount} conversations", 
+            messages.Length, conversations.Length);
     }
 }

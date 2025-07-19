@@ -44,6 +44,11 @@ public class ApplicationDbContext : IdentityDbContext<User>
     // Rental notification entities
     public DbSet<RentalNotification> RentalNotifications { get; set; }
     public DbSet<UserDeviceToken> UserDeviceTokens { get; set; }
+    
+    // Messaging entities
+    public DbSet<Message> Messages { get; set; }
+    public DbSet<Conversation> Conversations { get; set; }
+    public DbSet<MessageAttachment> MessageAttachments { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

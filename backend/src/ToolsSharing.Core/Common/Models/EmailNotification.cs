@@ -48,6 +48,7 @@ public enum EmailNotificationType
     
     // Messages
     NewMessage,
+    MessageReceived,
     MessageDigest,
     
     // Reviews

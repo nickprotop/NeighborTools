@@ -164,6 +164,99 @@ public class MobileNotificationService : IMobileNotificationService
         }
     }
 
+    public async Task SendNewMessageNotificationAsync(string userId, Guid messageId, string senderName, string messageSubject)
+    {
+        // TODO: Implement mobile push notification for new messages
+        var deviceTokens = await GetUserDeviceTokensAsync(userId);
+        
+        foreach (var token in deviceTokens)
+        {
+            try
+            {
+                // TODO: Send push notification using appropriate service (FCM/APNs)
+                // Example notification payload:
+                // {
+                //   "title": "New message from {senderName}",
+                //   "body": "{messageSubject}",
+                //   "data": {
+                //     "type": "new_message",
+                //     "message_id": messageId,
+                //     "sender_name": senderName,
+                //     "action": "open_message"
+                //   }
+                // }
+                
+                _logger.LogInformation($"TODO: Send mobile new message notification to device {token.DeviceToken} for message {messageId} from {senderName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to send mobile new message notification to device {token.DeviceToken}");
+            }
+        }
+    }
+
+    public async Task SendMessageReplyNotificationAsync(string userId, Guid messageId, string senderName, string originalSubject)
+    {
+        // TODO: Implement mobile push notification for message replies
+        var deviceTokens = await GetUserDeviceTokensAsync(userId);
+        
+        foreach (var token in deviceTokens)
+        {
+            try
+            {
+                // TODO: Send push notification for message replies
+                // Example notification payload:
+                // {
+                //   "title": "Reply from {senderName}",
+                //   "body": "Re: {originalSubject}",
+                //   "data": {
+                //     "type": "message_reply",
+                //     "message_id": messageId,
+                //     "sender_name": senderName,
+                //     "action": "open_conversation"
+                //   }
+                // }
+                
+                _logger.LogInformation($"TODO: Send mobile message reply notification to device {token.DeviceToken} for message {messageId} from {senderName}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to send mobile message reply notification to device {token.DeviceToken}");
+            }
+        }
+    }
+
+    public async Task SendMessageModerationNotificationAsync(string userId, Guid messageId, string moderationReason, bool isBlocked)
+    {
+        // TODO: Implement mobile push notification for message moderation
+        var deviceTokens = await GetUserDeviceTokensAsync(userId);
+        
+        foreach (var token in deviceTokens)
+        {
+            try
+            {
+                // TODO: Send high priority push notification for moderation alerts
+                // Example notification payload:
+                // {
+                //   "title": isBlocked ? "Message blocked" : "Message modified",
+                //   "body": moderationReason,
+                //   "data": {
+                //     "type": "message_moderation",
+                //     "message_id": messageId,
+                //     "is_blocked": isBlocked,
+                //     "action": "view_moderation_details"
+                //   }
+                // }
+                
+                _logger.LogInformation($"TODO: Send mobile message moderation notification to device {token.DeviceToken} for message {messageId} - Blocked: {isBlocked}");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, $"Failed to send mobile message moderation notification to device {token.DeviceToken}");
+            }
+        }
+    }
+
     public async Task RegisterDeviceTokenAsync(string userId, string deviceToken, string platform)
     {
         try

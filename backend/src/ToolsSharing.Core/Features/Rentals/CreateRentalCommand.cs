@@ -1,5 +1,6 @@
 
 using ToolsSharing.Core.Common.Models;
+using ToolsSharing.Core.Features.Tools;
 
 namespace ToolsSharing.Core.Features.Rentals;
 
@@ -29,4 +30,5 @@ public class RentalDto
     public DateTime? PickupDate { get; set; }
     public DateTime? ReturnDate { get; set; }
     public bool IsPaid { get; set; }
+    public ToolDto? Tool { get; set; }
 }

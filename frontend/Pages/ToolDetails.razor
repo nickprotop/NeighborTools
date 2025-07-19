@@ -4,12 +4,15 @@
 @using frontend.Models
 @using frontend.Services
 @using frontend.Components
+@using frontend.Components.Messages
 @using System.Web
 @inject IToolService ToolService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
 @inject INavigationHelperService NavigationHelper
+@inject MessageService MessageService
+@inject AuthenticationStateProvider AuthStateProvider
 @attribute [Authorize]
 
 <PageTitle>@(tool?.Name ?? "Tool Details") - NeighborTools</PageTitle>
@@ -156,15 +159,27 @@ else if (tool != null)
                 <!-- Owner Info -->
                 <MudDivider Class="my-4" />
                 <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-3">Owner</MudText>
-                <div class="d-flex align-center gap-3">
-                    <UserLink UserId="@tool.OwnerId" 
-                              DisplayName="@tool.OwnerName" 
-                              ShowAvatar="true" 
-                              AvatarSize="Size.Medium"
-                              AdditionalClass="d-flex flex-column" />
-                    <div>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary">Tool Owner</MudText>
+                <div class="d-flex align-center justify-space-between">
+                    <div class="d-flex align-center gap-3">
+                        <UserLink UserId="@tool.OwnerId" 
+                                  DisplayName="@tool.OwnerName" 
+                                  ShowAvatar="true" 
+                                  AvatarSize="Size.Medium"
+                                  AdditionalClass="d-flex flex-column" />
+                        <div>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Tool Owner</MudText>
+                        </div>
                     </div>
+                    @if (!isOwner)
+                    {
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Primary" 
+                                   Size="Size.Small"
+                                   StartIcon="@Icons.Material.Filled.Message"
+                                   OnClick="ContactOwner">
+                            Send Message
+                        </MudButton>
+                    }
                 </div>
             </MudPaper>
         </MudItem>
@@ -215,9 +230,15 @@ else if (tool != null)
     private bool isLoading = true;
     private string errorMessage = string.Empty;
     private List<BreadcrumbItem> _breadcrumbItems = new();
+    private bool isOwner = false;
+    private string? currentUserId;
 
     protected override async Task OnInitializedAsync()
     {
+        // Get current user
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        
         await LoadTool();
         SetupBreadcrumbs();
     }
@@ -243,6 +264,7 @@ else if (tool != null)
             if (result.Success && result.Data != null)
             {
                 tool = result.Data;
+                isOwner = tool.OwnerId == currentUserId;
             }
             else
             {
@@ -316,5 +338,33 @@ else if (tool != null)
     private async Task GoBack()
     {
         await NavigationHelper.NavigateBack("/tools");
+    }
+
+    private async Task ContactOwner()
+    {
+        if (tool == null) return;
+
+        var parameters = new DialogParameters 
+        { 
+            { "RecipientId", tool.OwnerId },
+            { "RecipientName", tool.OwnerName },
+            { "ToolId", tool.Id.ToString() },
+            { "ToolName", tool.Name }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        
+        var dialog = DialogService.Show<NewMessageDialog>("Send Message to Owner", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Message sent successfully!", Severity.Success);
+        }
     }
 }

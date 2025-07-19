@@ -572,6 +572,27 @@ The project includes detailed TODO files with prioritized roadmap:
   - Dismissible alerts with local state management for user experience
   - Professional styling with CSS classes and progress indicators
   - Real-time overdue progress calculation with maximum 14-day scale
+- ✅ Comprehensive Messaging System (completed January 2025)
+  - Complete database schema with Messages, Conversations, MessageAttachments tables and proper foreign key relationships
+  - RESTful API endpoints via ConversationsController and MessagesController with full CRUD operations
+  - Modern frontend interface (Messages.razor) with conversations/messages tabs, search functionality, and filtering
+  - Message statistics dashboard with real-time counts for total, unread, sent messages, and conversation counts
+  - Last message preview in conversations list with participant names, formatted timestamps, and truncated content
+  - Advanced filtering system with Read/Unread/All options and intelligent defaults (All selected by default)
+  - Database migration fixes resolving MessageAttachments schema inconsistencies and improved data seeding logic
+  - DTO consistency fixes standardizing property mapping between backend (LastMessageContent) and frontend DTOs
+  - MudBlazor 8.x compatibility fixes resolving component type parameters and property binding issues
+  - Professional UI design with modern conversation list, user avatars, unread indicators, and responsive layout
+  - Comprehensive backend service integration with real API endpoints replacing all mockup data
+  - Messaging integration across Tool Details, User Profile, and Rental Details pages with proper context linking
+  - NewMessageDialog with proper recipient population, tool/rental context tags, and file attachment support
+- ✅ Rental Data Transfer Object Enhancement (completed January 2025)
+  - Fixed missing Tool property in backend RentalDto class preventing frontend from accessing complete tool information
+  - Enhanced Mapster mapping configuration to include full Tool object in rental API responses
+  - Resolved "Tool Information" section display issues in RentalDetails.razor by ensuring complete tool data availability
+  - Improved message dialog context tags with meaningful tool names instead of truncated GUIDs
+  - Backend-to-frontend data flow optimization ensuring rental endpoints return complete tool details (name, description, category, brand, model, rates, condition, location, images)
+  - Verified fix through API testing with proper JWT authentication and confirmed Tool object inclusion in /api/rentals and /api/rentals/{id} responses
 
 See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 
@@ -594,6 +615,9 @@ See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 - **Email Notifications**: Use specific notification classes (e.g., `DisputeCreatedNotification`) rather than generic email sending
 - **File Uploads**: Always use `IFileStorageService` for consistent validation and storage abstraction
 - **Payment Processing**: All payment operations go through `IPaymentService` with automatic fraud detection and receipt generation
+- **DTO Design**: Backend DTOs must be classes (not records) with nullable reference properties for Mapster compatibility
+- **API Response Structure**: All endpoints include nested objects when frontend needs complete information (e.g., Tool object within RentalDto)
+- **Mapster Configuration**: Use explicit `.Map(dest => dest.Property, src => src.Property)` for complex object mappings in `MappingProfile.cs`
 
 ## Common Troubleshooting
 
@@ -641,6 +665,12 @@ See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 - `IDisputeNotificationService` - Dispute-specific email notifications
 - `IEmailNotificationService` - Universal email notification system
 - `IFileStorageService` - File upload and storage management
+
+#### Messaging Services
+- `IMessageService` - Message and conversation management
+- `MessageService` (frontend) - Frontend service for API communication
+- `ConversationsController` - RESTful API for conversation operations
+- `MessagesController` - RESTful API for message operations
 
 #### Infrastructure Services
 - `IRepository<T>` - Generic repository pattern

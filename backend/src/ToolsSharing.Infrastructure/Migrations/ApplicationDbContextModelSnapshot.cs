@@ -169,6 +169,70 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.ToTable("PayoutTransactions");
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Conversation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("LastMessageAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid?>("LastMessageId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Participant1Id")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<string>("Participant2Id")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<Guid?>("RentalId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<Guid?>("ToolId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LastMessageAt");
+
+                    b.HasIndex("LastMessageId");
+
+                    b.HasIndex("Participant1Id");
+
+                    b.HasIndex("Participant2Id");
+
+                    b.HasIndex("RentalId");
+
+                    b.HasIndex("ToolId");
+
+                    b.HasIndex("Participant1Id", "Participant2Id")
+                        .IsUnique();
+
+                    b.ToTable("Conversations");
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.Dispute", b =>
                 {
                     b.Property<Guid>("Id")
@@ -807,6 +871,166 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .HasDatabaseName("IX_UserConsents_User_Type_Date");
 
                     b.ToTable("UserConsents");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Message", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Content")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ConversationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<bool>("IsArchived")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsModerated")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsRead")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<DateTime?>("ModeratedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ModeratedBy")
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<string>("ModerationReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("OriginalContent")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Priority")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(2);
+
+                    b.Property<DateTime?>("ReadAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("RecipientId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<Guid?>("RentalId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("SenderId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<string>("Subject")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("varchar(200)");
+
+                    b.Property<Guid?>("ToolId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<int>("Type")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int")
+                        .HasDefaultValue(1);
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ConversationId");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("RecipientId");
+
+                    b.HasIndex("RentalId");
+
+                    b.HasIndex("SenderId");
+
+                    b.HasIndex("ToolId");
+
+                    b.HasIndex("RecipientId", "IsRead");
+
+                    b.HasIndex("SenderId", "RecipientId", "CreatedAt");
+
+                    b.ToTable("Messages");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.MessageAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<long>("FileSize")
+                        .HasColumnType("bigint");
+
+                    b.Property<bool>("IsDeleted")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsSafe")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<bool>("IsScanned")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<Guid>("MessageId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("OriginalFileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<string>("ScanResult")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<string>("StoragePath")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("MessageId");
+
+                    b.ToTable("MessageAttachments");
                 });
 
             modelBuilder.Entity("ToolsSharing.Core.Entities.Payment", b =>
@@ -2129,6 +2353,46 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Conversation", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.Message", "LastMessage")
+                        .WithMany()
+                        .HasForeignKey("LastMessageId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "Participant1")
+                        .WithMany("ConversationsAsParticipant1")
+                        .HasForeignKey("Participant1Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "Participant2")
+                        .WithMany("ConversationsAsParticipant2")
+                        .HasForeignKey("Participant2Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.Rental", "Rental")
+                        .WithMany()
+                        .HasForeignKey("RentalId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ToolsSharing.Core.Entities.Tool", "Tool")
+                        .WithMany()
+                        .HasForeignKey("ToolId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("LastMessage");
+
+                    b.Navigation("Participant1");
+
+                    b.Navigation("Participant2");
+
+                    b.Navigation("Rental");
+
+                    b.Navigation("Tool");
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.Dispute", b =>
                 {
                     b.HasOne("ToolsSharing.Core.Entities.User", "Initiator")
@@ -2271,6 +2535,57 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Message", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.Conversation", "Conversation")
+                        .WithMany("Messages")
+                        .HasForeignKey("ConversationId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "Recipient")
+                        .WithMany("ReceivedMessages")
+                        .HasForeignKey("RecipientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.Rental", "Rental")
+                        .WithMany()
+                        .HasForeignKey("RentalId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "Sender")
+                        .WithMany("SentMessages")
+                        .HasForeignKey("SenderId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.Tool", "Tool")
+                        .WithMany()
+                        .HasForeignKey("ToolId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Conversation");
+
+                    b.Navigation("Recipient");
+
+                    b.Navigation("Rental");
+
+                    b.Navigation("Sender");
+
+                    b.Navigation("Tool");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.MessageAttachment", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.Message", "Message")
+                        .WithMany("Attachments")
+                        .HasForeignKey("MessageId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Message");
                 });
 
             modelBuilder.Entity("ToolsSharing.Core.Entities.Payment", b =>
@@ -2491,9 +2806,19 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Conversation", b =>
+                {
+                    b.Navigation("Messages");
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.Dispute", b =>
                 {
                     b.Navigation("Messages");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.Message", b =>
+                {
+                    b.Navigation("Attachments");
                 });
 
             modelBuilder.Entity("ToolsSharing.Core.Entities.Rental", b =>
@@ -2521,6 +2846,10 @@ namespace ToolsSharing.Infrastructure.Migrations
                 {
                     b.Navigation("Consents");
 
+                    b.Navigation("ConversationsAsParticipant1");
+
+                    b.Navigation("ConversationsAsParticipant2");
+
                     b.Navigation("CookieConsents");
 
                     b.Navigation("DataRequests");
@@ -2537,6 +2866,8 @@ namespace ToolsSharing.Infrastructure.Migrations
 
                     b.Navigation("ProcessingLogs");
 
+                    b.Navigation("ReceivedMessages");
+
                     b.Navigation("RentalsAsOwner");
 
                     b.Navigation("RentalsAsRenter");
@@ -2544,6 +2875,8 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.Navigation("ReviewsGiven");
 
                     b.Navigation("ReviewsReceived");
+
+                    b.Navigation("SentMessages");
 
                     b.Navigation("Settings");
                 });

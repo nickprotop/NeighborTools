@@ -76,6 +76,7 @@ builder.Services.AddScoped<IPublicProfileService, PublicProfileService>();
 builder.Services.AddScoped<INavigationHelperService, NavigationHelperService>();
 builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IDisputeService, DisputeService>();
+builder.Services.AddScoped<MessageService>();
 
 var app = builder.Build();
 

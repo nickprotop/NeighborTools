@@ -1,0 +1,447 @@
+@page "/messages/{MessageId}"
+@attribute [Authorize]
+@inject MessageService MessageService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+
+<PageTitle>Message Details</PageTitle>
+
+@if (message != null)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudStack Spacing="4">
+                <!-- Header -->
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" 
+                                 OnClick="@(() => Navigation.NavigateTo("/messages"))" />
+                    
+                    <MudStack Row Spacing="2">
+                        <MudButton Variant="Variant.Outlined"
+                                 StartIcon="@Icons.Material.Filled.Reply"
+                                 OnClick="ReplyToMessage">
+                            Reply
+                        </MudButton>
+                        
+                        @if (!message.IsArchived)
+                        {
+                            <MudButton Variant="Variant.Outlined"
+                                     StartIcon="@Icons.Material.Filled.Archive"
+                                     OnClick="ArchiveMessage">
+                                Archive
+                            </MudButton>
+                        }
+                        
+                        @if (message.SenderId == currentUserId)
+                        {
+                            <MudButton Variant="Variant.Outlined"
+                                     Color="Color.Error"
+                                     StartIcon="@Icons.Material.Filled.Delete"
+                                     OnClick="DeleteMessage">
+                                Delete
+                            </MudButton>
+                        }
+                    </MudStack>
+                </MudStack>
+
+                <!-- Message Header Info -->
+                <MudCard>
+                    <MudCardContent>
+                        <MudStack Spacing="2">
+                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.h5">@message.Subject</MudText>
+                                
+                                @if (!message.IsRead && message.RecipientId == currentUserId)
+                                {
+                                    <MudChip T="string" Color="Color.Primary" Size="Size.Small">Unread</MudChip>
+                                }
+                                
+                                @if (message.IsModerated)
+                                {
+                                    <MudChip T="string" Color="Color.Warning" Size="Size.Small">Moderated</MudChip>
+                                }
+                            </MudStack>
+                            
+                            <MudDivider />
+                            
+                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                    <MudAvatar Color="Color.Primary" Size="Size.Medium">
+                                        @GetSenderInitials()
+                                    </MudAvatar>
+                                    
+                                    <MudStack Spacing="0">
+                                        <MudText Typo="Typo.subtitle1">
+                                            <strong>From:</strong> @message.SenderName
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                            @message.SenderEmail
+                                        </MudText>
+                                    </MudStack>
+                                </MudStack>
+                                
+                                <MudStack Spacing="0" Style="text-align: right;">
+                                    <MudText Typo="Typo.body2">
+                                        @FormatTimestamp(message.CreatedAt)
+                                    </MudText>
+                                    @if (message.ReadAt.HasValue)
+                                    {
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            Read: @FormatTimestamp(message.ReadAt.Value)
+                                        </MudText>
+                                    }
+                                </MudStack>
+                            </MudStack>
+                            
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                <MudText Typo="Typo.body2">
+                                    <strong>To:</strong> @message.RecipientName
+                                </MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @message.RecipientEmail
+                                </MudText>
+                            </MudStack>
+
+                            <!-- Context Information -->
+                            @if (!string.IsNullOrEmpty(message.RentalToolName) || !string.IsNullOrEmpty(message.ToolName))
+                            {
+                                <MudAlert Severity="Severity.Info" Dense="true">
+                                    @if (!string.IsNullOrEmpty(message.RentalToolName))
+                                    {
+                                        <MudText Typo="Typo.body2">
+                                            Related to rental: <strong>@message.RentalToolName</strong>
+                                        </MudText>
+                                    }
+                                    else if (!string.IsNullOrEmpty(message.ToolName))
+                                    {
+                                        <MudText Typo="Typo.body2">
+                                            Related to tool: <strong>@message.ToolName</strong>
+                                        </MudText>
+                                    }
+                                </MudAlert>
+                            }
+
+                            <!-- Priority and Type -->
+                            <MudStack Row Spacing="2">
+                                @if (message.Priority != MessagePriority.Normal)
+                                {
+                                    <MudChip T="string" Size="Size.Small" 
+                                           Color="@GetPriorityColor(message.Priority.ToString())">
+                                        @message.Priority Priority
+                                    </MudChip>
+                                }
+                                
+                                <MudChip T="string" Size="Size.Small" Color="Color.Default">
+                                    @message.Type
+                                </MudChip>
+                            </MudStack>
+                        </MudStack>
+                    </MudCardContent>
+                </MudCard>
+
+                <!-- Message Content -->
+                <MudCard>
+                    <MudCardContent>
+                        <MudText Typo="Typo.body1" Style="white-space: pre-wrap; word-break: break-word;">
+                            @message.Content
+                        </MudText>
+                    </MudCardContent>
+                </MudCard>
+
+                <!-- Attachments -->
+                @if (message.Attachments?.Any() == true)
+                {
+                    <MudCard>
+                        <MudCardHeader>
+                            <MudText Typo="Typo.h6">Attachments</MudText>
+                        </MudCardHeader>
+                        <MudCardContent>
+                            <MudList T="string">
+                                @foreach (var attachment in message.Attachments)
+                                {
+                                    <MudListItem T="string">
+                                        <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween" Style="width: 100%;">
+                                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                                <MudIcon Icon="@GetFileIcon(attachment.ContentType)" />
+                                                <MudStack Spacing="0">
+                                                    <MudText Typo="Typo.body1">@attachment.OriginalFileName</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                        @FormatFileSize(attachment.FileSize)
+                                                    </MudText>
+                                                </MudStack>
+                                            </MudStack>
+                                            
+                                            <MudButton Variant="Variant.Outlined"
+                                                     Size="Size.Small"
+                                                     StartIcon="@Icons.Material.Filled.Download"
+                                                     OnClick="() => DownloadAttachment(attachment)">
+                                                Download
+                                            </MudButton>
+                                        </MudStack>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        </MudCardContent>
+                    </MudCard>
+                }
+
+                <!-- Moderation Information -->
+                @if (message.IsModerated && !string.IsNullOrEmpty(message.ModerationReason))
+                {
+                    <MudAlert Severity="Severity.Warning">
+                        <MudText Typo="Typo.body1">
+                            <strong>Content Moderation Notice:</strong>
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            @message.ModerationReason
+                        </MudText>
+                    </MudAlert>
+                }
+
+                <!-- Conversation Link -->
+                @if (message.ConversationId.HasValue)
+                {
+                    <MudButton Variant="Variant.Text"
+                             StartIcon="@Icons.Material.Filled.Forum"
+                             OnClick="@(() => Navigation.NavigateTo($"/messages/conversation/{message.ConversationId}"))">
+                        View Full Conversation
+                    </MudButton>
+                }
+            </MudStack>
+        </MudPaper>
+    </MudContainer>
+}
+else if (isLoading)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        <MudStack AlignItems="AlignItems.Center" Justify="Justify.Center" Style="height: 50vh;">
+            <MudProgressCircular Indeterminate="true" />
+            <MudText>Loading message...</MudText>
+        </MudStack>
+    </MudContainer>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        <MudAlert Severity="Severity.Error">
+            Message not found or you don't have permission to view it.
+        </MudAlert>
+    </MudContainer>
+}
+
+@code {
+    [Parameter] public string MessageId { get; set; } = "";
+    
+    private MessageDto? message;
+    private string currentUserId = "";
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User?.FindFirst("sub")?.Value ?? 
+                       authState.User?.FindFirst("nameid")?.Value ?? "";
+        
+        await LoadMessage();
+    }
+
+    private async Task LoadMessage()
+    {
+        isLoading = true;
+        StateHasChanged();
+        
+        try
+        {
+            var response = await MessageService.GetMessageByIdAsync(MessageId);
+            if (response.Success && response.Data != null)
+            {
+                message = response.Data;
+                
+                // Mark as read if it's unread and we're the recipient
+                if (!message.IsRead && message.RecipientId == currentUserId)
+                {
+                    await MarkAsRead();
+                }
+            }
+            else
+            {
+                Snackbar.Add($"Failed to load message: {response.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading message: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task MarkAsRead()
+    {
+        try
+        {
+            await MessageService.MarkMessageAsReadAsync(MessageId);
+            if (message != null)
+            {
+                message.IsRead = true;
+                message.ReadAt = DateTime.Now;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to mark message as read: {ex.Message}");
+        }
+    }
+
+    private async Task ReplyToMessage()
+    {
+        if (message == null) return;
+
+        var parameters = new DialogParameters 
+        { 
+            { "IsReply", true },
+            { "RecipientId", message.SenderId },
+            { "RecipientName", message.SenderName },
+            { "ReplyToMessageId", message.Id },
+            { "OriginalSubject", message.Subject },
+            { "ConversationId", message.ConversationId },
+            { "RentalId", message.RentalId },
+            { "ToolId", message.ToolId }
+        };
+        
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        
+        var dialog = DialogService.Show<NewMessageDialog>("Reply to Message", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Reply sent successfully!", Severity.Success);
+            
+            // Navigate to conversation if we have a conversation ID
+            if (message.ConversationId.HasValue)
+            {
+                Navigation.NavigateTo($"/messages/conversation/{message.ConversationId}");
+            }
+        }
+    }
+
+    private async Task ArchiveMessage()
+    {
+        if (message == null) return;
+
+        try
+        {
+            var response = await MessageService.ArchiveMessageAsync(MessageId);
+            if (response.Success)
+            {
+                Snackbar.Add("Message archived successfully", Severity.Success);
+                Navigation.NavigateTo("/messages");
+            }
+            else
+            {
+                Snackbar.Add($"Failed to archive message: {response.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error archiving message: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DeleteMessage()
+    {
+        if (message == null) return;
+
+        // Confirmation dialog would be good here
+        try
+        {
+            var response = await MessageService.DeleteMessageAsync(MessageId);
+            if (response.Success)
+            {
+                Snackbar.Add("Message deleted successfully", Severity.Success);
+                Navigation.NavigateTo("/messages");
+            }
+            else
+            {
+                Snackbar.Add($"Failed to delete message: {response.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting message: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DownloadAttachment(MessageAttachmentDto attachment)
+    {
+        try
+        {
+            // Implementation for downloading attachments
+            Snackbar.Add($"Downloading {attachment.OriginalFileName}...", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to download attachment: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // Helper methods
+    private string GetSenderInitials()
+    {
+        if (message == null || string.IsNullOrEmpty(message.SenderName)) return "?";
+        
+        var parts = message.SenderName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return message.SenderName[0].ToString().ToUpper();
+    }
+
+    private string FormatTimestamp(DateTime timestamp)
+    {
+        return timestamp.ToString("MMM dd, yyyy 'at' h:mm tt");
+    }
+
+    private Color GetPriorityColor(string priority)
+    {
+        return priority.ToLower() switch
+        {
+            "high" => Color.Error,
+            "urgent" => Color.Error,
+            "low" => Color.Info,
+            _ => Color.Warning
+        };
+    }
+
+    private string GetFileIcon(string contentType)
+    {
+        return contentType.ToLower() switch
+        {
+            var ct when ct.StartsWith("image/") => Icons.Material.Filled.Image,
+            var ct when ct.Contains("pdf") => Icons.Material.Filled.PictureAsPdf,
+            var ct when ct.Contains("word") => Icons.Material.Filled.Description,
+            var ct when ct.Contains("text") => Icons.Material.Filled.TextSnippet,
+            var ct when ct.Contains("zip") => Icons.Material.Filled.FolderZip,
+            _ => Icons.Material.Filled.AttachFile
+        };
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+}

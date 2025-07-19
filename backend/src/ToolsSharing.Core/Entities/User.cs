@@ -51,4 +51,10 @@ public class User : IdentityUser
     public ICollection<DataProcessingLog> ProcessingLogs { get; set; } = new List<DataProcessingLog>();
     public ICollection<DataSubjectRequest> DataRequests { get; set; } = new List<DataSubjectRequest>();
     public ICollection<CookieConsent> CookieConsents { get; set; } = new List<CookieConsent>();
+    
+    // Messaging navigation properties
+    public ICollection<Message> SentMessages { get; set; } = new List<Message>();
+    public ICollection<Message> ReceivedMessages { get; set; } = new List<Message>();
+    public ICollection<Conversation> ConversationsAsParticipant1 { get; set; } = new List<Conversation>();
+    public ICollection<Conversation> ConversationsAsParticipant2 { get; set; } = new List<Conversation>();
 }

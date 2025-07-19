@@ -7,12 +7,14 @@
 @using frontend.Components.Disputes
 @using frontend.Components.Fraud
 @using frontend.Components.Rentals
+@using frontend.Components.Messages
 @inject IRentalService RentalService
 @inject IPaymentService PaymentService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IDialogService DialogService
+@inject MessageService MessageService
 @attribute [Authorize]
 
 <PageTitle>Rental Details - NeighborTools</PageTitle>
@@ -257,8 +259,13 @@
             <MudItem xs="12" md="4">
                 <MudPaper Elevation="4" Class="pa-4" Style="border-radius: 16px;">
                     <MudText Typo="Typo.h6" Class="mb-3">Tool Information</MudText>
+                    
+                    <!-- Show basic tool info from rental object -->
+                    <MudText Typo="Typo.subtitle1" GutterBottom="true">@rental.ToolName</MudText>
+                    
                     @if (rental.Tool != null)
                     {
+                        <!-- Show detailed tool info if available -->
                         <div class="mb-3">
                             @if (rental.Tool.ImageUrls.Any())
                             {
@@ -267,18 +274,83 @@
                                      style="width: 100%; height: 200px; object-fit: cover; border-radius: 8px;" />
                             }
                         </div>
-                        <MudText Typo="Typo.subtitle1" GutterBottom="true">@rental.Tool.Name</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary" GutterBottom="true">
-                            @rental.Tool.Description
-                        </MudText>
+                        
+                        @if (!string.IsNullOrEmpty(rental.Tool.Description))
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" GutterBottom="true">
+                                @rental.Tool.Description
+                            </MudText>
+                        }
+                        
                         <MudDivider Class="my-3" />
-                        <MudText Typo="Typo.body2">
-                            <strong>Owner:</strong> @rental.Tool.OwnerName
-                        </MudText>
-                        <MudText Typo="Typo.body2">
-                            <strong>Location:</strong> @rental.Tool.Location
-                        </MudText>
+                        
+                        <MudGrid>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.body2">
+                                    <strong>Category:</strong> @rental.Tool.Category
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.body2">
+                                    <strong>Condition:</strong> @rental.Tool.Condition
+                                </MudText>
+                            </MudItem>
+                            @if (!string.IsNullOrEmpty(rental.Tool.Brand))
+                            {
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Brand:</strong> @rental.Tool.Brand
+                                    </MudText>
+                                </MudItem>
+                            }
+                            @if (!string.IsNullOrEmpty(rental.Tool.Model))
+                            {
+                                <MudItem xs="6">
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Model:</strong> @rental.Tool.Model
+                                    </MudText>
+                                </MudItem>
+                            }
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.body2">
+                                    <strong>Daily Rate:</strong> $@rental.Tool.DailyRate.ToString("F2")
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.body2">
+                                    <strong>Location:</strong> @rental.Tool.Location
+                                </MudText>
+                            </MudItem>
+                        </MudGrid>
+                        
+                        <MudDivider Class="my-3" />
                     }
+                    else
+                    {
+                        <!-- Show basic info with link to view full tool details -->
+                        <MudText Typo="Typo.body2" Color="Color.Secondary" GutterBottom="true">
+                            Tool details are not fully loaded.
+                        </MudText>
+                        
+                        <MudDivider Class="my-3" />
+                        
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.OpenInNew"
+                                   Href="@($"/tools/{rental.ToolId}")"
+                                   Class="mb-3">
+                            View Full Tool Details
+                        </MudButton>
+                        
+                        <MudDivider Class="my-3" />
+                    }
+                    
+                    <MudText Typo="Typo.body2">
+                        <strong>Owner:</strong> 
+                        <MudLink Href="@($"/users/{rental.OwnerId}")" Color="Color.Primary">
+                            @rental.OwnerName
+                        </MudLink>
+                    </MudText>
                 </MudPaper>
 
                 <MudPaper Elevation="4" Class="pa-4 mt-4" Style="border-radius: 16px;">
@@ -286,26 +358,35 @@
                     @if (isRenter)
                     {
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Tool Owner</MudText>
-                        <MudText Typo="Typo.body1">@rental.Tool?.OwnerName</MudText>
-                        @if (rental.Status == "Approved" || rental.Status == "Active")
-                        {
-                            <MudButton Variant="Variant.Text" 
-                                       Color="Color.Primary" 
-                                       StartIcon="@Icons.Material.Filled.Message"
-                                       Class="mt-2">
-                                Contact Owner
-                            </MudButton>
-                        }
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+                            <MudLink Href="@($"/users/{rental.OwnerId}")" Typo="Typo.body1" Color="Color.Primary">
+                                @rental.OwnerName
+                            </MudLink>
+                            <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Color="Color.Secondary" />
+                        </MudStack>
+                        <MudButton Variant="Variant.Text" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Message"
+                                   OnClick="@(() => ContactOwner())"
+                                   Class="mt-1">
+                            Send Message to Owner
+                        </MudButton>
                     }
                     else if (isOwner)
                     {
                         <MudText Typo="Typo.body2" Color="Color.Secondary">Renter</MudText>
-                        <MudText Typo="Typo.body1">@rental.RenterName</MudText>
+                        <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+                            <MudLink Href="@($"/users/{rental.RenterId}")" Typo="Typo.body1" Color="Color.Primary">
+                                @rental.RenterName
+                            </MudLink>
+                            <MudIcon Icon="@Icons.Material.Filled.OpenInNew" Size="Size.Small" Color="Color.Secondary" />
+                        </MudStack>
                         <MudButton Variant="Variant.Text" 
                                    Color="Color.Primary" 
                                    StartIcon="@Icons.Material.Filled.Message"
-                                   Class="mt-2">
-                            Contact Renter
+                                   OnClick="@(() => ContactRenter())"
+                                   Class="mt-1">
+                            Send Message to Renter
                         </MudButton>
                     }
                 </MudPaper>
@@ -345,7 +426,7 @@
             {
                 rental = result.Data;
                 isRenter = rental.RenterId == currentUserId;
-                isOwner = rental.Tool?.OwnerId == currentUserId;
+                isOwner = rental.OwnerId == currentUserId;
 
                 // Load transaction details if available
                 if (rental.Status != "Pending" && rental.Status != "Rejected")
@@ -800,5 +881,63 @@
         }
         
         return "Dispute information is available for this rental.";
+    }
+
+    private async Task ContactOwner()
+    {
+        if (rental == null) return;
+
+        var parameters = new DialogParameters 
+        { 
+            { "RecipientId", rental.OwnerId },
+            { "RecipientName", rental.OwnerName },
+            { "RentalId", RentalId.ToString() },
+            { "ToolId", rental.ToolId },
+            { "ToolName", rental.ToolName }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        
+        var dialog = DialogService.Show<NewMessageDialog>("Send Message to Owner", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Message sent successfully!", Severity.Success);
+        }
+    }
+
+    private async Task ContactRenter()
+    {
+        if (rental == null) return;
+
+        var parameters = new DialogParameters 
+        { 
+            { "RecipientId", rental.RenterId },
+            { "RecipientName", rental.RenterName },
+            { "RentalId", RentalId.ToString() },
+            { "ToolId", rental.ToolId },
+            { "ToolName", rental.ToolName }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        
+        var dialog = DialogService.Show<NewMessageDialog>("Send Message to Renter", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Message sent successfully!", Severity.Success);
+        }
     }
 }

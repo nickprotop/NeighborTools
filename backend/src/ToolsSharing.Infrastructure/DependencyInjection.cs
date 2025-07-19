@@ -11,6 +11,7 @@ using ToolsSharing.Infrastructure.Features.Tools;
 using ToolsSharing.Infrastructure.Features.Rentals;
 using ToolsSharing.Infrastructure.Features.Users;
 using ToolsSharing.Infrastructure.Features.Settings;
+using ToolsSharing.Infrastructure.Features.Messaging;
 using ToolsSharing.Infrastructure.Repositories;
 using ToolsSharing.Infrastructure.Services;
 using ToolsSharing.Infrastructure.Mappings;
@@ -87,6 +88,10 @@ public static class DependencyInjection
         // Mobile and SMS Notification Services
         services.AddScoped<IMobileNotificationService, MobileNotificationService>();
         services.AddScoped<ISmsNotificationService, SmsNotificationService>();
+
+        // Messaging Services
+        services.AddScoped<IContentModerationService, ContentModerationService>();
+        services.AddScoped<IMessageService, MessageService>();
 
         return services;
     }

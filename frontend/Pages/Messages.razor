@@ -1,0 +1,480 @@
+@page "/messages"
+@using Microsoft.AspNetCore.Authorization
+@using frontend.Services
+@using frontend.Models
+@attribute [Authorize]
+@inject MessageService MessageService
+@inject IJSRuntime JSRuntime
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject NavigationManager Navigation
+
+<PageTitle>Messages</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudPaper Class="pa-4" Elevation="2">
+        <MudStack>
+            <!-- Header Section -->
+            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudStack>
+                    <MudText Typo="Typo.h4">Messages</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Manage your conversations and messages
+                    </MudText>
+                </MudStack>
+                
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Add"
+                          OnClick="OpenNewMessageDialog">
+                    New Message
+                </MudButton>
+            </MudStack>
+
+            <!-- Statistics Cards -->
+            @if (statistics != null)
+            {
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Class="pa-4" Style="height: 100px;">
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Primary" Size="Size.Large" />
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.h6">@statistics.TotalMessages</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Total Messages</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Class="pa-4" Style="height: 100px;">
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.MarkEmailUnread" Color="Color.Warning" Size="Size.Large" />
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.h6">@statistics.UnreadMessages</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Unread</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Class="pa-4" Style="height: 100px;">
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Forum" Color="Color.Success" Size="Size.Large" />
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.h6">@statistics.ConversationCount</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Conversations</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard Class="pa-4" Style="height: 100px;">
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                <MudIcon Icon="@Icons.Material.Filled.Send" Color="Color.Info" Size="Size.Large" />
+                                <MudStack Spacing="0">
+                                    <MudText Typo="Typo.h6">@statistics.SentMessages</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Sent</MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+            }
+
+            <!-- Tabs -->
+            <MudTabs @bind-ActivePanelIndex="activeTab" Elevation="0" Rounded="true" ApplyEffectsToContainer="true">
+                <MudTabPanel Text="Conversations" Icon="@Icons.Material.Filled.Forum">
+                    <div class="mt-4">
+                        @if (isLoadingConversations)
+                        {
+                            <MudProgressLinear Indeterminate="true" />
+                        }
+                        else if (conversations?.Any() == true)
+                        {
+                            <MudList T="string">
+                                @foreach (var conversation in conversations)
+                                {
+                                    <MudListItem T="string" @onclick="() => OpenConversation(conversation.Id.ToString())"
+                                               Class="conversation-item"
+                                               Style="cursor: pointer; border-radius: 8px; margin-bottom: 4px;">
+                                        <div style="display: flex; align-items: center; width: 100%;">
+                                            <MudAvatar Style="margin-right: 16px;" Color="Color.Primary">
+                                                @GetOtherParticipantInitials(conversation)
+                                            </MudAvatar>
+                                            
+                                            <div style="flex: 1; min-width: 0;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">
+                                                        @GetOtherParticipantName(conversation)
+                                                    </MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                        @FormatMessageTime(conversation.LastMessageAt)
+                                                    </MudText>
+                                                </div>
+                                                
+                                                @if (!string.IsNullOrEmpty(conversation.LastMessageContent))
+                                                {
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary" 
+                                                           Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                        @conversation.LastMessageContent
+                                                    </MudText>
+                                                }
+                                                
+                                                @if (conversation.UnreadCount > 0)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" 
+                                                           Style="margin-top: 4px;">
+                                                        @conversation.UnreadCount unread
+                                                    </MudChip>
+                                                }
+                                            </div>
+                                        </div>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Style="margin-top: 16px;">
+                                No conversations yet. Start a new conversation!
+                            </MudAlert>
+                        }
+                    </div>
+                </MudTabPanel>
+                
+                <MudTabPanel Text="All Messages" Icon="@Icons.Material.Filled.Message">
+                    <div class="mt-4">
+                        <!-- Search and Filters -->
+                        <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Class="mb-4">
+                            <MudTextField @bind-Value="searchTerm"
+                                        Placeholder="Search messages..."
+                                        Adornment="Adornment.End"
+                                        AdornmentIcon="@Icons.Material.Filled.Search"
+                                        OnAdornmentClick="SearchMessages"
+                                        OnKeyUp="@(async (e) => { if (e.Key == "Enter") await SearchMessages(); })"
+                                        Style="flex: 1;" />
+                            
+                            <MudSelect T="bool?" @bind-Value="filterRead" 
+                                     Placeholder="Read Status" 
+                                     Clearable="true"
+                                     Style="min-width: 150px;">
+                                <MudSelectItem T="bool?" Value="null">All</MudSelectItem>
+                                <MudSelectItem T="bool?" Value="true">Read</MudSelectItem>
+                                <MudSelectItem T="bool?" Value="false">Unread</MudSelectItem>
+                            </MudSelect>
+                            
+                            <MudButton Variant="Variant.Outlined" 
+                                     StartIcon="@Icons.Material.Filled.FilterList"
+                                     OnClick="LoadMessages">
+                                Apply Filters
+                            </MudButton>
+                        </MudStack>
+
+                        @if (isLoadingMessages)
+                        {
+                            <MudProgressLinear Indeterminate="true" />
+                        }
+                        else if (messages?.Any() == true)
+                        {
+                            <MudList T="string">
+                                @foreach (var message in messages)
+                                {
+                                    <MudListItem T="string" @onclick="() => OpenMessage(message.Id.ToString())"
+                                               Class="message-item"
+                                               Style="@GetMessageItemStyle(message)">
+                                        <div style="display: flex; align-items: center; width: 100%;">
+                                            <MudAvatar Style="margin-right: 16px;" Color="@GetMessageAvatarColor(message)">
+                                                @GetSenderInitials(message)
+                                            </MudAvatar>
+                                            
+                                            <div style="flex: 1; min-width: 0;">
+                                                <div style="display: flex; justify-content: space-between; align-items: center;">
+                                                    <MudText Typo="Typo.subtitle1" Style="@GetMessageTitleStyle(message)">
+                                                        @message.SenderName
+                                                    </MudText>
+                                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                                        @if (message.AttachmentCount > 0)
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" Color="Color.Secondary" />
+                                                        }
+                                                        @if (!message.IsRead)
+                                                        {
+                                                            <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Primary" />
+                                                        }
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                            @FormatMessageTime(message.CreatedAt)
+                                                        </MudText>
+                                                    </div>
+                                                </div>
+                                                
+                                                <MudText Typo="Typo.body1" Style="@GetMessageSubjectStyle(message)">
+                                                    @message.Subject
+                                                </MudText>
+                                                
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary" 
+                                                       Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px;">
+                                                    @message.PreviewContent
+                                                </MudText>
+                                            </div>
+                                        </div>
+                                    </MudListItem>
+                                }
+                            </MudList>
+                        }
+                        else
+                        {
+                            <MudAlert Severity="Severity.Info" Style="margin-top: 16px;">
+                                @(string.IsNullOrEmpty(searchTerm) ? "No messages found." : $"No messages found for '{searchTerm}'.")
+                            </MudAlert>
+                        }
+                    </div>
+                </MudTabPanel>
+            </MudTabs>
+        </MudStack>
+    </MudPaper>
+</MudContainer>
+
+<style>
+    .conversation-item:hover, .message-item:hover {
+        background-color: var(--mud-palette-action-hover) !important;
+    }
+    
+    .message-unread {
+        border-left: 4px solid var(--mud-palette-primary);
+        background-color: var(--mud-palette-primary-lighten);
+    }
+</style>
+
+@code {
+    private int activeTab = 0;
+    private bool isLoadingConversations = true;
+    private bool isLoadingMessages = true;
+    private string searchTerm = "";
+    private bool? filterRead = null;
+    
+    private List<ConversationDto>? conversations;
+    private List<MessageSummaryDto>? messages;
+    private MessageStatisticsDto? statistics;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        await Task.WhenAll(
+            LoadConversations(),
+            LoadMessages(),
+            LoadStatistics()
+        );
+    }
+
+    private async Task LoadConversations()
+    {
+        isLoadingConversations = true;
+        StateHasChanged();
+        
+        try
+        {
+            var response = await MessageService.GetConversationsAsync();
+            if (response.Success && response.Data != null)
+            {
+                conversations = response.Data;
+            }
+            else
+            {
+                Snackbar.Add($"Failed to load conversations: {response.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading conversations: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoadingConversations = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadMessages()
+    {
+        isLoadingMessages = true;
+        StateHasChanged();
+        
+        try
+        {
+            var response = await MessageService.GetMessagesAsync(isRead: filterRead);
+            if (response.Success && response.Data != null)
+            {
+                messages = response.Data;
+            }
+            else
+            {
+                Snackbar.Add($"Failed to load messages: {response.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading messages: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoadingMessages = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadStatistics()
+    {
+        try
+        {
+            var response = await MessageService.GetMessageStatisticsAsync();
+            if (response.Success && response.Data != null)
+            {
+                statistics = response.Data;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            // Statistics are optional, don't show error to user
+            Console.WriteLine($"Error loading message statistics: {ex.Message}");
+        }
+    }
+
+    private async Task SearchMessages()
+    {
+        if (string.IsNullOrWhiteSpace(searchTerm))
+        {
+            await LoadMessages();
+            return;
+        }
+
+        isLoadingMessages = true;
+        StateHasChanged();
+        
+        try
+        {
+            var response = await MessageService.SearchMessagesAsync(searchTerm, isRead: filterRead);
+            if (response.Success && response.Data != null)
+            {
+                messages = response.Data;
+            }
+            else
+            {
+                Snackbar.Add($"Search failed: {response.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Search error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoadingMessages = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenNewMessageDialog()
+    {
+        var parameters = new DialogParameters { { "IsReply", false } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium, FullWidth = true };
+        
+        var dialog = DialogService.Show<NewMessageDialog>("New Message", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            await LoadData(); // Refresh all data
+            Snackbar.Add("Message sent successfully!", Severity.Success);
+        }
+    }
+
+    private void OpenConversation(string conversationId)
+    {
+        Navigation.NavigateTo($"/messages/conversation/{conversationId}");
+    }
+
+    private void OpenMessage(string messageId)
+    {
+        Navigation.NavigateTo($"/messages/{messageId}");
+    }
+
+    // Helper methods
+    private string GetOtherParticipantName(ConversationDto conversation)
+    {
+        // This would be implemented based on current user context
+        // For now, return the first participant name
+        return !string.IsNullOrEmpty(conversation.Participant1Name) ? conversation.Participant1Name : conversation.Participant2Name;
+    }
+
+    private string GetOtherParticipantInitials(ConversationDto conversation)
+    {
+        var name = GetOtherParticipantName(conversation);
+        if (string.IsNullOrEmpty(name)) return "?";
+        
+        var parts = name.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return name[0].ToString().ToUpper();
+    }
+
+    private string GetSenderInitials(MessageSummaryDto message)
+    {
+        if (string.IsNullOrEmpty(message.SenderName)) return "?";
+        
+        var parts = message.SenderName.Split(' ', StringSplitOptions.RemoveEmptyEntries);
+        if (parts.Length >= 2)
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        return message.SenderName[0].ToString().ToUpper();
+    }
+
+    private string FormatMessageTime(DateTime? dateTime)
+    {
+        if (!dateTime.HasValue) return "";
+        
+        var now = DateTime.Now;
+        var diff = now - dateTime.Value;
+        
+        if (diff.Days == 0)
+            return dateTime.Value.ToString("HH:mm");
+        else if (diff.Days == 1)
+            return "Yesterday";
+        else if (diff.Days < 7)
+            return dateTime.Value.ToString("ddd");
+        else
+            return dateTime.Value.ToString("MM/dd");
+    }
+
+    private string GetMessageItemStyle(MessageSummaryDto message)
+    {
+        var baseStyle = "cursor: pointer; border-radius: 8px; margin-bottom: 4px;";
+        if (!message.IsRead)
+        {
+            baseStyle += " border-left: 4px solid var(--mud-palette-primary); background-color: rgba(var(--mud-palette-primary-rgb), 0.04);";
+        }
+        return baseStyle;
+    }
+
+    private string GetMessageTitleStyle(MessageSummaryDto message)
+    {
+        return message.IsRead ? "font-weight: 400;" : "font-weight: 600;";
+    }
+
+    private string GetMessageSubjectStyle(MessageSummaryDto message)
+    {
+        return message.IsRead ? "font-weight: 400;" : "font-weight: 500;";
+    }
+
+    private Color GetMessageAvatarColor(MessageSummaryDto message)
+    {
+        return message.IsRead ? Color.Default : Color.Primary;
+    }
+}
