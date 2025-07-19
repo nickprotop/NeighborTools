@@ -183,10 +183,9 @@ else if (filteredTools != null && filteredTools.Any())
                         
                         @if (tool.IsAvailable)
                         {
-                            <MudIconButton Icon="@Icons.Material.Filled.FavoriteBorder" 
-                                           Color="Color.Secondary" 
-                                           Size="Size.Small"
-                                           OnClick="() => ToggleFavorite(tool.Id)" />
+                            <FavoriteButton ToolId="@tool.Id" 
+                                           OwnerUserId="@tool.OwnerId" 
+                                           Size="Size.Small" />
                         }
                     </MudCardActions>
                 </MudCard>
@@ -346,10 +345,6 @@ else
         Navigation.NavigateTo($"/tools/{toolId}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
     }
 
-    private void ToggleFavorite(string toolId)
-    {
-        Snackbar.Add("Favorites feature coming soon!", Severity.Info);
-    }
 
     
     private string GetOwnerInitials(string ownerName)

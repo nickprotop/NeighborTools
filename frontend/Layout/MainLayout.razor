@@ -97,6 +97,9 @@
                                     <MudMenuItem Icon="@Icons.Material.Filled.Person" Href="/profile">
                                         Profile
                                     </MudMenuItem>
+                                    <MudMenuItem Icon="@Icons.Material.Filled.Favorite" Href="/favorites">
+                                        Favorites
+                                    </MudMenuItem>
                                     <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="/settings">
                                         Settings
                                     </MudMenuItem>
@@ -230,6 +233,14 @@
                                    Class="mobile-nav-item"
                                    OnClick="CloseMobileMenu">
                             Profile
+                        </MudButton>
+                        <MudButton Variant="Variant.Text" 
+                                   Href="/favorites" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.Favorite"
+                                   Class="mobile-nav-item"
+                                   OnClick="CloseMobileMenu">
+                            Favorites
                         </MudButton>
                         <MudButton Variant="Variant.Text" 
                                    Href="/settings" 

@@ -93,6 +93,9 @@ public static class DependencyInjection
         services.AddScoped<IContentModerationService, ContentModerationService>();
         services.AddScoped<IMessageService, MessageService>();
 
+        // Favorites Service
+        services.AddScoped<IFavoritesService, FavoritesService>();
+
         return services;
     }
 }

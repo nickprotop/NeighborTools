@@ -49,6 +49,9 @@ public class ApplicationDbContext : IdentityDbContext<User>
     public DbSet<Message> Messages { get; set; }
     public DbSet<Conversation> Conversations { get; set; }
     public DbSet<MessageAttachment> MessageAttachments { get; set; }
+    
+    // Favorites entities
+    public DbSet<Favorite> Favorites { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

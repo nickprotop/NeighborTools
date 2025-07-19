@@ -102,3 +102,47 @@ public class RentalApprovalRequest
     public bool IsApproved { get; set; }
     public string? Reason { get; set; }
 }
+
+// Favorites models
+public class FavoriteDto
+{
+    public string Id { get; set; } = string.Empty;
+    public string UserId { get; set; } = string.Empty;
+    public string ToolId { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+    
+    // Tool information
+    public string ToolName { get; set; } = string.Empty;
+    public string ToolDescription { get; set; } = string.Empty;
+    public string ToolCategory { get; set; } = string.Empty;
+    public decimal DailyRate { get; set; }
+    public string ToolCondition { get; set; } = string.Empty;
+    public string ToolLocation { get; set; } = string.Empty;
+    public List<string> ToolImageUrls { get; set; } = new();
+    public bool IsToolAvailable { get; set; }
+    
+    // Owner information
+    public string OwnerName { get; set; } = string.Empty;
+    public string OwnerEmail { get; set; } = string.Empty;
+}
+
+public class AddToFavoritesRequest
+{
+    public string ToolId { get; set; } = string.Empty;
+}
+
+public class RemoveFromFavoritesRequest
+{
+    public string ToolId { get; set; } = string.Empty;
+}
+
+public class CheckFavoriteStatusRequest
+{
+    public string ToolId { get; set; } = string.Empty;
+}
+
+public class FavoriteStatusDto
+{
+    public bool IsFavorited { get; set; }
+    public string? FavoriteId { get; set; }
+}

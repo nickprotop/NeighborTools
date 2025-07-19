@@ -57,4 +57,7 @@ public class User : IdentityUser
     public ICollection<Message> ReceivedMessages { get; set; } = new List<Message>();
     public ICollection<Conversation> ConversationsAsParticipant1 { get; set; } = new List<Conversation>();
     public ICollection<Conversation> ConversationsAsParticipant2 { get; set; } = new List<Conversation>();
+    
+    // Favorites navigation properties
+    public ICollection<Favorite> Favorites { get; set; } = new List<Favorite>();
 }

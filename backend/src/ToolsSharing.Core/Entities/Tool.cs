@@ -22,4 +22,5 @@ public class Tool : BaseEntity
     public ICollection<ToolImage> Images { get; set; } = new List<ToolImage>();
     public ICollection<Rental> Rentals { get; set; } = new List<Rental>();
     public ICollection<Review> Reviews { get; set; } = new List<Review>();
+    public ICollection<Favorite> FavoritedBy { get; set; } = new List<Favorite>();
 }
