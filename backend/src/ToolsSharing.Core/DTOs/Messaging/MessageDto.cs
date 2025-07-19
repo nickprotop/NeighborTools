@@ -138,6 +138,7 @@ public class MessageStatisticsDto
     public int ReceivedMessages { get; set; }
     public int ArchivedMessages { get; set; }
     public int ModeratedMessages { get; set; }
+    public int BlockedMessages { get; set; }
     public int ConversationCount { get; set; }
     public DateTime? LastMessageAt { get; set; }
     public Dictionary<MessageType, int> MessagesByType { get; set; } = new();

@@ -12,4 +12,5 @@ public interface IUserService
     Task<bool> DeleteUserAsync(string userId);
     Task<string?> UploadProfilePictureAsync(string userId, Stream imageStream, string fileName);
     Task<bool> RemoveProfilePictureAsync(string userId);
+    Task<List<UserSearchResultDto>> SearchUsersAsync(string query, int limit = 10);
 }

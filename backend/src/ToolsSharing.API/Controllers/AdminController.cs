@@ -5,6 +5,10 @@ using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Infrastructure.Data;
 using ToolsSharing.Core.Interfaces;
 using ToolsSharing.Core.DTOs.Admin;
+using ToolsSharing.Core.Features.Messaging;
+using ToolsSharing.Core.Features.Users;
+using ToolsSharing.Core.DTOs.Messaging;
+using MapsterMapper;
 
 namespace ToolsSharing.API.Controllers;
 
@@ -17,6 +21,9 @@ public class AdminController : ControllerBase
     private readonly IDisputeService _disputeService;
     private readonly IFraudDetectionService _fraudDetectionService;
     private readonly IPaymentService _paymentService;
+    private readonly IMessageService _messageService;
+    private readonly IContentModerationService _contentModerationService;
+    private readonly IMapper _mapper;
     private readonly ILogger<AdminController> _logger;
 
     public AdminController(
@@ -24,12 +31,18 @@ public class AdminController : ControllerBase
         IDisputeService disputeService,
         IFraudDetectionService fraudDetectionService,
         IPaymentService paymentService,
+        IMessageService messageService,
+        IContentModerationService contentModerationService,
+        IMapper mapper,
         ILogger<AdminController> logger)
     {
         _context = context;
         _disputeService = disputeService;
         _fraudDetectionService = fraudDetectionService;
         _paymentService = paymentService;
+        _messageService = messageService;
+        _contentModerationService = contentModerationService;
+        _mapper = mapper;
         _logger = logger;
     }
 
@@ -569,4 +582,434 @@ public class AdminController : ControllerBase
             return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to load payments"));
         }
     }
+
+    // MESSAGING ADMINISTRATION ENDPOINTS
+
+    /// <summary>
+    /// Get message statistics for admin dashboard
+    /// </summary>
+    [HttpGet("messaging/statistics")]
+    public async Task<IActionResult> GetMessageStatistics()
+    {
+        try
+        {
+            // Get global message statistics for admin dashboard (includes ALL messages for admin oversight)
+            var statistics = new MessageStatisticsDto
+            {
+                TotalMessages = await _context.Messages.Where(m => !m.IsDeleted).CountAsync(), // Total includes blocked for admin view
+                UnreadMessages = await _context.Messages.Where(m => !m.IsRead && !m.IsDeleted && !m.IsBlocked).CountAsync(), // Unread excludes blocked (they're never delivered)
+                SentMessages = await _context.Messages.Where(m => !m.IsDeleted && !m.IsBlocked).CountAsync(), // Sent excludes blocked (they're never delivered)
+                ReceivedMessages = await _context.Messages.Where(m => !m.IsDeleted && !m.IsBlocked).CountAsync(), // Received excludes blocked (they're never delivered)
+                ArchivedMessages = await _context.Messages.Where(m => m.IsArchived && !m.IsDeleted && !m.IsBlocked).CountAsync(), // Archived excludes blocked
+                ModeratedMessages = await _context.Messages.Where(m => m.IsModerated && !m.IsDeleted).CountAsync(), // Moderated includes blocked for admin oversight
+                BlockedMessages = await _context.Messages.Where(m => m.IsBlocked && !m.IsDeleted).CountAsync(), // New: Blocked message count
+                ConversationCount = await _context.Conversations.CountAsync(),
+                LastMessageAt = await _context.Messages
+                    .Where(m => !m.IsDeleted && !m.IsBlocked) // Last message excludes blocked (they're never delivered)
+                    .OrderByDescending(m => m.CreatedAt)
+                    .Select(m => (DateTime?)m.CreatedAt)
+                    .FirstOrDefaultAsync()
+            };
+
+            return Ok(ApiResponse<MessageStatisticsDto>.CreateSuccess(statistics, "Message statistics retrieved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting message statistics");
+            return StatusCode(500, ApiResponse<MessageStatisticsDto>.CreateFailure("Failed to load message statistics"));
+        }
+    }
+
+    /// <summary>
+    /// Get moderation statistics for admin dashboard
+    /// </summary>
+    [HttpGet("messaging/moderation-statistics")]
+    public async Task<IActionResult> GetModerationStatistics()
+    {
+        try
+        {
+            var statistics = await _contentModerationService.GetModerationStatisticsAsync();
+            return Ok(ApiResponse<object>.CreateSuccess(statistics, "Moderation statistics retrieved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting moderation statistics");
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to load moderation statistics"));
+        }
+    }
+
+    /// <summary>
+    /// Search users for admin purposes
+    /// </summary>
+    [HttpGet("users/search")]
+    public async Task<IActionResult> SearchUsers([FromQuery] string? query = null, [FromQuery] int limit = 100)
+    {
+        try
+        {
+            var usersQuery = _context.Users.AsQueryable();
+
+            if (!string.IsNullOrEmpty(query))
+            {
+                usersQuery = usersQuery.Where(u => 
+                    u.FirstName.Contains(query) ||
+                    u.LastName.Contains(query) ||
+                    u.Email.Contains(query));
+            }
+
+            var users = await usersQuery
+                .Select(u => new UserSearchResultDto
+                {
+                    Id = u.Id,
+                    Email = u.Email,
+                    FirstName = u.FirstName,
+                    LastName = u.LastName,
+                    ProfilePictureUrl = u.ProfilePictureUrl,
+                    PublicLocation = u.PublicLocation,
+                    IsVerified = u.EmailConfirmed, // Use EmailConfirmed from IdentityUser
+                    AverageRating = 0, // Could calculate if needed
+                    ReviewCount = 0 // Could calculate if needed
+                })
+                .OrderBy(u => u.FirstName)
+                .ThenBy(u => u.LastName)
+                .Take(limit)
+                .ToListAsync();
+
+            return Ok(ApiResponse<List<UserSearchResultDto>>.CreateSuccess(users, "Users retrieved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching users");
+            return StatusCode(500, ApiResponse<List<UserSearchResultDto>>.CreateFailure("Failed to search users"));
+        }
+    }
+
+    /// <summary>
+    /// Search messages with admin privileges
+    /// </summary>
+    [HttpGet("messaging/search")]
+    public async Task<IActionResult> SearchMessages(
+        [FromQuery] string? searchTerm = null,
+        [FromQuery] string? userId = null,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
+    {
+        try
+        {
+            // Admin search should include ALL messages (not filtered by user)
+            var messagesQuery = _context.Messages
+                .Include(m => m.Sender)
+                .Include(m => m.Recipient)
+                .Include(m => m.Attachments)
+                .Where(m => !m.IsDeleted); // Admin can see blocked messages for review
+
+            // Apply user filter only if specific user is selected
+            if (!string.IsNullOrEmpty(userId))
+            {
+                messagesQuery = messagesQuery.Where(m => m.SenderId == userId || m.RecipientId == userId);
+            }
+
+            // Apply search term filter
+            if (!string.IsNullOrEmpty(searchTerm))
+            {
+                messagesQuery = messagesQuery.Where(m => 
+                    m.Subject.Contains(searchTerm) || 
+                    m.Content.Contains(searchTerm) ||
+                    m.Sender.FirstName.Contains(searchTerm) ||
+                    m.Sender.LastName.Contains(searchTerm) ||
+                    m.Recipient.FirstName.Contains(searchTerm) ||
+                    m.Recipient.LastName.Contains(searchTerm));
+            }
+
+            // Apply date filters
+            if (fromDate.HasValue)
+            {
+                messagesQuery = messagesQuery.Where(m => m.CreatedAt >= fromDate.Value);
+            }
+
+            if (toDate.HasValue)
+            {
+                messagesQuery = messagesQuery.Where(m => m.CreatedAt <= toDate.Value);
+            }
+
+            // Apply pagination and sorting
+            messagesQuery = messagesQuery
+                .OrderByDescending(m => m.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize);
+
+            var messages = await messagesQuery.ToListAsync();
+            var messageDtos = _mapper.Map<List<MessageSummaryDto>>(messages);
+
+            return Ok(ApiResponse<List<MessageSummaryDto>>.CreateSuccess(messageDtos, "Messages retrieved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching messages");
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to search messages"));
+        }
+    }
+
+    /// <summary>
+    /// Get moderated messages for admin review
+    /// </summary>
+    [HttpGet("messaging/moderated-messages")]
+    public async Task<IActionResult> GetModeratedMessages(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null)
+    {
+        try
+        {
+            var query = new GetModeratedMessagesQuery(
+                Page: page,
+                PageSize: pageSize,
+                FromDate: fromDate,
+                ToDate: toDate
+            );
+
+            var result = await _messageService.GetModeratedMessagesAsync(query);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting moderated messages");
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to load moderated messages"));
+        }
+    }
+
+    /// <summary>
+    /// Get blocked messages for admin review
+    /// </summary>
+    [HttpGet("messaging/blocked-messages")]
+    public async Task<IActionResult> GetBlockedMessages(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50,
+        [FromQuery] DateTime? fromDate = null,
+        [FromQuery] DateTime? toDate = null)
+    {
+        try
+        {
+            var messagesQuery = _context.Messages
+                .Include(m => m.Sender)
+                .Include(m => m.Recipient)
+                .Where(m => m.IsBlocked && !m.IsDeleted);
+
+            if (fromDate.HasValue)
+            {
+                messagesQuery = messagesQuery.Where(m => m.ModeratedAt >= fromDate.Value);
+            }
+
+            if (toDate.HasValue)
+            {
+                messagesQuery = messagesQuery.Where(m => m.ModeratedAt <= toDate.Value);
+            }
+
+            messagesQuery = messagesQuery
+                .OrderByDescending(m => m.ModeratedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize);
+
+            var messages = await messagesQuery.ToListAsync();
+            var messageDtos = _mapper.Map<List<MessageSummaryDto>>(messages);
+
+            return Ok(ApiResponse<List<MessageSummaryDto>>.CreateSuccess(messageDtos, "Blocked messages retrieved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting blocked messages");
+            return StatusCode(500, ApiResponse<List<MessageSummaryDto>>.CreateFailure("Failed to load blocked messages"));
+        }
+    }
+
+    /// <summary>
+    /// Get individual message for admin review
+    /// </summary>
+    [HttpGet("messaging/message/{messageId}")]
+    public async Task<IActionResult> GetMessageById(Guid messageId)
+    {
+        try
+        {
+            var query = new GetMessageByIdQuery(
+                MessageId: messageId,
+                UserId: "" // Admin access - bypass user check
+            );
+
+            var result = await _messageService.GetMessageByIdAsync(query);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting message {MessageId}", messageId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to load message"));
+        }
+    }
+
+    /// <summary>
+    /// Approve a moderated message
+    /// </summary>
+    [HttpPost("messaging/approve/{messageId}")]
+    public async Task<IActionResult> ApproveMessage(Guid messageId)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var command = new ModerateMessageCommand(
+                ModeratorId: userId,
+                MessageId: messageId,
+                Reason: "Approved by admin",
+                ModifiedContent: null
+            );
+
+            // First get the message to clear moderation flags
+            var message = await _context.Messages.FindAsync(messageId);
+            if (message == null)
+            {
+                return NotFound(ApiResponse<object>.CreateFailure("Message not found"));
+            }
+
+            // Clear moderation flags to approve
+            message.IsModerated = false;
+            message.ModerationReason = null;
+            message.ModeratedBy = userId;
+            message.ModeratedAt = DateTime.UtcNow;
+            message.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(ApiResponse<object>.CreateSuccess(new { MessageId = messageId }, "Message approved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error approving message {MessageId}", messageId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to approve message"));
+        }
+    }
+
+    /// <summary>
+    /// Moderate a message with custom content
+    /// </summary>
+    [HttpPost("messaging/moderate/{messageId}")]
+    public async Task<IActionResult> ModerateMessage(Guid messageId, [FromBody] ModerateMessageRequest request)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var command = new ModerateMessageCommand(
+                ModeratorId: userId,
+                MessageId: messageId,
+                Reason: request.Reason,
+                ModifiedContent: request.ModifiedContent
+            );
+
+            var result = await _messageService.ModerateMessageAsync(command);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error moderating message {MessageId}", messageId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to moderate message"));
+        }
+    }
+
+    /// <summary>
+    /// Block a message completely
+    /// </summary>
+    [HttpPost("messaging/block/{messageId}")]
+    public async Task<IActionResult> BlockMessage(Guid messageId, [FromBody] BlockMessageRequest request)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var message = await _context.Messages.FindAsync(messageId);
+            if (message == null)
+            {
+                return NotFound(ApiResponse<object>.CreateFailure("Message not found"));
+            }
+
+            // Mark message as deleted/blocked
+            message.IsDeleted = true;
+            message.IsModerated = true;
+            message.ModerationReason = $"Blocked by admin: {request.Reason}";
+            message.ModeratedBy = userId;
+            message.ModeratedAt = DateTime.UtcNow;
+            message.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            return Ok(ApiResponse<object>.CreateSuccess(new { MessageId = messageId }, "Message blocked successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error blocking message {MessageId}", messageId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to block message"));
+        }
+    }
+
+    /// <summary>
+    /// Get top message senders for analytics
+    /// </summary>
+    [HttpGet("messaging/top-senders")]
+    public async Task<IActionResult> GetTopMessageSenders([FromQuery] int limit = 20)
+    {
+        try
+        {
+            var topSenders = await _context.Messages
+                .Where(m => !m.IsDeleted && !m.IsBlocked)
+                .GroupBy(m => m.SenderId)
+                .Select(g => new
+                {
+                    UserId = g.Key,
+                    MessageCount = g.Count(),
+                    ViolationCount = g.Count(m => m.IsModerated),
+                    LastMessageAt = g.Max(m => m.CreatedAt)
+                })
+                .OrderByDescending(s => s.MessageCount)
+                .Take(limit)
+                .ToListAsync();
+
+            // Get user names
+            var userIds = topSenders.Select(s => s.UserId).ToList();
+            var users = await _context.Users
+                .Where(u => userIds.Contains(u.Id))
+                .Select(u => new { u.Id, UserName = $"{u.FirstName} {u.LastName}", u.IsDeleted })
+                .ToListAsync();
+
+            var result = topSenders.Select(s => new
+            {
+                s.UserId,
+                UserName = users.FirstOrDefault(u => u.Id == s.UserId)?.UserName ?? "Unknown User",
+                s.MessageCount,
+                s.ViolationCount,
+                IsActive = !users.FirstOrDefault(u => u.Id == s.UserId)?.IsDeleted ?? false,
+                s.LastMessageAt
+            }).ToList();
+
+            return Ok(ApiResponse<object>.CreateSuccess(result, "Top senders retrieved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting top message senders");
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to load top senders"));
+        }
+    }
+}
+
+/// <summary>
+/// Request models for messaging moderation (specific to admin actions)
+/// </summary>
+public class BlockMessageRequest
+{
+    public string Reason { get; set; } = string.Empty;
 }

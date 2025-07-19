@@ -245,4 +245,52 @@ public class UserService : IUserService
 
         return activities.OrderByDescending(a => a.Date).Take(10).ToList();
     }
+
+    public async Task<List<UserSearchResultDto>> SearchUsersAsync(string query, int limit = 10)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+            return new List<UserSearchResultDto>();
+
+        // Normalize query for search
+        var normalizedQuery = query.Trim().ToLower();
+
+        // Search users by first name, last name, or email
+        var users = await _context.Users
+            .Where(u => !u.IsDeleted && u.EmailConfirmed &&
+                       (u.FirstName.ToLower().Contains(normalizedQuery) ||
+                        u.LastName.ToLower().Contains(normalizedQuery) ||
+                        u.Email.ToLower().Contains(normalizedQuery) ||
+                        (u.FirstName + " " + u.LastName).ToLower().Contains(normalizedQuery)))
+            .OrderBy(u => u.FirstName)
+            .ThenBy(u => u.LastName)
+            .Take(limit)
+            .ToListAsync();
+
+        var results = new List<UserSearchResultDto>();
+        
+        foreach (var user in users)
+        {
+            // Calculate review statistics
+            var reviews = await _context.Reviews
+                .Where(r => r.RevieweeId == user.Id)
+                .ToListAsync();
+
+            var userSearchResult = new UserSearchResultDto
+            {
+                Id = user.Id,
+                Email = user.Email ?? "",
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                ProfilePictureUrl = user.ProfilePictureUrl,
+                PublicLocation = user.PublicLocation,
+                IsVerified = !string.IsNullOrEmpty(user.PhoneNumber) && user.EmailConfirmed,
+                AverageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0,
+                ReviewCount = reviews.Count
+            };
+            
+            results.Add(userSearchResult);
+        }
+
+        return results;
+    }
 }

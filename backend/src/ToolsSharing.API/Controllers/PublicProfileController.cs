@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Core.Features.Users;
@@ -10,13 +11,16 @@ namespace ToolsSharing.API.Controllers;
 public class PublicProfileController : ControllerBase
 {
     private readonly IPublicProfileService _publicProfileService;
+    private readonly IUserService _userService;
     private readonly ILogger<PublicProfileController> _logger;
 
     public PublicProfileController(
         IPublicProfileService publicProfileService,
+        IUserService userService,
         ILogger<PublicProfileController> logger)
     {
         _publicProfileService = publicProfileService;
+        _userService = userService;
         _logger = logger;
     }
 
@@ -114,6 +118,40 @@ public class PublicProfileController : ControllerBase
         {
             _logger.LogError(ex, "Error getting reviews for user {UserId}", userId);
             return StatusCode(500, ApiResponse<List<PublicUserReviewDto>>.CreateFailure("Internal server error"));
+        }
+    }
+
+    /// <summary>
+    /// Search users by name or email
+    /// </summary>
+    /// <param name="query">Search query</param>
+    /// <param name="limit">Maximum number of results (default: 10, max: 50)</param>
+    /// <returns>List of matching users</returns>
+    [HttpGet("search")]
+    [Authorize]
+    public async Task<ActionResult<ApiResponse<List<UserSearchResultDto>>>> SearchUsers(
+        [FromQuery] string query,
+        [FromQuery] int limit = 10)
+    {
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            return BadRequest(ApiResponse<List<UserSearchResultDto>>.CreateFailure("Search query is required"));
+        }
+
+        if (limit < 1 || limit > 50)
+        {
+            limit = 10;
+        }
+
+        try
+        {
+            var results = await _userService.SearchUsersAsync(query, limit);
+            return Ok(ApiResponse<List<UserSearchResultDto>>.CreateSuccess(results));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching users with query {Query}", query);
+            return StatusCode(500, ApiResponse<List<UserSearchResultDto>>.CreateFailure("Internal server error"));
         }
     }
 }

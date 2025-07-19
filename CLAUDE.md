@@ -89,6 +89,56 @@ private Task OpenDialog()
 
 **Solution**: Remove all provider declarations from `MainLayout.razor` and keep only in `App.razor`.
 
+## ⚠️ CRITICAL: Messaging Moderation Documentation Requirement
+
+**⚠️ MANDATORY: Any changes to the messaging moderation system MUST update documentation!**
+
+**The messaging system includes automated content moderation with legal and compliance implications. Any modifications to moderation code require documentation updates to maintain transparency and auditability.**
+
+### ⚠️ CRITICAL: When to Update Documentation
+
+**REQUIRED updates to `MESSAGING_MODERATION_WORKFLOW.md` for ANY changes to:**
+
+#### Content Moderation Code:
+- **MessageService.cs** (lines 62-68) - The "before dispatch" hook
+- **ContentModerationService.cs** - Pattern matching, severity levels, validation logic
+- **IContentModerationService.cs** - Interface changes or new DTOs
+- **ProhibitedPatterns dictionary** - New patterns, severity changes, pattern removal
+- **SuspiciousWords list** - New words or phrases added to detection
+
+#### Admin Interface Changes:
+- **MessagingManagement.razor** - New features, UI changes, workflow modifications
+- **MessageReview.razor** - New actions, review process changes
+- **AdminDashboard.razor** - Messaging alerts, statistics, or navigation changes
+
+#### API Endpoint Changes:
+- New admin messaging endpoints
+- Moderation-related API modifications
+- User enforcement endpoint changes
+
+#### Configuration Changes:
+- Severity level definitions
+- User violation thresholds
+- Auto-approval settings
+- Pattern matching configuration
+
+### Documentation Update Requirements:
+
+1. **Technical Changes** - Update code references, line numbers, method signatures
+2. **Process Changes** - Update workflow diagrams, decision trees, escalation procedures  
+3. **Pattern Changes** - Document new prohibited content patterns with examples and severity
+4. **Policy Changes** - Update enforcement guidelines, user communication templates
+5. **API Changes** - Update endpoint documentation with examples
+
+### Compliance Note:
+**Moderation system changes without documentation updates can:**
+- Create legal liability for undocumented content policies
+- Fail regulatory audits requiring transparent moderation processes
+- Prevent proper staff training on moderation procedures
+- Block effective troubleshooting of moderation issues
+
+**ALWAYS update `MESSAGING_MODERATION_WORKFLOW.md` immediately after any moderation code changes.**
+
 ## Essential Development Commands
 
 ### Initial Setup
@@ -593,6 +643,16 @@ The project includes detailed TODO files with prioritized roadmap:
   - Improved message dialog context tags with meaningful tool names instead of truncated GUIDs
   - Backend-to-frontend data flow optimization ensuring rental endpoints return complete tool details (name, description, category, brand, model, rates, condition, location, images)
   - Verified fix through API testing with proper JWT authentication and confirmed Tool object inclusion in /api/rentals and /api/rentals/{id} responses
+- ✅ Comprehensive Messaging Moderation System (completed January 2025)
+  - Complete content moderation workflow with automated "before dispatch" hooks in MessageService.cs at lines 62-68
+  - ContentModerationService.cs implementing regex-based pattern matching for prohibited content (PII, threats, spam, illegal content)
+  - Five-tier severity system (Clean, Minor, Moderate, Severe, Critical) with automatic content modification and blocking
+  - Administrative interface (MessagingManagement.razor) with search, moderation queue, violation tracking, and analytics
+  - Individual message review system (MessageReview.razor) with approval, content editing, blocking, and user warning capabilities
+  - Real-time admin dashboard integration showing moderation statistics and critical alerts
+  - Comprehensive user enforcement system with warnings, suspensions, and escalation procedures
+  - Complete documentation in MESSAGING_MODERATION_WORKFLOW.md covering system architecture, API endpoints, and maintenance procedures
+  - User moderation history tracking with automatic flagging for repeat offenders (3+ violations in 30 days)
 
 See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 

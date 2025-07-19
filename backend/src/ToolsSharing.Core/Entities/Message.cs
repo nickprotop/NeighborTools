@@ -11,6 +11,7 @@ public class Message : BaseEntity
     public DateTime? ReadAt { get; set; }
     public bool IsArchived { get; set; } = false;
     public bool IsModerated { get; set; } = false;
+    public bool IsBlocked { get; set; } = false; // For severe/critical violations - saved but never delivered
     public string? ModerationReason { get; set; }
     public DateTime? ModeratedAt { get; set; }
     public string? ModeratedBy { get; set; }

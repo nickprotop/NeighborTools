@@ -62,29 +62,28 @@ public class MessageService : IMessageService
             // Content moderation
             var moderationResult = await _contentModerationService.ValidateContentAsync(command.Content, command.SenderId);
             
-            if (!moderationResult.IsApproved && moderationResult.Severity >= ModerationSeverity.Severe)
-            {
-                return ApiResponse<MessageDto>.CreateFailure($"Message blocked due to policy violation: {moderationResult.ModerationReason}");
-            }
-
-            // Get or create conversation
+            // Get or create conversation (needed for audit trail even for blocked messages)
             var conversation = await GetOrCreateConversationAsync(command.SenderId, command.RecipientId, command.ConversationId, command.RentalId, command.ToolId);
 
-            // Create message
+            // Determine if message should be blocked (Severe/Critical violations)
+            bool isBlocked = !moderationResult.IsApproved && moderationResult.Severity >= ModerationSeverity.Severe;
+
+            // Create message (ALWAYS save to database for audit trail)
             var message = new Message
             {
                 Id = Guid.NewGuid(),
                 SenderId = command.SenderId,
                 RecipientId = command.RecipientId,
                 Subject = command.Subject,
-                Content = moderationResult.ModifiedContent ?? command.Content,
-                OriginalContent = moderationResult.ModifiedContent != null ? command.Content : null,
+                Content = isBlocked ? command.Content : (moderationResult.ModifiedContent ?? command.Content), // Keep original for blocked messages
+                OriginalContent = !isBlocked && moderationResult.ModifiedContent != null ? command.Content : null,
                 ConversationId = conversation.Id,
                 RentalId = command.RentalId,
                 ToolId = command.ToolId,
                 Priority = command.Priority,
                 Type = command.Type,
                 IsModerated = !moderationResult.IsApproved,
+                IsBlocked = isBlocked,
                 ModerationReason = moderationResult.ModerationReason,
                 ModeratedAt = !moderationResult.IsApproved ? DateTime.UtcNow : null,
                 ModeratedBy = !moderationResult.IsApproved ? "auto_moderation" : null,
@@ -127,18 +126,27 @@ public class MessageService : IMessageService
                 }
             }
 
-            // Update conversation
-            conversation.LastMessageAt = DateTime.UtcNow;
-            conversation.LastMessageId = message.Id;
-            conversation.UpdatedAt = DateTime.UtcNow;
+            // Update conversation only for non-blocked messages
+            if (!isBlocked)
+            {
+                conversation.LastMessageAt = DateTime.UtcNow;
+                conversation.LastMessageId = message.Id;
+                conversation.UpdatedAt = DateTime.UtcNow;
+            }
 
             await _context.SaveChangesAsync();
 
-            // Load complete message for response
+            // For blocked messages: return error to user but message is saved for audit
+            if (isBlocked)
+            {
+                return ApiResponse<MessageDto>.CreateFailure($"Message blocked due to policy violation: {moderationResult.ModerationReason}");
+            }
+
+            // Load complete message for response (only for non-blocked messages)
             var createdMessage = await GetMessageWithIncludesAsync(message.Id);
             var messageDto = _mapper.Map<MessageDto>(createdMessage);
 
-            // Send email notification if enabled
+            // Send email notification only for non-blocked messages
             await SendMessageNotificationAsync(messageDto, recipientSettings);
 
             return ApiResponse<MessageDto>.CreateSuccess(messageDto, "Message sent successfully");
@@ -199,10 +207,16 @@ public class MessageService : IMessageService
                 return ApiResponse<MessageDto>.CreateFailure("Message not found");
             }
 
-            // Check if user has access to this message
+            // Check if user has access to this message and it's not blocked
             if (message.SenderId != query.UserId && message.RecipientId != query.UserId)
             {
                 return ApiResponse<MessageDto>.CreateFailure("Access denied");
+            }
+
+            // Block access to blocked messages for regular users
+            if (message.IsBlocked)
+            {
+                return ApiResponse<MessageDto>.CreateFailure("Message not found");
             }
 
             var messageDto = _mapper.Map<MessageDto>(message);
@@ -222,7 +236,7 @@ public class MessageService : IMessageService
                 .Include(m => m.Sender)
                 .Include(m => m.Recipient)
                 .Include(m => m.Attachments)
-                .Where(m => m.SenderId == query.UserId || m.RecipientId == query.UserId);
+                .Where(m => (m.SenderId == query.UserId || m.RecipientId == query.UserId) && !m.IsBlocked);
 
             // Apply filters
             if (query.IsRead.HasValue)
@@ -288,7 +302,7 @@ public class MessageService : IMessageService
             var messagesQuery = _context.Messages
                 .Include(m => m.Sender)
                 .Include(m => m.Recipient)
-                .Where(m => m.SenderId == query.UserId || m.RecipientId == query.UserId)
+                .Where(m => (m.SenderId == query.UserId || m.RecipientId == query.UserId) && !m.IsBlocked)
                 .Where(m => m.Subject.Contains(query.SearchTerm) || 
                            m.Content.Contains(query.SearchTerm));
 
@@ -635,7 +649,7 @@ public class MessageService : IMessageService
         try
         {
             var count = await _context.Messages
-                .CountAsync(m => m.RecipientId == query.UserId && !m.IsRead && !m.IsDeleted);
+                .CountAsync(m => m.RecipientId == query.UserId && !m.IsRead && !m.IsDeleted && !m.IsBlocked);
 
             return ApiResponse<int>.CreateSuccess(count, "Unread message count retrieved successfully");
         }
@@ -652,9 +666,9 @@ public class MessageService : IMessageService
             var conversation = await _context.Conversations
                 .Include(c => c.Participant1)
                 .Include(c => c.Participant2)
-                .Include(c => c.Messages.OrderByDescending(m => m.CreatedAt).Take(query.PageSize))
+                .Include(c => c.Messages.Where(m => !m.IsBlocked).OrderByDescending(m => m.CreatedAt).Take(query.PageSize))
                     .ThenInclude(m => m.Sender)
-                .Include(c => c.Messages)
+                .Include(c => c.Messages.Where(m => !m.IsBlocked).OrderByDescending(m => m.CreatedAt).Take(query.PageSize))
                     .ThenInclude(m => m.Attachments)
                 .FirstOrDefaultAsync(c => c.Id == query.ConversationId && 
                     (c.Participant1Id == query.UserId || c.Participant2Id == query.UserId));
