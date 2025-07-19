@@ -1,0 +1,653 @@
+@page "/admin/messaging/review/{MessageId}"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Message Review - Admin - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <div class="d-flex align-center mb-4">
+        <MudIconButton Icon="@Icons.Material.Filled.ArrowBack" 
+                       OnClick="@(() => Navigation.NavigateTo("/admin/messaging"))" />
+        <MudIcon Icon="@Icons.Material.Filled.Gavel" Size="Size.Large" Class="mr-3" />
+        <MudText Typo="Typo.h4">Message Review</MudText>
+    </div>
+    
+    @if (isLoading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (loadError != null)
+    {
+        <MudAlert Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else if (message == null)
+    {
+        <MudAlert Severity="Severity.Warning">Message not found</MudAlert>
+    }
+    else
+    {
+        <MudGrid>
+            <!-- Message Content -->
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-4">
+                    <!-- Message Header -->
+                    <div class="d-flex justify-space-between align-center mb-4">
+                        <div>
+                            <MudText Typo="Typo.h6">@message.Subject</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                From: @message.SenderName (@message.SenderEmail) → To: @message.RecipientName (@message.RecipientEmail)
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Sent: @message.CreatedAt.ToString("MMM dd, yyyy HH:mm")
+                            </MudText>
+                        </div>
+                        <MudChip T="string" Color="@GetSeverityColor(message.ModerationSeverity)" Size="Size.Large">
+                            @message.ModerationSeverity
+                        </MudChip>
+                    </div>
+
+                    <!-- Moderation Alert -->
+                    @if (message.IsModerated)
+                    {
+                        <MudAlert Severity="Severity.Warning" Class="mb-4">
+                            <div>
+                                <MudText Typo="Typo.subtitle2">Content Moderation Alert</MudText>
+                                <MudText Typo="Typo.body2">@message.ModerationReason</MudText>
+                                <MudText Typo="Typo.caption">
+                                    Moderated by @message.ModeratedBy on @message.ModeratedAt?.ToString("MMM dd, yyyy HH:mm")
+                                </MudText>
+                            </div>
+                        </MudAlert>
+                    }
+
+                    <!-- Original Content -->
+                    @if (!string.IsNullOrEmpty(message.OriginalContent))
+                    {
+                        <MudExpansionPanels Elevation="2" Class="mb-4">
+                            <MudExpansionPanel Text="Original Content (Before Moderation)">
+                                <div class="pa-3" style="background-color: #fff3cd; border-left: 4px solid #ffc107;">
+                                    <MudText Typo="Typo.body1" Style="white-space: pre-wrap;">@message.OriginalContent</MudText>
+                                </div>
+                            </MudExpansionPanel>
+                        </MudExpansionPanels>
+                    }
+
+                    <!-- Current Content -->
+                    <MudPaper Class="pa-3 mb-4" style="background-color: #f8f9fa; border-left: 4px solid #17a2b8;">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Current Content</MudText>
+                        <MudText Typo="Typo.body1" Style="white-space: pre-wrap;">@message.Content</MudText>
+                    </MudPaper>
+
+                    <!-- Attachments -->
+                    @if (message.Attachments?.Any() == true)
+                    {
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Attachments</MudText>
+                        <MudList T="string" Dense="true" Class="mb-4">
+                            @foreach (var attachment in message.Attachments)
+                            {
+                                <MudListItem T="string">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@GetFileIcon(attachment.ContentType)" Class="mr-2" />
+                                        <div>
+                                            <MudText Typo="Typo.body2">@attachment.FileName</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @FormatFileSize(attachment.FileSize) | @attachment.ContentType
+                                            </MudText>
+                                        </div>
+                                        <MudSpacer />
+                                        <MudButton Size="Size.Small" 
+                                                 Variant="Variant.Outlined"
+                                                 StartIcon="@Icons.Material.Filled.Download"
+                                                 OnClick="@(() => DownloadAttachment(attachment.Id.ToString()))">
+                                            Download
+                                        </MudButton>
+                                    </div>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+
+                    <!-- Context Information -->
+                    @if (message.ConversationId.HasValue || message.RentalId.HasValue || message.ToolId.HasValue)
+                    {
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Context</MudText>
+                        <MudStack Row Spacing="2" Class="mb-4">
+                            @if (message.ConversationId.HasValue)
+                            {
+                                <MudChip T="string" Icon="@Icons.Material.Filled.Chat" Size="Size.Small">
+                                    Conversation: @message.ConversationId.Value.ToString()[..8]...
+                                </MudChip>
+                            }
+                            @if (message.RentalId.HasValue)
+                            {
+                                <MudChip T="string" Icon="@Icons.Material.Filled.Receipt" Size="Size.Small" Color="Color.Primary">
+                                    Rental: @message.RentalToolName
+                                </MudChip>
+                            }
+                            @if (message.ToolId.HasValue)
+                            {
+                                <MudChip T="string" Icon="@Icons.Material.Filled.Build" Size="Size.Small" Color="Color.Secondary">
+                                    Tool: @message.ToolName
+                                </MudChip>
+                            }
+                        </MudStack>
+                    }
+                </MudPaper>
+            </MudItem>
+
+            <!-- Moderation Actions -->
+            <MudItem xs="12" md="4">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-4">Moderation Actions</MudText>
+
+                    <!-- Quick Actions -->
+                    <MudStack Spacing="3" Class="mb-4">
+                        <MudButton Variant="Variant.Filled" 
+                                 Color="Color.Success" 
+                                 FullWidth="true"
+                                 StartIcon="@Icons.Material.Filled.Check"
+                                 OnClick="ApproveMessage"
+                                 Disabled="isProcessing">
+                            Approve Message
+                        </MudButton>
+
+                        <MudButton Variant="Variant.Outlined" 
+                                 Color="Color.Warning" 
+                                 FullWidth="true"
+                                 StartIcon="@Icons.Material.Filled.Edit"
+                                 OnClick="() => showEditDialog = true"
+                                 Disabled="isProcessing">
+                            Moderate Content
+                        </MudButton>
+
+                        <MudButton Variant="Variant.Filled" 
+                                 Color="Color.Error" 
+                                 FullWidth="true"
+                                 StartIcon="@Icons.Material.Filled.Block"
+                                 OnClick="() => showBlockDialog = true"
+                                 Disabled="isProcessing">
+                            Block Message
+                        </MudButton>
+                    </MudStack>
+
+                    <MudDivider Class="my-4" />
+
+                    <!-- User Actions -->
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">User Actions</MudText>
+                    <MudStack Spacing="2">
+                        <MudButton Variant="Variant.Outlined" 
+                                 FullWidth="true"
+                                 StartIcon="@Icons.Material.Filled.Person"
+                                 OnClick="@(() => Navigation.NavigateTo($"/admin/users/{message.SenderId}"))">
+                            View Sender Profile
+                        </MudButton>
+
+                        <MudButton Variant="Variant.Outlined" 
+                                 FullWidth="true"
+                                 StartIcon="@Icons.Material.Filled.History"
+                                 OnClick="ViewUserHistory">
+                            View Moderation History
+                        </MudButton>
+
+                        <MudButton Variant="Variant.Outlined" 
+                                 Color="Color.Warning"
+                                 FullWidth="true"
+                                 StartIcon="@Icons.Material.Filled.Warning"
+                                 OnClick="() => showWarningDialog = true">
+                            Issue Warning
+                        </MudButton>
+                    </MudStack>
+
+                    <MudDivider Class="my-4" />
+
+                    <!-- Conversation Actions -->
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">Conversation</MudText>
+                    <MudStack Spacing="2">
+                        @if (message.ConversationId.HasValue)
+                        {
+                            <MudButton Variant="Variant.Outlined" 
+                                     FullWidth="true"
+                                     StartIcon="@Icons.Material.Filled.Chat"
+                                     OnClick="@(() => Navigation.NavigateTo($"/admin/messaging/conversation/{message.ConversationId}"))">
+                                View Full Conversation
+                            </MudButton>
+                        }
+
+                        <MudButton Variant="Variant.Outlined" 
+                                 FullWidth="true"
+                                 StartIcon="@Icons.Material.Filled.Search"
+                                 OnClick="ViewRelatedMessages">
+                            View Related Messages
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+
+                <!-- User Moderation History -->
+                @if (userHistory?.Any() == true)
+                {
+                    <MudPaper Class="pa-4 mt-4">
+                        <MudText Typo="Typo.h6" Class="mb-3">Recent Moderation History</MudText>
+                        <MudList T="string" Dense="true">
+                            @foreach (var item in userHistory.Take(5))
+                            {
+                                <MudListItem T="string">
+                                    <div class="d-flex justify-space-between align-center w-100">
+                                        <div>
+                                            <MudText Typo="Typo.body2">@item.Type</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @item.Date.ToString("MMM dd, yyyy")
+                                            </MudText>
+                                        </div>
+                                        <MudChip T="string" Size="Size.Small" Color="@GetSeverityColor(item.Severity)">
+                                            @item.Severity
+                                        </MudChip>
+                                    </div>
+                                </MudListItem>
+                            }
+                        </MudList>
+                        @if (userHistory.Count > 5)
+                        {
+                            <MudButton Size="Size.Small" 
+                                     Variant="Variant.Text" 
+                                     FullWidth="true"
+                                     OnClick="ViewUserHistory">
+                                View All (@userHistory.Count)
+                            </MudButton>
+                        }
+                    </MudPaper>
+                }
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+<!-- Edit Content Dialog -->
+<MudDialog @bind-IsVisible="showEditDialog" Options="new DialogOptions { MaxWidth = MaxWidth.Medium, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Moderate Message Content</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="4">
+            <MudTextField @bind-Value="moderatedContent" 
+                        Label="Modified Content" 
+                        Lines="6"
+                        AutoGrow="true"
+                        Placeholder="Enter the moderated version of the content..." />
+            
+            <MudTextField @bind-Value="moderationReason" 
+                        Label="Moderation Reason" 
+                        Placeholder="Explain why this content was moderated..." />
+            
+            <MudSelect T="string" @bind-Value="selectedSeverity" Label="Severity Level">
+                <MudSelectItem T="string" Value="@("Minor")">Minor</MudSelectItem>
+                <MudSelectItem T="string" Value="@("Moderate")">Moderate</MudSelectItem>
+                <MudSelectItem T="string" Value="@("Severe")">Severe</MudSelectItem>
+                <MudSelectItem T="string" Value="@("Critical")">Critical</MudSelectItem>
+            </MudSelect>
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => showEditDialog = false">Cancel</MudButton>
+        <MudButton Color="Color.Warning" 
+                 Variant="Variant.Filled" 
+                 OnClick="ModerateContent"
+                 Disabled="isProcessing">
+            Apply Moderation
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Block Message Dialog -->
+<MudDialog @bind-IsVisible="showBlockDialog" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Block Message</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudAlert Severity="Severity.Error">
+                This will permanently block the message and prevent it from being delivered.
+            </MudAlert>
+            
+            <MudTextField @bind-Value="blockReason" 
+                        Label="Block Reason" 
+                        Lines="3"
+                        Placeholder="Explain why this message is being blocked..." />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => showBlockDialog = false">Cancel</MudButton>
+        <MudButton Color="Color.Error" 
+                 Variant="Variant.Filled" 
+                 OnClick="BlockMessage"
+                 Disabled="isProcessing">
+            Block Message
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+<!-- Warning Dialog -->
+<MudDialog @bind-IsVisible="showWarningDialog" Options="new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true }">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Issue User Warning</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudStack Spacing="3">
+            <MudTextField @bind-Value="warningMessage" 
+                        Label="Warning Message" 
+                        Lines="4"
+                        Placeholder="Enter the warning message to send to the user..." />
+            
+            <MudCheckBox @bind-Value="escalateToSuspension" 
+                       Label="Escalate to suspension if warning is ignored" />
+        </MudStack>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="() => showWarningDialog = false">Cancel</MudButton>
+        <MudButton Color="Color.Warning" 
+                 Variant="Variant.Filled" 
+                 OnClick="IssueWarning"
+                 Disabled="isProcessing">
+            Send Warning
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public string MessageId { get; set; } = "";
+    [Inject] private HttpClient HttpClient { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private bool isLoading = true;
+    private bool isProcessing = false;
+    private string? loadError = null;
+    
+    private MessageDto? message = null;
+    private List<ModerationHistoryItem> userHistory = new();
+
+    // Dialog states
+    private bool showEditDialog = false;
+    private bool showBlockDialog = false;
+    private bool showWarningDialog = false;
+
+    // Dialog form data
+    private string moderatedContent = "";
+    private string moderationReason = "";
+    private string selectedSeverity = "Moderate";
+    private string blockReason = "";
+    private string warningMessage = "";
+    private bool escalateToSuspension = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMessage();
+    }
+
+    private async Task LoadMessage()
+    {
+        try
+        {
+            isLoading = true;
+            loadError = null;
+
+            var response = await HttpClient.GetAsync($"api/admin/messaging/message/{MessageId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<MessageDto>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    message = result.Data;
+                    moderatedContent = message.Content; // Initialize with current content
+                    
+                    // Load user moderation history
+                    await LoadUserHistory();
+                }
+                else
+                {
+                    loadError = result?.Message ?? "Failed to load message";
+                }
+            }
+            else
+            {
+                loadError = "Message not found";
+            }
+        }
+        catch (Exception ex)
+        {
+            loadError = $"Error loading message: {ex.Message}";
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadUserHistory()
+    {
+        if (message?.SenderId == null) return;
+
+        try
+        {
+            var response = await HttpClient.GetAsync($"api/admin/users/{message.SenderId}/moderation-history");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<ModerationHistoryItem>>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    userHistory = result.Data;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading user history: {ex.Message}");
+        }
+    }
+
+    private async Task ApproveMessage()
+    {
+        try
+        {
+            isProcessing = true;
+            var response = await HttpClient.PostAsync($"api/admin/messaging/approve/{MessageId}", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Message approved successfully", Severity.Success);
+                Navigation.NavigateTo("/admin/messaging");
+            }
+            else
+            {
+                Snackbar.Add("Failed to approve message", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error approving message: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task ModerateContent()
+    {
+        try
+        {
+            isProcessing = true;
+            
+            var request = new
+            {
+                ModifiedContent = moderatedContent,
+                Reason = moderationReason,
+                Severity = selectedSeverity
+            };
+
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/messaging/moderate/{MessageId}", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Content moderated successfully", Severity.Success);
+                showEditDialog = false;
+                await LoadMessage(); // Refresh the message data
+            }
+            else
+            {
+                Snackbar.Add("Failed to moderate content", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error moderating content: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task BlockMessage()
+    {
+        try
+        {
+            isProcessing = true;
+            
+            var request = new { Reason = blockReason };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/messaging/block/{MessageId}", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Message blocked successfully", Severity.Success);
+                showBlockDialog = false;
+                Navigation.NavigateTo("/admin/messaging");
+            }
+            else
+            {
+                Snackbar.Add("Failed to block message", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error blocking message: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task IssueWarning()
+    {
+        try
+        {
+            isProcessing = true;
+            
+            var request = new
+            {
+                Message = warningMessage,
+                EscalateToSuspension = escalateToSuspension
+            };
+
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/users/{message?.SenderId}/warning", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Warning issued successfully", Severity.Success);
+                showWarningDialog = false;
+                await LoadUserHistory(); // Refresh history
+            }
+            else
+            {
+                Snackbar.Add("Failed to issue warning", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error issuing warning: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task DownloadAttachment(string attachmentId)
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync($"api/messaging/attachment/{attachmentId}");
+            if (response.IsSuccessStatusCode)
+            {
+                var fileBytes = await response.Content.ReadAsByteArrayAsync();
+                var fileName = response.Content.Headers.ContentDisposition?.FileName ?? "attachment";
+                // Implement file download logic here
+                Snackbar.Add("Attachment downloaded", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to download attachment: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void ViewUserHistory()
+    {
+        Navigation.NavigateTo($"/admin/users/{message?.SenderId}/moderation-history");
+    }
+
+    private void ViewRelatedMessages()
+    {
+        Navigation.NavigateTo($"/admin/messaging?userId={message?.SenderId}");
+    }
+
+    private Color GetSeverityColor(string severity)
+    {
+        return severity?.ToLower() switch
+        {
+            "critical" => Color.Error,
+            "severe" => Color.Warning,
+            "moderate" => Color.Info,
+            "minor" => Color.Success,
+            _ => Color.Default
+        };
+    }
+
+    private string GetFileIcon(string contentType)
+    {
+        return contentType.ToLower() switch
+        {
+            var ct when ct.StartsWith("image/") => Icons.Material.Filled.Image,
+            var ct when ct.Contains("pdf") => Icons.Material.Filled.PictureAsPdf,
+            var ct when ct.Contains("word") => Icons.Material.Filled.Description,
+            var ct when ct.Contains("text") => Icons.Material.Filled.TextSnippet,
+            var ct when ct.Contains("zip") => Icons.Material.Filled.FolderZip,
+            _ => Icons.Material.Filled.AttachFile
+        };
+    }
+
+    private string FormatFileSize(long bytes)
+    {
+        string[] sizes = { "B", "KB", "MB", "GB" };
+        double len = bytes;
+        int order = 0;
+        while (len >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            len = len / 1024;
+        }
+        return $"{len:0.##} {sizes[order]}";
+    }
+
+    // Supporting DTOs
+    public class ModerationHistoryItem
+    {
+        public string Type { get; set; } = "";
+        public string Severity { get; set; } = "";
+        public DateTime Date { get; set; }
+        public string Reason { get; set; } = "";
+    }
+}

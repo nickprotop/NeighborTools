@@ -222,8 +222,11 @@
 
         try
         {
-            // This would call a user search API endpoint
-            // For now, return empty list - implement when user search API is available
+            var response = await UserService.SearchUsersAsync(value, 10);
+            if (response?.Success == true && response.Data != null)
+            {
+                return response.Data;
+            }
             return new List<UserSearchResult>();
         }
         catch (Exception ex)
@@ -391,13 +394,4 @@
 }
 
 @code {
-    public class UserSearchResult
-    {
-        public string Id { get; set; } = "";
-        public string FirstName { get; set; } = "";
-        public string LastName { get; set; } = "";
-        public string Email { get; set; } = "";
-        
-        public string FullName => $"{FirstName} {LastName}".Trim();
-    }
 }

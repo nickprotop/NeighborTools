@@ -23,6 +23,7 @@
                     <MudNavLink OnClick="@(() => ScrollToSection("getting-started"))" Icon="@Icons.Material.Filled.PlayArrow">Getting Started</MudNavLink>
                     <MudNavLink OnClick="@(() => ScrollToSection("for-renters"))" Icon="@Icons.Material.Filled.Person">For Renters</MudNavLink>
                     <MudNavLink OnClick="@(() => ScrollToSection("for-owners"))" Icon="@Icons.Material.Filled.HomeWork">For Tool Owners</MudNavLink>
+                    <MudNavLink OnClick="@(() => ScrollToSection("messaging"))" Icon="@Icons.Material.Filled.Message">Messaging System</MudNavLink>
                     <MudNavLink OnClick="@(() => ScrollToSection("payments"))" Icon="@Icons.Material.Filled.Payment">Payments & Billing</MudNavLink>
                     <MudNavLink OnClick="@(() => ScrollToSection("disputes"))" Icon="@Icons.Material.Filled.Report">Disputes & Issues</MudNavLink>
                     <MudNavLink OnClick="@(() => ScrollToSection("safety"))" Icon="@Icons.Material.Filled.Security">Safety & Trust</MudNavLink>
@@ -310,6 +311,182 @@
                             <li>Build relationships with reliable repeat customers</li>
                         </ul>
                     </MudAlert>
+                </MudPaper>
+            </div>
+
+            <!-- Messaging System Section -->
+            <div id="messaging">
+                <MudPaper Elevation="4" Class="pa-6 mb-6">
+                    <div class="d-flex align-center mb-4">
+                        <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Primary" Class="mr-3" Style="font-size: 2rem;" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">Messaging System</MudText>
+                    </div>
+
+                    <MudExpansionPanels Elevation="2" Class="mb-4">
+                        <MudExpansionPanel IsInitiallyExpanded="true">
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Send" Class="mr-3" />
+                                    <MudText>How Messaging Works</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Secure Communication:</strong> Our messaging system allows safe communication between tool owners and renters
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>User Search:</strong> Find and message any verified user on the platform using the search autocomplete
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Context Tags:</strong> Messages can be linked to specific tools or rentals for better organization
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>File Attachments:</strong> Share photos, documents, and other files up to 10MB per file (max 5 files per message)
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Real-time Notifications:</strong> Receive instant notifications when you receive new messages
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Forum" Class="mr-3" />
+                                    <MudText>Message Features</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Conversations View:</strong> Organized conversations with participants, last message preview, and unread indicators
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Message Statistics:</strong> Track total messages, unread count, sent messages, and conversation counts
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Advanced Filtering:</strong> Filter conversations by read/unread status or view all messages
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Search Functionality:</strong> Search through conversations and messages to find what you need
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Message Priority:</strong> Set message priority levels for important communications
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@Icons.Material.Filled.Link" Class="mr-3" />
+                                    <MudText>Platform Integration</MudText>
+                                </div>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Tool Details Integration:</strong> Message tool owners directly from any tool listing page
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Rental Context:</strong> Messages sent from rental pages are automatically tagged with rental information
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>User Profile Integration:</strong> Contact users directly from their profile pages
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    <strong>Cross-Platform Access:</strong> Access your messages from any page using the navigation menu
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
+
+                    <MudAlert Severity="Severity.Warning" Icon="@Icons.Material.Filled.Security" Class="mb-4">
+                        <MudText Typo="Typo.h6" Class="mb-2">⚖️ Important Legal Notice: Message Monitoring & Content Policy</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            <strong>Automated Monitoring:</strong> All messages sent through our platform are automatically scanned and monitored 
+                            for legal compliance, safety, and platform security purposes. This includes content analysis for prohibited materials 
+                            and compliance with applicable laws and regulations.
+                        </MudText>
+                        <MudText Typo="Typo.body2" Class="mb-3">
+                            <strong>Legal Compliance:</strong> Messages may be reviewed by automated systems and human moderators to ensure 
+                            compliance with local, state, and federal laws. Suspicious content may be reported to appropriate authorities 
+                            as required by law.
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            <strong>Privacy Notice:</strong> While we respect your privacy, by using our messaging system you consent to 
+                            this monitoring for safety and legal compliance purposes. Messages are stored securely and accessed only 
+                            as necessary for platform operation and legal obligations.
+                        </MudText>
+                    </MudAlert>
+
+                    <MudAlert Severity="Severity.Error" Icon="@Icons.Material.Filled.Block" Class="mb-4">
+                        <MudText Typo="Typo.h6" Class="mb-2">🚫 Prohibited Content - Strictly Banned</MudText>
+                        <MudText Typo="Typo.body2" Class="mb-2">The following content is explicitly prohibited and will result in immediate account suspension and legal action:</MudText>
+                        <MudGrid>
+                            <MudItem xs="12" md="6">
+                                <MudList T="string" Dense="true">
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Block">
+                                        <MudText><strong>Illegal Activities:</strong> Drug sales, weapon trafficking, fraud, money laundering</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Block">
+                                        <MudText><strong>Harmful Content:</strong> Threats, violence, harassment, hate speech, doxxing</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Block">
+                                        <MudText><strong>Exploitation:</strong> Any content involving minors, human trafficking, exploitation</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Block">
+                                        <MudText><strong>Intellectual Property:</strong> Copyright infringement, counterfeit goods, piracy</MudText>
+                                    </MudListItem>
+                                </MudList>
+                            </MudItem>
+                            <MudItem xs="12" md="6">
+                                <MudList T="string" Dense="true">
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Block">
+                                        <MudText><strong>Financial Crimes:</strong> Tax evasion, insurance fraud, identity theft</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Block">
+                                        <MudText><strong>Platform Abuse:</strong> Spam, phishing, malware distribution, account manipulation</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Block">
+                                        <MudText><strong>Circumvention:</strong> Bypassing platform fees, off-platform payments, terms violations</MudText>
+                                    </MudListItem>
+                                    <MudListItem T="string" Icon="@Icons.Material.Filled.Block">
+                                        <MudText><strong>Adult Content:</strong> Pornography, sexual services, inappropriate material</MudText>
+                                    </MudListItem>
+                                </MudList>
+                            </MudItem>
+                        </MudGrid>
+                    </MudAlert>
+
+                    <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Lightbulb" Class="mb-4">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">Messaging Best Practices</MudText>
+                        <ul>
+                            <li>Keep conversations professional and tool-rental focused</li>
+                            <li>Be clear about pickup times, locations, and rental terms</li>
+                            <li>Use file attachments to share tool manuals or condition photos</li>
+                            <li>Respond promptly to maintain good community standing</li>
+                            <li>Report any suspicious or inappropriate messages immediately</li>
+                            <li>Use context tags to keep tool and rental discussions organized</li>
+                        </ul>
+                    </MudAlert>
+
+                    <MudPaper Elevation="2" Class="pa-4" Style="background: linear-gradient(45deg, #f5f5f5, #fafafa);">
+                        <div class="d-flex align-center mb-3">
+                            <MudIcon Icon="@Icons.Material.Filled.Report" Color="Color.Warning" Class="mr-2" />
+                            <MudText Typo="Typo.h6" Color="Color.Warning">Enforcement & Consequences</MudText>
+                        </div>
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            <strong>First Violation:</strong> Warning and content removal with required acknowledgment
+                        </MudText>
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            <strong>Serious Violations:</strong> Immediate account suspension and law enforcement notification
+                        </MudText>
+                        <MudText Typo="Typo.body2" Class="mb-2">
+                            <strong>Legal Violations:</strong> Account termination, asset freezing, and full cooperation with authorities
+                        </MudText>
+                        <MudText Typo="Typo.body2">
+                            <strong>Appeals Process:</strong> Wrongful suspensions may be appealed through our support system with evidence
+                        </MudText>
+                    </MudPaper>
                 </MudPaper>
             </div>
 
@@ -762,6 +939,46 @@
                                     Check with your homeowners or renters insurance provider about coverage for tool rental activities. 
                                     Some policies may require notification or additional coverage. Consider the value of your tools 
                                     and potential liability when setting security deposits and rental terms.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudText>How does the messaging system work and what are the rules?</MudText>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    Our messaging system allows secure communication between users with features like file attachments, 
+                                    user search, and context tags linking messages to specific tools or rentals.
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    <strong>Important:</strong> All messages are automatically monitored for legal compliance and safety. 
+                                    Prohibited content includes illegal activities, harassment, fraud, adult content, and platform abuse.
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    Violations can result in warnings, account suspension, or termination with law enforcement notification 
+                                    for serious offenses. Keep conversations professional and tool-rental focused.
+                                </MudText>
+                            </ChildContent>
+                        </MudExpansionPanel>
+
+                        <MudExpansionPanel>
+                            <TitleContent>
+                                <MudText>Are my messages private or monitored?</MudText>
+                            </TitleContent>
+                            <ChildContent>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    Messages are automatically scanned by both automated systems and human moderators for legal compliance, 
+                                    safety, and platform security. This monitoring helps protect all users and ensures legal compliance.
+                                </MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">
+                                    Suspicious content may be reported to appropriate authorities as required by law. By using our messaging 
+                                    system, you consent to this monitoring for safety and legal compliance purposes.
+                                </MudText>
+                                <MudText Typo="Typo.body1">
+                                    Messages are stored securely and accessed only as necessary for platform operation and legal obligations. 
+                                    We respect your privacy while maintaining necessary safety and legal compliance measures.
                                 </MudText>
                             </ChildContent>
                         </MudExpansionPanel>

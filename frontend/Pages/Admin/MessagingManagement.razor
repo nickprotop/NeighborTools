@@ -1,0 +1,927 @@
+@page "/admin/messaging"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Messaging Management - Admin - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
+    <div class="d-flex align-center mb-4">
+        <MudIcon Icon="@Icons.Material.Filled.Message" Size="Size.Large" Class="mr-3" />
+        <MudText Typo="Typo.h3">Messaging Management</MudText>
+    </div>
+    
+    @if (isLoading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+    }
+    else if (loadError != null)
+    {
+        <MudAlert Severity="Severity.Error">@loadError</MudAlert>
+    }
+    else
+    {
+        <!-- Messaging Statistics Overview -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Primary" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Messages</MudText>
+                                <MudText Typo="Typo.h4">@statistics?.TotalMessages.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Success">@statistics?.SentMessages sent</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Chat" Color="Color.Secondary" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Conversations</MudText>
+                                <MudText Typo="Typo.h4">@statistics?.ConversationCount.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption">@statistics?.UnreadMessages unread</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Warning" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Moderated Messages</MudText>
+                                <MudText Typo="Typo.h4">@statistics?.ModeratedMessages.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption" Color="@(pendingReviewCount > 0 ? Color.Error : Color.Success)">@pendingReviewCount pending review</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Block" Color="Color.Error" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Blocked Messages</MudText>
+                                <MudText Typo="Typo.h4">@statistics?.BlockedMessages.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Error">never delivered - audit trail</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Quick Actions -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12">
+                <MudPaper Class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Quick Actions</MudText>
+                    <div class="d-flex flex-wrap gap-2">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Warning" 
+                                   StartIcon="@Icons.Material.Filled.Security"
+                                   OnClick="() => SelectTab(1)">
+                            Review Moderated Messages (@statistics?.ModeratedMessages)
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Error" 
+                                   StartIcon="@Icons.Material.Filled.Block"
+                                   OnClick="() => SelectTab(2)">
+                            Blocked Messages (@statistics?.BlockedMessages)
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Error" 
+                                   StartIcon="@Icons.Material.Filled.ReportProblem"
+                                   OnClick="() => SelectTab(3)">
+                            Content Violations (@violationCount)
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Info" 
+                                   StartIcon="@Icons.Material.Filled.Analytics"
+                                   OnClick="() => SelectTab(4)">
+                            View Analytics
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Search"
+                                   OnClick="() => SelectTab(0)">
+                            Search Messages
+                        </MudButton>
+                    </div>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Content Moderation Alert -->
+        @if (pendingReviewCount > 0 || violationCount > 0)
+        {
+            <MudGrid Class="mb-6">
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Warning" Class="pa-4">
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
+                            <div>
+                                <MudText Typo="Typo.subtitle1">Content Moderation Alert</MudText>
+                                <MudText Typo="Typo.body2">
+                                    @pendingReviewCount messages require manual review and @violationCount policy violations need attention.
+                                </MudText>
+                            </div>
+                            <MudSpacer />
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="Color.Warning" 
+                                       StartIcon="@Icons.Material.Filled.Gavel"
+                                       OnClick="() => SelectTab(1)">
+                                Review Now
+                            </MudButton>
+                        </div>
+                    </MudAlert>
+                </MudItem>
+            </MudGrid>
+        }
+
+        <!-- Main Content Tabs -->
+        <MudTabs @bind-ActivePanelIndex="activeTab" Elevation="4" Rounded="true" Color="Color.Primary">
+            <!-- Message Search Tab -->
+            <MudTabPanel Text="Message Search" Icon="@Icons.Material.Filled.Search">
+                <div class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-4">Search Messages</MudText>
+                    
+                    <!-- Search Filters -->
+                    <MudGrid Class="mb-4">
+                        <MudItem xs="12" md="4">
+                            <MudTextField @bind-Value="searchTerm" 
+                                        Label="Search Content" 
+                                        Placeholder="Search in message content..."
+                                        Adornment="Adornment.End"
+                                        AdornmentIcon="@Icons.Material.Filled.Search" />
+                        </MudItem>
+                        <MudItem xs="12" md="3">
+                            <MudAutocomplete T="UserSearchResult" 
+                                           @bind-Value="selectedUser" 
+                                           Label="Search User" 
+                                           SearchFunc="SearchUsers"
+                                           ToStringFunc="@(u => u == null ? "" : $"{u.FullName} ({u.Email})")"
+                                           ResetValueOnEmptyText="true"
+                                           CoerceText="false"
+                                           Clearable="true"
+                                           AdornmentIcon="@Icons.Material.Filled.Person"
+                                           Adornment="Adornment.Start"
+                                           Placeholder="Type to search users...">
+                                <ItemTemplate Context="item">
+                                    <div class="d-flex align-center">
+                                        <MudAvatar Size="Size.Small" Class="mr-2">
+                                            @if (item.IsVerified)
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.Verified" Size="Size.Small" Color="Color.Success" />
+                                            }
+                                            else
+                                            {
+                                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                            }
+                                        </MudAvatar>
+                                        <div>
+                                            <MudText Typo="Typo.body2">@item.FullName</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@item.Email</MudText>
+                                        </div>
+                                    </div>
+                                </ItemTemplate>
+                                <NoItemsTemplate>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">No users found</MudText>
+                                </NoItemsTemplate>
+                            </MudAutocomplete>
+                        </MudItem>
+                        <MudItem xs="12" md="2">
+                            <MudDatePicker @bind-Date="fromDate" Label="From Date" />
+                        </MudItem>
+                        <MudItem xs="12" md="2">
+                            <MudDatePicker @bind-Date="toDate" Label="To Date" />
+                        </MudItem>
+                        <MudItem xs="12" md="1">
+                            <MudButton Variant="Variant.Filled" 
+                                     Color="Color.Primary" 
+                                     FullWidth="true"
+                                     OnClick="SearchMessages">
+                                Search
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Search Results -->
+                    <MudDataGrid T="MessageSummaryDto" 
+                                Items="@searchResults" 
+                                Loading="@isSearching"
+                                Hover="true"
+                                Striped="true"
+                                Dense="true">
+                        <Columns>
+                            <PropertyColumn Property="x => x.SenderName" Title="From" />
+                            <PropertyColumn Property="x => x.RecipientName" Title="To" />
+                            <PropertyColumn Property="x => x.Subject" Title="Subject" />
+                            <TemplateColumn Title="Content">
+                                <CellTemplate>
+                                    <MudText Typo="Typo.body2">
+                                        @if (context.Item.Content.Length > 100)
+                                        {
+                                            @(context.Item.Content.Substring(0, 100) + "...")
+                                        }
+                                        else
+                                        {
+                                            @context.Item.Content
+                                        }
+                                    </MudText>
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="Status">
+                                <CellTemplate>
+                                    @if (context.Item.IsModerated)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning">Moderated</MudChip>
+                                    }
+                                    else if (!context.Item.IsRead)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info">Unread</MudChip>
+                                    }
+                                    else
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success">Read</MudChip>
+                                    }
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <PropertyColumn Property="x => x.CreatedAt" Title="Date" Format="MMM dd, yyyy HH:mm" />
+                            <TemplateColumn Title="Actions">
+                                <CellTemplate>
+                                    <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                                 Size="Size.Small" 
+                                                 OnClick="@(() => ViewMessage(context.Item.Id.ToString()))" />
+                                    @if (context.Item.IsModerated)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.Gavel" 
+                                                     Size="Size.Small" 
+                                                     Color="Color.Warning"
+                                                     OnClick="@(() => ReviewMessage(context.Item.Id.ToString()))" />
+                                    }
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </Columns>
+                        <PagerContent>
+                            <MudDataGridPager T="MessageSummaryDto" />
+                        </PagerContent>
+                    </MudDataGrid>
+                </div>
+            </MudTabPanel>
+
+            <!-- Moderated Messages Tab -->
+            <MudTabPanel Text="Moderated Messages" Icon="@Icons.Material.Filled.Security">
+                <div class="pa-4">
+                    <div class="d-flex align-center justify-space-between mb-4">
+                        <MudText Typo="Typo.h6">Moderated Messages</MudText>
+                        <MudButton Variant="Variant.Outlined" 
+                                 StartIcon="@Icons.Material.Filled.Refresh"
+                                 OnClick="LoadModeratedMessages">
+                            Refresh
+                        </MudButton>
+                    </div>
+
+                    <MudDataGrid T="MessageSummaryDto" 
+                                Items="@moderatedMessages" 
+                                Loading="@isLoadingModerated"
+                                Hover="true"
+                                Striped="true"
+                                Dense="true">
+                        <Columns>
+                            <PropertyColumn Property="x => x.SenderName" Title="Sender" />
+                            <PropertyColumn Property="x => x.RecipientName" Title="Recipient" />
+                            <PropertyColumn Property="x => x.Subject" Title="Subject" />
+                            <TemplateColumn Title="Moderation Reason">
+                                <CellTemplate>
+                                    <MudText Typo="Typo.body2" Color="Color.Warning">
+                                        @context.Item.ModerationReason
+                                    </MudText>
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <TemplateColumn Title="Severity">
+                                <CellTemplate>
+                                    <MudChip T="string" Size="Size.Small" 
+                                           Color="@GetSeverityColor(context.Item.ModerationSeverity)">
+                                        @context.Item.ModerationSeverity
+                                    </MudChip>
+                                </CellTemplate>
+                            </TemplateColumn>
+                            <PropertyColumn Property="x => x.ModeratedAt" Title="Moderated" Format="MMM dd, yyyy HH:mm" />
+                            <TemplateColumn Title="Actions">
+                                <CellTemplate>
+                                    <MudButtonGroup Variant="Variant.Outlined" Size="Size.Small">
+                                        <MudButton StartIcon="@Icons.Material.Filled.Visibility" 
+                                                 OnClick="@(() => ViewMessage(context.Item.Id.ToString()))">
+                                            View
+                                        </MudButton>
+                                        <MudButton StartIcon="@Icons.Material.Filled.Gavel" 
+                                                 Color="Color.Warning"
+                                                 OnClick="@(() => ReviewMessage(context.Item.Id.ToString()))">
+                                            Review
+                                        </MudButton>
+                                        <MudButton StartIcon="@Icons.Material.Filled.Check" 
+                                                 Color="Color.Success"
+                                                 OnClick="@(() => ApproveMessage(context.Item.Id.ToString()))">
+                                            Approve
+                                        </MudButton>
+                                    </MudButtonGroup>
+                                </CellTemplate>
+                            </TemplateColumn>
+                        </Columns>
+                        <PagerContent>
+                            <MudDataGridPager T="MessageSummaryDto" />
+                        </PagerContent>
+                    </MudDataGrid>
+                </div>
+            </MudTabPanel>
+
+            <!-- Blocked Messages Tab -->
+            <MudTabPanel Text="Blocked Messages" Icon="@Icons.Material.Filled.Block">
+                <div class="pa-4">
+                    <div class="d-flex align-center justify-space-between mb-4">
+                        <MudText Typo="Typo.h6">Blocked Messages</MudText>
+                        <MudButton Variant="Variant.Outlined" 
+                                 StartIcon="@Icons.Material.Filled.Refresh"
+                                 OnClick="LoadBlockedMessages">
+                            Refresh
+                        </MudButton>
+                    </div>
+
+                    <MudAlert Severity="Severity.Error" Class="mb-4">
+                        <MudText Typo="Typo.body2">
+                            <strong>Audit Trail:</strong> These messages were blocked due to severe policy violations (Severe/Critical severity).
+                            They were never delivered to recipients but are preserved for legal compliance and review purposes.
+                        </MudText>
+                    </MudAlert>
+
+                    @if (isLoadingBlocked)
+                    {
+                        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        <MudText Class="ml-3">Loading blocked messages...</MudText>
+                    }
+                    else if (blockedMessages?.Any() == true)
+                    {
+                        <MudDataGrid T="MessageSummaryDto" Items="@blockedMessages" Dense="true" Hover="true">
+                            <Columns>
+                                <PropertyColumn Property="x => x.SenderName" Title="Sender" />
+                                <PropertyColumn Property="x => x.RecipientName" Title="Intended Recipient" />
+                                <PropertyColumn Property="x => x.Subject" Title="Subject" />
+                                <TemplateColumn Title="Content Preview">
+                                    <CellTemplate>
+                                        <MudText Typo="Typo.body2" Class="text-truncate" style="max-width: 200px;" Color="Color.Error">
+                                            @(context.Item.PreviewContent?.Length > 50 ? context.Item.PreviewContent.Substring(0, 50) + "..." : context.Item.PreviewContent)
+                                        </MudText>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <TemplateColumn Title="Blocked Reason">
+                                    <CellTemplate>
+                                        <MudChip Color="Color.Error" Size="Size.Small">
+                                            @context.Item.ModerationReason
+                                        </MudChip>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                                <PropertyColumn Property="x => x.ModeratedAt" Title="Blocked At" Format="yyyy-MM-dd HH:mm" />
+                                <TemplateColumn Title="Actions">
+                                    <CellTemplate>
+                                        <MudIconButton Icon="@Icons.Material.Filled.Visibility" 
+                                                     Size="Size.Small" 
+                                                     Color="Color.Error"
+                                                     OnClick="@(() => ViewBlockedMessage(context.Item.Id.ToString()))" 
+                                                     Title="View blocked message (admin only)" />
+                                    </CellTemplate>
+                                </TemplateColumn>
+                            </Columns>
+                            <PagerContent>
+                                <MudDataGridPager T="MessageSummaryDto" />
+                            </PagerContent>
+                        </MudDataGrid>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Success">
+                            <MudText>No blocked messages found - all messages passed content moderation.</MudText>
+                        </MudAlert>
+                    }
+                </div>
+            </MudTabPanel>
+
+            <!-- Content Violations Tab -->
+            <MudTabPanel Text="Content Violations" Icon="@Icons.Material.Filled.ReportProblem">
+                <div class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-4">Content Policy Violations</MudText>
+                    
+                    <!-- Violation Statistics -->
+                    <MudGrid Class="mb-4">
+                        @if (moderationStats != null)
+                        {
+                            @foreach (var violation in moderationStats.ViolationsBySeverity)
+                            {
+                                <MudItem xs="6" md="3">
+                                    <MudCard>
+                                        <MudCardContent Class="pa-3">
+                                            <div class="d-flex align-center">
+                                                <MudIcon Icon="@GetSeverityIcon(violation.Key)" 
+                                                       Color="@GetSeverityColor(violation.Key.ToString())" 
+                                                       Size="Size.Medium" />
+                                                <div class="ml-2">
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">@violation.Key</MudText>
+                                                    <MudText Typo="Typo.h6">@violation.Value</MudText>
+                                                </div>
+                                            </div>
+                                        </MudCardContent>
+                                    </MudCard>
+                                </MudItem>
+                            }
+                        }
+                    </MudGrid>
+
+                    <!-- Common Violations -->
+                    @if (moderationStats?.CommonViolations?.Any() == true)
+                    {
+                        <MudPaper Class="pa-4 mb-4">
+                            <MudText Typo="Typo.subtitle1" Class="mb-2">Most Common Violations</MudText>
+                            <MudChipSet T="string">
+                                @foreach (var violation in moderationStats.CommonViolations)
+                                {
+                                    <MudChip T="string" Color="Color.Warning">@violation</MudChip>
+                                }
+                            </MudChipSet>
+                        </MudPaper>
+                    }
+                </div>
+            </MudTabPanel>
+
+            <!-- Analytics Tab -->
+            <MudTabPanel Text="Analytics" Icon="@Icons.Material.Filled.Analytics">
+                <div class="pa-4">
+                    <MudText Typo="Typo.h6" Class="mb-4">Messaging Analytics</MudText>
+                    
+                    <MudGrid>
+                        <!-- Message Volume Trends -->
+                        <MudItem xs="12" md="6">
+                            <MudPaper Class="pa-4">
+                                <MudText Typo="Typo.subtitle1" Class="mb-3">Message Volume (Last 30 Days)</MudText>
+                                <div style="height: 300px; display: flex; align-items: center; justify-content: center;">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        Chart implementation would go here (Chart.js, etc.)
+                                    </MudText>
+                                </div>
+                            </MudPaper>
+                        </MudItem>
+
+                        <!-- Moderation Trends -->
+                        <MudItem xs="12" md="6">
+                            <MudPaper Class="pa-4">
+                                <MudText Typo="Typo.subtitle1" Class="mb-3">Moderation Activity</MudText>
+                                <div style="height: 300px; display: flex; align-items: center; justify-content: center;">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        Moderation chart would go here
+                                    </MudText>
+                                </div>
+                            </MudPaper>
+                        </MudItem>
+
+                        <!-- User Engagement -->
+                        <MudItem xs="12">
+                            <MudPaper Class="pa-4">
+                                <MudText Typo="Typo.subtitle1" Class="mb-3">Top Message Senders (This Month)</MudText>
+                                @if (topSenders?.Any() == true)
+                                {
+                                    <MudSimpleTable Hover="true" Dense="true">
+                                        <thead>
+                                            <tr>
+                                                <th>User</th>
+                                                <th>Messages Sent</th>
+                                                <th>Violations</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var sender in topSenders.Take(10))
+                                            {
+                                                <tr>
+                                                    <td>@sender.UserName</td>
+                                                    <td>@sender.MessageCount</td>
+                                                    <td>
+                                                        <MudChip T="string" Size="Size.Small" 
+                                                               Color="@(sender.ViolationCount > 0 ? Color.Warning : Color.Success)">
+                                                            @sender.ViolationCount
+                                                        </MudChip>
+                                                    </td>
+                                                    <td>
+                                                        <MudChip T="string" Size="Size.Small" 
+                                                               Color="@(sender.IsActive ? Color.Success : Color.Error)">
+                                                            @(sender.IsActive ? "Active" : "Suspended")
+                                                        </MudChip>
+                                                    </td>
+                                                    <td>
+                                                        <MudButton Size="Size.Small" 
+                                                                 Variant="Variant.Text" 
+                                                                 Color="Color.Primary"
+                                                                 OnClick="() => ViewUserMessages(sender.UserId)">
+                                                            View Messages
+                                                        </MudButton>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </MudSimpleTable>
+                                }
+                                else
+                                {
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">No message data available</MudText>
+                                }
+                            </MudPaper>
+                        </MudItem>
+                    </MudGrid>
+                </div>
+            </MudTabPanel>
+        </MudTabs>
+    }
+</MudContainer>
+
+@code {
+    [Inject] private HttpClient HttpClient { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private MessageService MessageService { get; set; } = default!;
+
+    private bool isLoading = true;
+    private bool isSearching = false;
+    private bool isLoadingModerated = false;
+    private bool isLoadingBlocked = false;
+    private string? loadError = null;
+    private int activeTab = 0;
+
+    // Data properties
+    private MessageStatisticsDto? statistics = null;
+    private ModerationStatisticsDto? moderationStats = null;
+    private List<MessageSummaryDto> searchResults = new();
+    private List<MessageSummaryDto> moderatedMessages = new();
+    private List<MessageSummaryDto> blockedMessages = new();
+    private List<UserSearchResult> users = new();
+    private List<TopMessageSender> topSenders = new();
+
+    // Search filters
+    private string searchTerm = "";
+    private string selectedUserId = "";
+    private UserSearchResult? selectedUser = null;
+    private DateTime? fromDate = null;
+    private DateTime? toDate = null;
+
+    // Statistics
+    private int pendingReviewCount = 0;
+    private int violationCount = 0;
+    private int attachmentCount = 0;
+    private long totalAttachmentSize = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    private async Task LoadData()
+    {
+        try
+        {
+            isLoading = true;
+            loadError = null;
+
+            // Load message statistics
+            await LoadMessageStatistics();
+
+            // Load moderation statistics  
+            await LoadModerationStatistics();
+
+            // Load moderated messages
+            await LoadModeratedMessages();
+
+            // Load blocked messages
+            await LoadBlockedMessages();
+
+            // Load users for search
+            await LoadUsers();
+
+            // Load analytics data
+            await LoadAnalyticsData();
+        }
+        catch (Exception ex)
+        {
+            loadError = $"Failed to load messaging data: {ex.Message}";
+            Snackbar.Add(loadError, Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task LoadMessageStatistics()
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync("api/admin/messaging/statistics");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<MessageStatisticsDto>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    statistics = result.Data;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading message statistics: {ex.Message}");
+        }
+    }
+
+    private async Task LoadModerationStatistics()
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync("api/admin/messaging/moderation-statistics");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<ModerationStatisticsDto>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    moderationStats = result.Data;
+                    pendingReviewCount = result.Data.PendingReview;
+                    violationCount = result.Data.ModeratedMessages;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading moderation statistics: {ex.Message}");
+        }
+    }
+
+    private async Task LoadModeratedMessages()
+    {
+        try
+        {
+            isLoadingModerated = true;
+            var response = await HttpClient.GetAsync("api/admin/messaging/moderated-messages?page=1&pageSize=50");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<MessageSummaryDto>>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    moderatedMessages = result.Data;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading moderated messages: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingModerated = false;
+        }
+    }
+
+    private async Task LoadUsers()
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync("api/admin/users/search?query=&limit=100");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<UserSearchResult>>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    users = result.Data;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading users: {ex.Message}");
+        }
+    }
+
+    private async Task LoadAnalyticsData()
+    {
+        try
+        {
+            var response = await HttpClient.GetAsync("api/admin/messaging/top-senders?limit=20");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<TopMessageSender>>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    topSenders = result.Data;
+                }
+            }
+
+            // Load attachment statistics (placeholder)
+            attachmentCount = statistics?.TotalMessages / 4 ?? 0;
+            totalAttachmentSize = attachmentCount * 1024 * 512; // Average 512KB per attachment
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading analytics data: {ex.Message}");
+        }
+    }
+
+    private async Task SearchMessages()
+    {
+        try
+        {
+            isSearching = true;
+            searchResults.Clear();
+
+            var queryParams = new List<string>();
+            if (!string.IsNullOrEmpty(searchTerm))
+                queryParams.Add($"searchTerm={Uri.EscapeDataString(searchTerm)}");
+            if (selectedUser != null && !string.IsNullOrEmpty(selectedUser.Id))
+                queryParams.Add($"userId={selectedUser.Id}");
+            if (fromDate.HasValue)
+                queryParams.Add($"fromDate={fromDate.Value:yyyy-MM-dd}");
+            if (toDate.HasValue)
+                queryParams.Add($"toDate={toDate.Value:yyyy-MM-dd}");
+
+            var query = string.Join("&", queryParams);
+            var response = await HttpClient.GetAsync($"api/admin/messaging/search?{query}&page=1&pageSize=50");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<MessageSummaryDto>>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    searchResults = result.Data;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Search failed: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSearching = false;
+        }
+    }
+
+    private void SelectTab(int tabIndex)
+    {
+        activeTab = tabIndex;
+    }
+
+    private void ViewMessage(string messageId)
+    {
+        Navigation.NavigateTo($"/admin/messaging/message/{messageId}");
+    }
+
+    private void ReviewMessage(string messageId)
+    {
+        Navigation.NavigateTo($"/admin/messaging/review/{messageId}");
+    }
+
+    private void ViewUserMessages(string userId)
+    {
+        // Find the user from the users list and set it as selected
+        selectedUser = users.FirstOrDefault(u => u.Id == userId);
+        activeTab = 0; // Switch to search tab
+        StateHasChanged();
+        _ = Task.Run(SearchMessages);
+    }
+
+    private async Task<IEnumerable<UserSearchResult>> SearchUsers(string searchText, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (string.IsNullOrWhiteSpace(searchText) || searchText.Length < 2)
+            {
+                return users.Take(10); // Show first 10 users if no search text
+            }
+
+            var searchLower = searchText.ToLower();
+            return users.Where(u => 
+                u.FullName.ToLower().Contains(searchLower) || 
+                u.Email.ToLower().Contains(searchLower) ||
+                u.FirstName.ToLower().Contains(searchLower) ||
+                u.LastName.ToLower().Contains(searchLower)
+            ).Take(10);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error searching users: {ex.Message}");
+            return new List<UserSearchResult>();
+        }
+    }
+
+    private async Task ApproveMessage(string messageId)
+    {
+        try
+        {
+            var response = await HttpClient.PostAsync($"api/admin/messaging/approve/{messageId}", null);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Message approved successfully", Severity.Success);
+                await LoadModeratedMessages();
+            }
+            else
+            {
+                Snackbar.Add("Failed to approve message", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error approving message: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadBlockedMessages()
+    {
+        try
+        {
+            isLoadingBlocked = true;
+            var response = await HttpClient.GetAsync("api/admin/messaging/blocked-messages?page=1&pageSize=50");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<List<MessageSummaryDto>>>();
+                if (result?.Success == true && result.Data != null)
+                {
+                    blockedMessages = result.Data;
+                }
+                else
+                {
+                    Snackbar.Add("Failed to load blocked messages", Severity.Error);
+                }
+            }
+            else
+            {
+                Snackbar.Add("Failed to load blocked messages", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading blocked messages: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoadingBlocked = false;
+        }
+    }
+
+    private void ViewBlockedMessage(string messageId)
+    {
+        // Navigate to admin-specific blocked message view
+        Navigation.NavigateTo($"/admin/messaging/blocked/{messageId}");
+    }
+
+    private Color GetSeverityColor(string severity)
+    {
+        return severity?.ToLower() switch
+        {
+            "critical" => Color.Error,
+            "severe" => Color.Warning,
+            "moderate" => Color.Info,
+            "minor" => Color.Success,
+            _ => Color.Default
+        };
+    }
+
+    private string GetSeverityIcon(ModerationSeverity severity)
+    {
+        return severity switch
+        {
+            ModerationSeverity.Critical => Icons.Material.Filled.Dangerous,
+            ModerationSeverity.Severe => Icons.Material.Filled.Warning,
+            ModerationSeverity.Moderate => Icons.Material.Filled.Info,
+            ModerationSeverity.Minor => Icons.Material.Filled.CheckCircle,
+            _ => Icons.Material.Filled.HelpOutline
+        };
+    }
+
+    // Supporting DTOs (these would typically be in Models folder)
+    public class TopMessageSender
+    {
+        public string UserId { get; set; } = "";
+        public string UserName { get; set; } = "";
+        public int MessageCount { get; set; }
+        public int ViolationCount { get; set; }
+        public bool IsActive { get; set; }
+    }
+}

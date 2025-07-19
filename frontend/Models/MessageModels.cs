@@ -15,7 +15,12 @@ public class MessageDto
     public DateTime? ReadAt { get; set; }
     public bool IsArchived { get; set; }
     public bool IsModerated { get; set; }
+    public bool IsBlocked { get; set; }
     public string? ModerationReason { get; set; }
+    public string? ModerationSeverity { get; set; }
+    public DateTime? ModeratedAt { get; set; }
+    public string? ModeratedBy { get; set; }
+    public string? OriginalContent { get; set; }
     public Guid? ConversationId { get; set; }
     public Guid? RentalId { get; set; }
     public Guid? ToolId { get; set; }
@@ -172,6 +177,13 @@ public class MessageSummaryDto
     public bool IsRead { get; set; }
     public DateTime? ReadAt { get; set; }
     public bool IsArchived { get; set; }
+    public bool IsModerated { get; set; }
+    public bool IsBlocked { get; set; }
+    public string? ModerationReason { get; set; }
+    public string? ModerationSeverity { get; set; }
+    public DateTime? ModeratedAt { get; set; }
+    public string? ModeratedBy { get; set; }
+    public string Content { get; set; } = "";
     public Guid? ConversationId { get; set; }
     public MessagePriority Priority { get; set; }
     public MessageType Type { get; set; }
@@ -184,7 +196,12 @@ public class MessageStatisticsDto
     public int TotalMessages { get; set; }
     public int UnreadMessages { get; set; }
     public int SentMessages { get; set; }
+    public int ReceivedMessages { get; set; }
+    public int ArchivedMessages { get; set; }
+    public int ModeratedMessages { get; set; }
+    public int BlockedMessages { get; set; }
     public int ConversationCount { get; set; }
+    public DateTime? LastMessageAt { get; set; }
 }
 
 public class ConversationDetailsDto
@@ -204,4 +221,24 @@ public class ConversationDetailsDto
     public string? LastMessageContent { get; set; }
     public int UnreadCount { get; set; }
 }
+
+public class ModerationStatisticsDto
+{
+    public int TotalMessagesProcessed { get; set; }
+    public int ApprovedMessages { get; set; }
+    public int ModeratedMessages { get; set; }
+    public int PendingReview { get; set; }
+    public Dictionary<ModerationSeverity, int> ViolationsBySeverity { get; set; } = new();
+    public List<string> CommonViolations { get; set; } = new();
+}
+
+public enum ModerationSeverity
+{
+    Clean = 0,
+    Minor = 1,
+    Moderate = 2,
+    Severe = 3,
+    Critical = 4
+}
+
 

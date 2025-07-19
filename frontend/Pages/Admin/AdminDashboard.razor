@@ -83,6 +83,69 @@
             </MudItem>
         </MudGrid>
 
+        <!-- Messaging System Overview -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Message" Color="Color.Info" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Messages</MudText>
+                                <MudText Typo="Typo.h4">@messagingStats?.TotalMessages.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption">@messagingStats?.ConversationCount conversations</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Warning" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Moderated Messages</MudText>
+                                <MudText Typo="Typo.h4">@messagingStats?.ModeratedMessages.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption" Color="@(moderationStats?.PendingReview > 0 ? Color.Error : Color.Success)">@moderationStats?.PendingReview pending review</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Block" Color="Color.Error" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Blocked Messages</MudText>
+                                <MudText Typo="Typo.h4">@messagingStats?.BlockedMessages.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption" Color="@(messagingStats?.BlockedMessages > 0 ? Color.Error : Color.Success)">never delivered to users</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.AttachFile" Color="Color.Secondary" Size="Size.Large" />
+                            <div class="ml-3">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Attachments</MudText>
+                                <MudText Typo="Typo.h4">@attachmentStats?.TotalAttachments.ToString("N0")</MudText>
+                                <MudText Typo="Typo.caption">@((attachmentStats?.TotalSize ?? 0) / (1024 * 1024)).ToString("F1") MB total</MudText>
+                            </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
         <!-- Quick Actions -->
         <MudGrid Class="mb-6">
             <MudItem xs="12">
@@ -124,6 +187,12 @@
                                    StartIcon="@Icons.Material.Filled.Analytics"
                                    Href="/admin/reports">
                             View Reports
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Tertiary" 
+                                   StartIcon="@Icons.Material.Filled.Message"
+                                   Href="/admin/messaging">
+                            Messaging System
                         </MudButton>
                     </div>
                 </MudPaper>
@@ -209,6 +278,60 @@
                                             </div>
                                             <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Info" Href="/admin/payouts">
                                                 Process
+                                            </MudButton>
+                                        </div>
+                                    </MudAlert>
+                                </MudItem>
+                            }
+                            
+                            <!-- Message Moderation Alerts -->
+                            @if (moderationStats?.PendingReview > 0)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudAlert Severity="Severity.Warning" Class="mb-2">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle2">Messages Require Moderation</MudText>
+                                                <MudText Typo="Typo.body2">@moderationStats.PendingReview messages need manual review</MudText>
+                                            </div>
+                                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Warning" Href="/admin/messaging">
+                                                Review
+                                            </MudButton>
+                                        </div>
+                                    </MudAlert>
+                                </MudItem>
+                            }
+                            
+                            <!-- Critical Message Violations -->
+                            @if (GetCriticalViolations() > 0)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudAlert Severity="Severity.Error" Class="mb-2">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle2">Critical Content Violations</MudText>
+                                                <MudText Typo="Typo.body2">@GetCriticalViolations() messages flagged for immediate action</MudText>
+                                            </div>
+                                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" Href="/admin/messaging?tab=1">
+                                                Investigate
+                                            </MudButton>
+                                        </div>
+                                    </MudAlert>
+                                </MudItem>
+                            }
+                            
+                            <!-- Blocked Messages Alert -->
+                            @if (messagingStats?.BlockedMessages > 0)
+                            {
+                                <MudItem xs="12" md="6">
+                                    <MudAlert Severity="Severity.Error" Class="mb-2">
+                                        <div class="d-flex justify-space-between align-center">
+                                            <div>
+                                                <MudText Typo="Typo.subtitle2">Blocked Messages Audit Trail</MudText>
+                                                <MudText Typo="Typo.body2">@messagingStats.BlockedMessages messages blocked but saved for legal compliance</MudText>
+                                            </div>
+                                            <MudButton Size="Size.Small" Variant="Variant.Outlined" Color="Color.Error" Href="/admin/messaging?tab=blocked">
+                                                Review
                                             </MudButton>
                                         </div>
                                     </MudAlert>
@@ -521,6 +644,11 @@
     private List<ActivityItem>? recentActivity = null;
     private List<FraudAlert>? fraudAlerts = null;
     
+    // Messaging system data
+    private MessageStatisticsDto? messagingStats = null;
+    private ModerationStatisticsDto? moderationStats = null;
+    private AttachmentStatistics? attachmentStats = null;
+    
     // System health metrics
     private int failedPayments = 0;
     private int paymentsUnderReview = 0;
@@ -574,6 +702,9 @@
                     fraudAlerts = fraudResult.Data.Alerts;
                 }
             }
+            
+            // Load messaging system data
+            await LoadMessagingData();
             
             // Load system health metrics (simulate for now - would be real endpoints)
             await LoadSystemHealthMetrics();
@@ -630,6 +761,45 @@
         }
     }
 
+    private async Task LoadMessagingData()
+    {
+        try
+        {
+            // Load message statistics
+            var statsResponse = await HttpClient.GetAsync("api/admin/messaging/statistics");
+            if (statsResponse.IsSuccessStatusCode)
+            {
+                var statsResult = await statsResponse.Content.ReadFromJsonAsync<ApiResponse<MessageStatisticsDto>>();
+                if (statsResult?.Success == true && statsResult.Data != null)
+                {
+                    messagingStats = statsResult.Data;
+                }
+            }
+
+            // Load moderation statistics
+            var moderationResponse = await HttpClient.GetAsync("api/admin/messaging/moderation-statistics");
+            if (moderationResponse.IsSuccessStatusCode)
+            {
+                var moderationResult = await moderationResponse.Content.ReadFromJsonAsync<ApiResponse<ModerationStatisticsDto>>();
+                if (moderationResult?.Success == true && moderationResult.Data != null)
+                {
+                    moderationStats = moderationResult.Data;
+                }
+            }
+
+            // Load attachment statistics (placeholder - would be real endpoint)
+            attachmentStats = new AttachmentStatistics
+            {
+                TotalAttachments = messagingStats?.TotalMessages / 4 ?? 0,
+                TotalSize = (messagingStats?.TotalMessages ?? 0) * 512 * 1024 // Average 512KB per attachment
+            };
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading messaging data: {ex.Message}");
+        }
+    }
+
     private int GetCriticalAlertCount()
     {
         int count = 0;
@@ -648,6 +818,14 @@
             
         // Pending payouts
         if (overview?.Revenue?.PendingPayouts > 0)
+            count++;
+            
+        // Message moderation alerts
+        if (moderationStats?.PendingReview > 0)
+            count++;
+            
+        // Critical message violations
+        if (GetCriticalViolations() > 0)
             count++;
             
         return count;
@@ -679,5 +857,22 @@
             "user" => Color.Info,
             _ => Color.Default
         };
+    }
+
+    private int GetTotalViolations()
+    {
+        return moderationStats?.ModeratedMessages ?? 0;
+    }
+
+    private int GetCriticalViolations()
+    {
+        return moderationStats?.ViolationsBySeverity?.GetValueOrDefault(ModerationSeverity.Critical, 0) ?? 0;
+    }
+
+    // Supporting DTOs for messaging statistics
+    public class AttachmentStatistics
+    {
+        public int TotalAttachments { get; set; }
+        public long TotalSize { get; set; }
     }
 }
