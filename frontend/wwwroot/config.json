@@ -1,4 +1,6 @@
 {
+  "_instructions": "Copy this file to 'config.json' and update with your actual values",
+  "_comment": "This file contains frontend configuration including API endpoints and feature flags",
   "ApiSettings": {
     "BaseUrl": "http://localhost:5002",
     "TimeoutSeconds": 30,
@@ -11,5 +13,8 @@
     "EnablePayments": true,
     "EnableDisputes": true,
     "EnableAnalytics": false
+  },
+  "Site": {
+    "HomePageUrl": "https://neighbortools.com"
   }
 }

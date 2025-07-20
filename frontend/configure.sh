@@ -3,29 +3,45 @@
 # Frontend configuration script
 # Usage: ./configure.sh [OPTIONS]
 # 
+# This script intelligently updates wwwroot/config.json:
+# - Creates the file if it doesn't exist (using config.sample.json as template)
+# - Only updates the parameters you specify
+# - Preserves all existing settings
+#
 # Options:
-#   --api-url URL          API base URL (default: http://localhost:5002)
-#   --environment ENV      Environment name (default: Development)
+#   --api-url URL          Update API base URL
+#   --environment ENV      Update environment name
+#   --home-page-url URL    Update home page URL
 #   --help                 Show this help message
 #
 # Examples:
-#   ./configure.sh
-#   ./configure.sh --api-url "https://api.yourapp.com" --environment "Production"
-#   ./configure.sh --environment "Staging"
+#   ./configure.sh --api-url "https://api.yourapp.com"
+#   ./configure.sh --environment "Production"
+#   ./configure.sh --home-page-url "https://yoursite.com"
+#   ./configure.sh --api-url "https://api.prod.com" --environment "Production"
 
-# Set defaults
-API_URL="http://localhost:5002"
-ENVIRONMENT="Development"
+# Initialize variables to track what parameters were provided
+UPDATE_API_URL=""
+UPDATE_ENVIRONMENT=""
+UPDATE_HOME_PAGE_URL=""
+PARAMS_PROVIDED=false
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
     case $1 in
         --api-url)
-            API_URL="$2"
+            UPDATE_API_URL="$2"
+            PARAMS_PROVIDED=true
             shift 2
             ;;
         --environment)
-            ENVIRONMENT="$2"
+            UPDATE_ENVIRONMENT="$2"
+            PARAMS_PROVIDED=true
+            shift 2
+            ;;
+        --home-page-url)
+            UPDATE_HOME_PAGE_URL="$2"
+            PARAMS_PROVIDED=true
             shift 2
             ;;
         --help|-h)
@@ -33,15 +49,22 @@ while [[ $# -gt 0 ]]; do
             echo ""
             echo "Usage: ./configure.sh [OPTIONS]"
             echo ""
+            echo "This script intelligently updates wwwroot/config.json:"
+            echo "• Creates the file if it doesn't exist (using config.sample.json as template)"
+            echo "• Only updates the parameters you specify"
+            echo "• Preserves all existing settings"
+            echo ""
             echo "Options:"
-            echo "  --api-url URL          API base URL (default: http://localhost:5002)"
-            echo "  --environment ENV      Environment name (default: Development)"
+            echo "  --api-url URL          Update API base URL"
+            echo "  --environment ENV      Update environment name"
+            echo "  --home-page-url URL    Update home page URL"
             echo "  --help, -h             Show this help message"
             echo ""
             echo "Examples:"
-            echo "  ./configure.sh"
-            echo "  ./configure.sh --api-url \"https://api.yourapp.com\" --environment \"Production\""
-            echo "  ./configure.sh --environment \"Staging\""
+            echo "  ./configure.sh --api-url \"https://api.yourapp.com\""
+            echo "  ./configure.sh --environment \"Production\""
+            echo "  ./configure.sh --home-page-url \"https://yoursite.com\""
+            echo "  ./configure.sh --api-url \"https://api.prod.com\" --environment \"Production\""
             exit 0
             ;;
         *)
@@ -52,49 +75,130 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
-echo "========================================="
-echo "Configuring NeighborTools Frontend"
-echo "========================================="
-echo "API URL: $API_URL"
-echo "Environment: $ENVIRONMENT"
-echo "========================================="
-
-# Validate API URL format
-if [[ ! "$API_URL" =~ ^https?:// ]]; then
-    echo "❌ Error: API URL must start with http:// or https://"
-    echo "   Example: ./configure.sh --api-url \"https://api.yourapp.com\""
+# Check if no parameters were provided
+if [ "$PARAMS_PROVIDED" = false ]; then
+    echo "❌ Error: No configuration parameters provided"
+    echo "   Use --help to see available options"
+    echo ""
+    echo "Examples:"
+    echo "  ./configure.sh --api-url \"https://api.yourapp.com\""
+    echo "  ./configure.sh --environment \"Production\""
     exit 1
 fi
 
-# Create config.json with actual values
-echo "📝 Creating config.json..."
-cat > config.json << EOF
-{
-  "ApiSettings": {
-    "BaseUrl": "$API_URL",
-    "TimeoutSeconds": 30,
-    "RetryAttempts": 3
-  },
-  "Environment": "$ENVIRONMENT",
-  "Features": {
-    "EnableAdvancedSearch": true,
-    "EnableNotifications": true,
-    "EnablePayments": true,
-    "EnableDisputes": true,
-    "EnableAnalytics": $([ "$ENVIRONMENT" == "Production" ] && echo "true" || echo "false")
-  }
-}
-EOF
+echo "========================================="
+echo "Smart Frontend Configuration"
+echo "========================================="
 
-# Copy config to wwwroot so it's served with the app
-echo "📁 Copying configuration to wwwroot..."
+# Ensure wwwroot directory exists
 mkdir -p wwwroot
-cp config.json wwwroot/
 
-echo "✅ Frontend configured successfully!"
-echo "   API URL: $API_URL"
-echo "   Environment: $ENVIRONMENT"
-echo "   Configuration: wwwroot/config.json"
+CONFIG_FILE="wwwroot/config.json"
+SAMPLE_FILE="config.sample.json"
+
+# Check if config.json exists, if not create it from sample
+if [ ! -f "$CONFIG_FILE" ]; then
+    echo "📝 Config file not found, creating from template..."
+    if [ -f "$SAMPLE_FILE" ]; then
+        cp "$SAMPLE_FILE" "$CONFIG_FILE"
+        echo "✅ Created $CONFIG_FILE from $SAMPLE_FILE"
+    else
+        echo "❌ Error: Neither $CONFIG_FILE nor $SAMPLE_FILE exists"
+        echo "   Please ensure config.sample.json exists or create wwwroot/config.json manually"
+        exit 1
+    fi
+else
+    echo "📋 Using existing $CONFIG_FILE"
+fi
+
+# Function to validate URL format
+validate_url() {
+    local url="$1"
+    local param_name="$2"
+    
+    if [[ ! "$url" =~ ^https?:// ]]; then
+        echo "❌ Error: $param_name must start with http:// or https://"
+        echo "   Example: ./configure.sh --${param_name,,} \"https://example.com\""
+        exit 1
+    fi
+}
+
+# Function to update JSON value using jq or fallback to sed
+update_json_value() {
+    local file="$1"
+    local json_path="$2"
+    local new_value="$3"
+    local description="$4"
+    
+    # Check if jq is available for robust JSON manipulation
+    if command -v jq &> /dev/null; then
+        # Use jq for safe JSON manipulation
+        local temp_file=$(mktemp)
+        jq "$json_path = \"$new_value\"" "$file" > "$temp_file" && mv "$temp_file" "$file"
+        echo "✅ Updated $description to: $new_value"
+    else
+        # Fallback to sed (less robust but works for simple cases)
+        case "$json_path" in
+            ".ApiSettings.BaseUrl")
+                sed -i 's|"BaseUrl": *"[^"]*"|"BaseUrl": "'"$new_value"'"|' "$file"
+                ;;
+            ".Environment")
+                sed -i 's|"Environment": *"[^"]*"|"Environment": "'"$new_value"'"|' "$file"
+                ;;
+            ".Site.HomePageUrl")
+                sed -i 's|"HomePageUrl": *"[^"]*"|"HomePageUrl": "'"$new_value"'"|' "$file"
+                ;;
+        esac
+        echo "✅ Updated $description to: $new_value (using sed fallback)"
+    fi
+}
+
+# Update API URL if provided
+if [ -n "$UPDATE_API_URL" ]; then
+    validate_url "$UPDATE_API_URL" "API URL"
+    update_json_value "$CONFIG_FILE" ".ApiSettings.BaseUrl" "$UPDATE_API_URL" "API Base URL"
+fi
+
+# Update Environment if provided
+if [ -n "$UPDATE_ENVIRONMENT" ]; then
+    update_json_value "$CONFIG_FILE" ".Environment" "$UPDATE_ENVIRONMENT" "Environment"
+    
+    # If environment is Production, enable analytics
+    if [ "$UPDATE_ENVIRONMENT" = "Production" ]; then
+        if command -v jq &> /dev/null; then
+            local temp_file=$(mktemp)
+            jq '.Features.EnableAnalytics = true' "$CONFIG_FILE" > "$temp_file" && mv "$temp_file" "$CONFIG_FILE"
+            echo "✅ Enabled analytics for Production environment"
+        else
+            sed -i 's|"EnableAnalytics": *false|"EnableAnalytics": true|' "$CONFIG_FILE"
+            echo "✅ Enabled analytics for Production environment (using sed fallback)"
+        fi
+    fi
+fi
+
+# Update Home Page URL if provided
+if [ -n "$UPDATE_HOME_PAGE_URL" ]; then
+    validate_url "$UPDATE_HOME_PAGE_URL" "Home Page URL"
+    update_json_value "$CONFIG_FILE" ".Site.HomePageUrl" "$UPDATE_HOME_PAGE_URL" "Home Page URL"
+fi
+
+echo "========================================="
+echo "✅ Configuration updated successfully!"
+echo "📁 File: $CONFIG_FILE"
+echo ""
+
+# Show current configuration
+echo "📋 Current configuration:"
+if command -v jq &> /dev/null; then
+    echo "   API URL: $(jq -r '.ApiSettings.BaseUrl' "$CONFIG_FILE")"
+    echo "   Environment: $(jq -r '.Environment' "$CONFIG_FILE")"
+    echo "   Home Page URL: $(jq -r '.Site.HomePageUrl' "$CONFIG_FILE")"
+    echo "   Analytics: $(jq -r '.Features.EnableAnalytics' "$CONFIG_FILE")"
+else
+    echo "   (Install 'jq' for better configuration display)"
+    echo "   Configuration saved to: $CONFIG_FILE"
+fi
+
 echo ""
 echo "Next steps:"
 echo "   dotnet run              # Start development server"

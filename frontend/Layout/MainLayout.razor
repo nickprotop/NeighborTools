@@ -4,6 +4,7 @@
 @using frontend.Shared
 @using frontend.Models
 @using frontend.Services
+@using ToolsSharing.Frontend.Configuration
 @inherits LayoutComponentBase
 @implements IDisposable
 
@@ -355,6 +356,12 @@
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
                         Share tools, build community
                     </MudText>
+                    <MudLink Href="@AppSettings.Site.HomePageUrl" 
+                             Target="_blank" 
+                             Class="footer-link mt-2"
+                             Style="font-size: 14px;">
+                        Visit our website
+                    </MudLink>
                 </div>
                 <div class="footer-section">
                     <MudText Typo="Typo.subtitle1" Class="mb-2">Quick Links</MudText>
@@ -722,6 +729,7 @@
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
     [Inject] private IDisputeService DisputeService { get; set; } = default!;
+    [Inject] private AppSettings AppSettings { get; set; } = default!;
 
     private bool mobileMenuOpen = false;
     private string? currentUserId = null;
