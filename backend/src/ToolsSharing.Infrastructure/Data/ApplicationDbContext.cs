@@ -52,6 +52,10 @@ public class ApplicationDbContext : IdentityDbContext<User>
     
     // Favorites entities
     public DbSet<Favorite> Favorites { get; set; }
+    
+    // Mutual dispute closure entities
+    public DbSet<MutualDisputeClosure> MutualDisputeClosures { get; set; }
+    public DbSet<MutualClosureAuditLog> MutualClosureAuditLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

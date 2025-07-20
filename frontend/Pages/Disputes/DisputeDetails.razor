@@ -2,6 +2,7 @@
 @using frontend.Models
 @using frontend.Components.Disputes
 @using frontend.Services
+@using ToolsSharing.Frontend.Services
 @using Microsoft.AspNetCore.Components.Authorization
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
@@ -9,6 +10,7 @@
 @inject IDisputeService DisputeService
 @inject IAuthService AuthService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject MutualClosureService MutualClosureService
 
 <PageTitle>Dispute Details - NeighborTools</PageTitle>
 
@@ -229,6 +231,14 @@
                         }
                     </MudStack>
                 </MudPaper>
+
+                <!-- Mutual Closure Status -->
+                @if (Dispute.Status != DisputeStatus.Closed && Dispute.Status != DisputeStatus.Resolved)
+                {
+                    <MutualClosureStatusCard DisputeId="@Guid.Parse(Dispute.Id)" 
+                                           CurrentUserId="@CurrentUserId"
+                                           OnStatusChanged="HandleMutualClosureStatusChanged" />
+                }
 
                 <!-- Dispute Stats -->
                 <MudPaper Elevation="2" Class="pa-4 mb-4">
@@ -507,12 +517,37 @@
         
         if (Dispute?.Status == DisputeStatus.Open || Dispute?.Status == DisputeStatus.InProgress)
         {
+            // Mutual Closure Actions (highest priority)
+            // Users can always try to initiate mutual closure if dispute is open
+            actions.Add(new QuickAction
+            {
+                Label = "Propose Resolution",
+                Icon = Icons.Material.Filled.Handshake,
+                Color = "success",
+                Variant = "filled",
+                ActionType = "initiate-mutual-closure"
+            });
+            
+            // For now, we'll handle response actions dynamically through the status card component
+            if (false) // Placeholder for future dynamic action logic
+            {
+                actions.Add(new QuickAction
+                {
+                    Label = "Respond to Resolution",
+                    Icon = Icons.Material.Filled.ReplyAll,
+                    Color = "primary",
+                    Variant = "filled",
+                    ActionType = "respond-mutual-closure"
+                });
+            }
+            
             actions.Add(new QuickAction
             {
                 Label = "Add Evidence",
                 Icon = Icons.Material.Filled.AttachFile,
                 Color = "primary",
-                Variant = "outlined"
+                Variant = "outlined",
+                ActionType = "evidence"
             });
             
             if (CanEscalateDispute())
@@ -522,7 +557,8 @@
                     Label = "Escalate to PayPal",
                     Icon = Icons.Material.Filled.ArrowUpward,
                     Color = "warning",
-                    Variant = "outlined"
+                    Variant = "outlined",
+                    ActionType = "escalate"
                 });
             }
         }
@@ -545,6 +581,12 @@
     {
         switch (action.ActionType.ToLower())
         {
+            case "initiate-mutual-closure":
+                await OpenInitiateMutualClosureDialog();
+                break;
+            case "respond-mutual-closure":
+                await OpenRespondToMutualClosureDialog();
+                break;
             case "evidence":
                 await ShowAttachmentDialog();
                 break;
@@ -666,6 +708,68 @@
         "outlined" => Variant.Outlined,
         _ => Variant.Text
     };
+
+    // Mutual Closure Dialog Methods
+    private async Task OpenInitiateMutualClosureDialog()
+    {
+        var parameters = new DialogParameters 
+        { 
+            { "DisputeId", Dispute!.Id },
+            { "DisputeTitle", Dispute.Subject },
+            { "DisputeAmount", Dispute.DisputedAmount }
+        };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+        
+        var dialog = DialogService.Show<InitiateMutualClosureDialog>("Propose Mutual Resolution", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            await LoadDisputeDetails(); // Refresh dispute data
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenRespondToMutualClosureDialog()
+    {
+        // First, get the active mutual closure request for this dispute
+        var mutualClosuresResult = await MutualClosureService.GetDisputeMutualClosuresAsync(Guid.Parse(Dispute!.Id));
+        if (mutualClosuresResult?.Success == true && mutualClosuresResult.Data?.Any() == true)
+        {
+            var activeMutualClosure = mutualClosuresResult.Data
+                .FirstOrDefault(mc => mc.Status == MutualClosureStatus.Pending && !mc.IsExpired);
+                
+            if (activeMutualClosure != null)
+            {
+                var parameters = new DialogParameters { { "MutualClosureId", activeMutualClosure.Id } };
+                var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+                
+                var dialog = DialogService.Show<RespondToMutualClosureDialog>("Respond to Mutual Resolution", parameters, options);
+                var result = await dialog.Result;
+                
+                if (!result.Canceled)
+                {
+                    await LoadDisputeDetails(); // Refresh dispute data
+                    StateHasChanged();
+                }
+            }
+            else
+            {
+                Snackbar.Add("No active mutual closure request found to respond to.", Severity.Warning);
+            }
+        }
+        else
+        {
+            Snackbar.Add("Failed to load mutual closure requests.", Severity.Error);
+        }
+    }
+
+    private async Task HandleMutualClosureStatusChanged()
+    {
+        // Refresh the dispute data when mutual closure status changes
+        await LoadDisputeDetails();
+        StateHasChanged();
+    }
 }
 
 public class QuickAction

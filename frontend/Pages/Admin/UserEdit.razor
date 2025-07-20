@@ -1,0 +1,600 @@
+@page "/admin/users/{UserId}/edit"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@using System.Text.Json
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Edit User - NeighborTools Admin</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
+    @if (isLoading)
+    {
+        <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+        <MudText Typo="Typo.body1" Class="mt-3">Loading user details...</MudText>
+    }
+    else if (loadError != null)
+    {
+        <MudAlert Severity="Severity.Error">@loadError</MudAlert>
+        <MudButton Variant="Variant.Text" 
+                   StartIcon="@Icons.Material.Filled.ArrowBack" 
+                   Href="/admin/users"
+                   Class="mt-3">
+            Back to Users
+        </MudButton>
+    }
+    else if (user != null)
+    {
+        <!-- Header -->
+        <div class="d-flex align-center justify-space-between mb-6">
+            <div class="d-flex align-center">
+                <MudButton Variant="Variant.Text" 
+                           StartIcon="@Icons.Material.Filled.ArrowBack" 
+                           Href="/admin/users"
+                           Class="mr-3">
+                    Back
+                </MudButton>
+                <div>
+                    <MudText Typo="Typo.h4">Edit User</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        @user.FirstName @user.LastName (@user.Email)
+                    </MudText>
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2">
+                @if (!user.EmailConfirmed)
+                {
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Success"
+                               StartIcon="@Icons.Material.Filled.VerifiedUser"
+                               OnClick="VerifyUserAsync">
+                        Verify Email
+                    </MudButton>
+                }
+                @if (user.IsSuspended)
+                {
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Success"
+                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                               OnClick="UnsuspendUserAsync">
+                        Unsuspend
+                    </MudButton>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Error"
+                               StartIcon="@Icons.Material.Filled.Block"
+                               OnClick="SuspendUserAsync">
+                        Suspend
+                    </MudButton>
+                }
+            </div>
+        </div>
+
+        <MudGrid>
+            <!-- Left Column - User Details Form -->
+            <MudItem xs="12" md="8">
+                <MudPaper Class="pa-6 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-4">User Information</MudText>
+                    
+                    <EditForm Model="editModel" OnValidSubmit="SaveUserAsync">
+                        <MudGrid>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="editModel.FirstName"
+                                              Label="First Name"
+                                              Required="true"
+                                              For="@(() => editModel.FirstName)" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="editModel.LastName"
+                                              Label="Last Name"
+                                              Required="true"
+                                              For="@(() => editModel.LastName)" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="editModel.PhoneNumber"
+                                              Label="Phone Number"
+                                              For="@(() => editModel.PhoneNumber)" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="editModel.City"
+                                              Label="City"
+                                              For="@(() => editModel.City)" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="editModel.Country"
+                                              Label="Country"
+                                              For="@(() => editModel.Country)" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="editModel.PostalCode"
+                                              Label="Postal Code"
+                                              For="@(() => editModel.PostalCode)" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="editModel.Address"
+                                              Label="Address"
+                                              For="@(() => editModel.Address)" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudTextField @bind-Value="editModel.PublicLocation"
+                                              Label="Public Location"
+                                              For="@(() => editModel.PublicLocation)" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6">
+                                <MudDatePicker @bind-Date="editModel.DateOfBirth"
+                                               Label="Date of Birth"
+                                               Clearable="true" />
+                            </MudItem>
+                            <MudItem xs="12">
+                                <MudSwitch @bind-Value="editModel.EmailConfirmed"
+                                           Label="Email Confirmed"
+                                           Color="Color.Success" />
+                            </MudItem>
+                        </MudGrid>
+                        
+                        <div class="d-flex justify-end gap-2 mt-4">
+                            <MudButton Variant="Variant.Text"
+                                       OnClick="ResetForm">
+                                Reset
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       ButtonType="ButtonType.Submit"
+                                       StartIcon="@Icons.Material.Filled.Save"
+                                       Disabled="isSaving">
+                                @if (isSaving)
+                                {
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                }
+                                else
+                                {
+                                    <span>Save Changes</span>
+                                }
+                            </MudButton>
+                        </div>
+                    </EditForm>
+                </MudPaper>
+
+                <!-- User's Tools -->
+                @if (user.Tools?.Any() == true)
+                {
+                    <MudPaper Class="pa-6 mb-4">
+                        <MudText Typo="Typo.h6" Class="mb-4">Tools Owned (@user.Tools.Count)</MudText>
+                        <MudTable T="AdminToolDto" Items="@user.Tools" Dense="true" Hover="true">
+                            <HeaderContent>
+                                <MudTh>Name</MudTh>
+                                <MudTh>Category</MudTh>
+                                <MudTh>Status</MudTh>
+                                <MudTh>Created</MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Name">@context.Name</MudTd>
+                                <MudTd DataLabel="Category">@context.Category</MudTd>
+                                <MudTd DataLabel="Status">
+                                    <MudChip T="string" 
+                                             Color="@(context.IsAvailable ? Color.Success : Color.Warning)" 
+                                             Size="Size.Small">
+                                        @(context.IsAvailable ? "Available" : "Unavailable")
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="Created">
+                                    @context.CreatedAt.ToString("MMM dd, yyyy")
+                                </MudTd>
+                                <MudTd DataLabel="Actions">
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Text" 
+                                               StartIcon="@Icons.Material.Filled.Visibility"
+                                               Href="@($"/tools/{context.Id}")">
+                                        View
+                                    </MudButton>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudPaper>
+                }
+
+                <!-- Recent Rentals -->
+                @if (user.RecentRentals?.Any() == true)
+                {
+                    <MudPaper Class="pa-6">
+                        <MudText Typo="Typo.h6" Class="mb-4">Recent Rentals (@user.RecentRentals.Count)</MudText>
+                        <MudTable T="AdminRentalDto" Items="@user.RecentRentals" Dense="true" Hover="true">
+                            <HeaderContent>
+                                <MudTh>Tool</MudTh>
+                                <MudTh>Status</MudTh>
+                                <MudTh>Start Date</MudTh>
+                                <MudTh>End Date</MudTh>
+                                <MudTh>Created</MudTh>
+                                <MudTh>Actions</MudTh>
+                            </HeaderContent>
+                            <RowTemplate>
+                                <MudTd DataLabel="Tool">@context.ToolName</MudTd>
+                                <MudTd DataLabel="Status">
+                                    <MudChip T="string" 
+                                             Color="@GetRentalStatusColor(context.StatusString)" 
+                                             Size="Size.Small">
+                                        @context.StatusString
+                                    </MudChip>
+                                </MudTd>
+                                <MudTd DataLabel="Start Date">
+                                    @context.StartDate.ToString("MMM dd, yyyy")
+                                </MudTd>
+                                <MudTd DataLabel="End Date">
+                                    @context.EndDate.ToString("MMM dd, yyyy")
+                                </MudTd>
+                                <MudTd DataLabel="Created">
+                                    @context.CreatedAt.ToString("MMM dd, yyyy")
+                                </MudTd>
+                                <MudTd DataLabel="Actions">
+                                    <MudButton Size="Size.Small" 
+                                               Variant="Variant.Text" 
+                                               StartIcon="@Icons.Material.Filled.Visibility"
+                                               Href="@($"/admin/rentals/{context.Id}")">
+                                        View
+                                    </MudButton>
+                                </MudTd>
+                            </RowTemplate>
+                        </MudTable>
+                    </MudPaper>
+                }
+            </MudItem>
+
+            <!-- Right Column - User Stats and Info -->
+            <MudItem xs="12" md="4">
+                <!-- User Status Card -->
+                <MudPaper Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">User Status</MudText>
+                    <div class="d-flex flex-column gap-3">
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Email" 
+                                     Color="@(user.EmailConfirmed ? Color.Success : Color.Warning)" 
+                                     Class="mr-2" />
+                            <MudText Typo="Typo.body2">
+                                Email @(user.EmailConfirmed ? "Confirmed" : "Unconfirmed")
+                            </MudText>
+                        </div>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@(user.IsSuspended ? Icons.Material.Filled.Block : Icons.Material.Filled.CheckCircle)" 
+                                     Color="@(user.IsSuspended ? Color.Error : Color.Success)" 
+                                     Class="mr-2" />
+                            <MudText Typo="Typo.body2">
+                                Account @(user.IsSuspended ? "Suspended" : "Active")
+                            </MudText>
+                        </div>
+                        <div class="d-flex align-center">
+                            <MudIcon Icon="@Icons.Material.Filled.CalendarToday" 
+                                     Color="Color.Info" 
+                                     Class="mr-2" />
+                            <MudText Typo="Typo.body2">
+                                Joined @user.CreatedAt.ToString("MMM dd, yyyy")
+                            </MudText>
+                        </div>
+                        @if (user.UpdatedAt != user.CreatedAt)
+                        {
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Update" 
+                                         Color="Color.Info" 
+                                         Class="mr-2" />
+                                <MudText Typo="Typo.body2">
+                                    Updated @user.UpdatedAt.ToString("MMM dd, yyyy")
+                                </MudText>
+                            </div>
+                        }
+                    </div>
+                </MudPaper>
+
+                <!-- User Statistics -->
+                <MudPaper Class="pa-4 mb-4">
+                    <MudText Typo="Typo.h6" Class="mb-3">Statistics</MudText>
+                    <div class="d-flex flex-column gap-2">
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.body2">Tools Owned:</MudText>
+                            <MudText Typo="Typo.body2"><strong>@user.ToolCount</strong></MudText>
+                        </div>
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.body2">Rentals as Renter:</MudText>
+                            <MudText Typo="Typo.body2"><strong>@user.RentalCount</strong></MudText>
+                        </div>
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.body2">Rentals as Owner:</MudText>
+                            <MudText Typo="Typo.body2"><strong>@user.OwnerRentalCount</strong></MudText>
+                        </div>
+                    </div>
+                </MudPaper>
+
+                <!-- Profile Picture -->
+                @if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+                {
+                    <MudPaper Class="pa-4">
+                        <MudText Typo="Typo.h6" Class="mb-3">Profile Picture</MudText>
+                        <MudImage Src="@user.ProfilePictureUrl" 
+                                  Alt="Profile Picture"
+                                  Width="200"
+                                  Height="200"
+                                  ObjectFit="ObjectFit.Cover"
+                                  Class="rounded" />
+                    </MudPaper>
+                }
+            </MudItem>
+        </MudGrid>
+    }
+</MudContainer>
+
+@code {
+    [Parameter] public string UserId { get; set; } = "";
+    [Inject] private HttpClient HttpClient { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private bool isLoading = true;
+    private bool isSaving = false;
+    private string? loadError = null;
+    private AdminUserDetailDto? user = null;
+    private UserEditModel editModel = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadUserAsync();
+    }
+
+    private async Task LoadUserAsync()
+    {
+        try
+        {
+            isLoading = true;
+            loadError = null;
+
+            var response = await HttpClient.GetAsync($"api/admin/users/{UserId}");
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var jsonString = await response.Content.ReadAsStringAsync();
+                var result = JsonSerializer.Deserialize<ApiResponse<AdminUserDetailDto>>(jsonString, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                if (result?.Success == true && result.Data != null)
+                {
+                    user = result.Data;
+                    
+                    // Populate edit model
+                    editModel = new UserEditModel
+                    {
+                        FirstName = user.FirstName ?? "",
+                        LastName = user.LastName ?? "",
+                        PhoneNumber = user.PhoneNumber,
+                        City = user.City,
+                        Country = user.Country,
+                        Address = user.Address,
+                        PostalCode = user.PostalCode,
+                        PublicLocation = user.PublicLocation,
+                        EmailConfirmed = user.EmailConfirmed,
+                        DateOfBirth = user.DateOfBirth
+                    };
+                }
+                else
+                {
+                    loadError = result?.Message ?? "Failed to load user details";
+                }
+            }
+            else
+            {
+                loadError = "Failed to load user details";
+            }
+        }
+        catch (Exception ex)
+        {
+            loadError = $"Error loading user: {ex.Message}";
+            Snackbar.Add(loadError, Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task SaveUserAsync()
+    {
+        try
+        {
+            isSaving = true;
+
+            var response = await HttpClient.PutAsJsonAsync($"api/admin/users/{UserId}", editModel);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("User updated successfully", Severity.Success);
+                await LoadUserAsync(); // Refresh data
+            }
+            else
+            {
+                Snackbar.Add("Failed to update user", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating user: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSaving = false;
+        }
+    }
+
+    private void ResetForm()
+    {
+        if (user != null)
+        {
+            editModel = new UserEditModel
+            {
+                FirstName = user.FirstName ?? "",
+                LastName = user.LastName ?? "",
+                PhoneNumber = user.PhoneNumber,
+                City = user.City,
+                Country = user.Country,
+                Address = user.Address,
+                PostalCode = user.PostalCode,
+                PublicLocation = user.PublicLocation,
+                EmailConfirmed = user.EmailConfirmed,
+                DateOfBirth = user.DateOfBirth
+            };
+        }
+    }
+
+    private async Task VerifyUserAsync()
+    {
+        try
+        {
+            var response = await HttpClient.PostAsync($"api/admin/users/{UserId}/verify", null);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("User verified successfully", Severity.Success);
+                await LoadUserAsync();
+            }
+            else
+            {
+                Snackbar.Add("Failed to verify user", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task SuspendUserAsync()
+    {
+        try
+        {
+            var request = new { Suspend = true };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/users/{UserId}/suspend", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("User suspended successfully", Severity.Success);
+                await LoadUserAsync();
+            }
+            else
+            {
+                Snackbar.Add("Failed to suspend user", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task UnsuspendUserAsync()
+    {
+        try
+        {
+            var request = new { Suspend = false };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/users/{UserId}/suspend", request);
+            
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("User unsuspended successfully", Severity.Success);
+                await LoadUserAsync();
+            }
+            else
+            {
+                Snackbar.Add("Failed to unsuspend user", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetRentalStatusColor(string status)
+    {
+        return status.ToLower() switch
+        {
+            "pending" => Color.Warning,
+            "approved" => Color.Info,
+            "rejected" => Color.Error,
+            "pickedup" => Color.Primary,
+            "returned" => Color.Success,
+            "cancelled" => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+
+    public class AdminUserDetailDto
+    {
+        public string Id { get; set; } = "";
+        public string Email { get; set; } = "";
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string? PhoneNumber { get; set; }
+        public bool EmailConfirmed { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public DateTime UpdatedAt { get; set; }
+        public string? City { get; set; }
+        public string? Country { get; set; }
+        public string? Address { get; set; }
+        public string? PostalCode { get; set; }
+        public string? PublicLocation { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public string? ProfilePictureUrl { get; set; }
+        public bool IsDeleted { get; set; }
+        public bool IsSuspended { get; set; }
+        public int ToolCount { get; set; }
+        public int RentalCount { get; set; }
+        public int OwnerRentalCount { get; set; }
+        public List<AdminToolDto> Tools { get; set; } = new();
+        public List<AdminRentalDto> RecentRentals { get; set; } = new();
+    }
+
+    public class AdminToolDto
+    {
+        public string Id { get; set; } = "";
+        public string Name { get; set; } = "";
+        public string Category { get; set; } = "";
+        public bool IsAvailable { get; set; }
+        public DateTime CreatedAt { get; set; }
+    }
+
+    public class AdminRentalDto
+    {
+        public string Id { get; set; } = "";
+        public object Status { get; set; } = "";
+        public DateTime CreatedAt { get; set; }
+        public DateTime StartDate { get; set; }
+        public DateTime EndDate { get; set; }
+        public string ToolName { get; set; } = "";
+        
+        public string StatusString => Status?.ToString() ?? "";
+    }
+
+    public class UserEditModel
+    {
+        public string FirstName { get; set; } = "";
+        public string LastName { get; set; } = "";
+        public string? PhoneNumber { get; set; }
+        public string? City { get; set; }
+        public string? Country { get; set; }
+        public string? Address { get; set; }
+        public string? PostalCode { get; set; }
+        public string? PublicLocation { get; set; }
+        public DateTime? DateOfBirth { get; set; }
+        public bool EmailConfirmed { get; set; }
+    }
+
+    public class ApiResponse<T>
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
+        public T? Data { get; set; }
+        public List<string> Errors { get; set; } = new();
+    }
+}

@@ -1,0 +1,321 @@
+@using frontend.Models
+@using ToolsSharing.Frontend.Services
+@inject MutualClosureService MutualClosureService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.ReplyAll" class="mr-3" />
+            Respond to Mutual Resolution
+        </MudText>
+    </TitleContent>
+    
+    <DialogContent>
+        <MudContainer Class="pa-0" MaxWidth="MaxWidth.False">
+            
+            @* Mutual Closure Details *@
+            @if (MutualClosure != null)
+            {
+                <MudCard Class="mb-4" Elevation="2">
+                    <MudCardHeader Style="background-color: var(--mud-palette-primary-lighten);">
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6" Color="Color.Primary">
+                                <MudIcon Icon="@Icons.Material.Filled.Description" class="mr-2" />
+                                Proposed Resolution
+                            </MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        <MudGrid>
+                            <MudItem xs="12" md="8">
+                                <MudText Typo="Typo.subtitle2" Class="mb-2">From: @MutualClosure.InitiatedByUserName</MudText>
+                                <MudText Typo="Typo.body1" Class="mb-3">@MutualClosure.ProposedResolution</MudText>
+                                
+                                @if (MutualClosure.AgreedRefundAmount.HasValue && MutualClosure.AgreedRefundAmount.Value > 0)
+                                {
+                                    <MudChip T="string" Icon="@Icons.Material.Filled.AttachMoney" 
+                                           Color="Color.Success" 
+                                           Size="Size.Medium"
+                                           Class="mb-2">
+                                        Refund: @MutualClosure.AgreedRefundAmount.Value.ToString("C")
+                                    </MudChip>
+                                }
+                            </MudItem>
+                            <MudItem xs="12" md="4">
+                                <MudText Typo="Typo.caption" Class="mb-1">Created:</MudText>
+                                <MudText Typo="Typo.body2" Class="mb-3">@MutualClosure.CreatedAt.ToString("MMM dd, yyyy 'at' h:mm tt")</MudText>
+                                
+                                <MudText Typo="Typo.caption" Class="mb-1">Expires:</MudText>
+                                <MudText Typo="Typo.body2" Color="@(MutualClosure.IsExpired ? Color.Error : Color.Default)">
+                                    @MutualClosure.ExpiresAt.ToString("MMM dd, yyyy 'at' h:mm tt")
+                                </MudText>
+                                
+                                @if (!MutualClosure.IsExpired)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Info" Class="mt-2">
+                                        ⏰ @MutualClosure.HoursUntilExpiry hours remaining
+                                    </MudText>
+                                }
+                            </MudItem>
+                        </MudGrid>
+                        
+                        @if (MutualClosure.IsExpired)
+                        {
+                            <MudAlert Severity="Severity.Error" Class="mt-3">
+                                ⚠️ This mutual resolution request has expired and can no longer be responded to.
+                            </MudAlert>
+                        }
+                    </MudCardContent>
+                </MudCard>
+
+                @* Decision Guidance *@
+                @if (!MutualClosure.IsExpired)
+                {
+                    <MudCard Class="mb-4" Elevation="0" Style="background-color: var(--mud-palette-info-lighten);">
+                        <MudCardContent Class="pa-4">
+                            <MudText Typo="Typo.h6" Class="mb-3">
+                                <MudIcon Icon="@Icons.Material.Filled.Psychology" class="mr-2" />
+                                Consider Your Response
+                            </MudText>
+                            
+                            <MudExpansionPanels Elevation="0">
+                                <MudExpansionPanel Text="If You Accept" Icon="@Icons.Material.Filled.ThumbUp">
+                                    <div class="pa-2">
+                                        <MudList T="string" Dense="true">
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.CheckCircle" Text="The dispute will be immediately resolved" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Payment" Text="Any agreed refund will be processed automatically" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Close" Text="No further action needed from either party" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Speed" Text="Fastest way to resolve the dispute" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Handshake" Text="Shows good faith and cooperation" />
+                                        </MudList>
+                                    </div>
+                                </MudExpansionPanel>
+                                
+                                <MudExpansionPanel Text="If You Reject" Icon="@Icons.Material.Filled.ThumbDown">
+                                    <div class="pa-2">
+                                        <MudList T="string" Dense="true">
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Gavel" Text="Dispute continues through normal resolution process" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.AdminPanelSettings" Text="May require admin review and intervention" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Schedule" Text="Resolution may take longer" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Message" Text="You can propose an alternative solution" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Balance" Text="Final decision may be made by admin" />
+                                        </MudList>
+                                    </div>
+                                </MudExpansionPanel>
+                                
+                                <MudExpansionPanel Text="Questions to Ask Yourself" Icon="@Icons.Material.Filled.HelpOutline">
+                                    <div class="pa-2">
+                                        <MudList T="string" Dense="true">
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.QuestionMark" Text="Is the proposed solution fair and reasonable?" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.QuestionMark" Text="Does it adequately address the issue?" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.QuestionMark" Text="Would you be satisfied with this outcome?" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.QuestionMark" Text="Is the compensation appropriate for any damages?" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.QuestionMark" Text="Would continuing the dispute likely lead to a better outcome?" />
+                                        </MudList>
+                                    </div>
+                                </MudExpansionPanel>
+                            </MudExpansionPanels>
+                        </MudCardContent>
+                    </MudCard>
+
+                    @* Response Form *@
+                    <EditForm Model="Response" OnValidSubmit="HandleSubmit">
+                        <DataAnnotationsValidator />
+                        
+                        <MudCard Elevation="1" Class="mb-4">
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Your Response</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudRadioGroup @bind-Value="Response.Accept" Class="mb-4">
+                                    <MudRadio Value="true" Color="Color.Success">
+                                        <MudText Typo="Typo.body1" Class="d-flex align-center">
+                                            <MudIcon Icon="@Icons.Material.Filled.ThumbUp" class="mr-2" Color="Color.Success" />
+                                            <strong>Accept</strong> - I agree to this resolution
+                                        </MudText>
+                                    </MudRadio>
+                                    <MudRadio Value="false" Color="Color.Error">
+                                        <MudText Typo="Typo.body1" Class="d-flex align-center">
+                                            <MudIcon Icon="@Icons.Material.Filled.ThumbDown" class="mr-2" Color="Color.Error" />
+                                            <strong>Reject</strong> - I do not agree to this resolution
+                                        </MudText>
+                                    </MudRadio>
+                                </MudRadioGroup>
+
+                                @if (Response.Accept == true)
+                                {
+                                    <MudTextField @bind-Value="Response.ResponseMessage"
+                                                Label="Acceptance Message (Optional)"
+                                                HelperText="You can add a message explaining your acceptance or just leave this blank"
+                                                Placeholder="Thank you for the fair resolution..."
+                                                Variant="Variant.Outlined"
+                                                Lines="3"
+                                                MaxLength="1000"
+                                                Counter="1000"
+                                                For="@(() => Response.ResponseMessage)" />
+                                    
+                                    <MudAlert Severity="Severity.Success" Class="mt-3">
+                                        ✅ <strong>By accepting:</strong> The dispute will be resolved immediately and any refund will be processed.
+                                    </MudAlert>
+                                }
+                                else if (Response.Accept == false)
+                                {
+                                    <MudTextField @bind-Value="Response.RejectionReason"
+                                                Label="Reason for Rejection"
+                                                HelperText="Please explain why you're rejecting this proposal. This helps with future resolution."
+                                                Placeholder="I believe the proposed refund amount is insufficient because..."
+                                                Variant="Variant.Outlined"
+                                                Lines="4"
+                                                MaxLength="500"
+                                                Counter="500"
+                                                Required="true"
+                                                For="@(() => Response.RejectionReason)" />
+                                    
+                                    <ValidationMessage For="@(() => Response.RejectionReason)" />
+                                    
+                                    <MudAlert Severity="Severity.Warning" Class="mt-3">
+                                        ⚠️ <strong>By rejecting:</strong> The dispute will continue through normal resolution channels, which may take longer.
+                                    </MudAlert>
+                                }
+                            </MudCardContent>
+                        </MudCard>
+
+                        @* Confirmation Section *@
+                        @if (Response.Accept.HasValue)
+                        {
+                            <MudCard Elevation="1" Class="mb-4" Style="border-left: 4px solid var(--mud-palette-warning);">
+                                <MudCardContent>
+                                    <MudText Typo="Typo.h6" Class="mb-2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" class="mr-2" />
+                                        Important Notice
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        This action cannot be undone. Once you submit your response:
+                                    </MudText>
+                                    <MudList T="string" Dense="true">
+                                        @if (Response.Accept == true)
+                                        {
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Lock" Text="The dispute will be automatically closed" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Payment" Text="Any refund will be processed immediately" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Block" Text="You cannot reopen the dispute later" />
+                                        }
+                                        else
+                                        {
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Close" Text="This mutual resolution proposal will be permanently rejected" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.AdminPanelSettings" Text="The dispute will require admin intervention" />
+                                            <MudListItem T="string" Icon="@Icons.Material.Filled.Schedule" Text="Resolution may take significantly longer" />
+                                        }
+                                    </MudList>
+                                </MudCardContent>
+                            </MudCard>
+                        }
+                    </EditForm>
+                }
+            }
+        </MudContainer>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancel" StartIcon="@Icons.Material.Filled.Cancel">
+            Cancel
+        </MudButton>
+        
+        @if (MutualClosure != null && !MutualClosure.IsExpired && Response.Accept.HasValue)
+        {
+            <MudButton Color="@(Response.Accept == true ? Color.Success : Color.Error)" 
+                     Variant="Variant.Filled" 
+                     OnClick="HandleSubmit" 
+                     StartIcon="@(Response.Accept == true ? Icons.Material.Filled.ThumbUp : Icons.Material.Filled.ThumbDown)"
+                     Disabled="IsSubmitting || (Response.Accept == false && string.IsNullOrWhiteSpace(Response.RejectionReason))">
+                @if (IsSubmitting)
+                {
+                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ms-2">Submitting...</MudText>
+                }
+                else
+                {
+                    <MudText>@(Response.Accept == true ? "Accept Resolution" : "Reject Resolution")</MudText>
+                }
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid MutualClosureId { get; set; }
+
+    private MutualClosureDto? MutualClosure;
+    private RespondToMutualClosureRequest Response = new();
+    private bool IsSubmitting = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize response with mutual closure ID
+        Response.MutualClosureId = MutualClosureId;
+        
+        // Load mutual closure details
+        await LoadMutualClosureDetails();
+    }
+
+    private async Task LoadMutualClosureDetails()
+    {
+        MutualClosure = await MutualClosureService.GetMutualClosureDetailsAsync(MutualClosureId);
+        StateHasChanged();
+    }
+
+    private async Task HandleSubmit()
+    {
+        if (!Response.Accept.HasValue || IsSubmitting)
+            return;
+
+        if (Response.Accept == false && string.IsNullOrWhiteSpace(Response.RejectionReason))
+        {
+            Snackbar.Add("Please provide a reason for rejecting this proposal.", Severity.Warning);
+            return;
+        }
+
+        IsSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await MutualClosureService.RespondToMutualClosureAsync(MutualClosureId, Response);
+            
+            if (result?.Success == true)
+            {
+                if (Response.Accept == true)
+                {
+                    Snackbar.Add("✅ Resolution accepted! The dispute has been resolved and any refund will be processed.", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("❌ Resolution rejected. The dispute will continue through normal channels.", Severity.Info);
+                }
+                MudDialog.Close(DialogResult.Ok(result));
+            }
+            else
+            {
+                var errorMessage = result?.ErrorMessage ?? "Failed to submit response";
+                Snackbar.Add($"❌ {errorMessage}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ An unexpected error occurred: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

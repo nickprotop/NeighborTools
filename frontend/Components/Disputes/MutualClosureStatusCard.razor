@@ -1,0 +1,336 @@
+@using frontend.Models
+@using ToolsSharing.Frontend.Services
+@inject MutualClosureService MutualClosureService
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+
+@if (MutualClosures?.Any() == true)
+{
+    <MudCard Class="mb-4" Elevation="2">
+        <MudCardHeader Style="background: linear-gradient(45deg, var(--mud-palette-primary), var(--mud-palette-primary-darken));">
+            <CardHeaderContent>
+                <MudText Typo="Typo.h6" Style="color: white;">
+                    <MudIcon Icon="@Icons.Material.Filled.Handshake" class="mr-2" />
+                    Mutual Resolution Status
+                </MudText>
+            </CardHeaderContent>
+            <CardHeaderActions>
+                <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                             Color="Color.Inherit" 
+                             OnClick="RefreshStatus"
+                             Style="color: white;" />
+            </CardHeaderActions>
+        </MudCardHeader>
+        <MudCardContent Class="pa-0">
+            @foreach (var mutualClosure in MutualClosures.OrderByDescending(mc => mc.CreatedAt))
+            {
+                <div class="pa-4 @(mutualClosure != MutualClosures.Last() ? "border-b" : "")">
+                    <MudGrid AlignItems="Center.Center">
+                        <MudItem xs="12" md="8">
+                            @* Status and Timeline *@
+                            <div class="d-flex align-center mb-2">
+                                <MudChip T="string" Icon="@GetStatusIcon(mutualClosure.Status)" 
+                                       Color="@GetStatusColor(mutualClosure.Status)" 
+                                       Size="Size.Small"
+                                       Class="mr-3">
+                                    @GetStatusText(mutualClosure.Status)
+                                </MudChip>
+                                
+                                @if (mutualClosure.Status == MutualClosureStatus.Pending)
+                                {
+                                    <MudText Typo="Typo.caption" Color="@(mutualClosure.IsExpired ? Color.Error : Color.Info)">
+                                        @if (mutualClosure.IsExpired)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" class="mr-1" />
+                                            <text>Expired</text>
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" class="mr-1" />
+                                            <text>@mutualClosure.HoursUntilExpiry hours remaining</text>
+                                        }
+                                    </MudText>
+                                }
+                            </div>
+
+                            @* Proposal Details *@
+                            <MudText Typo="Typo.body2" Class="mb-2">
+                                <strong>From:</strong> @mutualClosure.InitiatedByUserName
+                            </MudText>
+                            <MudText Typo="Typo.body2" Class="mb-2">
+                                Summary information available in details view
+                            </MudText>
+                            
+                            @if (mutualClosure.AgreedRefundAmount.HasValue && mutualClosure.AgreedRefundAmount.Value > 0)
+                            {
+                                <MudChip T="string" Icon="@Icons.Material.Filled.AttachMoney" 
+                                       Color="Color.Success" 
+                                       Size="Size.Small"
+                                       Class="mr-2">
+                                    Refund: @mutualClosure.AgreedRefundAmount.Value.ToString("C")
+                                </MudChip>
+                            }
+                            
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-2">
+                                Created: @mutualClosure.CreatedAt.ToString("MMM dd, yyyy 'at' h:mm tt")
+                            </MudText>
+                        </MudItem>
+                        
+                        <MudItem xs="12" md="4" Class="text-center">
+                            @* Action Buttons *@
+                            @if (mutualClosure.Status == MutualClosureStatus.Pending && !mutualClosure.IsExpired)
+                            {
+                                @if (CanUserRespond(mutualClosure))
+                                {
+                                    <MudButton Color="Color.Primary" 
+                                             Variant="Variant.Filled" 
+                                             StartIcon="@Icons.Material.Filled.ReplyAll"
+                                             OnClick="() => OpenResponseDialog(mutualClosure.Id)"
+                                             Class="mb-2"
+                                             FullWidth="true">
+                                        Respond
+                                    </MudButton>
+                                }
+                                else if (CanUserCancel(mutualClosure))
+                                {
+                                    <MudButton Color="Color.Secondary" 
+                                             Variant="Variant.Outlined" 
+                                             StartIcon="@Icons.Material.Filled.Cancel"
+                                             OnClick="() => CancelMutualClosure(mutualClosure.Id)"
+                                             Class="mb-2"
+                                             FullWidth="true">
+                                        Cancel
+                                    </MudButton>
+                                }
+                                
+                                @* Waiting message *@
+                                <MudText Typo="Typo.caption" Color="Color.Info" Align="Align.Center">
+                                    @if (CanUserRespond(mutualClosure))
+                                    {
+                                        <text>⏰ Waiting for your response</text>
+                                    }
+                                    else
+                                    {
+                                        <text>⏰ Waiting for @mutualClosure.ResponseRequiredFromUserName</text>
+                                    }
+                                </MudText>
+                            }
+                            else
+                            {
+                                @* Final Status Information *@
+                                <div class="text-center">
+                                    @switch (mutualClosure.Status)
+                                    {
+                                        case MutualClosureStatus.Accepted:
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" Class="mb-2" />
+                                            <MudText Typo="Typo.body2" Color="Color.Success">
+                                                <strong>Resolution Accepted</strong><br/>
+                                                Dispute resolved successfully
+                                            </MudText>
+                                            break;
+                                            
+                                        case MutualClosureStatus.Rejected:
+                                            <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" Size="Size.Large" Class="mb-2" />
+                                            <MudText Typo="Typo.body2" Color="Color.Error">
+                                                <strong>Resolution Rejected</strong><br/>
+                                                Dispute continues normally
+                                            </MudText>
+                                            break;
+                                            
+                                        case MutualClosureStatus.Expired:
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Warning" Size="Size.Large" Class="mb-2" />
+                                            <MudText Typo="Typo.body2" Color="Color.Warning">
+                                                <strong>Request Expired</strong><br/>
+                                                No response received in time
+                                            </MudText>
+                                            break;
+                                            
+                                        case MutualClosureStatus.Cancelled:
+                                            <MudIcon Icon="@Icons.Material.Filled.Block" Color="Color.Warning" Size="Size.Large" Class="mb-2" />
+                                            <MudText Typo="Typo.body2" Color="Color.Warning">
+                                                <strong>Request Cancelled</strong><br/>
+                                                Cancelled by initiator
+                                            </MudText>
+                                            break;
+                                            
+                                        case MutualClosureStatus.UnderAdminReview:
+                                            <MudIcon Icon="@Icons.Material.Filled.AdminPanelSettings" Color="Color.Info" Size="Size.Large" Class="mb-2" />
+                                            <MudText Typo="Typo.body2" Color="Color.Info">
+                                                <strong>Under Admin Review</strong><br/>
+                                                Being reviewed by admin team
+                                            </MudText>
+                                            break;
+                                    }
+                                </div>
+                            }
+                        </MudItem>
+                    </MudGrid>
+                    
+                    @* Expanded Details Toggle *@
+                    <MudCollapse Expanded="expandedItems.Contains(mutualClosure.Id)">
+                        <div class="mt-4 pt-4 border-t">
+                            <MudGrid>
+                                <MudItem xs="12" md="6">
+                                    <MudText Typo="Typo.subtitle2" Class="mb-2">Timeline:</MudText>
+                                    <MudList T="string" Dense="true">
+                                        <MudListItem T="string" Icon="@Icons.Material.Filled.Send" Text="@($"Created: {mutualClosure.CreatedAt:MMM dd, yyyy h:mm tt}")" />
+                                        <MudListItem T="string" Icon="@Icons.Material.Filled.Schedule" Text="@($"Expires: {mutualClosure.ExpiresAt:MMM dd, yyyy h:mm tt}")" />
+                                    </MudList>
+                                </MudItem>
+                                <MudItem xs="12" md="6">
+                                    <MudText Typo="Typo.subtitle2" Class="mb-2">Status Details:</MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-3">@mutualClosure.StatusDisplay</MudText>
+                                    
+                                    @if (mutualClosure.RequiresPaymentAction)
+                                    {
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="mb-2">
+                                            Payment Action Required
+                                        </MudChip>
+                                    }
+                                </MudItem>
+                            </MudGrid>
+                        </div>
+                    </MudCollapse>
+                    
+                    @* Toggle Button *@
+                    <div class="text-center mt-3">
+                        <MudButton Size="Size.Small" 
+                                 StartIcon="@(expandedItems.Contains(mutualClosure.Id) ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                                 OnClick="() => ToggleExpanded(mutualClosure.Id)">
+                            @(expandedItems.Contains(mutualClosure.Id) ? "Show Less" : "Show Details")
+                        </MudButton>
+                    </div>
+                </div>
+            }
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    [Parameter] public Guid DisputeId { get; set; }
+    [Parameter] public string? CurrentUserId { get; set; }
+    [Parameter] public EventCallback OnStatusChanged { get; set; }
+
+    private List<MutualClosureSummaryDto>? MutualClosures;
+    private HashSet<Guid> expandedItems = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadMutualClosures();
+    }
+
+    private async Task LoadMutualClosures()
+    {
+        var result = await MutualClosureService.GetDisputeMutualClosuresAsync(DisputeId);
+        MutualClosures = result?.Data ?? new List<MutualClosureSummaryDto>();
+        StateHasChanged();
+    }
+
+    private async Task RefreshStatus()
+    {
+        await LoadMutualClosures();
+        await OnStatusChanged.InvokeAsync();
+    }
+
+    private void ToggleExpanded(Guid mutualClosureId)
+    {
+        if (expandedItems.Contains(mutualClosureId))
+        {
+            expandedItems.Remove(mutualClosureId);
+        }
+        else
+        {
+            expandedItems.Add(mutualClosureId);
+        }
+    }
+
+    private async Task OpenResponseDialog(Guid mutualClosureId)
+    {
+        var parameters = new DialogParameters { { "MutualClosureId", mutualClosureId } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+        
+        var dialog = DialogService.Show<RespondToMutualClosureDialog>("Respond to Mutual Resolution", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            await RefreshStatus();
+        }
+    }
+
+    private async Task CancelMutualClosure(Guid mutualClosureId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Cancel Mutual Resolution",
+            "Are you sure you want to cancel this mutual resolution request? This action cannot be undone.",
+            yesText: "Cancel Request",
+            cancelText: "Keep Request");
+
+        if (confirmed == true)
+        {
+            var result = await MutualClosureService.CancelMutualClosureAsync(mutualClosureId, "Cancelled by user");
+            
+            if (result?.Success == true)
+            {
+                Snackbar.Add("Mutual resolution request cancelled.", Severity.Info);
+                await RefreshStatus();
+            }
+            else
+            {
+                Snackbar.Add("Failed to cancel mutual resolution request.", Severity.Error);
+            }
+        }
+    }
+
+    private bool CanUserRespond(MutualClosureSummaryDto mutualClosure)
+    {
+        return mutualClosure.ResponseRequiredFromUserName.Contains(CurrentUserId ?? "");
+    }
+
+    private bool CanUserCancel(MutualClosureSummaryDto mutualClosure)
+    {
+        return mutualClosure.InitiatedByUserName.Contains(CurrentUserId ?? "");
+    }
+
+    private string GetStatusIcon(MutualClosureStatus status)
+    {
+        return status switch
+        {
+            MutualClosureStatus.Pending => Icons.Material.Filled.Schedule,
+            MutualClosureStatus.Accepted => Icons.Material.Filled.CheckCircle,
+            MutualClosureStatus.Rejected => Icons.Material.Filled.Cancel,
+            MutualClosureStatus.Expired => Icons.Material.Filled.Schedule,
+            MutualClosureStatus.Cancelled => Icons.Material.Filled.Block,
+            MutualClosureStatus.UnderAdminReview => Icons.Material.Filled.AdminPanelSettings,
+            _ => Icons.Material.Filled.HelpOutline
+        };
+    }
+
+    private Color GetStatusColor(MutualClosureStatus status)
+    {
+        return status switch
+        {
+            MutualClosureStatus.Pending => Color.Warning,
+            MutualClosureStatus.Accepted => Color.Success,
+            MutualClosureStatus.Rejected => Color.Error,
+            MutualClosureStatus.Expired => Color.Warning,
+            MutualClosureStatus.Cancelled => Color.Secondary,
+            MutualClosureStatus.UnderAdminReview => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    private string GetStatusText(MutualClosureStatus status)
+    {
+        return status switch
+        {
+            MutualClosureStatus.Pending => "Pending Response",
+            MutualClosureStatus.Accepted => "Accepted",
+            MutualClosureStatus.Rejected => "Rejected",
+            MutualClosureStatus.Expired => "Expired",
+            MutualClosureStatus.Cancelled => "Cancelled",
+            MutualClosureStatus.UnderAdminReview => "Under Review",
+            _ => "Unknown"
+        };
+    }
+}

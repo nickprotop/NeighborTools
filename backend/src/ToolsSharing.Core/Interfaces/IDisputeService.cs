@@ -37,10 +37,17 @@ public interface IDisputeService
     Task<List<DisputeSummaryDto>> GetPendingDisputesAsync();
     Task<DisputeStatisticsDto> GetDisputeStatisticsAsync(DateTime? fromDate = null, DateTime? toDate = null);
     Task<AssignDisputeResult> AssignDisputeToAdminAsync(Guid disputeId, string adminUserId);
+    Task<GetDisputesResult> GetDisputesForAdminAsync(GetDisputesRequest request);
     
     // Evidence and documentation
     Task<UploadEvidenceResult> UploadEvidenceAsync(Guid disputeId, string userId, List<EvidenceFile> files);
     Task<List<EvidenceFileDto>> GetDisputeEvidenceAsync(Guid disputeId, string userId);
+    
+    // Mutual Closure Integration
+    Task<MutualClosureEligibilityDto> CheckDisputeMutualClosureEligibilityAsync(Guid disputeId, string userId);
+    Task<CreateMutualClosureResult> InitiateMutualClosureAsync(Guid disputeId, CreateMutualClosureRequest request, string userId);
+    Task<GetMutualClosuresResult> GetDisputeMutualClosuresAsync(Guid disputeId, string userId);
+    Task<bool> HandleMutualClosureCompletionAsync(Guid disputeId, MutualClosureStatus status, string resolutionNotes, decimal? refundAmount = null);
 }
 
 // DTOs for dispute operations

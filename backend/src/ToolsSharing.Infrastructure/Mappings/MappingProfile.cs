@@ -3,6 +3,7 @@ using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Features.Tools;
 using ToolsSharing.Core.Features.Rentals;
 using ToolsSharing.Core.DTOs.Messaging;
+using ToolsSharing.Core.DTOs.Dispute;
 
 namespace ToolsSharing.Infrastructure.Mappings;
 
@@ -105,5 +106,24 @@ public static class MappingConfig
             .Map(dest => dest.RecipientName, src => $"{src.Recipient.FirstName} {src.Recipient.LastName}")
             .Map(dest => dest.PreviewContent, src => src.Content.Length > 100 ? src.Content.Substring(0, 100) + "..." : src.Content)
             .Map(dest => dest.AttachmentCount, src => src.Attachments.Count);
+
+        // Mutual Closure mappings
+        TypeAdapterConfig<MutualDisputeClosure, MutualClosureDto>
+            .NewConfig()
+            .Map(dest => dest.DisputeTitle, src => src.Dispute.Title ?? "")
+            .Map(dest => dest.InitiatedByUserName, src => $"{src.InitiatedByUser.FirstName} {src.InitiatedByUser.LastName}")
+            .Map(dest => dest.ResponseRequiredFromUserName, src => $"{src.ResponseRequiredFromUser.FirstName} {src.ResponseRequiredFromUser.LastName}")
+            .Map(dest => dest.AuditLogs, src => src.AuditLogs);
+
+        TypeAdapterConfig<MutualDisputeClosure, MutualClosureSummaryDto>
+            .NewConfig()
+            .Map(dest => dest.DisputeTitle, src => src.Dispute.Title ?? "")
+            .Map(dest => dest.InitiatedByUserName, src => $"{src.InitiatedByUser.FirstName} {src.InitiatedByUser.LastName}")
+            .Map(dest => dest.ResponseRequiredFromUserName, src => $"{src.ResponseRequiredFromUser.FirstName} {src.ResponseRequiredFromUser.LastName}")
+            .Map(dest => dest.StatusDisplay, src => src.Status.ToString());
+
+        TypeAdapterConfig<MutualClosureAuditLog, MutualClosureAuditLogDto>
+            .NewConfig()
+            .Map(dest => dest.UserName, src => $"{src.User.FirstName} {src.User.LastName}");
     }
 }

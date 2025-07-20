@@ -383,6 +383,21 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Validate MessageId parameter
+        if (string.IsNullOrEmpty(MessageId))
+        {
+            loadError = "Message ID is required";
+            isLoading = false;
+            return;
+        }
+
+        if (!Guid.TryParse(MessageId, out var parsedId))
+        {
+            loadError = $"Invalid message ID format: {MessageId}";
+            isLoading = false;
+            return;
+        }
+
         await LoadMessage();
     }
 
@@ -393,9 +408,13 @@
             isLoading = true;
             loadError = null;
 
+            Console.WriteLine($"Attempting to fetch message with ID: {MessageId}");
             var response = await HttpClient.GetAsync($"api/admin/messaging/message/{MessageId}");
             if (response.IsSuccessStatusCode)
             {
+                var jsonContent = await response.Content.ReadAsStringAsync();
+                Console.WriteLine($"API Response: {jsonContent}");
+                
                 var result = await response.Content.ReadFromJsonAsync<ApiResponse<MessageDto>>();
                 if (result?.Success == true && result.Data != null)
                 {
@@ -407,17 +426,32 @@
                 }
                 else
                 {
-                    loadError = result?.Message ?? "Failed to load message";
+                    loadError = result?.Message ?? "Failed to load message data";
+                    if (result?.Errors?.Any() == true)
+                    {
+                        loadError += $" Errors: {string.Join(", ", result.Errors)}";
+                    }
                 }
             }
             else
             {
-                loadError = "Message not found";
+                var errorContent = await response.Content.ReadAsStringAsync();
+                loadError = $"API Error ({response.StatusCode}): {errorContent}";
+                
+                if (response.StatusCode == System.Net.HttpStatusCode.Unauthorized)
+                {
+                    loadError = "Access denied. Please ensure you have admin privileges.";
+                }
+                else if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+                {
+                    loadError = "Message not found.";
+                }
             }
         }
         catch (Exception ex)
         {
             loadError = $"Error loading message: {ex.Message}";
+            Console.WriteLine($"Exception details: {ex}");
         }
         finally
         {

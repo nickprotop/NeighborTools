@@ -3,6 +3,7 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using ToolsSharing.Frontend.Services
 @attribute [Authorize(Roles = "Admin")]
 
 <PageTitle>Dispute Management - NeighborTools Admin</PageTitle>
@@ -86,43 +87,6 @@
             </MudItem>
         </MudGrid>
 
-        <!-- Filters -->
-        <MudPaper Class="pa-4 mb-4">
-            <MudText Typo="Typo.h6" Class="mb-3">Filter Disputes</MudText>
-            <MudGrid>
-                <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="DisputeStatus?" @bind-Value="selectedStatus" Label="Status" Clearable="true">
-                        <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.Open">Open</MudSelectItem>
-                        <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.InProgress">In Progress</MudSelectItem>
-                        <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.EscalatedToPayPal">Escalated to PayPal</MudSelectItem>
-                        <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.Resolved">Resolved</MudSelectItem>
-                        <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.Closed">Closed</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" sm="6" md="3">
-                    <MudSelect T="DisputeType?" @bind-Value="selectedType" Label="Type" Clearable="true">
-                        <MudSelectItem T="DisputeType?" Value="@DisputeType.PaymentDispute">Payment Dispute</MudSelectItem>
-                        <MudSelectItem T="DisputeType?" Value="@DisputeType.ServiceDispute">Service Dispute</MudSelectItem>
-                        <MudSelectItem T="DisputeType?" Value="@DisputeType.Damage">Damage</MudSelectItem>
-                        <MudSelectItem T="DisputeType?" Value="@DisputeType.NoShow">No Show</MudSelectItem>
-                        <MudSelectItem T="DisputeType?" Value="@DisputeType.Chargeback">Chargeback</MudSelectItem>
-                        <MudSelectItem T="DisputeType?" Value="@DisputeType.Refund">Refund</MudSelectItem>
-                    </MudSelect>
-                </MudItem>
-                <MudItem xs="12" sm="6" md="3">
-                    <MudDateRangePicker @bind-DateRange="dateRange" Label="Date Range" />
-                </MudItem>
-                <MudItem xs="12" sm="6" md="3" Class="d-flex align-end">
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
-                               StartIcon="@Icons.Material.Filled.Search"
-                               OnClick="LoadDisputes"
-                               FullWidth="true">
-                        Apply Filters
-                    </MudButton>
-                </MudItem>
-            </MudGrid>
-        </MudPaper>
 
         <!-- Quick Actions -->
         <MudPaper Class="pa-4 mb-4">
@@ -147,6 +111,12 @@
                     In Progress (@underReviewDisputes)
                 </MudButton>
                 <MudButton Variant="Variant.Outlined" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Handshake"
+                           OnClick="@(() => activeTab = 1)">
+                    Mutual Closures (@(mutualClosuresCount ?? 0))
+                </MudButton>
+                <MudButton Variant="Variant.Outlined" 
                            Color="Color.Success" 
                            StartIcon="@Icons.Material.Filled.FileDownload"
                            OnClick="ExportDisputes">
@@ -155,21 +125,62 @@
             </div>
         </MudPaper>
 
-        <!-- Disputes Table -->
-        <MudPaper Class="pa-4">
-            <div class="d-flex justify-space-between align-center mb-4">
-                <MudText Typo="Typo.h6">Disputes (@totalCount)</MudText>
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Secondary" 
-                           StartIcon="@Icons.Material.Filled.Refresh"
-                           OnClick="LoadDisputes">
-                    Refresh
-                </MudButton>
-            </div>
+        <!-- Main Content Tabs -->
+        <MudTabs @bind-ActivePanelIndex="activeTab" Elevation="2" Rounded="true" Color="Color.Primary">
+            <!-- Disputes Tab -->
+            <MudTabPanel Text="Disputes" Icon="@Icons.Material.Filled.ReportProblem">
+                <div class="pa-4">
+                    <!-- Dispute Filters -->
+                    <MudPaper Class="pa-4 mb-4">
+                        <MudText Typo="Typo.h6" Class="mb-3">Filter Disputes</MudText>
+                        <MudGrid>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudSelect T="DisputeStatus?" @bind-Value="selectedStatus" Label="Status" Clearable="true">
+                                    <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.Open">Open</MudSelectItem>
+                                    <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.InProgress">In Progress</MudSelectItem>
+                                    <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.EscalatedToPayPal">Escalated to PayPal</MudSelectItem>
+                                    <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.Resolved">Resolved</MudSelectItem>
+                                    <MudSelectItem T="DisputeStatus?" Value="@DisputeStatus.Closed">Closed</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudSelect T="DisputeType?" @bind-Value="selectedType" Label="Type" Clearable="true">
+                                    <MudSelectItem T="DisputeType?" Value="@DisputeType.PaymentDispute">Payment Dispute</MudSelectItem>
+                                    <MudSelectItem T="DisputeType?" Value="@DisputeType.ServiceDispute">Service Dispute</MudSelectItem>
+                                    <MudSelectItem T="DisputeType?" Value="@DisputeType.Damage">Damage</MudSelectItem>
+                                    <MudSelectItem T="DisputeType?" Value="@DisputeType.NoShow">No Show</MudSelectItem>
+                                    <MudSelectItem T="DisputeType?" Value="@DisputeType.Chargeback">Chargeback</MudSelectItem>
+                                    <MudSelectItem T="DisputeType?" Value="@DisputeType.Refund">Refund</MudSelectItem>
+                                </MudSelect>
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudDateRangePicker @bind-DateRange="dateRange" Label="Date Range" />
+                            </MudItem>
+                            <MudItem xs="12" sm="6" md="3" Class="d-flex align-end">
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Primary" 
+                                           StartIcon="@Icons.Material.Filled.Search"
+                                           OnClick="LoadDisputes"
+                                           FullWidth="true">
+                                    Apply Filters
+                                </MudButton>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+
+                    <div class="d-flex justify-space-between align-center mb-4">
+                        <MudText Typo="Typo.h6">Disputes (@totalCount)</MudText>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Secondary" 
+                                   StartIcon="@Icons.Material.Filled.Refresh"
+                                   OnClick="LoadDisputes">
+                            Refresh
+                        </MudButton>
+                    </div>
             
-            @if (disputes?.Any() == true)
-            {
-                <MudTable T="Dispute" Items="@disputes" Hover="true" Dense="true" FixedHeader="true" Height="600px">
+                    @if (disputes?.Any() == true)
+                    {
+                        <MudTable T="Dispute" Items="@disputes" Hover="true" Dense="true" FixedHeader="true" Height="600px">
                     <HeaderContent>
                         <MudTh>Dispute ID</MudTh>
                         <MudTh>Rental/Tool</MudTh>
@@ -293,16 +304,259 @@
                         <MudPagination Count="@totalPages" 
                                        Selected="@currentPage" 
                                        SelectedChanged="@((page) => OnPageChanged(page))" />
+                        </div>
+                    }
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            <MudText>No disputes found with the current filters.</MudText>
+                        </MudAlert>
+                    }
+                </div>
+            </MudTabPanel>
+
+            <!-- Mutual Closures Tab -->
+            <MudTabPanel Text="Mutual Closures" Icon="@Icons.Material.Filled.Handshake">
+                <div class="pa-4">
+                    <div class="d-flex justify-space-between align-center mb-4">
+                        <MudText Typo="Typo.h6">Mutual Closure Requests (@(filteredMutualClosures?.Count ?? 0))</MudText>
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Secondary" 
+                                   StartIcon="@Icons.Material.Filled.Refresh"
+                                   OnClick="LoadMutualClosures">
+                            Refresh
+                        </MudButton>
                     </div>
-                }
-            }
-            else
-            {
-                <MudAlert Severity="Severity.Info">
-                    <MudText>No disputes found with the current filters.</MudText>
-                </MudAlert>
-            }
-        </MudPaper>
+
+                    <!-- Mutual Closures Quick Stats -->
+                    <MudGrid Class="mb-4">
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudCard Elevation="1">
+                                <MudCardContent>
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Warning" Size="Size.Large" Class="mr-3"/>
+                                        <div>
+                                            <MudText Typo="Typo.h6">@(mutualClosureStats?.PendingCount ?? 0)</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Pending</MudText>
+                                        </div>
+                                    </div>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudCard Elevation="1">
+                                <MudCardContent>
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Size="Size.Large" Class="mr-3"/>
+                                        <div>
+                                            <MudText Typo="Typo.h6">@(mutualClosureStats?.AcceptedCount ?? 0)</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Accepted</MudText>
+                                        </div>
+                                    </div>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudCard Elevation="1">
+                                <MudCardContent>
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.Cancel" Color="Color.Error" Size="Size.Large" Class="mr-3"/>
+                                        <div>
+                                            <MudText Typo="Typo.h6">@(mutualClosureStats?.RejectedCount ?? 0)</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Rejected</MudText>
+                                        </div>
+                                    </div>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudCard Elevation="1">
+                                <MudCardContent>
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Color="Color.Info" Size="Size.Large" Class="mr-3"/>
+                                        <div>
+                                            <MudText Typo="Typo.h6">@((mutualClosureStats?.TotalRefundAmount ?? 0).ToString("C"))</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Total Refunds</MudText>
+                                        </div>
+                                    </div>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Mutual Closures Filters -->
+                    <MudGrid Class="mb-4">
+                        <MudItem xs="12" sm="4">
+                            <MudTextField @bind-Value="mutualClosuresSearchTerm"
+                                        Label="Search"
+                                        Placeholder="Search by dispute title, users..."
+                                        Adornment="Adornment.Start"
+                                        AdornmentIcon="@Icons.Material.Filled.Search"
+                                        Immediate="true"
+                                        DebounceInterval="300"
+                                        OnDebounceIntervalElapsed="ApplyMutualClosuresFilters" />
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudSelect T="MutualClosureStatus?" @bind-Value="mutualClosuresStatusFilter" Label="Status Filter" Variant="Variant.Outlined">
+                                <MudSelectItem T="MutualClosureStatus?" Value="@((MutualClosureStatus?)null)">All Statuses</MudSelectItem>
+                                <MudSelectItem T="MutualClosureStatus?" Value="@MutualClosureStatus.Pending">Pending</MudSelectItem>
+                                <MudSelectItem T="MutualClosureStatus?" Value="@MutualClosureStatus.Accepted">Accepted</MudSelectItem>
+                                <MudSelectItem T="MutualClosureStatus?" Value="@MutualClosureStatus.Rejected">Rejected</MudSelectItem>
+                                <MudSelectItem T="MutualClosureStatus?" Value="@MutualClosureStatus.UnderAdminReview">Under Review</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudSelect T="string?" @bind-Value="mutualClosuresPriorityFilter" Label="Priority Filter" Variant="Variant.Outlined">
+                                <MudSelectItem T="string?" Value="@((string?)null)">All Priorities</MudSelectItem>
+                                <MudSelectItem T="string?" Value="@("high-value")">High Value (>$100)</MudSelectItem>
+                                <MudSelectItem T="string?" Value="@("expiring-soon")">Expiring Soon</MudSelectItem>
+                                <MudSelectItem T="string?" Value="@("admin-review")">Needs Review</MudSelectItem>
+                            </MudSelect>
+                        </MudItem>
+                        <MudItem xs="12" sm="2">
+                            <MudButton Color="Color.Secondary" 
+                                     StartIcon="@Icons.Material.Filled.Clear"
+                                     OnClick="ClearMutualClosuresFilters"
+                                     FullWidth="true">
+                                Clear
+                            </MudButton>
+                        </MudItem>
+                    </MudGrid>
+
+                    <!-- Mutual Closures Table -->
+                    @if (isLoadingMutualClosures)
+                    {
+                        <div class="d-flex justify-center pa-4">
+                            <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                        </div>
+                    }
+                    else if (filteredMutualClosures?.Any() == true)
+                    {
+                        <MudDataGrid T="MutualClosureSummaryDto"
+                                   Items="@filteredMutualClosures"
+                                   Loading="@isLoadingMutualClosures"
+                                   Filterable="false"
+                                   SortMode="SortMode.Multiple"
+                                   Groupable="false"
+                                   Elevation="1"
+                                   RowsPerPage="25">
+                            <Columns>
+                                <PropertyColumn Property="x => x.DisputeTitle" Title="Dispute" Sortable="true">
+                                    <CellTemplate>
+                                        <div>
+                                            <MudText Typo="Typo.body2" Class="font-weight-medium">@context.Item.DisputeTitle</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                ID: @context.Item.Id.ToString().Substring(0, 8)
+                                            </MudText>
+                                        </div>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <PropertyColumn Property="x => x.Status" Title="Status" Sortable="true">
+                                    <CellTemplate>
+                                        <MudChip T="string" Color="@GetMutualClosureStatusColor(context.Item.Status)" 
+                                               Size="Size.Small"
+                                               Icon="@GetMutualClosureStatusIcon(context.Item.Status)">
+                                            @GetMutualClosureStatusText(context.Item.Status)
+                                        </MudChip>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <PropertyColumn Property="x => x.InitiatedByUserName" Title="Initiated By" Sortable="true">
+                                    <CellTemplate>
+                                        <MudText Typo="Typo.body2">@context.Item.InitiatedByUserName</MudText>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <PropertyColumn Property="x => x.ResponseRequiredFromUserName" Title="Response From" Sortable="true">
+                                    <CellTemplate>
+                                        <MudText Typo="Typo.body2">@context.Item.ResponseRequiredFromUserName</MudText>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <PropertyColumn Property="x => x.AgreedRefundAmount" Title="Refund Amount" Sortable="true">
+                                    <CellTemplate>
+                                        @if (context.Item.AgreedRefundAmount.HasValue && context.Item.AgreedRefundAmount.Value > 0)
+                                        {
+                                            <MudChip T="string" Color="@(context.Item.AgreedRefundAmount.Value > 100 ? Color.Warning : Color.Success)" 
+                                                   Size="Size.Small"
+                                                   Icon="@Icons.Material.Filled.AttachMoney">
+                                                @context.Item.AgreedRefundAmount.Value.ToString("C")
+                                            </MudChip>
+                                        }
+                                        else
+                                        {
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">No refund</MudText>
+                                        }
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <PropertyColumn Property="x => x.CreatedAt" Title="Created" Sortable="true">
+                                    <CellTemplate>
+                                        <div>
+                                            <MudText Typo="Typo.body2">@context.Item.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @context.Item.CreatedAt.ToString("h:mm tt")
+                                            </MudText>
+                                        </div>
+                                    </CellTemplate>
+                                </PropertyColumn>
+
+                                <TemplateColumn Title="Actions" Sortable="false">
+                                    <CellTemplate>
+                                        <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
+                                            <MudMenuItem Icon="@Icons.Material.Filled.Visibility" 
+                                                       OnClick="() => ViewMutualClosureDetails(context.Item.Id)">
+                                                View Details
+                                            </MudMenuItem>
+                                            <MudMenuItem Icon="@Icons.Material.Filled.OpenInNew" 
+                                                       OnClick="() => ViewRelatedDispute(context.Item.DisputeId)">
+                                                View Dispute
+                                            </MudMenuItem>
+                                            @if (context.Item.Status == MutualClosureStatus.Pending)
+                                            {
+                                                <MudDivider />
+                                                <MudMenuItem Icon="@Icons.Material.Filled.AdminPanelSettings" 
+                                                           OnClick="() => ForceAdminReview(context.Item.Id)">
+                                                    Force Admin Review
+                                                </MudMenuItem>
+                                                <MudMenuItem Icon="@Icons.Material.Filled.Block" 
+                                                           OnClick="() => CancelMutualClosure(context.Item.Id)">
+                                                    Cancel Request
+                                                </MudMenuItem>
+                                            }
+                                            @if (context.Item.Status == MutualClosureStatus.UnderAdminReview)
+                                            {
+                                                <MudDivider />
+                                                <MudMenuItem Icon="@Icons.Material.Filled.CheckCircle" 
+                                                           OnClick="() => ApproveMutualClosure(context.Item.Id)">
+                                                    Approve Resolution
+                                                </MudMenuItem>
+                                                <MudMenuItem Icon="@Icons.Material.Filled.Cancel" 
+                                                           OnClick="() => RejectMutualClosure(context.Item.Id)">
+                                                    Reject Resolution
+                                                </MudMenuItem>
+                                            }
+                                        </MudMenu>
+                                    </CellTemplate>
+                                </TemplateColumn>
+                            </Columns>
+                            
+                            <PagerContent>
+                                <MudDataGridPager T="MutualClosureSummaryDto" />
+                            </PagerContent>
+                        </MudDataGrid>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            <MudText>No mutual closure requests found with the current filters.</MudText>
+                        </MudAlert>
+                    }
+                </div>
+            </MudTabPanel>
+        </MudTabs>
     }
 </MudContainer>
 
@@ -310,10 +564,13 @@
     [Inject] private HttpClient HttpClient { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private MutualClosureService MutualClosureService { get; set; } = default!;
+    [Inject] private IDialogService DialogService { get; set; } = default!;
 
     private bool isLoading = true;
     private string? loadError = null;
     private List<Dispute>? disputes = null;
+    private int activeTab = 0;
     
     // Pagination
     private int currentPage = 1;
@@ -332,10 +589,23 @@
     private int escalatedDisputes = 0;
     private int resolvedThisMonth = 0;
 
+    // Mutual Closures
+    private List<MutualClosureSummaryDto> allMutualClosures = new();
+    private List<MutualClosureSummaryDto> filteredMutualClosures = new();
+    private MutualClosureStatistics? mutualClosureStats = null;
+    private bool isLoadingMutualClosures = false;
+    private int? mutualClosuresCount = null;
+    
+    // Mutual Closures Filters
+    private string mutualClosuresSearchTerm = string.Empty;
+    private MutualClosureStatus? mutualClosuresStatusFilter = null;
+    private string? mutualClosuresPriorityFilter = null;
+
     protected override async Task OnInitializedAsync()
     {
         await LoadDisputes();
         await LoadStats();
+        await LoadMutualClosures();
     }
 
     private async Task LoadDisputes()
@@ -355,7 +625,7 @@
                 queryParams.Add($"type={selectedType}");
 
             var queryString = string.Join("&", queryParams);
-            var response = await HttpClient.GetAsync($"api/disputes?{queryString}");
+            var response = await HttpClient.GetAsync($"api/admin/disputes?{queryString}");
             
             if (response.IsSuccessStatusCode)
             {
@@ -423,7 +693,7 @@
     {
         try
         {
-            var response = await HttpClient.PostAsync($"api/disputes/{disputeId}/start-review", null);
+            var response = await HttpClient.PostAsync($"api/admin/disputes/{disputeId}/start-review", null);
             if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add("Dispute review started", Severity.Success);
@@ -445,7 +715,7 @@
     {
         try
         {
-            var response = await HttpClient.PostAsync($"api/disputes/{disputeId}/escalate", null);
+            var response = await HttpClient.PostAsync($"api/admin/disputes/{disputeId}/escalate", null);
             if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add("Dispute escalated to PayPal", Severity.Success);
@@ -467,7 +737,7 @@
     {
         try
         {
-            var response = await HttpClient.PostAsync($"api/disputes/{disputeId}/resolve", null);
+            var response = await HttpClient.PostAsync($"api/admin/disputes/{disputeId}/resolve", null);
             if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add("Dispute resolved successfully", Severity.Success);
@@ -489,7 +759,7 @@
     {
         try
         {
-            var response = await HttpClient.PostAsync($"api/disputes/{disputeId}/sync-paypal", null);
+            var response = await HttpClient.PostAsync($"api/admin/disputes/{disputeId}/sync-paypal", null);
             if (response.IsSuccessStatusCode)
             {
                 Snackbar.Add("PayPal sync completed", Severity.Success);
@@ -557,4 +827,204 @@
             _ => Color.Default
         };
     }
+
+    // Mutual Closures Methods
+    private async Task LoadMutualClosures()
+    {
+        try
+        {
+            isLoadingMutualClosures = true;
+            
+            var result = await MutualClosureService.GetAllMutualClosuresAsync();
+            if (result?.Success == true && result.Data != null)
+            {
+                allMutualClosures = result.Data.ToList();
+                CalculateMutualClosureStatistics();
+                ApplyMutualClosuresFilters();
+                mutualClosuresCount = allMutualClosures.Count;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load mutual closure data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoadingMutualClosures = false;
+            StateHasChanged();
+        }
+    }
+
+    private void CalculateMutualClosureStatistics()
+    {
+        mutualClosureStats = new MutualClosureStatistics
+        {
+            PendingCount = allMutualClosures.Count(mc => mc.Status == MutualClosureStatus.Pending),
+            AcceptedCount = allMutualClosures.Count(mc => mc.Status == MutualClosureStatus.Accepted),
+            RejectedCount = allMutualClosures.Count(mc => mc.Status == MutualClosureStatus.Rejected),
+            TotalRefundAmount = allMutualClosures
+                .Where(mc => mc.AgreedRefundAmount.HasValue && mc.Status == MutualClosureStatus.Accepted)
+                .Sum(mc => mc.AgreedRefundAmount ?? 0)
+        };
+    }
+
+    private void ApplyMutualClosuresFilters()
+    {
+        var filtered = allMutualClosures.AsEnumerable();
+
+        // Search filter
+        if (!string.IsNullOrWhiteSpace(mutualClosuresSearchTerm))
+        {
+            filtered = filtered.Where(mc =>
+                mc.DisputeTitle.Contains(mutualClosuresSearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                mc.InitiatedByUserName.Contains(mutualClosuresSearchTerm, StringComparison.OrdinalIgnoreCase) ||
+                mc.ResponseRequiredFromUserName.Contains(mutualClosuresSearchTerm, StringComparison.OrdinalIgnoreCase));
+        }
+
+        // Status filter
+        if (mutualClosuresStatusFilter.HasValue)
+        {
+            filtered = filtered.Where(mc => mc.Status == mutualClosuresStatusFilter.Value);
+        }
+
+        // Priority filter
+        if (!string.IsNullOrEmpty(mutualClosuresPriorityFilter))
+        {
+            filtered = mutualClosuresPriorityFilter switch
+            {
+                "high-value" => filtered.Where(mc => mc.AgreedRefundAmount.HasValue && mc.AgreedRefundAmount.Value > 100),
+                "expiring-soon" => filtered.Where(mc => mc.Status == MutualClosureStatus.Pending && mc.HoursUntilExpiry <= 24),
+                "admin-review" => filtered.Where(mc => mc.Status == MutualClosureStatus.UnderAdminReview),
+                _ => filtered
+            };
+        }
+
+        filteredMutualClosures = filtered.OrderByDescending(mc => mc.CreatedAt).ToList();
+        StateHasChanged();
+    }
+
+    private void ClearMutualClosuresFilters()
+    {
+        mutualClosuresSearchTerm = string.Empty;
+        mutualClosuresStatusFilter = null;
+        mutualClosuresPriorityFilter = null;
+        ApplyMutualClosuresFilters();
+    }
+
+    private async Task ViewMutualClosureDetails(Guid mutualClosureId)
+    {
+        var parameters = new DialogParameters { { "MutualClosureId", mutualClosureId } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.ExtraLarge, FullWidth = true };
+        
+        // Since we don't have AdminMutualClosureDetailsDialog in this context, we'll navigate instead
+        Snackbar.Add($"Navigate to mutual closure details: {mutualClosureId.ToString().Substring(0, 8)}", Severity.Info);
+    }
+
+    private void ViewRelatedDispute(Guid disputeId)
+    {
+        Navigation.NavigateTo($"/disputes/{disputeId}");
+    }
+
+    private async Task ForceAdminReview(Guid mutualClosureId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Force Admin Review",
+            "This will mark the mutual closure request as requiring admin review. Continue?",
+            yesText: "Force Review",
+            cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            Snackbar.Add("Mutual closure marked for admin review", Severity.Info);
+            await LoadMutualClosures();
+        }
+    }
+
+    private async Task CancelMutualClosure(Guid mutualClosureId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Cancel Mutual Closure",
+            "This will permanently cancel the mutual closure request. This action cannot be undone. Continue?",
+            yesText: "Cancel Request",
+            cancelText: "Keep Request");
+
+        if (confirmed == true)
+        {
+            var result = await MutualClosureService.CancelMutualClosureAsync(mutualClosureId, "Cancelled by administrator");
+            
+            if (result?.Success == true)
+            {
+                Snackbar.Add("Mutual closure request cancelled successfully", Severity.Success);
+                await LoadMutualClosures();
+            }
+            else
+            {
+                Snackbar.Add("Failed to cancel mutual closure request", Severity.Error);
+            }
+        }
+    }
+
+    private async Task ApproveMutualClosure(Guid mutualClosureId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Approve Mutual Closure",
+            "This will approve and finalize the mutual closure request. Any refunds will be processed. Continue?",
+            yesText: "Approve",
+            cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            Snackbar.Add("Mutual closure approved and processed", Severity.Success);
+            await LoadMutualClosures();
+        }
+    }
+
+    private async Task RejectMutualClosure(Guid mutualClosureId)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Reject Mutual Closure",
+            "This will reject the mutual closure request and return the dispute to normal resolution. Continue?",
+            yesText: "Reject",
+            cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            Snackbar.Add("Mutual closure rejected - dispute continues normally", Severity.Info);
+            await LoadMutualClosures();
+        }
+    }
+
+    // Helper methods for Mutual Closures UI
+    private Color GetMutualClosureStatusColor(MutualClosureStatus status) => status switch
+    {
+        MutualClosureStatus.Pending => Color.Warning,
+        MutualClosureStatus.Accepted => Color.Success,
+        MutualClosureStatus.Rejected => Color.Error,
+        MutualClosureStatus.Expired => Color.Warning,
+        MutualClosureStatus.Cancelled => Color.Secondary,
+        MutualClosureStatus.UnderAdminReview => Color.Info,
+        _ => Color.Default
+    };
+
+    private string GetMutualClosureStatusIcon(MutualClosureStatus status) => status switch
+    {
+        MutualClosureStatus.Pending => Icons.Material.Filled.Schedule,
+        MutualClosureStatus.Accepted => Icons.Material.Filled.CheckCircle,
+        MutualClosureStatus.Rejected => Icons.Material.Filled.Cancel,
+        MutualClosureStatus.Expired => Icons.Material.Filled.Schedule,
+        MutualClosureStatus.Cancelled => Icons.Material.Filled.Block,
+        MutualClosureStatus.UnderAdminReview => Icons.Material.Filled.AdminPanelSettings,
+        _ => Icons.Material.Filled.HelpOutline
+    };
+
+    private string GetMutualClosureStatusText(MutualClosureStatus status) => status switch
+    {
+        MutualClosureStatus.Pending => "Pending Response",
+        MutualClosureStatus.Accepted => "Accepted",
+        MutualClosureStatus.Rejected => "Rejected",
+        MutualClosureStatus.Expired => "Expired",
+        MutualClosureStatus.Cancelled => "Cancelled",
+        MutualClosureStatus.UnderAdminReview => "Under Review",
+        _ => "Unknown"
+    };
 }

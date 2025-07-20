@@ -79,6 +79,8 @@ builder.Services.AddScoped<IDisputeService, DisputeService>();
 builder.Services.AddScoped<MessageService>();
 builder.Services.AddScoped<FavoritesService>();
 builder.Services.AddScoped<SampleDataService>();
+builder.Services.AddScoped<ToolsSharing.Frontend.Services.MutualClosureService>();
+builder.Services.AddScoped<AdminMutualClosureService>();
 
 var app = builder.Build();
 

@@ -8,6 +8,10 @@ using ToolsSharing.Core.DTOs.Admin;
 using ToolsSharing.Core.Features.Messaging;
 using ToolsSharing.Core.Features.Users;
 using ToolsSharing.Core.DTOs.Messaging;
+using ToolsSharing.Core.DTOs.Dispute;
+using ToolsSharing.Core.Entities;
+using UpdateDisputeStatusRequest = ToolsSharing.Core.DTOs.Dispute.UpdateDisputeStatusRequest;
+using ResolveDisputeRequest = ToolsSharing.Core.Interfaces.ResolveDisputeRequest;
 using MapsterMapper;
 
 namespace ToolsSharing.API.Controllers;
@@ -832,12 +836,9 @@ public class AdminController : ControllerBase
     {
         try
         {
-            var query = new GetMessageByIdQuery(
-                MessageId: messageId,
-                UserId: "" // Admin access - bypass user check
-            );
-
-            var result = await _messageService.GetMessageByIdAsync(query);
+            // Security: Admin access is already validated by [Authorize(Roles = "Admin")] attribute
+            // Use dedicated admin method that bypasses user access checks
+            var result = await _messageService.GetMessageByIdForAdminAsync(messageId);
             return Ok(result);
         }
         catch (Exception ex)
@@ -958,6 +959,193 @@ public class AdminController : ControllerBase
     }
 
     /// <summary>
+    /// Get disputes for admin management with filtering and pagination
+    /// </summary>
+    [HttpGet("disputes")]
+    public async Task<IActionResult> GetAdminDisputes(
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] DisputeStatus? status = null,
+        [FromQuery] DisputeType? type = null,
+        [FromQuery] DisputeCategory? category = null,
+        [FromQuery] DateTime? startDate = null,
+        [FromQuery] DateTime? endDate = null,
+        [FromQuery] string? sortBy = null,
+        [FromQuery] bool sortDescending = true)
+    {
+        try
+        {
+            var request = new GetDisputesRequest
+            {
+                UserId = string.Empty, // Admin request - will be ignored by admin method
+                PageNumber = page,
+                PageSize = pageSize,
+                Status = status,
+                Type = type,
+                Category = category,
+                StartDate = startDate,
+                EndDate = endDate,
+                SortBy = sortBy,
+                SortDescending = sortDescending
+            };
+
+            // Use dedicated admin method that shows all disputes
+            var result = await _disputeService.GetDisputesForAdminAsync(request);
+            
+            return Ok(new
+            {
+                success = result.Success,
+                data = result.Data,
+                message = result.Message,
+                totalCount = result.TotalCount,
+                pageNumber = page,
+                pageSize = pageSize
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving disputes for admin");
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "An error occurred while retrieving disputes"
+            });
+        }
+    }
+
+    /// <summary>
+    /// Start review process for a dispute (Admin action)
+    /// </summary>
+    [HttpPost("disputes/{disputeId}/start-review")]
+    public async Task<IActionResult> StartDisputeReview(Guid disputeId)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var updateRequest = new UpdateDisputeStatusRequest
+            {
+                DisputeId = disputeId,
+                Status = DisputeStatus.UnderReview,
+                UpdatedBy = userId,
+                Reason = "Admin started review process",
+                Notes = $"Review started by admin user {userId}"
+            };
+
+            var result = await _disputeService.UpdateDisputeStatusAsync(updateRequest);
+
+            if (!result.Success)
+            {
+                return BadRequest(ApiResponse<object>.CreateFailure(result.Message ?? "Failed to start review"));
+            }
+
+            return Ok(ApiResponse<object>.CreateSuccess(new { DisputeId = disputeId }, "Dispute review started successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting review for dispute {DisputeId}", disputeId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to start dispute review"));
+        }
+    }
+
+    /// <summary>
+    /// Escalate dispute to PayPal (Admin action)
+    /// </summary>
+    [HttpPost("disputes/{disputeId}/escalate")]
+    public async Task<IActionResult> EscalateDispute(Guid disputeId)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var result = await _disputeService.EscalateToPayPalAsync(disputeId, userId);
+
+            if (!result.Success)
+            {
+                return BadRequest(ApiResponse<object>.CreateFailure(result.ErrorMessage ?? "Failed to escalate dispute"));
+            }
+
+            return Ok(ApiResponse<object>.CreateSuccess(
+                new { DisputeId = disputeId, ExternalDisputeId = result.ExternalDisputeId }, 
+                "Dispute escalated to PayPal successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error escalating dispute {DisputeId}", disputeId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to escalate dispute"));
+        }
+    }
+
+    /// <summary>
+    /// Resolve dispute with admin privileges
+    /// </summary>
+    [HttpPost("disputes/{disputeId}/resolve")]
+    public async Task<IActionResult> ResolveDispute(Guid disputeId, [FromBody] ResolveDisputeRequest request)
+    {
+        try
+        {
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            request.DisputeId = disputeId;
+            request.ResolvedBy = userId;
+
+            var result = await _disputeService.ResolveDisputeAsync(request);
+
+            if (!result.Success)
+            {
+                return BadRequest(ApiResponse<object>.CreateFailure(result.ErrorMessage ?? "Failed to resolve dispute"));
+            }
+
+            return Ok(ApiResponse<object>.CreateSuccess(
+                new { DisputeId = disputeId, RefundTransactionId = result.RefundTransactionId }, 
+                "Dispute resolved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resolving dispute {DisputeId}", disputeId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to resolve dispute"));
+        }
+    }
+
+    /// <summary>
+    /// Sync dispute with PayPal (Admin action)
+    /// </summary>
+    [HttpPost("disputes/{disputeId}/sync-paypal")]
+    public async Task<IActionResult> SyncPayPalDispute(Guid disputeId)
+    {
+        try
+        {
+            var dispute = await _context.Disputes.FirstOrDefaultAsync(d => d.Id == disputeId);
+            if (dispute?.ExternalDisputeId == null)
+            {
+                return BadRequest(ApiResponse<object>.CreateFailure("Dispute has no external PayPal dispute ID"));
+            }
+
+            var result = await _disputeService.SyncPayPalDisputeAsync(dispute.ExternalDisputeId);
+
+            if (!result.Success)
+            {
+                return BadRequest(ApiResponse<object>.CreateFailure(result.ErrorMessage ?? "Failed to sync with PayPal"));
+            }
+
+            return Ok(ApiResponse<object>.CreateSuccess(
+                new { DisputeId = disputeId, Dispute = result.Dispute }, 
+                "PayPal sync completed successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error syncing PayPal dispute {DisputeId}", disputeId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to sync with PayPal"));
+        }
+    }
+
+    /// <summary>
     /// Get top message senders for analytics
     /// </summary>
     [HttpGet("messaging/top-senders")]
@@ -1004,6 +1192,164 @@ public class AdminController : ControllerBase
             return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to load top senders"));
         }
     }
+
+    /// <summary>
+    /// Get individual user details for admin
+    /// </summary>
+    [HttpGet("users/{userId}")]
+    public async Task<IActionResult> GetUserById(string userId)
+    {
+        try
+        {
+            var user = await _context.Users
+                .Include(u => u.OwnedTools.Where(t => !t.IsDeleted))
+                .Include(u => u.RentalsAsRenter)
+                    .ThenInclude(r => r.Tool)
+                .Include(u => u.RentalsAsOwner)
+                    .ThenInclude(r => r.Tool)
+                .FirstOrDefaultAsync(u => u.Id == userId);
+
+            if (user == null)
+            {
+                return NotFound(ApiResponse<object>.CreateFailure("User not found"));
+            }
+
+            var result = new
+            {
+                user.Id,
+                user.Email,
+                user.FirstName,
+                user.LastName,
+                user.PhoneNumber,
+                user.EmailConfirmed,
+                user.CreatedAt,
+                user.UpdatedAt,
+                user.City,
+                user.Country,
+                user.Address,
+                user.PostalCode,
+                user.PublicLocation,
+                user.DateOfBirth,
+                user.ProfilePictureUrl,
+                IsDeleted = user.IsDeleted,
+                IsSuspended = user.IsDeleted,
+                
+                // Statistics
+                ToolCount = user.OwnedTools.Count,
+                RentalCount = user.RentalsAsRenter.Count,
+                OwnerRentalCount = user.RentalsAsOwner.Count,
+                
+                // Tools owned
+                Tools = user.OwnedTools.Select(t => new
+                {
+                    t.Id,
+                    t.Name,
+                    t.Category,
+                    t.IsAvailable,
+                    t.CreatedAt
+                }).ToList(),
+                
+                // Recent activity
+                RecentRentals = user.RentalsAsRenter
+                    .OrderByDescending(r => r.CreatedAt)
+                    .Take(10)
+                    .Select(r => new
+                    {
+                        r.Id,
+                        r.Status,
+                        r.CreatedAt,
+                        r.StartDate,
+                        r.EndDate,
+                        ToolName = r.Tool.Name
+                    }).ToList()
+            };
+
+            return Ok(ApiResponse<object>.CreateSuccess(result));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting user {UserId}", userId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to load user"));
+        }
+    }
+
+    /// <summary>
+    /// Update user details as admin
+    /// </summary>
+    [HttpPut("users/{userId}")]
+    public async Task<IActionResult> UpdateUser(string userId, [FromBody] AdminUpdateUserRequest request)
+    {
+        try
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return NotFound(ApiResponse<object>.CreateFailure("User not found"));
+            }
+
+            // Update user properties
+            user.FirstName = request.FirstName;
+            user.LastName = request.LastName;
+            user.PhoneNumber = request.PhoneNumber;
+            user.City = request.City;
+            user.Country = request.Country;
+            user.Address = request.Address;
+            user.PostalCode = request.PostalCode;
+            user.PublicLocation = request.PublicLocation;
+            if (request.DateOfBirth.HasValue)
+                user.DateOfBirth = request.DateOfBirth.Value;
+            user.EmailConfirmed = request.EmailConfirmed;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("User {UserId} updated by admin", userId);
+
+            return Ok(ApiResponse<object>.CreateSuccess(new { 
+                UserId = userId,
+                Message = "User updated successfully"
+            }));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating user {UserId}", userId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to update user"));
+        }
+    }
+
+    /// <summary>
+    /// Verify user email
+    /// </summary>
+    [HttpPost("users/{userId}/verify")]
+    public async Task<IActionResult> VerifyUser(string userId)
+    {
+        try
+        {
+            var user = await _context.Users.FindAsync(userId);
+            if (user == null)
+            {
+                return NotFound(ApiResponse<object>.CreateFailure("User not found"));
+            }
+
+            user.EmailConfirmed = true;
+            user.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("User {UserId} verified by admin", userId);
+
+            return Ok(ApiResponse<object>.CreateSuccess(new { 
+                UserId = userId, 
+                Verified = true,
+                Message = "User verified successfully"
+            }));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error verifying user {UserId}", userId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to verify user"));
+        }
+    }
 }
 
 /// <summary>
@@ -1012,4 +1358,21 @@ public class AdminController : ControllerBase
 public class BlockMessageRequest
 {
     public string Reason { get; set; } = string.Empty;
+}
+
+/// <summary>
+/// Request model for admin user updates
+/// </summary>
+public class AdminUpdateUserRequest
+{
+    public string FirstName { get; set; } = string.Empty;
+    public string LastName { get; set; } = string.Empty;
+    public string? PhoneNumber { get; set; }
+    public string? City { get; set; }
+    public string? Country { get; set; }
+    public string? Address { get; set; }
+    public string? PostalCode { get; set; }
+    public string? PublicLocation { get; set; }
+    public DateTime? DateOfBirth { get; set; }
+    public bool EmailConfirmed { get; set; }
 }

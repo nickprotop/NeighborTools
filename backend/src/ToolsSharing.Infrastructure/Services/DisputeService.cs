@@ -33,6 +33,7 @@ public class DisputeService : IDisputeService
     private readonly IEmailNotificationService _emailService;
     private readonly IFileStorageService _fileStorageService;
     private readonly IDisputeNotificationService _notificationService;
+    private readonly IMutualDisputeClosureService _mutualClosureService;
     private readonly ILogger<DisputeService> _logger;
 
     public DisputeService(
@@ -41,6 +42,7 @@ public class DisputeService : IDisputeService
         IEmailNotificationService emailService,
         IFileStorageService fileStorageService,
         IDisputeNotificationService notificationService,
+        IMutualDisputeClosureService mutualClosureService,
         ILogger<DisputeService> logger)
     {
         _context = context;
@@ -48,6 +50,7 @@ public class DisputeService : IDisputeService
         _emailService = emailService;
         _fileStorageService = fileStorageService;
         _notificationService = notificationService;
+        _mutualClosureService = mutualClosureService;
         _logger = logger;
     }
 
@@ -193,6 +196,9 @@ public class DisputeService : IDisputeService
 
         var disputeDto = await MapToDisputeDetailsAsync(dispute);
         
+        // Enhance with mutual closure information
+        disputeDto = await EnhanceDisputeDetailsWithMutualClosureAsync(disputeDto, userId);
+        
         return new DisputeDetailsResult
         {
             Success = true,
@@ -241,13 +247,16 @@ public class DisputeService : IDisputeService
                 .Include(d => d.Messages)
                 .AsQueryable();
 
-            // Apply user filter
-            if (!string.IsNullOrEmpty(request.UserId))
+            // Security: Always require a valid UserId for regular user access
+            if (string.IsNullOrEmpty(request.UserId))
             {
-                query = query.Where(d => d.InitiatedBy == request.UserId || 
-                                        d.Rental.RenterId == request.UserId ||
-                                        d.Rental.Tool.OwnerId == request.UserId);
+                return GetDisputesResult.CreateFailure("User ID is required");
             }
+
+            // Apply user filter - user can only see disputes they're involved in
+            query = query.Where(d => d.InitiatedBy == request.UserId || 
+                                    d.Rental.RenterId == request.UserId ||
+                                    d.Rental.Tool.OwnerId == request.UserId);
 
             // Apply filters
             if (request.Status.HasValue)
@@ -314,6 +323,91 @@ public class DisputeService : IDisputeService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error retrieving disputes for user {UserId}", request.UserId);
+            return GetDisputesResult.CreateFailure($"Failed to retrieve disputes: {ex.Message}");
+        }
+    }
+
+    public async Task<GetDisputesResult> GetDisputesForAdminAsync(GetDisputesRequest request)
+    {
+        try
+        {
+            var query = _context.Disputes
+                .Include(d => d.Rental)
+                    .ThenInclude(r => r.Tool)
+                .Include(d => d.Messages)
+                .AsQueryable();
+
+            // Admin can see all disputes - no user filtering applied
+            // Security: Admin access is validated at controller level via [Authorize(Roles = "Admin")]
+
+            // Apply filters
+            if (request.Status.HasValue)
+                query = query.Where(d => d.Status == request.Status);
+
+            if (request.Type.HasValue)
+                query = query.Where(d => d.Type == request.Type);
+
+            if (request.StartDate.HasValue)
+                query = query.Where(d => d.CreatedAt >= request.StartDate.Value);
+
+            if (request.EndDate.HasValue)
+                query = query.Where(d => d.CreatedAt <= request.EndDate.Value);
+
+            if (request.Category.HasValue)
+                query = query.Where(d => d.Category == request.Category);
+
+            // Get total count before pagination
+            var totalCount = await query.CountAsync();
+
+            // Apply sorting
+            query = request.SortBy?.ToLowerInvariant() switch
+            {
+                "createdat" => request.SortDescending ? query.OrderByDescending(d => d.CreatedAt) : query.OrderBy(d => d.CreatedAt),
+                "status" => request.SortDescending ? query.OrderByDescending(d => d.Status) : query.OrderBy(d => d.Status),
+                "type" => request.SortDescending ? query.OrderByDescending(d => d.Type) : query.OrderBy(d => d.Type),
+                _ => query.OrderByDescending(d => d.CreatedAt)
+            };
+
+            // Apply pagination
+            var disputes = await query
+                .Skip((request.PageNumber - 1) * request.PageSize)
+                .Take(request.PageSize)
+                .ToListAsync();
+
+            // Convert to DTOs
+            var disputeDtos = disputes.Select(d => new DisputeDto
+            {
+                Id = d.Id.ToString(),
+                RentalId = d.RentalId,
+                Subject = d.Title,
+                Description = d.Description,
+                Type = d.Type,
+                Status = d.Status,
+                Category = d.Category,
+                CreatedAt = d.CreatedAt,
+                UpdatedAt = d.UpdatedAt,
+                DisputedAmount = d.DisputeAmount,
+                InitiatedBy = d.InitiatedBy,
+                InitiatedByName = d.InitiatedByName,
+                ExternalDisputeId = d.ExternalDisputeId,
+                Resolution = d.Resolution,
+                ResolvedAt = d.ResolvedAt,
+                ResolutionNotes = d.ResolutionNotes,
+                Rental = d.Rental != null ? new RentalSummaryDto
+                {
+                    Id = d.Rental.Id,
+                    ToolName = d.Rental.Tool?.Name ?? "Unknown Tool",
+                    StartDate = d.Rental.StartDate,
+                    EndDate = d.Rental.EndDate,
+                    TotalCost = d.Rental.TotalCost
+                } : null
+            }).ToList();
+
+            return GetDisputesResult.CreateSuccess(disputeDtos, totalCount, request.PageNumber, request.PageSize);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving disputes for admin");
             return GetDisputesResult.CreateFailure($"Failed to retrieve disputes: {ex.Message}");
         }
     }
@@ -670,6 +764,277 @@ public class DisputeService : IDisputeService
         };
         
         return await AddDisputeMessageAsync(request);
+    }
+
+    // Mutual Closure Integration Methods
+    
+    /// <summary>
+    /// Checks if a dispute is eligible for mutual closure
+    /// </summary>
+    public async Task<MutualClosureEligibilityDto> CheckDisputeMutualClosureEligibilityAsync(Guid disputeId, string userId)
+    {
+        try
+        {
+            var dispute = await _context.Disputes
+                .Include(d => d.Rental)
+                    .ThenInclude(r => r.Tool)
+                .FirstOrDefaultAsync(d => d.Id == disputeId);
+
+            if (dispute == null)
+            {
+                return new MutualClosureEligibilityDto
+                {
+                    IsEligible = false,
+                    Reasons = new List<string> { "Dispute not found" }
+                };
+            }
+
+            // Check user access
+            bool hasAccess = dispute.InitiatedBy == userId ||
+                           dispute.Rental.RenterId == userId ||
+                           dispute.Rental.Tool.OwnerId == userId;
+
+            if (!hasAccess)
+            {
+                return new MutualClosureEligibilityDto
+                {
+                    IsEligible = false,
+                    Reasons = new List<string> { "User not authorized for this dispute" }
+                };
+            }
+
+            // Use mutual closure service to check eligibility
+            return await _mutualClosureService.CheckMutualClosureEligibilityAsync(disputeId, userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking mutual closure eligibility for dispute {DisputeId}", disputeId);
+            return new MutualClosureEligibilityDto
+            {
+                IsEligible = false,
+                Reasons = new List<string> { "An error occurred while checking eligibility" }
+            };
+        }
+    }
+
+    /// <summary>
+    /// Initiates a mutual closure request for a dispute
+    /// </summary>
+    public async Task<CreateMutualClosureResult> InitiateMutualClosureAsync(Guid disputeId, CreateMutualClosureRequest request, string userId)
+    {
+        try
+        {
+            // Verify dispute exists and user has access
+            var dispute = await _context.Disputes
+                .Include(d => d.Rental)
+                    .ThenInclude(r => r.Tool)
+                .FirstOrDefaultAsync(d => d.Id == disputeId);
+
+            if (dispute == null)
+            {
+                return CreateMutualClosureResult.CreateFailure("Dispute not found");
+            }
+
+            // Check user access
+            bool hasAccess = dispute.InitiatedBy == userId ||
+                           dispute.Rental.RenterId == userId ||
+                           dispute.Rental.Tool.OwnerId == userId;
+
+            if (!hasAccess)
+            {
+                return CreateMutualClosureResult.CreateFailure("User not authorized for this dispute");
+            }
+
+            // Check if dispute can be mutually closed
+            if (dispute.Status == DisputeStatus.Closed || dispute.Status == DisputeStatus.Resolved)
+            {
+                return CreateMutualClosureResult.CreateFailure("Cannot create mutual closure for a closed or resolved dispute");
+            }
+
+            // Check if there's already an active mutual closure request
+            var existingMutualClosure = await _context.MutualDisputeClosures
+                .FirstOrDefaultAsync(mc => mc.DisputeId == disputeId && 
+                                          mc.Status == MutualClosureStatus.Pending);
+
+            if (existingMutualClosure != null)
+            {
+                return CreateMutualClosureResult.CreateFailure("A mutual closure request already exists for this dispute");
+            }
+
+            // Set the dispute ID in the request
+            request.DisputeId = disputeId;
+
+            // Delegate to mutual closure service
+            var result = await _mutualClosureService.CreateMutualClosureRequestAsync(request, userId);
+            
+            if (result.Success)
+            {
+                // Update dispute status to indicate mutual closure is pending
+                dispute.LastActionAt = DateTime.UtcNow;
+                dispute.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Mutual closure request created for dispute {DisputeId} by user {UserId}", 
+                    disputeId, userId);
+            }
+
+            return result;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initiating mutual closure for dispute {DisputeId}", disputeId);
+            return CreateMutualClosureResult.CreateFailure("An error occurred while creating the mutual closure request");
+        }
+    }
+
+    /// <summary>
+    /// Gets all mutual closure requests for a dispute
+    /// </summary>
+    public async Task<GetMutualClosuresResult> GetDisputeMutualClosuresAsync(Guid disputeId, string userId)
+    {
+        try
+        {
+            // Verify dispute exists and user has access
+            var dispute = await _context.Disputes
+                .Include(d => d.Rental)
+                    .ThenInclude(r => r.Tool)
+                .FirstOrDefaultAsync(d => d.Id == disputeId);
+
+            if (dispute == null)
+            {
+                return GetMutualClosuresResult.CreateFailure("Dispute not found");
+            }
+
+            // Check user access
+            bool hasAccess = dispute.InitiatedBy == userId ||
+                           dispute.Rental.RenterId == userId ||
+                           dispute.Rental.Tool.OwnerId == userId;
+
+            if (!hasAccess)
+            {
+                return GetMutualClosuresResult.CreateFailure("User not authorized for this dispute");
+            }
+
+            // Delegate to mutual closure service
+            return await _mutualClosureService.GetDisputeMutualClosuresAsync(disputeId, userId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting mutual closures for dispute {DisputeId}", disputeId);
+            return GetMutualClosuresResult.CreateFailure("An error occurred while retrieving mutual closure requests");
+        }
+    }
+
+    /// <summary>
+    /// Handles the completion of a mutual closure (called by mutual closure service)
+    /// Updates the dispute status accordingly
+    /// </summary>
+    public async Task<bool> HandleMutualClosureCompletionAsync(Guid disputeId, MutualClosureStatus status, string resolutionNotes, decimal? refundAmount = null)
+    {
+        try
+        {
+            var dispute = await _context.Disputes.FindAsync(disputeId);
+            if (dispute == null)
+            {
+                _logger.LogWarning("Dispute {DisputeId} not found during mutual closure completion", disputeId);
+                return false;
+            }
+
+            switch (status)
+            {
+                case MutualClosureStatus.Accepted:
+                    dispute.Status = DisputeStatus.Resolved;
+                    dispute.Resolution = DisputeResolution.MutualAgreement;
+                    dispute.ResolvedAt = DateTime.UtcNow;
+                    dispute.ResolutionNotes = resolutionNotes ?? "Dispute resolved through mutual agreement";
+                    dispute.RefundAmount = refundAmount;
+                    break;
+
+                case MutualClosureStatus.Rejected:
+                case MutualClosureStatus.Expired:
+                case MutualClosureStatus.Cancelled:
+                    // Dispute remains in its current status
+                    dispute.LastActionAt = DateTime.UtcNow;
+                    break;
+
+                case MutualClosureStatus.UnderAdminReview:
+                    dispute.Status = DisputeStatus.InProgress;
+                    dispute.LastActionAt = DateTime.UtcNow;
+                    break;
+            }
+
+            dispute.UpdatedAt = DateTime.UtcNow;
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Dispute {DisputeId} updated following mutual closure completion with status {Status}", 
+                disputeId, status);
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error handling mutual closure completion for dispute {DisputeId}", disputeId);
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Updates dispute details to include mutual closure information
+    /// </summary>
+    private async Task<DisputeDetailsDto> EnhanceDisputeDetailsWithMutualClosureAsync(DisputeDetailsDto disputeDetails, string userId)
+    {
+        try
+        {
+            var disputeId = disputeDetails.Id;
+            
+            // Get mutual closure eligibility
+            var eligibility = await _mutualClosureService.CheckMutualClosureEligibilityAsync(disputeId, userId);
+            
+            // Get active mutual closure requests
+            var mutualClosuresResult = await _mutualClosureService.GetDisputeMutualClosuresAsync(disputeId, userId);
+            
+            // Add mutual closure information to available actions
+            var availableActions = disputeDetails.AvailableActions?.ToList() ?? new List<string>();
+            
+            if (eligibility.IsEligible)
+            {
+                availableActions.Add("InitiateMutualClosure");
+            }
+            
+            if (mutualClosuresResult.Success && mutualClosuresResult.Data?.Any() == true)
+            {
+                var activeMutualClosure = mutualClosuresResult.Data
+                    .FirstOrDefault(mc => mc.Status == MutualClosureStatus.Pending);
+                
+                if (activeMutualClosure != null)
+                {
+                    // Get the full mutual closure details to access user IDs
+                    var fullMutualClosure = await _mutualClosureService.GetMutualClosureAsync(activeMutualClosure.Id, userId);
+                    
+                    if (fullMutualClosure != null)
+                    {
+                        if (fullMutualClosure.ResponseRequiredFromUserId == userId)
+                        {
+                            availableActions.Add("RespondToMutualClosure");
+                        }
+                        
+                        if (fullMutualClosure.InitiatedByUserId == userId)
+                        {
+                            availableActions.Add("CancelMutualClosure");
+                        }
+                    }
+                }
+            }
+            
+            disputeDetails.AvailableActions = availableActions;
+            
+            return disputeDetails;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error enhancing dispute details with mutual closure info for dispute {DisputeId}", disputeDetails.Id);
+            return disputeDetails; // Return original details if enhancement fails
+        }
     }
 
     // Helper mapping methods

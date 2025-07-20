@@ -285,6 +285,7 @@ public class DisputesController : ControllerBase
     }
 
     [HttpPost("{id}/escalate")]
+    [Authorize(Roles = "Admin,Support")]
     public async Task<IActionResult> EscalateDispute(Guid id)
     {
         try
@@ -325,6 +326,7 @@ public class DisputesController : ControllerBase
     }
 
     [HttpPost("{id}/resolve")]
+    [Authorize(Roles = "Admin,Support")]
     public async Task<IActionResult> ResolveDispute(Guid id, [FromBody] ResolveDisputeRequest request)
     {
         try
@@ -367,7 +369,58 @@ public class DisputesController : ControllerBase
         }
     }
 
+    [HttpPost("{id}/start-review")]
+    [Authorize(Roles = "Admin,Support")]
+    public async Task<IActionResult> StartDisputeReview(Guid id)
+    {
+        try
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            // Update dispute status to UnderReview
+            var updateRequest = new UpdateDisputeStatusRequest
+            {
+                DisputeId = id,
+                Status = DisputeStatus.UnderReview,
+                UpdatedBy = userId,
+                Reason = "Admin started review process",
+                Notes = $"Review started by admin user {userId}"
+            };
+
+            var result = await _disputeService.UpdateDisputeStatusAsync(updateRequest);
+
+            if (!result.Success)
+            {
+                return BadRequest(new
+                {
+                    success = false,
+                    message = result.Message
+                });
+            }
+
+            return Ok(new
+            {
+                success = true,
+                message = "Dispute review started successfully"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error starting review for dispute {DisputeId}", id);
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "An error occurred while starting dispute review"
+            });
+        }
+    }
+
     [HttpPost("{id}/close")]
+    [Authorize(Roles = "Admin,Support")]
     public async Task<IActionResult> CloseDispute(Guid id, [FromBody] CloseDisputeRequest request)
     {
         try

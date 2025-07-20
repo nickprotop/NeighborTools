@@ -8,6 +8,7 @@ public class GetDisputesRequest
     public string UserId { get; set; } = string.Empty;
     public DisputeStatus? Status { get; set; }
     public DisputeType? Type { get; set; }
+    public DisputeCategory? Category { get; set; }
     public DateTime? StartDate { get; set; }
     public DateTime? EndDate { get; set; }
     public int PageNumber { get; set; } = 1;

@@ -145,3 +145,4 @@ frontend/config.json
 frontend/wwwroot/config.json
 backend/docker/.env
 
+CLAUDE.local.md

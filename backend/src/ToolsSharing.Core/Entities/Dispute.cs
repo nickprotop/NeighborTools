@@ -142,5 +142,6 @@ public enum DisputeResolution
     Replacement,         // Item replacement
     StoreCredit,         // Platform credit
     Mediation,           // Third-party mediation
-    PayPalDecision       // PayPal made the decision
+    PayPalDecision,      // PayPal made the decision
+    MutualAgreement      // Parties reached mutual agreement
 }

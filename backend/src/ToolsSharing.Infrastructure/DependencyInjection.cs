@@ -99,6 +99,14 @@ public static class DependencyInjection
         // Sample Data Service
         services.AddScoped<ISampleDataService, SampleDataService>();
 
+        // Mutual Dispute Closure Configuration
+        services.Configure<MutualClosureConfiguration>(configuration.GetSection("MutualClosure"));
+
+        // Mutual Dispute Closure Services
+        services.AddScoped<IMutualClosureConfigurationService, MutualClosureConfigurationService>();
+        services.AddScoped<IMutualClosureNotificationService, MutualClosureNotificationService>();
+        services.AddScoped<IMutualDisputeClosureService, MutualDisputeClosureService>();
+
         return services;
     }
 }

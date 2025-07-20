@@ -241,4 +241,42 @@ public enum ModerationSeverity
     Critical = 4
 }
 
+public class TopMessageSender
+{
+    public string UserId { get; set; } = "";
+    public string UserName { get; set; } = "";
+    public int MessageCount { get; set; }
+    public int ViolationCount { get; set; }
+    public bool IsActive { get; set; }
+}
+
+public class ViolationSummaryDto
+{
+    public string UserId { get; set; } = "";
+    public string UserName { get; set; } = "";
+    public string Email { get; set; } = "";
+    public int ViolationCount { get; set; }
+    public string RiskLevel { get; set; } = "";
+    public DateTime LastViolation { get; set; }
+    public bool IsSuspended { get; set; }
+    public bool IsWarned { get; set; }
+}
+
+public class MessagingAnalyticsDto
+{
+    public int MessageGrowth { get; set; }
+    public decimal GrowthPercentage { get; set; }
+    public decimal ModerationRate { get; set; }
+    public int ModeratedCount { get; set; }
+    public int ActiveUsers { get; set; }
+    public string AverageResponseTime { get; set; } = "";
+    public List<ViolationPatternDto> TopViolations { get; set; } = new();
+}
+
+public class ViolationPatternDto
+{
+    public string Pattern { get; set; } = "";
+    public int Count { get; set; }
+    public string Severity { get; set; } = "";
+}
 

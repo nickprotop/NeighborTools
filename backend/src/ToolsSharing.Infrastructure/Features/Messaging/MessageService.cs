@@ -207,7 +207,7 @@ public class MessageService : IMessageService
                 return ApiResponse<MessageDto>.CreateFailure("Message not found");
             }
 
-            // Check if user has access to this message and it's not blocked
+            // Check if user has access to this message (sender or recipient)
             if (message.SenderId != query.UserId && message.RecipientId != query.UserId)
             {
                 return ApiResponse<MessageDto>.CreateFailure("Access denied");
@@ -903,6 +903,27 @@ public class MessageService : IMessageService
         catch (Exception ex)
         {
             return ApiResponse<bool>.CreateFailure($"Error validating content: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<MessageDto>> GetMessageByIdForAdminAsync(Guid messageId)
+    {
+        try
+        {
+            var message = await GetMessageWithIncludesAsync(messageId);
+
+            if (message == null)
+            {
+                return ApiResponse<MessageDto>.CreateFailure("Message not found");
+            }
+
+            // Admin can access any message, including blocked ones
+            var messageDto = _mapper.Map<MessageDto>(message);
+            return ApiResponse<MessageDto>.CreateSuccess(messageDto, "Message retrieved successfully");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<MessageDto>.CreateFailure($"Error retrieving message: {ex.Message}");
         }
     }
 }

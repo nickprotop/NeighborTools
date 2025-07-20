@@ -222,9 +222,9 @@
                                 <MudButton Size="Size.Small" 
                                            Variant="Variant.Text" 
                                            Color="Color.Primary"
-                                           StartIcon="@Icons.Material.Filled.Visibility"
-                                           OnClick="@(() => ViewUserDetails(context.Id))">
-                                    View
+                                           StartIcon="@Icons.Material.Filled.Edit"
+                                           OnClick="@(() => EditUser(context.Id))">
+                                    Edit
                                 </MudButton>
                                 @if (!context.EmailConfirmed)
                                 {
@@ -462,9 +462,9 @@
         }
     }
 
-    private void ViewUserDetails(string userId)
+    private void EditUser(string userId)
     {
-        Navigation.NavigateTo($"/admin/users/{userId}");
+        Navigation.NavigateTo($"/admin/users/{userId}/edit");
     }
 
     private async Task ExportUsers()

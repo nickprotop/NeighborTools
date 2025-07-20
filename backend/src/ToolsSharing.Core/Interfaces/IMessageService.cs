@@ -34,4 +34,7 @@ public interface IMessageService
     
     // Legal moderation hook
     Task<ApiResponse<bool>> ValidateMessageContentAsync(string content, string senderId);
+    
+    // Admin-specific operations
+    Task<ApiResponse<MessageDto>> GetMessageByIdForAdminAsync(Guid messageId);
 }
