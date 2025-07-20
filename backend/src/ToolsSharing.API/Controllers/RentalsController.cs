@@ -22,6 +22,13 @@ public class RentalsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> GetRentals([FromQuery] GetRentalsQuery query)
     {
+        // If no specific UserId is provided, use the current user's ID
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(query.UserId) && !string.IsNullOrEmpty(userId))
+        {
+            query = query with { UserId = userId };
+        }
+        
         var result = await _rentalsService.GetRentalsAsync(query);
         return Ok(result);
     }

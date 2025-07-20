@@ -97,13 +97,15 @@ else if (filteredTools != null && filteredTools.Any())
             Showing @(filteredTools?.Count ?? 0) tools
         </MudText>
         
-        <MudSelect T="string" @bind-Value="sortBy" Label="Sort by" Variant="Variant.Outlined" Dense="true" Style="min-width: 150px;" AdornmentIcon="@Icons.Material.Filled.Sort" Adornment="Adornment.Start" @bind-Value:after="StateHasChanged">
-            <MudSelectItem T="string" Value="@("name")">Name</MudSelectItem>
-            <MudSelectItem T="string" Value="@("price-low")">Price: Low to High</MudSelectItem>
-            <MudSelectItem T="string" Value="@("price-high")">Price: High to Low</MudSelectItem>
-            <MudSelectItem T="string" Value="@("rating")">Rating</MudSelectItem>
-            <MudSelectItem T="string" Value="@("newest")">Newest First</MudSelectItem>
-        </MudSelect>
+        <div class="d-flex justify-end">
+            <MudSelect T="string" @bind-Value="sortBy" Label="Sort by" Variant="Variant.Outlined" Dense="true" Style="width: fit-content;" AdornmentIcon="@Icons.Material.Filled.Sort" Adornment="Adornment.Start" @bind-Value:after="StateHasChanged">
+                <MudSelectItem T="string" Value="@("name")">Name</MudSelectItem>
+                <MudSelectItem T="string" Value="@("price-low")">Price: Low to High</MudSelectItem>
+                <MudSelectItem T="string" Value="@("price-high")">Price: High to Low</MudSelectItem>
+                <MudSelectItem T="string" Value="@("rating")">Rating</MudSelectItem>
+                <MudSelectItem T="string" Value="@("newest")">Newest First</MudSelectItem>
+            </MudSelect>
+        </div>
     </div>
     
     <MudGrid>

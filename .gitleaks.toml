@@ -1,0 +1,72 @@
+# GitLeaks Configuration for NeighborTools
+# This file customizes secret detection rules
+
+# General settings
+[extend]
+# Use default GitLeaks rules as base
+useDefault = true
+
+# Custom rules for common .NET/Blazor secrets
+[[rules]]
+id = "connection-string"
+description = "Database connection strings"
+regex = '''(?i)(connectionstring|connstring)\s*[=:]\s*["']?[^"'\s]+["']?'''
+tags = ["database", "connection"]
+
+[[rules]]
+id = "paypal-secret"
+description = "PayPal client secrets"
+regex = '''(?i)(paypal[_-]?secret|paypal[_-]?client[_-]?secret)\s*[=:]\s*["']?[A-Za-z0-9_-]{20,}["']?'''
+tags = ["paypal", "api-key"]
+
+[[rules]]
+id = "jwt-secret"
+description = "JWT signing keys"
+regex = '''(?i)(jwt[_-]?secret|jwt[_-]?key|signing[_-]?key)\s*[=:]\s*["']?[A-Za-z0-9_/+=]{32,}["']?'''
+tags = ["jwt", "authentication"]
+
+[[rules]]
+id = "smtp-password"
+description = "SMTP passwords"
+regex = '''(?i)(smtp[_-]?password|email[_-]?password)\s*[=:]\s*["']?[^"'\s]+["']?'''
+tags = ["email", "smtp"]
+
+# Allowlist for known safe patterns
+[allowlist]
+description = "Safe patterns and file types"
+paths = [
+    '''.*test.*''',
+    '''.*example.*''',
+    '''.*sample.*''',
+    '''.*template.*''',
+    '''.*\.exe''',
+    '''.*\.dll''',
+    '''.*\.so''',
+    '''.*\.dylib''',
+    '''.*\.bin''',
+    '''.*\.jpg''',
+    '''.*\.jpeg''',
+    '''.*\.png''',
+    '''.*\.gif''',
+    '''.*\.pdf''',
+    '''bin/.*''',
+    '''obj/.*''',
+    '''node_modules/.*''',
+    '''\.git/.*'''
+]
+regexes = [
+    '''placeholder''',
+    '''your-.*-here''',
+    '''your-app-password''',
+    '''your-password''',
+    '''your-username''',
+    '''paypal_client_secret''',
+    '''YOUR_REDIS_PASSWORD''',
+    '''REDIS_SERVER_IP''',
+    '''replace-.*''',
+    '''example\.com''',
+    '''localhost''',
+    '''redis:6379''',
+    '''smtpPassword = smtpSettings''',
+    '''SmtpPassword.*'''
+]

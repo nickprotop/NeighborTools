@@ -38,15 +38,17 @@
     <MudTabPanel Text="My Requests" Icon="@Icons.Material.Filled.ShoppingCart">
         <div class="d-flex justify-space-between align-center mb-4">
             <MudText Typo="Typo.h6">Tools I'm Renting</MudText>
-            <MudSelect T="string" @bind-Value="selectedRenterStatus" Label="Status Filter" Variant="Variant.Outlined" Dense="true" Style="min-width: 150px;">
-                <MudSelectItem T="string" Value="@string.Empty">All Status</MudSelectItem>
-                <MudSelectItem T="string" Value="@("Pending")">Pending</MudSelectItem>
-                <MudSelectItem T="string" Value="@("Approved")">Approved</MudSelectItem>
-                <MudSelectItem T="string" Value="@("PickedUp")">Picked Up</MudSelectItem>
-                <MudSelectItem T="string" Value="@("Returned")">Returned</MudSelectItem>
-                <MudSelectItem T="string" Value="@("Rejected")">Rejected</MudSelectItem>
-                <MudSelectItem T="string" Value="@("Cancelled")">Cancelled</MudSelectItem>
-            </MudSelect>
+            <div class="d-flex justify-end">
+                <MudSelect T="string" @bind-Value="selectedRenterStatus" Label="Status Filter" Variant="Variant.Outlined" Dense="true" Style="width: fit-content;">
+                    <MudSelectItem T="string" Value="@string.Empty">All Status</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Pending")">Pending</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Approved")">Approved</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("PickedUp")">Picked Up</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Returned")">Returned</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Rejected")">Rejected</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Cancelled")">Cancelled</MudSelectItem>
+                </MudSelect>
+            </div>
         </div>
         
         @if (isLoadingRenterRentals)
@@ -166,14 +168,16 @@
     <MudTabPanel Text="Tool Rentals" Icon="@Icons.Material.Filled.Build">
         <div class="d-flex justify-space-between align-center mb-4">
             <MudText Typo="Typo.h6">My Tools Being Rented</MudText>
-            <MudSelect T="string" @bind-Value="selectedOwnerStatus" Label="Status Filter" Variant="Variant.Outlined" Dense="true" Style="min-width: 150px;">
-                <MudSelectItem T="string" Value="@string.Empty">All Status</MudSelectItem>
-                <MudSelectItem T="string" Value="@("Pending")">Pending</MudSelectItem>
-                <MudSelectItem T="string" Value="@("Approved")">Approved</MudSelectItem>
-                <MudSelectItem T="string" Value="@("PickedUp")">Picked Up</MudSelectItem>
-                <MudSelectItem T="string" Value="@("Returned")">Returned</MudSelectItem>
-                <MudSelectItem T="string" Value="@("Rejected")">Rejected</MudSelectItem>
-            </MudSelect>
+            <div class="d-flex justify-end">
+                <MudSelect T="string" @bind-Value="selectedOwnerStatus" Label="Status Filter" Variant="Variant.Outlined" Dense="true" Style="width: fit-content;">
+                    <MudSelectItem T="string" Value="@string.Empty">All Status</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Pending")">Pending</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Approved")">Approved</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("PickedUp")">Picked Up</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Returned")">Returned</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Rejected")">Rejected</MudSelectItem>
+                </MudSelect>
+            </div>
         </div>
         
         @if (isLoadingOwnerRentals)

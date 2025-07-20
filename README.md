@@ -1,6 +1,6 @@
 # NeighborTools - Community Tool Sharing Platform
 
-A modern full-stack application for community tool sharing, built with .NET 8 backend and Blazor WebAssembly frontend.
+A modern full-stack application for community tool sharing, built with .NET 9 backend and Blazor WebAssembly frontend.
 
 ## 🚀 Quick Start
 
@@ -29,7 +29,7 @@ NeighborTools enables community members to share tools with each other through a
 
 ## 🏗️ Architecture
 
-### Backend (.NET 8 API)
+### Backend (.NET 9 API)
 - **Clean Architecture** with Core, Infrastructure, and API layers
 - **JWT Authentication** with automatic token handling
 - **Entity Framework Core** with MySQL database
@@ -48,7 +48,7 @@ NeighborTools enables community members to share tools with each other through a
 
 | Component | Technology |
 |-----------|------------|
-| Backend API | .NET 8, ASP.NET Core Web API |
+| Backend API | .NET 9, ASP.NET Core Web API |
 | Frontend | Blazor WebAssembly |
 | Database | MySQL 8.0 |
 | Cache | Redis 7 (configured, not implemented) |
@@ -61,7 +61,7 @@ NeighborTools enables community members to share tools with each other through a
 
 ```
 NeighborTools/
-├── backend/                    # .NET 8 API Backend
+├── backend/                    # .NET 9 API Backend
 │   ├── src/
 │   │   ├── ToolsSharing.API/          # Web API controllers and endpoints
 │   │   ├── ToolsSharing.Core/         # Domain entities and business logic
@@ -74,6 +74,10 @@ NeighborTools/
 │   ├── Services/                      # API communication services
 │   ├── Layout/                        # Layout components
 │   └── Models/                        # Frontend models
+├── .github/workflows/          # GitHub Actions workflows
+│   └── gitleaks.yml                   # Secret scanning workflow
+├── .gitleaks.toml             # GitLeaks configuration
+├── setup-gitleaks.sh          # GitLeaks setup script for new developers
 ├── TODO_*.md                   # Future implementation tasks
 └── start-services.sh          # Main development startup script
 ```
@@ -81,9 +85,10 @@ NeighborTools/
 ## 🔧 Development Setup
 
 ### Prerequisites
-- **.NET 8 SDK** (required)
+- **.NET 9 SDK** (required)
 - **Docker & Docker Compose** (required)
 - **Git** (for cloning)
+- **GitLeaks** (recommended for secret scanning)
 
 ### Backend Setup
 
@@ -167,6 +172,7 @@ The seeded database includes these test accounts:
 - **CORS configuration** for cross-origin requests
 - **Input validation** throughout the application
 - **Authenticated HTTP client** with automatic token injection
+- **Secret scanning** with GitLeaks integration
 
 ## 🚀 Deployment Modes
 
@@ -185,6 +191,202 @@ The seeded database includes these test accounts:
 - API runs with `dotnet run` or `dotnet watch`
 - Hot reload support
 - Easier debugging
+
+## 🔐 Secret Scanning with GitLeaks
+
+NeighborTools includes GitLeaks integration to prevent secrets from being accidentally committed to version control.
+
+### 🛡️ What's Included
+
+- **Pre-commit hook** - Automatically scans staged changes before each commit
+- **GitHub Actions workflow** - Runs on push, pull requests, and weekly schedule
+- **Custom configuration** - Tailored rules for .NET/Blazor projects with allowlist for test values
+- **Multiple output formats** - JSON, CSV, and SARIF reports
+
+### 📦 Installation Options
+
+#### Option 1: Local GitLeaks Installation (Recommended)
+
+**Ubuntu/WSL:**
+```bash
+sudo apt update && sudo apt install gitleaks
+```
+
+**macOS:**
+```bash
+brew install gitleaks
+```
+
+**Windows:**
+```bash
+# Via chocolatey
+choco install gitleaks
+
+# Via scoop
+scoop install gitleaks
+```
+
+#### Option 2: Docker-only Setup
+
+If you prefer not to install GitLeaks locally, you can use the Docker-based hook:
+
+```bash
+# Copy the Docker hook to replace the standard one
+cp .git/hooks/pre-commit-docker .git/hooks/pre-commit
+chmod +x .git/hooks/pre-commit
+```
+
+This requires Docker but no local GitLeaks installation.
+
+### 🚀 Usage
+
+#### Manual Scanning
+
+```bash
+# Scan entire repository
+gitleaks detect --verbose
+
+# Scan staged changes only (before commit)
+gitleaks protect --verbose
+
+# Generate detailed report
+gitleaks detect --report-format=json --report-path=gitleaks-report.json
+
+# Use custom configuration
+gitleaks detect --config=.gitleaks.toml --verbose
+```
+
+#### Automatic Scanning
+
+**Pre-commit Hook:**
+- ✅ Already configured
+- Runs automatically on every `git commit`
+- Blocks commits if secrets are detected
+- Provides clear feedback on what was found
+
+**GitHub Actions:**
+- ✅ Already configured in `.github/workflows/gitleaks.yml`
+- Runs on push to main branches
+- Runs on pull requests
+- Weekly scheduled scans
+- Uploads reports as artifacts
+
+### ⚙️ Configuration
+
+The repository includes a custom `.gitleaks.toml` configuration with:
+
+**Custom Rules:**
+- Database connection strings
+- PayPal client secrets
+- JWT signing keys
+- SMTP passwords
+
+**Allowlist:**
+- Test and example files
+- Placeholder values (`your-password`, `example.com`, etc.)
+- Binary files and build artifacts
+- Development-specific patterns
+
+### 🔧 Team Setup
+
+**For New Developers:**
+
+1. **Quick Setup** (recommended):
+   ```bash
+   # Run the automated setup script
+   ./setup-gitleaks.sh
+   ```
+
+2. **Manual Install** (alternative):
+   ```bash
+   # Ubuntu/WSL
+   sudo apt install gitleaks
+   
+   # macOS
+   brew install gitleaks
+   
+   # Or use Docker-based hook (no installation needed)
+   cp .git/hooks/pre-commit-docker .git/hooks/pre-commit
+   chmod +x .git/hooks/pre-commit
+   ```
+
+3. **Verify Setup:**
+   ```bash
+   # Test the hook
+   echo "test" > test.txt
+   git add test.txt
+   git commit -m "Test commit"  # Should show GitLeaks scan
+   git reset HEAD~1 && rm test.txt  # Cleanup
+   ```
+
+4. **Understand the Workflow:**
+   - Commits are automatically scanned
+   - If secrets are detected, the commit is blocked
+   - Remove the secrets and try again
+   - Use environment variables for real secrets
+
+### 🆘 Troubleshooting
+
+**Pre-commit Hook Issues:**
+
+```bash
+# Check if hook is executable
+ls -la .git/hooks/pre-commit
+
+# Test hook manually
+./.git/hooks/pre-commit
+
+# Re-enable hook if disabled
+chmod +x .git/hooks/pre-commit
+```
+
+**False Positives:**
+
+If GitLeaks flags safe content, you can:
+
+1. **Add to allowlist** in `.gitleaks.toml`:
+   ```toml
+   regexes = [
+       '''your-safe-pattern'''
+   ]
+   ```
+
+2. **Create baseline** to ignore existing issues:
+   ```bash
+   gitleaks detect --report-path=.gitleaks-baseline.json
+   gitleaks detect --baseline-path=.gitleaks-baseline.json
+   ```
+
+**Bypass Hook (Emergency Only):**
+```bash
+git commit --no-verify -m "Emergency commit"
+```
+⚠️ **Only use in emergencies and scan manually afterward!**
+
+### 📋 Security Best Practices
+
+✅ **DO:**
+- Use environment variables for secrets
+- Store secrets in secure vaults (Azure Key Vault, AWS Secrets Manager)
+- Rotate any exposed secrets immediately
+- Run manual scans before major releases
+- Train team members on secret management
+
+❌ **DON'T:**
+- Commit real API keys, passwords, or tokens
+- Ignore GitLeaks warnings without investigation
+- Disable the pre-commit hook permanently
+- Store secrets in configuration files
+
+### 📊 Integration Status
+
+| Integration | Status | Description |
+|-------------|---------|-------------|
+| Pre-commit Hook | ✅ Active | Scans every commit automatically |
+| GitHub Actions | ✅ Configured | Runs on push/PR/schedule |
+| Custom Rules | ✅ Configured | .NET/Blazor specific patterns |
+| Allowlist | ✅ Configured | Ignores test/placeholder values |
+| Docker Support | ✅ Available | No local installation needed |
 
 ## 📊 Future Enhancements
 

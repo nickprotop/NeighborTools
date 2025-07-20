@@ -10,5 +10,6 @@ public record GetRentalsQuery(
     string? UserId = null,
     RentalStatus? Status = null,
     Guid? ToolId = null,
-    string? SortBy = null
+    string? SortBy = null,
+    string? Type = null // "renter", "owner", or null for both
 );

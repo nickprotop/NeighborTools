@@ -49,10 +49,34 @@ public class RentalsService : IRentalsService
             // Apply filters
             if (!string.IsNullOrEmpty(query.UserId))
             {
-                // Filter by renter or owner
-                rentalsQuery = rentalsQuery.Where(r => 
-                    r.RenterId == query.UserId || 
-                    r.Tool.OwnerId == query.UserId);
+                // Filter by role type if specified
+                if (!string.IsNullOrEmpty(query.Type))
+                {
+                    if (query.Type.ToLower() == "renter")
+                    {
+                        // Only rentals where user is the renter
+                        rentalsQuery = rentalsQuery.Where(r => r.RenterId == query.UserId);
+                    }
+                    else if (query.Type.ToLower() == "owner")
+                    {
+                        // Only rentals where user is the tool owner
+                        rentalsQuery = rentalsQuery.Where(r => r.Tool.OwnerId == query.UserId);
+                    }
+                    else
+                    {
+                        // Invalid type, default to both
+                        rentalsQuery = rentalsQuery.Where(r => 
+                            r.RenterId == query.UserId || 
+                            r.Tool.OwnerId == query.UserId);
+                    }
+                }
+                else
+                {
+                    // No type specified, filter by renter or owner
+                    rentalsQuery = rentalsQuery.Where(r => 
+                        r.RenterId == query.UserId || 
+                        r.Tool.OwnerId == query.UserId);
+                }
             }
 
             if (query.Status.HasValue)
