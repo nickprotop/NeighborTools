@@ -142,5 +142,6 @@ context.db-wal
 # Configuration files with sensitive data
 backend/src/ToolsSharing.API/config.json
 frontend/config.json
+frontend/wwwroot/config.json
 backend/docker/.env
 
