@@ -19,6 +19,7 @@ namespace ToolsSharing.Infrastructure.Migrations
             ");
 
             // Essential Admin User - Required for accessing admin panel
+            // Password: Admin123! (hashed)
             migrationBuilder.Sql(@"
                 INSERT IGNORE INTO AspNetUsers (
                     Id, UserName, NormalizedUserName, Email, NormalizedEmail, EmailConfirmed,
@@ -34,7 +35,7 @@ namespace ToolsSharing.Infrastructure.Migrations
                     'admin@neighbortools.com',
                     'ADMIN@NEIGHBORTOOLS.COM',
                     1,
-                    'AQAAAAIAAYagAAAAEGqkdLyOQ2rP3/GfJ5h7V+Y8m3HpNgXN2RwF8L4kJ1pEf0vKXxDo9mZ3VtY5IwQR0Q==',
+                    'AQAAAAIAAYagAAAAENaSYxhAOH+IVf/oWulNX/O4dydxSfnjfF9ibD7VQFKwEYhpEyKCyHO2GNcon+gUDA==',
                     UUID(),
                     UUID(),
                     '+10000000000',

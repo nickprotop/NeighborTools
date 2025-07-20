@@ -771,35 +771,45 @@ When implementing new features or completing tasks, follow this workflow:
 5. Run lint and typecheck commands (e.g., `npm run lint`, `npm run typecheck`, `ruff`, etc.) if available
 6. **NEVER commit changes unless explicitly asked by the user**
 
-### 🔄 CRITICAL: Update TODO Documentation After Feature Completion
+### 🔄 CRITICAL: Update Documentation After Task Completion
 
-**MANDATORY FINAL STEP**: After successfully implementing any feature or completing a significant task, you MUST update the relevant TODO files to reflect the progress:
+**MANDATORY FINAL STEP**: After successfully implementing any feature or completing a significant task, you MUST update the relevant documentation to reflect the progress:
 
-#### Required TODO Updates:
-1. **`TODO_MASTER_INDEX.md`**:
+#### Required Documentation Updates:
+1. **`CHANGELOG.md`** (ALWAYS REQUIRED):
+   - Add entry for completed task with category (Added, Changed, Fixed, etc.)
+   - Include completion date in YYYY-MM-DD format
+   - Provide technical details and impact description
+   - Document any breaking changes or migration requirements
+
+2. **`TODO_MASTER_INDEX.md`**:
    - Mark completed items as ✅ **COMPLETED**
    - Update priority rankings if dependencies are resolved
    - Add new items to "Recently Completed" section with detailed description
    - Adjust phase timelines based on completed work
 
-2. **Specific TODO files** (e.g., `TODO_BASIC_COMMISSION_SYSTEM.md`):
+3. **Specific TODO files** (e.g., `TODO_BASIC_COMMISSION_SYSTEM.md`):
    - Mark completed sections as ✅ **COMPLETED**
    - Update implementation status and progress
    - Note any deviations from original plan (e.g., PayPal instead of Stripe)
    - Document lessons learned or architectural decisions
 
-3. **`CLAUDE.md`** (this file):
+4. **`CLAUDE.md`** (this file):
    - Update "Recently Completed" section with new achievements
    - Add new services to Quick Service Reference if applicable
    - Update Known Working Patterns with new implementations
    - Document any new architectural patterns or best practices
 
-#### Example Update Pattern:
+#### Documentation Update Order:
+1. **First**: Update `CHANGELOG.md` with completed task entry
+2. **Second**: Update relevant TODO files with completion status
+3. **Third**: Update `CLAUDE.md` if architectural changes were made
+
+#### Example CHANGELOG Entry:
 ```markdown
-### ✅ Recently Completed:
-- ✅ [Feature Name] (completed [Date])
-  - [Key achievement 1]
-  - [Key achievement 2] 
-  - [Technical implementation details]
-  - [Architectural decisions made]
+### Fixed
+- **Task Description** (2025-01-20)
+  - Technical implementation details
+  - Impact on users or system functionality
+  - Any breaking changes or migration requirements
 ```
