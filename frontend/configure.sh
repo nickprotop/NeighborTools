@@ -166,7 +166,7 @@ if [ -n "$UPDATE_ENVIRONMENT" ]; then
     # If environment is Production, enable analytics
     if [ "$UPDATE_ENVIRONMENT" = "Production" ]; then
         if command -v jq &> /dev/null; then
-            local temp_file=$(mktemp)
+            temp_file=$(mktemp)
             jq '.Features.EnableAnalytics = true' "$CONFIG_FILE" > "$temp_file" && mv "$temp_file" "$CONFIG_FILE"
             echo "✅ Enabled analytics for Production environment"
         else
