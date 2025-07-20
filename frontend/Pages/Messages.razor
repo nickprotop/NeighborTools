@@ -8,6 +8,7 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject NavigationManager Navigation
+@implements IDisposable
 
 <PageTitle>Messages</PageTitle>
 
@@ -259,10 +260,93 @@
     private List<ConversationDto>? conversations;
     private List<MessageSummaryDto>? messages;
     private MessageStatisticsDto? statistics;
+    private DotNetObjectReference<Messages>? dotNetHelper;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadData();
+        // Mark unread messages as read when page is initially loaded
+        await MarkUnreadMessagesAsRead();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            // Add event listener for when the page becomes visible (user returns from another page)
+            dotNetHelper = DotNetObjectReference.Create(this);
+            await JSRuntime.InvokeVoidAsync("addVisibilityChangeListener", dotNetHelper);
+        }
+    }
+
+    [JSInvokable]
+    public async Task OnPageVisible()
+    {
+        // Mark unread messages as read when user returns to the page
+        await MarkUnreadMessagesAsRead();
+        
+        // Refresh message data when user returns to the page
+        await LoadData();
+        StateHasChanged();
+    }
+
+    private async Task MarkUnreadMessagesAsRead()
+    {
+        try
+        {
+            // Mark unread messages as read
+            if (messages?.Any() == true)
+            {
+                var unreadMessages = messages.Where(m => !m.IsRead).ToList();
+                if (unreadMessages.Any())
+                {
+                    // Mark each unread message as read
+                    var markReadTasks = unreadMessages.Select(async message =>
+                    {
+                        try
+                        {
+                            await MessageService.MarkMessageAsReadAsync(message.Id.ToString());
+                            message.IsRead = true; // Update local state
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to mark message {message.Id} as read: {ex.Message}");
+                        }
+                    });
+                    
+                    await Task.WhenAll(markReadTasks);
+                }
+            }
+            
+            // Mark unread conversations as read
+            if (conversations?.Any() == true)
+            {
+                var unreadConversations = conversations.Where(c => c.UnreadCount > 0).ToList();
+                if (unreadConversations.Any())
+                {
+                    // Mark each conversation with unread messages as read
+                    var markConversationReadTasks = unreadConversations.Select(async conversation =>
+                    {
+                        try
+                        {
+                            await MessageService.MarkConversationAsReadAsync(conversation.Id.ToString());
+                            conversation.UnreadCount = 0; // Update local state
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine($"Failed to mark conversation {conversation.Id} as read: {ex.Message}");
+                        }
+                    });
+                    
+                    await Task.WhenAll(markConversationReadTasks);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Don't show errors to user for read marking failures
+            Console.WriteLine($"Error marking messages as read: {ex.Message}");
+        }
     }
 
     private async Task LoadData()
@@ -476,5 +560,23 @@
     private Color GetMessageAvatarColor(MessageSummaryDto message)
     {
         return message.IsRead ? Color.Default : Color.Primary;
+    }
+
+    // Cleanup
+    public void Dispose()
+    {
+        try
+        {
+            // Dispose the visibility change listener
+            if (dotNetHelper != null)
+            {
+                JSRuntime.InvokeVoidAsync("disposeVisibilityListener", dotNetHelper);
+                dotNetHelper.Dispose();
+            }
+        }
+        catch
+        {
+            // Ignore disposal errors
+        }
     }
 }

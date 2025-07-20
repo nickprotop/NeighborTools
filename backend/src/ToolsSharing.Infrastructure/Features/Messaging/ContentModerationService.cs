@@ -1,6 +1,7 @@
 using System.Text.RegularExpressions;
 using Microsoft.EntityFrameworkCore;
 using ToolsSharing.Core.Interfaces;
+using ToolsSharing.Core.DTOs.ContentModeration;
 using ToolsSharing.Infrastructure.Data;
 
 namespace ToolsSharing.Infrastructure.Features.Messaging;
@@ -52,7 +53,12 @@ public class ContentModerationService : IContentModerationService
         var result = new ContentModerationResult
         {
             IsApproved = true,
-            Severity = ModerationSeverity.Clean
+            Severity = ModerationSeverity.Clean,
+            Provider = "Basic",
+            ProcessedAt = DateTime.UtcNow,
+            Violations = new List<string>(),
+            Detections = new List<Detection>(),
+            RawResponseJson = null
         };
 
         if (string.IsNullOrWhiteSpace(content))
@@ -292,6 +298,106 @@ public class ContentModerationService : IContentModerationService
                 "Policy compliance"
             };
         }
+    }
+
+    // New interface methods for cloud-based moderation (basic fallback implementations)
+    public async Task<ContentModerationResult> ModerateImageAsync(byte[] imageData, string fileName = "", ContentModerationOptions? options = null)
+    {
+        // Basic service doesn't support image moderation
+        await Task.CompletedTask;
+        return new ContentModerationResult
+        {
+            IsApproved = true, // Allow images by default in basic service
+            ModerationReason = "Image moderation not supported in basic service",
+            Severity = ModerationSeverity.Clean,
+            Provider = "Basic (Image Analysis Unavailable)",
+            ProcessedAt = DateTime.UtcNow
+        };
+    }
+
+    public async Task<ContentModerationResult> ModerateImageAsync(string imageUrl, ContentModerationOptions? options = null)
+    {
+        await Task.CompletedTask;
+        return new ContentModerationResult
+        {
+            IsApproved = true,
+            ModerationReason = "Image moderation not supported in basic service",
+            Severity = ModerationSeverity.Clean,
+            Provider = "Basic (Image Analysis Unavailable)",
+            ProcessedAt = DateTime.UtcNow
+        };
+    }
+
+    public async Task<ContentModerationResult> ModerateTextAsync(string text, ContentModerationOptions? options = null)
+    {
+        return await ValidateContentAsync(text, "system");
+    }
+
+    public async Task<ContentModerationResult> ModerateVideoAsync(byte[] videoData, string fileName = "", ContentModerationOptions? options = null)
+    {
+        await Task.CompletedTask;
+        return new ContentModerationResult
+        {
+            IsApproved = true,
+            ModerationReason = "Video moderation not supported in basic service",
+            Severity = ModerationSeverity.Clean,
+            Provider = "Basic (Video Analysis Unavailable)",
+            ProcessedAt = DateTime.UtcNow
+        };
+    }
+
+    public async Task<ContentModerationResult> ModerateVideoAsync(string videoUrl, ContentModerationOptions? options = null)
+    {
+        await Task.CompletedTask;
+        return new ContentModerationResult
+        {
+            IsApproved = true,
+            ModerationReason = "Video moderation not supported in basic service",
+            Severity = ModerationSeverity.Clean,
+            Provider = "Basic (Video Analysis Unavailable)",
+            ProcessedAt = DateTime.UtcNow
+        };
+    }
+
+    public async Task<WorkflowModerationResult> ExecuteWorkflowAsync(string workflowId, Dictionary<string, object> parameters)
+    {
+        await Task.CompletedTask;
+        return new WorkflowModerationResult
+        {
+            Success = false,
+            WorkflowId = workflowId,
+            ErrorMessage = "Workflow execution not supported in basic service"
+        };
+    }
+
+    public async Task<ServiceHealthResult> CheckServiceHealthAsync()
+    {
+        await Task.CompletedTask;
+        return new ServiceHealthResult
+        {
+            IsHealthy = true,
+            Status = "Healthy",
+            ResponseTime = TimeSpan.FromMilliseconds(1),
+            ServiceInfo = new Dictionary<string, object>
+            {
+                ["service"] = "basic_moderation",
+                ["features"] = "text_patterns_only"
+            }
+        };
+    }
+
+    public async Task<UsageStatsResult> GetUsageStatsAsync(DateTime? startDate = null, DateTime? endDate = null)
+    {
+        await Task.CompletedTask;
+        return new UsageStatsResult
+        {
+            StartDate = startDate ?? DateTime.UtcNow.AddDays(-30),
+            EndDate = endDate ?? DateTime.UtcNow,
+            TotalRequests = 0,
+            SuccessfulRequests = 0,
+            FailedRequests = 0,
+            RequestsByType = new Dictionary<string, int> { ["basic_text_validation"] = 0 }
+        };
     }
 
     private class UserModerationHistory

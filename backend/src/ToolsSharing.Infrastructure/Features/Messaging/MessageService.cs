@@ -4,6 +4,7 @@ using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Core.Common.Models.EmailNotifications;
 using ToolsSharing.Core.DTOs.Messaging;
+using ToolsSharing.Core.DTOs.ContentModeration;
 using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Features.Messaging;
 using ToolsSharing.Core.Interfaces;
@@ -126,15 +127,17 @@ public class MessageService : IMessageService
                 }
             }
 
-            // Update conversation only for non-blocked messages
+            // Save conversation and message first to avoid circular dependency
+            await _context.SaveChangesAsync();
+
+            // Update conversation with last message info only for non-blocked messages
             if (!isBlocked)
             {
                 conversation.LastMessageAt = DateTime.UtcNow;
                 conversation.LastMessageId = message.Id;
                 conversation.UpdatedAt = DateTime.UtcNow;
+                await _context.SaveChangesAsync();
             }
-
-            await _context.SaveChangesAsync();
 
             // For blocked messages: return error to user but message is saved for audit
             if (isBlocked)

@@ -89,8 +89,37 @@ public static class DependencyInjection
         services.AddScoped<IMobileNotificationService, MobileNotificationService>();
         services.AddScoped<ISmsNotificationService, SmsNotificationService>();
 
-        // Messaging Services
-        services.AddScoped<IContentModerationService, ContentModerationService>();
+        // Content Moderation Configuration
+        services.Configure<SightEngineConfiguration>(configuration.GetSection("SightEngine"));
+        services.Configure<CascadedModerationConfiguration>(configuration.GetSection("CascadedModeration"));
+        
+        // Content Moderation Services - Register all services
+        services.AddScoped<ContentModerationService>(); // Basic service (always available)
+        
+        var sightEngineConfig = configuration.GetSection("SightEngine").Get<SightEngineConfiguration>();
+        if (sightEngineConfig?.IsConfigured == true)
+        {
+            services.AddHttpClient<SightEngineService>();
+            services.AddScoped<SightEngineService>(); // Register as concrete service
+        }
+        
+        var cascadedConfig = configuration.GetSection("CascadedModeration").Get<CascadedModerationConfiguration>();
+        if (cascadedConfig?.EnableCascadedModeration == true && sightEngineConfig?.IsConfigured == true)
+        {
+            // Use cascaded service (basic + SightEngine)
+            services.AddScoped<IContentModerationService, CascadedContentModerationService>();
+        }
+        else if (sightEngineConfig?.IsConfigured == true)
+        {
+            // Use SightEngine only
+            services.AddScoped<IContentModerationService, SightEngineService>();
+        }
+        else
+        {
+            // Use basic service only
+            services.AddScoped<IContentModerationService, ContentModerationService>();
+        }
+        
         services.AddScoped<IMessageService, MessageService>();
 
         // Favorites Service

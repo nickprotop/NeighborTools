@@ -245,7 +245,7 @@
 
         try
         {
-            var attachments = new List<FileUploadRequest>();
+            var attachments = new List<MessageAttachmentUpload>();
             
             if (selectedFiles?.Any() == true)
             {
@@ -261,11 +261,12 @@
                     using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024);
                     await stream.ReadAsync(fileContent);
                     
-                    attachments.Add(new FileUploadRequest
+                    attachments.Add(new MessageAttachmentUpload
                     {
                         FileName = file.Name,
                         ContentType = file.ContentType,
-                        FileData = fileContent
+                        Content = fileContent,
+                        FileSize = fileContent.Length
                     });
                 }
             }
@@ -275,7 +276,7 @@
                 var replyRequest = new ReplyToMessageRequest
                 {
                     Content = messageContent.Trim(),
-                    Attachments = attachments.Any() ? attachments : null
+                    Attachments = attachments.Any() ? attachments : new List<MessageAttachmentUpload>()
                 };
 
                 var response = await MessageService.ReplyToMessageAsync(ReplyToMessageId, replyRequest);
@@ -300,7 +301,7 @@
                     ToolId = string.IsNullOrEmpty(ToolId) ? null : Guid.Parse(ToolId),
                     Priority = MessagePriority.Normal,
                     Type = MessageType.Direct,
-                    Attachments = attachments.Any() ? attachments : null
+                    Attachments = attachments.Any() ? attachments : new List<MessageAttachmentUpload>()
                 };
 
                 var response = await MessageService.SendMessageAsync(sendRequest);

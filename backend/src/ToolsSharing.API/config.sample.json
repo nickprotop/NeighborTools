@@ -68,5 +68,74 @@
     "DataRetentionPeriodYears": 7,
     "CookieConsentExpiryDays": 365,
     "PrivacyPolicyVersion": "1.0"
+  },
+  "SightEngine": {
+    "_Comment": "Content moderation service configuration. Get API credentials from https://sightengine.com/",
+    "_Instructions": "Set ApiUser and ApiSecret from your SightEngine dashboard. Leave empty to disable content moderation.",
+    "ApiUser": "",
+    "ApiSecret": "",
+    "BaseUrl": "https://api.sightengine.com/1.0",
+    "TimeoutSeconds": 30,
+    "MaxRetries": 3,
+    "EnableLogging": true,
+    "EnableCaching": false,
+    "CacheDurationMinutes": 60,
+    "Models": {
+      "Image": [
+        "nudity-2.0",
+        "wad",
+        "offensive",
+        "faces",
+        "face-attributes",
+        "celebrities",
+        "text-content",
+        "logo",
+        "qr-content"
+      ],
+      "Text": [
+        "text-content",
+        "text-classification"
+      ],
+      "Video": [
+        "nudity-2.0",
+        "wad",
+        "offensive"
+      ]
+    },
+    "Thresholds": {
+      "_Comment": "Comprehensive detection thresholds for all SightEngine models",
+      "NudityThreshold": 0.5,
+      "WeaponThreshold": 0.7,
+      "AlcoholThreshold": 0.6,
+      "DrugThreshold": 0.7,
+      "OffensiveThreshold": 0.6,
+      "ProfanityThreshold": 0.5,
+      "TextContentThreshold": 0.5,
+      "SexualThreshold": 0.5,
+      "DiscriminatoryThreshold": 0.4,
+      "InsultingThreshold": 0.5,
+      "ViolentThreshold": 0.3,
+      "ToxicThreshold": 0.5,
+      "SelfHarmThreshold": 0.3
+    },
+    "Workflows": {
+      "ImageModerationWorkflow": "",
+      "TextModerationWorkflow": "",
+      "VideoModerationWorkflow": "",
+      "CustomWorkflows": {}
+    }
+  },
+  "CascadedModeration": {
+    "_Comment": "Two-stage content moderation configuration to reduce SightEngine API costs",
+    "_Instructions": "Basic moderation runs first, SightEngine only called for content that passes basic checks",
+    "EnableCascadedModeration": true,
+    "SightEngineThreshold": "Severe",
+    "AllowImagesWhenSightEngineUnavailable": false,
+    "AllowVideosWhenSightEngineUnavailable": false,
+    "SightEngineModels": [
+      "text-content",
+      "text-classification"
+    ],
+    "SightEngineTimeoutSeconds": 10
   }
 }

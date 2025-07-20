@@ -52,12 +52,17 @@
                                        StartIcon="@Icons.Material.Filled.Assignment">
                                 My Rentals
                             </MudButton>
-                            <MudButton Variant="Variant.Text" 
-                                       Href="/messages" 
-                                       Class="nav-link"
-                                       StartIcon="@Icons.Material.Filled.Message">
-                                Messages
-                            </MudButton>
+                            <MudBadge Content="@unreadMessageCount" 
+                                      Color="Color.Error" 
+                                      Overlap="true" 
+                                      Visible="@(unreadMessageCount > 0)">
+                                <MudButton Variant="Variant.Text" 
+                                           Href="/messages" 
+                                           Class="nav-link"
+                                           StartIcon="@Icons.Material.Filled.Message">
+                                    Messages
+                                </MudButton>
+                            </MudBadge>
                             @if (hasOpenDisputes)
                             {
                                 <MudButton Variant="Variant.Text" 
@@ -191,14 +196,19 @@
                                    OnClick="CloseMobileMenu">
                             My Rentals
                         </MudButton>
-                        <MudButton Variant="Variant.Text" 
-                                   Href="/messages" 
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.Message"
-                                   Class="mobile-nav-item"
-                                   OnClick="CloseMobileMenu">
-                            Messages
-                        </MudButton>
+                        <MudBadge Content="@unreadMessageCount" 
+                                  Color="Color.Error" 
+                                  Overlap="true" 
+                                  Visible="@(unreadMessageCount > 0)">
+                            <MudButton Variant="Variant.Text" 
+                                       Href="/messages" 
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Message"
+                                       Class="mobile-nav-item"
+                                       OnClick="CloseMobileMenu">
+                                Messages
+                            </MudButton>
+                        </MudBadge>
                         @if (hasOpenDisputes)
                         {
                             <MudButton Variant="Variant.Text" 
@@ -729,12 +739,14 @@
     [Inject] private NavigationManager Navigation { get; set; } = default!;
     [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
     [Inject] private IDisputeService DisputeService { get; set; } = default!;
+    [Inject] private MessageService MessageService { get; set; } = default!;
     [Inject] private AppSettings AppSettings { get; set; } = default!;
 
     private bool mobileMenuOpen = false;
     private string? currentUserId = null;
     private bool isAdmin = false;
     private bool hasOpenDisputes = false;
+    private int unreadMessageCount = 0;
 
     protected override async Task OnInitializedAsync()
     {
@@ -742,12 +754,25 @@
         
         // Subscribe to authentication state changes
         AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        
+        // Subscribe to navigation changes to refresh unread count
+        Navigation.LocationChanged += OnLocationChanged;
     }
 
     private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
     {
         await LoadCurrentUserIdAsync();
         await InvokeAsync(StateHasChanged);
+    }
+
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        // Refresh unread count when navigating (especially useful when coming back from messages page)
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            await LoadUnreadMessageCountAsync();
+            await InvokeAsync(StateHasChanged);
+        }
     }
 
     private async Task LoadCurrentUserIdAsync()
@@ -768,12 +793,16 @@
                 
                 // Check for open disputes
                 await CheckOpenDisputesAsync();
+                
+                // Load unread message count
+                await LoadUnreadMessageCountAsync();
             }
             else
             {
                 currentUserId = null;
                 isAdmin = false;
                 hasOpenDisputes = false;
+                unreadMessageCount = 0;
             }
         }
         catch
@@ -781,6 +810,7 @@
             currentUserId = null;
             isAdmin = false;
             hasOpenDisputes = false;
+            unreadMessageCount = 0;
         }
     }
 
@@ -812,9 +842,36 @@
         }
     }
 
+    private async Task LoadUnreadMessageCountAsync()
+    {
+        try
+        {
+            var response = await MessageService.GetUnreadMessageCountAsync();
+            if (response.Success)
+            {
+                unreadMessageCount = response.Data;
+            }
+            else
+            {
+                unreadMessageCount = 0;
+            }
+        }
+        catch
+        {
+            unreadMessageCount = 0;
+        }
+    }
+
+    public async Task RefreshUnreadMessageCountAsync()
+    {
+        await LoadUnreadMessageCountAsync();
+        StateHasChanged();
+    }
+
     public void Dispose()
     {
         AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 
     private void ToggleMobileMenu()

@@ -75,7 +75,7 @@ public class SendMessageRequest
     public Guid? ToolId { get; set; }
     public MessagePriority Priority { get; set; } = MessagePriority.Normal;
     public MessageType Type { get; set; } = MessageType.Direct;
-    public List<FileUploadRequest> Attachments { get; set; } = new();
+    public List<MessageAttachmentUpload> Attachments { get; set; } = new();
 }
 
 public class CreateConversationRequest
@@ -127,6 +127,14 @@ public class MarkMessageAsReadRequest
     public Guid MessageId { get; set; }
 }
 
+public class MessageAttachmentUpload
+{
+    public string FileName { get; set; } = "";
+    public string ContentType { get; set; } = "";
+    public byte[] Content { get; set; } = Array.Empty<byte>();
+    public long FileSize { get; set; }
+}
+
 public class FileUploadRequest
 {
     public string FileName { get; set; } = "";
@@ -137,7 +145,7 @@ public class FileUploadRequest
 public class ReplyToMessageRequest
 {
     public string Content { get; set; } = "";
-    public List<FileUploadRequest>? Attachments { get; set; }
+    public List<MessageAttachmentUpload>? Attachments { get; set; }
 }
 
 public class MessageAttachmentRequest

@@ -52,6 +52,8 @@ This document provides a prioritized overview of all planned features and improv
 - **DTO Consistency** - Standardized property mapping between backend and frontend DTOs
 - **MudBlazor 8.x Compatibility** - Fixed component type parameters and property binding issues
 - **Professional UI Design** - Modern conversation list with avatars, unread indicators, and responsive layout
+- **Auto-Read Functionality** - Messages automatically marked as read when viewed with page visibility detection
+- **Navigation Badges** - Unread message count badges on navigation links with real-time updates
 
 ### **✅ Comprehensive Favorites System** - COMPLETED (January 2025)
 - **Complete Database Schema** - Favorite entity with User-Tool relationships, unique constraints, and proper indexing
@@ -64,6 +66,31 @@ This document provides a prioritized overview of all planned features and improv
 - **Smart Validation** - Users cannot favorite their own tools, with real-time UI feedback
 - **Navigation Integration** - Favorites accessible via user profile menu on both desktop and mobile
 - **Blazor Best Practices** - Refactored conditional rendering to use separate @if blocks instead of problematic @if/@else chains
+
+### **✅ Advanced Content Moderation System** - COMPLETED (January 2025)
+- **Two-Stage Cascaded Architecture** - Cost-optimized basic validation + SightEngine AI analysis pipeline
+- **SightEngine Integration** - Professional AI content moderation with text-content and text-classification models
+- **Comprehensive Detection** - Sexual, discriminatory, violent, toxic, self-harm, PII, spam, extremism detection
+- **Cost Optimization** - Basic validation filters obvious violations before expensive AI analysis
+- **Fallback Mechanisms** - Graceful degradation when SightEngine unavailable with configurable policies
+- **Configuration Management** - Extensive threshold and model configuration with CascadedModerationConfiguration
+- **Result Combination Logic** - Intelligent merging of basic and AI results using most restrictive approach
+- **Detailed Documentation** - Updated MESSAGING_MODERATION_WORKFLOW.md with architectural details
+- **Security Integration** - Secure admin validation and comprehensive audit logging
+- **Performance Monitoring** - Processing time tracking and service health monitoring
+
+### **✅ Mutual Dispute Closure System** - COMPLETED (January 2025)
+- **Alternative Dispute Resolution** - Users can resolve disputes through mutual agreement without admin intervention
+- **Complete Backend Infrastructure** - MutualDisputeClosure entity, service layer, and dual controller architecture
+- **Frontend Components** - Status cards, initiation dialogs, response dialogs, and admin management interfaces
+- **Financial Integration** - Refund amount specification, recipient designation, and PayPal transaction tracking
+- **Business Rules Engine** - Eligibility checking, velocity limits, cooldown periods, and fraud prevention
+- **Admin Oversight System** - High-value case review, manual intervention, statistics dashboard, and audit trails
+- **Lifecycle Management** - Request creation, response handling, expiration, cancellation, and automatic processing
+- **Security Safeguards** - Rate limiting, authorization checks, audit logging, and secure user identification
+- **Notification System** - Email notifications for all lifecycle events with reminder and escalation support
+- **Status Management** - Comprehensive status tracking (Pending, Accepted, Rejected, Expired, Cancelled, UnderAdminReview)
+- **Integration Points** - Seamless integration with existing dispute workflow and payment systems
 
 ## Current TODOs - Prioritized Roadmap
 
@@ -358,5 +385,5 @@ Build advanced monetization before mobile
 
 ---
 
-**Last Updated**: December 2024  
+**Last Updated**: January 2025  
 **Next Review**: Quarterly or after major milestone completion
