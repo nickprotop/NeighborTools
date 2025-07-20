@@ -96,6 +96,9 @@ public static class DependencyInjection
         // Favorites Service
         services.AddScoped<IFavoritesService, FavoritesService>();
 
+        // Sample Data Service
+        services.AddScoped<ISampleDataService, SampleDataService>();
+
         return services;
     }
 }

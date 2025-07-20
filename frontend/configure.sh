@@ -77,13 +77,32 @@ done
 
 # Check if no parameters were provided
 if [ "$PARAMS_PROVIDED" = false ]; then
-    echo "❌ Error: No configuration parameters provided"
-    echo "   Use --help to see available options"
-    echo ""
-    echo "Examples:"
-    echo "  ./configure.sh --api-url \"https://api.yourapp.com\""
-    echo "  ./configure.sh --environment \"Production\""
-    exit 1
+    echo "========================================="
+    echo "Frontend Configuration Check"
+    echo "========================================="
+    
+    # Ensure wwwroot directory exists
+    mkdir -p wwwroot
+    
+    CONFIG_FILE="wwwroot/config.json"
+    SAMPLE_FILE="config.sample.json"
+    
+    # Check if config.json exists, if not create it from sample
+    if [ ! -f "$CONFIG_FILE" ]; then
+        echo "📝 Config file not found, creating from template..."
+        if [ -f "$SAMPLE_FILE" ]; then
+            cp "$SAMPLE_FILE" "$CONFIG_FILE"
+            echo "✅ Created $CONFIG_FILE from $SAMPLE_FILE"
+        else
+            echo "❌ Error: Neither $CONFIG_FILE nor $SAMPLE_FILE exists"
+            echo "   Please ensure config.sample.json exists or create wwwroot/config.json manually"
+            exit 1
+        fi
+    else
+        echo "✅ Config file already exists: $CONFIG_FILE"
+        echo "   No changes made. Use --help to see configuration options."
+    fi
+    exit 0
 fi
 
 echo "========================================="

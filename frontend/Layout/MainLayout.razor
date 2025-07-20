@@ -116,6 +116,9 @@
                                         <MudMenuItem Icon="@Icons.Material.Filled.AdminPanelSettings" Href="/admin">
                                             Admin Dashboard
                                         </MudMenuItem>
+                                        <MudMenuItem Icon="@Icons.Material.Filled.Science" Href="/admin/sample-data">
+                                            Sample Data
+                                        </MudMenuItem>
                                     }
                                     <MudDivider />
                                     <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
@@ -260,6 +263,14 @@
                                        Class="mobile-nav-item"
                                        OnClick="CloseMobileMenu">
                                 Admin Dashboard
+                            </MudButton>
+                            <MudButton Variant="Variant.Text" 
+                                       Href="/admin/sample-data" 
+                                       FullWidth="true"
+                                       StartIcon="@Icons.Material.Filled.Science"
+                                       Class="mobile-nav-item"
+                                       OnClick="CloseMobileMenu">
+                                Sample Data
                             </MudButton>
                         }
                     </div>

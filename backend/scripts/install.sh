@@ -71,9 +71,9 @@ MYSQL_ROOT_PASSWORD=$(read_password "MySQL root password" "RootPassword123!")
 MYSQL_USER_PASSWORD=$(read_password "MySQL toolsuser password" "ToolsPassword123!")
 
 echo ""
-echo "🌐 Frontend Configuration"
-echo "========================"
-echo "Configure the frontend base URL for development."
+echo "🌐 Blazor WASM App Configuration"
+echo "==============================="
+echo "Configure the Blazor WebAssembly app URL for development."
 echo ""
 
 # Function to read text input with default
@@ -98,7 +98,7 @@ read_input() {
     fi
 }
 
-FRONTEND_BASE_URL=$(read_input "Frontend base URL" "http://localhost:5000")
+FRONTEND_BASE_URL=$(read_input "Blazor WASM app URL" "http://localhost:5000")
 
 echo ""
 echo "✅ Configuration complete"
@@ -106,7 +106,7 @@ echo "================================================"
 echo "Review your configuration:"
 echo "   MySQL root password: $(echo "$MYSQL_ROOT_PASSWORD" | sed 's/./*/g')"
 echo "   MySQL user password: $(echo "$MYSQL_USER_PASSWORD" | sed 's/./*/g')"
-echo "   Frontend base URL: $FRONTEND_BASE_URL"
+echo "   Blazor WASM app URL: $FRONTEND_BASE_URL"
 echo "================================================"
 echo ""
 echo -n "Proceed with installation? [Y/n]: " >&2
@@ -201,7 +201,7 @@ if [ ! -f "config.json" ]; then
     fi
 fi
 
-# Update the database connection string and frontend base URL in config.json
+# Update the database connection string and Blazor WASM app URL in config.json
 CONNECTION_STRING="server=localhost;port=3306;database=toolssharing;uid=toolsuser;pwd=${MYSQL_USER_PASSWORD}"
 if command -v jq &> /dev/null; then
     # Use jq if available for proper JSON manipulation
@@ -209,18 +209,18 @@ if command -v jq &> /dev/null; then
     jq --arg conn "$CONNECTION_STRING" --arg frontend "$FRONTEND_BASE_URL" \
        '.ConnectionStrings.DefaultConnection = $conn | .Frontend.BaseUrl = $frontend' \
        config.json > "$tmp" && mv "$tmp" config.json
-    echo "✅ Updated database connection string and frontend base URL in config.json (using jq)"
+    echo "✅ Updated database connection string and Blazor WASM app URL in config.json (using jq)"
 else
     # Fallback to sed for basic replacement
     sed -i "s|\"DefaultConnection\": \".*\"|\"DefaultConnection\": \"$CONNECTION_STRING\"|g" config.json
     sed -i "s|\"BaseUrl\": \".*\"|\"BaseUrl\": \"$FRONTEND_BASE_URL\"|g" config.json
-    echo "✅ Updated database connection string and frontend base URL in config.json (using sed)"
+    echo "✅ Updated database connection string and Blazor WASM app URL in config.json (using sed)"
 fi
 
 cd ../..
 
-# Seed initial data (migrations will run automatically)
-echo "🌱 Running database migrations and seeding initial data..."
+# Apply database migrations (essential system data included)
+echo "🗄️ Running database migrations with essential system data..."
 dotnet run --project src/ToolsSharing.API --seed-only
 
 echo ""
@@ -234,12 +234,18 @@ echo "Next steps:"
 echo "  • Run './start-all.sh' to start development environment"
 echo "  • Or run './start-infrastructure.sh' + 'dotnet run' for API debugging"
 echo "  • Access Swagger UI at: http://localhost:5002/swagger"
-echo "  • Frontend will be available at: $FRONTEND_BASE_URL"
+echo "  • Blazor WASM app will be available at: $FRONTEND_BASE_URL"
 echo "  • MySQL: localhost:3306 (user: toolsuser, password: [configured above])"
 echo "  • Redis: localhost:6379"
 echo ""
+echo "Admin Access:"
+echo "  • Essential admin user created: admin@neighbortools.com / Admin123!"
+echo "  • Essential data (roles, tool categories) installed automatically"
+echo "  • Use Admin Panel → Sample Data Management to add/remove test data"
+echo "  • Optional: Add sample users (john.doe@email.com, jane.smith@email.com) via admin panel"
+echo ""
 echo "Configuration Files Updated:"
 echo "  • Docker Compose: Uses environment variables with fallback to defaults"
-echo "  • Backend config.json: Updated with database password and frontend base URL"
+echo "  • Backend config.json: Updated with database password and Blazor WASM app URL"
 echo ""
 echo "Happy coding! 🚀"

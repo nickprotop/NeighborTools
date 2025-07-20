@@ -201,7 +201,7 @@ try
     {
         Log.Information("Running in seed-only mode");
         
-        // Run migrations and seed the database, then exit
+        // Run migrations only (no seeding - use admin panel for sample data)
         using (var scope = app.Services.CreateScope())
         {
             var context = scope.ServiceProvider.GetRequiredService<ToolsSharing.Infrastructure.Data.ApplicationDbContext>();
@@ -211,17 +211,16 @@ try
             await context.Database.MigrateAsync();
             Log.Information("Database migrations applied successfully");
             
-            // Seed the database
-            await ToolsSharing.Infrastructure.Data.DataSeeder.SeedAsync(scope.ServiceProvider);
+            Log.Information("Essential system data loaded via migrations. Use admin panel to add sample data if needed.");
         }
         
-        Log.Information("Database seeding completed. Exiting.");
+        Log.Information("Database setup completed. Exiting.");
         return;
     }
     
     Log.Information("Starting Tools Sharing API");
     
-    // Run database migrations and seed the database
+    // Run database migrations only (essential data is in migrations)
     using (var scope = app.Services.CreateScope())
     {
         var context = scope.ServiceProvider.GetRequiredService<ToolsSharing.Infrastructure.Data.ApplicationDbContext>();
@@ -231,8 +230,7 @@ try
         await context.Database.MigrateAsync();
         Log.Information("Database migrations applied successfully");
         
-        // Seed the database
-        await ToolsSharing.Infrastructure.Data.DataSeeder.SeedAsync(scope.ServiceProvider);
+        Log.Information("Essential system data loaded via migrations. Use admin panel to manage sample data.");
     }
     
     app.Run();

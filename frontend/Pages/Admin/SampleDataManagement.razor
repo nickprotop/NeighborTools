@@ -1,0 +1,374 @@
+@page "/admin/sample-data"
+@using frontend.Services
+@using Microsoft.AspNetCore.Authorization
+@inject SampleDataService SampleDataService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Sample Data Management - NeighborTools Admin</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <MudCard>
+        <MudCardHeader>
+            <CardHeaderContent>
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <div style="display: flex; align-items: center;">
+                        <MudIcon Icon="@Icons.Material.Filled.Science" Style="margin-right: 12px;" />
+                        <MudText Typo="Typo.h5">Sample Data Management</MudText>
+                    </div>
+                    <div>
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Refresh"
+                                   OnClick="RefreshStatusAsync"
+                                   Disabled="@isLoading">
+                            Refresh
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Error" 
+                                   StartIcon="@Icons.Material.Filled.DeleteSweep"
+                                   OnClick="RemoveAllDataAsync"
+                                   Disabled="@(isLoading || !status?.HasAnySampleData == true)"
+                                   Style="margin-left: 8px;">
+                            Remove All
+                        </MudButton>
+                    </div>
+                </div>
+            </CardHeaderContent>
+        </MudCardHeader>
+        <MudCardContent>
+            <MudText Typo="Typo.body1" Class="mb-4">
+                Manage sample/test data for development and demonstration purposes. 
+                Essential system data (roles, categories) is managed automatically via database migrations.
+            </MudText>
+
+            @if (isLoading)
+            {
+                <div style="display: flex; justify-content: center; align-items: center; height: 200px;">
+                    <MudProgressCircular Color="Color.Primary" Indeterminate="true" />
+                </div>
+            }
+            else if (status != null)
+            {
+                <MudGrid>
+                    @foreach (var dataType in status.DataTypes)
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <MudCard Outlined="true" Class="pa-4" Style="height: 100%;">
+                                <div style="display: flex; flex-direction: column; height: 100%;">
+                                    <div style="display: flex; align-items: center; margin-bottom: 12px;">
+                                        <MudIcon Icon="@GetDataTypeIcon(dataType.DataType)" 
+                                                 Color="@(dataType.IsApplied ? Color.Success : Color.Default)"
+                                                 Style="margin-right: 8px;" />
+                                        <MudText Typo="Typo.h6">@dataType.DisplayName</MudText>
+                                    </div>
+                                    
+                                    <MudText Typo="Typo.body2" Class="mb-2" Style="flex-grow: 1;">
+                                        @dataType.Description
+                                    </MudText>
+                                    
+                                    <div style="margin-bottom: 12px;">
+                                        @if (dataType.IsApplied)
+                                        {
+                                            <MudChip T="string" Color="Color.Success" Size="Size.Small">
+                                                Applied (@dataType.Count items)
+                                            </MudChip>
+                                        }
+                                        else
+                                        {
+                                            <MudChip T="string" Color="Color.Default" Size="Size.Small">
+                                                Not Applied
+                                            </MudChip>
+                                        }
+                                    </div>
+                                    
+                                    <div style="display: flex; gap: 8px;">
+                                        @if (!dataType.IsApplied)
+                                        {
+                                            <MudButton Variant="Variant.Filled" 
+                                                       Color="Color.Success" 
+                                                       Size="Size.Small"
+                                                       StartIcon="@Icons.Material.Filled.Add"
+                                                       OnClick="() => ApplyDataTypeAsync(dataType.DataType)"
+                                                       Disabled="@isLoading"
+                                                       FullWidth="true">
+                                                Apply
+                                            </MudButton>
+                                        }
+                                        else
+                                        {
+                                            <MudButton Variant="Variant.Filled" 
+                                                       Color="Color.Error" 
+                                                       Size="Size.Small"
+                                                       StartIcon="@Icons.Material.Filled.Remove"
+                                                       OnClick="() => RemoveDataTypeAsync(dataType.DataType)"
+                                                       Disabled="@isLoading"
+                                                       FullWidth="true">
+                                                Remove
+                                            </MudButton>
+                                        }
+                                    </div>
+                                </div>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+
+                @if (status.DataTypes.Any(d => d.IsApplied))
+                {
+                    <MudDivider Class="my-6" />
+                    
+                    <MudText Typo="Typo.h6" Class="mb-4">Quick Actions</MudText>
+                    
+                    <div style="display: flex; gap: 16px; flex-wrap: wrap;">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Success" 
+                                   StartIcon="@Icons.Material.Filled.GroupAdd"
+                                   OnClick="ApplyCoreDataAsync"
+                                   Disabled="@isLoading">
+                            Apply Core Data (Users + Tools + Rentals)
+                        </MudButton>
+                        
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Info" 
+                                   StartIcon="@Icons.Material.Filled.Chat"
+                                   OnClick="ApplyMessagingDataAsync"
+                                   Disabled="@isLoading">
+                            Apply Messaging Data
+                        </MudButton>
+                        
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Warning" 
+                                   StartIcon="@Icons.Material.Filled.Star"
+                                   OnClick="ApplyReviewsDataAsync"
+                                   Disabled="@isLoading">
+                            Apply Reviews
+                        </MudButton>
+                    </div>
+                }
+            }
+            else
+            {
+                <MudAlert Severity="Severity.Error">
+                    Failed to load sample data status. Please check your connection and try again.
+                </MudAlert>
+            }
+        </MudCardContent>
+    </MudCard>
+    
+    @if (status?.HasAnySampleData == true)
+    {
+        <MudCard Class="mt-4">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <div style="display: flex; align-items: center;">
+                        <MudIcon Icon="@Icons.Material.Filled.Info" Style="margin-right: 12px;" />
+                        <MudText Typo="Typo.h6">Sample Data Information</MudText>
+                    </div>
+                </CardHeaderContent>
+            </MudCardHeader>
+            <MudCardContent>
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    <strong>Sample Users:</strong> john.doe@email.com and jane.smith@email.com (both use password: Password123!)
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mb-2">
+                    <strong>Note:</strong> John Doe has Admin + User roles, Jane Smith has User role only.
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    <strong>Data Relationships:</strong> Removing users will cascade delete ALL their associated data (tools, rentals, messages, reviews, favorites).
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    }
+</MudContainer>
+
+@code {
+    private SampleDataStatusDto? status;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshStatusAsync();
+    }
+
+    private async Task RefreshStatusAsync()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await SampleDataService.GetStatusAsync();
+            if (response.Success && response.Data != null)
+            {
+                status = response.Data;
+                Snackbar.Add("Sample data status refreshed", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Failed to refresh status: {response.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error refreshing status: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ApplyDataTypeAsync(string dataType)
+    {
+        var dataTypeInfo = status?.DataTypes.FirstOrDefault(d => d.DataType == dataType);
+        var displayName = dataTypeInfo?.DisplayName ?? dataType;
+
+        bool? result = await DialogService.ShowMessageBox(
+            "Apply Sample Data",
+            $"Apply {displayName}? This will add sample {dataType.ToLower()} to the database.",
+            yesText: "Apply", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            await ApplyMultipleAsync(new[] { dataType });
+        }
+    }
+
+    private async Task RemoveDataTypeAsync(string dataType)
+    {
+        var dataTypeInfo = status?.DataTypes.FirstOrDefault(d => d.DataType == dataType);
+        var displayName = dataTypeInfo?.DisplayName ?? dataType;
+
+        bool? result = await DialogService.ShowMessageBox(
+            "Remove Sample Data",
+            $"Remove {displayName}? This will permanently delete sample {dataType.ToLower()} and all associated data.",
+            yesText: "Remove", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            try
+            {
+                var response = await SampleDataService.RemoveSampleDataAsync(new List<string> { dataType });
+                if (response.Success && response.Data != null)
+                {
+                    status = response.Data;
+                    Snackbar.Add($"{displayName} removed successfully", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add($"Failed to remove {displayName}: {response.Message}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error removing {displayName}: {ex.Message}", Severity.Error);
+            }
+            finally
+            {
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private async Task ApplyMultipleAsync(string[] dataTypes)
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await SampleDataService.ApplySampleDataAsync(dataTypes.ToList());
+            if (response.Success && response.Data != null)
+            {
+                status = response.Data;
+                Snackbar.Add($"Applied {string.Join(", ", dataTypes)} successfully", Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add($"Failed to apply data: {response.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error applying data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ApplyCoreDataAsync()
+    {
+        await ApplyMultipleAsync(new[] { "Users", "Tools", "Rentals" });
+    }
+
+    private async Task ApplyMessagingDataAsync()
+    {
+        await ApplyMultipleAsync(new[] { "Conversations", "Messages" });
+    }
+
+    private async Task ApplyReviewsDataAsync()
+    {
+        await ApplyMultipleAsync(new[] { "Reviews" });
+    }
+
+    private async Task RemoveAllDataAsync()
+    {
+        bool? result = await DialogService.ShowMessageBox(
+            "Remove All Sample Data",
+            "This will permanently delete ALL sample data including users, tools, rentals, messages, reviews, and conversations. This action cannot be undone.",
+            yesText: "Remove All", cancelText: "Cancel");
+
+        if (result == true)
+        {
+            isLoading = true;
+            StateHasChanged();
+
+            try
+            {
+                var response = await SampleDataService.RemoveAllSampleDataAsync();
+                if (response.Success && response.Data != null)
+                {
+                    status = response.Data;
+                    Snackbar.Add("All sample data removed successfully", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add($"Failed to remove all data: {response.Message}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error removing all data: {ex.Message}", Severity.Error);
+            }
+            finally
+            {
+                isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    private string GetDataTypeIcon(string dataType)
+    {
+        return dataType switch
+        {
+            "Users" => Icons.Material.Filled.People,
+            "Tools" => Icons.Material.Filled.Build,
+            "Rentals" => Icons.Material.Filled.EventNote,
+            "Reviews" => Icons.Material.Filled.Star,
+            "Messages" => Icons.Material.Filled.Message,
+            "Conversations" => Icons.Material.Filled.Chat,
+            _ => Icons.Material.Filled.DataObject
+        };
+    }
+}

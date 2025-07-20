@@ -78,6 +78,7 @@ builder.Services.AddScoped<IPaymentService, PaymentService>();
 builder.Services.AddScoped<IDisputeService, DisputeService>();
 builder.Services.AddScoped<MessageService>();
 builder.Services.AddScoped<FavoritesService>();
+builder.Services.AddScoped<SampleDataService>();
 
 var app = builder.Build();
 
