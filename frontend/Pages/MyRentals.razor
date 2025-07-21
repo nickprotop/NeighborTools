@@ -4,6 +4,7 @@
 @using frontend.Models
 @using frontend.Services
 @using frontend.Components
+@using frontend.Shared
 @inject IRentalService RentalService
 @inject IPaymentService PaymentService
 @inject ISnackbar Snackbar
@@ -77,14 +78,16 @@
                             }
                             
                             <MudCardContent>
-                                <MudText Typo="Typo.h6" GutterBottom="true">@rental.ToolName</MudText>
+                                <MudLink Href="@($"/tools/{rental.ToolId}")" Typo="Typo.h6" Color="Color.Primary" GutterBottom="true">
+                                    @rental.ToolName
+                                </MudLink>
                                 
                                 <div class="d-flex justify-space-between align-center mb-2">
                                     <MudChip T="string" Color="@GetStatusColor(rental.Status)" Size="Size.Small">
                                         @rental.Status
                                     </MudChip>
                                     <MudText Typo="Typo.h6" Color="Color.Primary">
-                                        $@rental.TotalCost.ToString("F2")
+                                        $@(rentalCosts.ContainsKey(rental.Id) && rentalCosts[rental.Id].HasValue ? rentalCosts[rental.Id].Value.ToString("F2") : rental.TotalCost.ToString("F2"))
                                     </MudText>
                                 </div>
                                 
@@ -92,7 +95,23 @@
                                 {
                                     <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-2">
                                         <MudText Typo="Typo.caption">
-                                            <MudIcon Icon="@Icons.Material.Filled.Payment" Size="Size.Small" /> Payment Required
+                                            <MudIcon Icon="@Icons.Material.Filled.Payment" Size="Size.Small" /> Payment Required - Approved and Ready
+                                        </MudText>
+                                    </MudAlert>
+                                }
+                                else if (rental.Status == "Pending")
+                                {
+                                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                                        <MudText Typo="Typo.caption">
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /> Awaiting Owner Approval - Show serious interest by paying upfront
+                                        </MudText>
+                                    </MudAlert>
+                                }
+                                else if (rental.Status == "Approved" && rental.IsPaid)
+                                {
+                                    <MudAlert Severity="Severity.Success" Dense="true" Class="mb-2">
+                                        <MudText Typo="Typo.caption">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" /> Payment Complete - Ready for Pickup
                                         </MudText>
                                     </MudAlert>
                                 }
@@ -123,6 +142,13 @@
                                     </MudText>
                                 }
                                 
+                                @if (rental.Status == "Pending")
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                                        <strong>Optional:</strong> Pay now to demonstrate serious interest. This shows the owner you're committed and may increase your chances of approval.
+                                    </MudText>
+                                }
+                                
                                 <MudText Typo="Typo.caption" Color="Color.Secondary">
                                     Requested: @rental.CreatedAt.ToString("MMM dd, yyyy")
                                 </MudText>
@@ -140,8 +166,11 @@
                                 }
                                 else if (rental.Status == "Pending")
                                 {
-                                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => CancelRental(rental.Id)" StartIcon="@Icons.Material.Filled.Cancel">
-                                        Cancel
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => InitiatePayment(rental.Id)" StartIcon="@Icons.Material.Filled.VerifiedUser" Size="Size.Small">
+                                        Pay Now to Show Commitment
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => CancelRental(rental.Id)" StartIcon="@Icons.Material.Filled.Cancel" Size="Size.Small">
+                                        Cancel Rental
                                     </MudButton>
                                 }
                             </MudCardActions>
@@ -206,16 +235,35 @@
                             }
                             
                             <MudCardContent>
-                                <MudText Typo="Typo.h6" GutterBottom="true">@rental.ToolName</MudText>
+                                <MudLink Href="@($"/tools/{rental.ToolId}")" Typo="Typo.h6" Color="Color.Primary" GutterBottom="true">
+                                    @rental.ToolName
+                                </MudLink>
                                 
                                 <div class="d-flex justify-space-between align-center mb-2">
                                     <MudChip T="string" Color="@GetStatusColor(rental.Status)" Size="Size.Small">
                                         @rental.Status
                                     </MudChip>
                                     <MudText Typo="Typo.h6" Color="Color.Primary">
-                                        $@rental.TotalCost.ToString("F2")
+                                        $@(rentalCosts.ContainsKey(rental.Id) && rentalCosts[rental.Id].HasValue ? rentalCosts[rental.Id].Value.ToString("F2") : rental.TotalCost.ToString("F2"))
                                     </MudText>
                                 </div>
+                                
+                                @if (rental.Status == "Approved" && !rental.IsPaid)
+                                {
+                                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                                        <MudText Typo="Typo.caption">
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /> Waiting for renter payment
+                                        </MudText>
+                                    </MudAlert>
+                                }
+                                else if (rental.Status == "Approved" && rental.IsPaid)
+                                {
+                                    <MudAlert Severity="Severity.Success" Dense="true" Class="mb-2">
+                                        <MudText Typo="Typo.caption">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" /> Payment received
+                                        </MudText>
+                                    </MudAlert>
+                                }
                                 
                                 <MudText Typo="Typo.body2" Class="mb-2">
                                     <strong>Renter:</strong> 
@@ -284,6 +332,7 @@
     private string selectedRenterStatus = string.Empty;
     private string selectedOwnerStatus = string.Empty;
     private int activeTab = 0;
+    private Dictionary<string, decimal?> rentalCosts = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -302,6 +351,9 @@
             if (result.Success)
             {
                 renterRentals = result.Data;
+                
+                // Calculate costs for display
+                await LoadRentalCosts(renterRentals);
             }
             else
             {
@@ -431,32 +483,151 @@
     {
         try
         {
-            if (Guid.TryParse(rentalId, out var rentalGuid))
-            {
-                var result = await PaymentService.InitiatePaymentAsync(rentalGuid);
-                
-                if (result.Success && !string.IsNullOrEmpty(result.Data?.ApprovalUrl))
-                {
-                    Navigation.NavigateTo(result.Data.ApprovalUrl, true);
-                }
-                else
-                {
-                    Snackbar.Add(result.Message ?? "Failed to initiate payment", Severity.Error);
-                }
-            }
-            else
+            if (!Guid.TryParse(rentalId, out var rentalGuid))
             {
                 Snackbar.Add("Invalid rental ID", Severity.Error);
+                return;
+            }
+
+            // Find the rental to get tool details for the dialog
+            var rental = renterRentals?.FirstOrDefault(r => r.Id == rentalId);
+            if (rental?.Tool == null)
+            {
+                Snackbar.Add("Rental information not found", Severity.Error);
+                return;
+            }
+
+            // Calculate rental cost using the backend API for accuracy
+            if (!Guid.TryParse(rental.Tool.Id, out var toolGuid))
+            {
+                Snackbar.Add("Invalid tool ID format", Severity.Error);
+                return;
+            }
+
+            var costResult = await PaymentService.CalculateRentalCostAsync(toolGuid, rental.StartDate, rental.EndDate);
+            if (!costResult.Success || costResult.Data == null)
+            {
+                Snackbar.Add($"Failed to calculate rental cost: {costResult.Message}", Severity.Error);
+                return;
+            }
+            
+            var parameters = new DialogParameters 
+            { 
+                { "RentalId", rentalGuid },
+                { "Tool", rental.Tool },
+                { "RentalAmount", costResult.Data.RentalAmount },
+                { "SecurityDeposit", costResult.Data.SecurityDeposit },
+                { "CommissionAmount", costResult.Data.CommissionAmount },
+                { "CommissionRate", costResult.Data.CommissionRate },
+                { "TotalAmount", costResult.Data.TotalPayerAmount },
+                { "StartDate", rental.StartDate },
+                { "EndDate", rental.EndDate }
+            };
+            
+            var options = new DialogOptions 
+            { 
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true
+            };
+            
+            var dialog = await DialogService.ShowAsync<PaymentConfirmationDialog>("Confirm Payment", parameters, options);
+            var result = await dialog.Result;
+            
+            if (!result.Canceled)
+            {
+                // Payment was initiated successfully, refresh the rentals
+                await LoadRenterRentals();
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error initiating payment: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error opening payment dialog: {ex.Message}", Severity.Error);
         }
     }
 
-    private void CancelRental(string rentalId)
+    private async Task CancelRental(string rentalId)
     {
-        Snackbar.Add("Cancel rental feature coming soon!", Severity.Info);
+        var rental = renterRentals?.FirstOrDefault(r => r.Id == rentalId);
+        if (rental == null)
+        {
+            Snackbar.Add("Rental not found", Severity.Error);
+            return;
+        }
+
+        // Show confirmation dialog
+        var parameters = new DialogParameters
+        {
+            { "Title", "Cancel Rental Request" },
+            { "Message", $"Are you sure you want to cancel your rental request for \"{rental.ToolName}\"?" },
+            { "ShowReasonInput", true },
+            { "ReasonLabel", "Cancellation reason (optional)" },
+            { "ConfirmText", "Cancel Rental" },
+            { "ConfirmColor", Color.Error }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = DialogService.Show<ConfirmationDialog>("Cancel Rental", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is ConfirmationDialogResult dialogResult && dialogResult.Confirmed)
+        {
+            try
+            {
+                var apiResult = await RentalService.CancelRentalAsync(rentalId, dialogResult.Reason);
+                
+                if (apiResult.Success)
+                {
+                    Snackbar.Add("Rental cancelled successfully", Severity.Success);
+                    await LoadRenterRentals(); // Refresh the list
+                }
+                else
+                {
+                    Snackbar.Add($"Error cancelling rental: {apiResult.Message}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error cancelling rental: {ex.Message}", Severity.Error);
+            }
+        }
     }
+
+    private async Task LoadRentalCosts(List<Rental>? rentals)
+    {
+        if (rentals == null) return;
+        
+        foreach (var rental in rentals)
+        {
+            if (rental.Tool != null && Guid.TryParse(rental.Tool.Id, out var toolGuid))
+            {
+                try
+                {
+                    var costResult = await PaymentService.CalculateRentalCostAsync(toolGuid, rental.StartDate, rental.EndDate);
+                    if (costResult.Success && costResult.Data != null)
+                    {
+                        rentalCosts[rental.Id] = costResult.Data.TotalPayerAmount;
+                    }
+                    else
+                    {
+                        rentalCosts[rental.Id] = null;
+                    }
+                }
+                catch
+                {
+                    // Silently fail for individual cost calculations
+                    rentalCosts[rental.Id] = null;
+                }
+            }
+        }
+        
+        StateHasChanged();
+    }
+
 }

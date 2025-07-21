@@ -4,8 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Architecture
 
-NeighborTools is a **community tool sharing platform** with a .NET 9 Web API backend and Blazor WebAssembly frontend. The backend follows **Clean Architecture** with three layers:
-
+NeighborTools is a **community tool sharing platform** with a .NET 9 Web API backend and Blazor WebAssembly frontend. Clean Architecture with:
 - **ToolsSharing.Core** - Domain entities, commands/queries, and interfaces
 - **ToolsSharing.Infrastructure** - Data access, Mapster, and external services  
 - **ToolsSharing.API** - Controllers, JWT authentication, and API configuration
@@ -156,11 +155,13 @@ cd frontend && dotnet run       # Frontend only
 
 ### Backend Development
 ```bash
-# Daily development with interactive API mode selection
-./backend/scripts/start-all.sh
-
 # Infrastructure only (for manual API debugging)
 ./backend/scripts/start-infrastructure.sh
+
+# Start API manually after infrastructure is running
+cd backend && dotnet run --project src/ToolsSharing.API
+
+# DO NOT USE ./backend/scripts/start-all.sh - requires interactive input
 
 # Database migrations
 dotnet ef migrations add MigrationName --project src/ToolsSharing.Infrastructure --startup-project src/ToolsSharing.API
@@ -204,6 +205,15 @@ dotnet restore
 - **Swagger**: http://localhost:5002/swagger
 - **MySQL**: localhost:3306 (user: toolsuser, password: ToolsPassword123!)
 - **Redis**: localhost:6379 (configured but not implemented)
+
+### Docker Images
+- **MySQL**: `mysql:8.0` (container: `tools-sharing-mysql`)
+- **Redis**: `redis:7-alpine` (container: `tools-sharing-redis`)
+
+### Configuration Files
+- **Environment Variables**: `backend/docker/.env`
+- **Docker Compose**: `backend/docker/docker-compose.yml`
+- **Passwords**: All database passwords are stored in `backend/docker/.env` file
 
 ## Authentication Architecture
 
@@ -445,14 +455,6 @@ Comprehensive dispute resolution system with evidence upload, communication, and
   - Queue management and delivery tracking
   - Template types: Authentication, Rentals, Payments, Disputes, Security, Marketing
 
-### Email Notification Types
-The system supports professional email templates for:
-- **Authentication**: Welcome, verification, password reset, security alerts
-- **Rentals**: Requests, approvals, rejections, reminders, overdue notifications
-- **Payments**: Processing confirmations, receipts, payout notifications, failed payments
-- **Disputes**: Creation, messages, status changes, escalation, resolution, evidence upload
-- **Security**: Login alerts, two-factor codes, suspicious activity warnings
-- **System**: Maintenance notifications, terms updates, privacy policy changes
 
 ### File Storage Service
 - **`IFileStorageService`** - Universal file management
@@ -461,69 +463,6 @@ The system supports professional email templates for:
   - Configurable validation rules and storage providers
   - Security features: file type validation, size limits, secure paths
 
-### Usage Examples
-
-#### Payment Processing
-```csharp
-// Inject payment service
-[Inject] private IPaymentService PaymentService { get; set; }
-
-// Process rental payment
-var result = await PaymentService.ProcessRentalPaymentAsync(new ProcessRentalPaymentRequest
-{
-    RentalId = rentalId,
-    PaymentMethod = PaymentMethod.PayPal,
-    ReturnUrl = "https://localhost:5001/payment/success",
-    CancelUrl = "https://localhost:5001/payment/cancel"
-});
-```
-
-#### Dispute Creation
-```csharp
-// Inject dispute service
-[Inject] private IDisputeService DisputeService { get; set; }
-
-// Create dispute with evidence
-var result = await DisputeService.CreateDisputeAsync(new CreateDisputeRequest
-{
-    RentalId = rentalId,
-    Type = DisputeType.ToolDamage,
-    Category = DisputeCategory.Quality,
-    Title = "Tool was damaged upon pickup",
-    Description = "The drill had a broken chuck...",
-    Evidence = evidenceFiles
-});
-```
-
-#### File Upload
-```csharp
-// Inject file storage service
-[Inject] private IFileStorageService FileStorage { get; set; }
-
-// Upload file with validation
-var storagePath = await FileStorage.UploadFileAsync(
-    fileStream, 
-    fileName, 
-    contentType, 
-    folder: "disputes/evidence"
-);
-```
-
-#### Email Notifications
-```csharp
-// Inject email service
-[Inject] private IEmailNotificationService EmailService { get; set; }
-
-// Send notification
-var notification = new DisputeCreatedNotification
-{
-    RecipientEmail = user.Email,
-    RecipientName = user.Name,
-    DisputeTitle = dispute.Title,
-    // ... other properties
-};
-await EmailService.SendNotificationAsync(notification);
-```
 
 ## Error Handling and Validation
 
@@ -550,266 +489,50 @@ The project includes detailed TODO files with prioritized roadmap:
 2. **Medium Priority**: Cloud deployment automation, Redis implementation
 3. **Lower Priority**: Mobile app, advanced monetization features
 
-**Recently Completed**:
-- ✅ .NET 9 upgrade (completed January 2025)
-  - All projects upgraded from .NET 8 to .NET 9
-  - WSL compatibility issues resolved with Directory.Build.props
-  - Docker images updated to .NET 9
-  - All documentation and scripts updated
-- ✅ Frontend compilation fixes (completed January 2025)
-  - Fixed Tool.Images property access in OverdueRentalsManagement.razor (changed to ImageUrls)
-  - Resolved Guid conversion errors in admin components
-  - Fixed MudBlazor 8.x filter lambda expression issues
-  - Resolved nullable reference warnings in ExtendRentalDialog.razor
-- ✅ AutoMapper to Mapster migration
-  - Resolved commercial licensing concerns
-  - Improved performance and maintained functionality
-  - Updated service registrations and configurations
-- ✅ MudBlazor 8.9.0 upgrade  
-  - Updated from 7.15.0 to 8.9.0 for better .NET 9 compatibility
-  - Fixed breaking changes in DialogOptions and dialog API
-  - Updated date picker event handling to use @bind-Date:after
-- ✅ Authentication state consistency fixes
-  - Enhanced JWT token validation in CustomAuthenticationStateProvider
-  - Automatic cleanup of inconsistent auth data
-  - Improved 401 response handling with auto-logout
-- ✅ Dialog component fixes
-  - Fixed rental dialog close/cancel button functionality
-  - Updated DialogParameters to use non-generic approach for MudBlazor 8.x
-  - Resolved MissingMethodException in dialog creation
-- ✅ Admin Dashboard Implementation
-  - Added role-based authentication with Admin role
-  - JWT tokens include role claims and IsAdmin flag
-  - Admin dashboard with comprehensive overview and statistics
-  - Conditional navigation menu items for admin users
-  - John Doe is seeded as admin user for testing
-- ✅ Production-Ready Admin Management System (completed January 2025)
-  - **FraudManagement.razor** - Complete fraud detection center with real-time alerts, risk level filtering, and admin workflows
-  - **UserManagement.razor** - Comprehensive user administration with search, suspend/unsuspend, verification, and activity tracking
-  - **PaymentManagement.razor** - Payment oversight with status management, approval/rejection workflows, retry/refund capabilities
-  - **DisputeManagement.razor** - Full dispute resolution center with filtering, escalation to PayPal, and resolution workflows
-  - **Real Backend Integration** - All admin pages use actual API endpoints instead of mockup data
-  - **Advanced Filtering** - Comprehensive search and filtering capabilities across all management interfaces
-  - **Role-Based Security** - All admin pages protected with `[Authorize(Roles = "Admin")]`
-  - **Professional UI** - Modern MudBlazor 8.x components with responsive design and consistent styling
-- ✅ Comprehensive Payment System (completed January 2025)
-  - PayPal integration with secure webhook validation
-  - Commission calculation and automated owner payouts
-  - Security deposit handling with real PayPal refunds
-  - Advanced fraud detection and velocity limits
-  - Professional receipt generation and tracking
-  - Payment status communication and timeline explanations
-- ✅ Dispute Management System (completed January 2025)
-  - Full dispute workflow with evidence upload capability
-  - File storage service with security validation
-  - Communication system between parties and admins
-  - PayPal dispute API integration for escalation
-  - Comprehensive email notification system
-  - Professional HTML email templates for all dispute events
-- ✅ Advanced Services Architecture (completed January 2025)
-  - Universal email notification service with 15+ template types
-  - File storage abstraction with local/cloud provider support
-  - Payment receipt service with detailed breakdowns
-  - Background services for automated payout processing
-  - Fraud detection service with configurable rules
-- ✅ Comprehensive Rental Workflow System (completed January 2025)
-  - Pickup/return confirmation API endpoints with PATCH /api/rentals/{id}/pickup and /api/rentals/{id}/return
-  - RentalLifecycleService background service for automated rental state transitions and overdue detection
-  - Enhanced RentalDetails.razor with 'Confirm Pickup', 'Confirm Return', and 'Extend Rental' buttons
-  - Progressive return reminder email notifications (2 days before, 1 day before, same day, and overdue escalation)
-  - Overdue rental detection with 1-day, 3-day, 7-day, and weekly notification escalation
-  - Rental extension functionality with conflict detection and additional cost calculation
-  - Admin overdue rental management UI with comprehensive filtering and actions
-  - Mobile push notification infrastructure with device token management (placeholder implementation)
-  - SMS notification infrastructure with Twilio/AWS SNS integration points (placeholder implementation)
-- ✅ Overdue Rental UI Alert System (completed January 2025)
-  - OverdueRentalAlertComponent.razor - Comprehensive overdue alert component with 295 lines of code
-  - Progressive severity levels based on days overdue (Recent -> Moderate -> Severe -> Critical)
-  - Integrated alerts on Home.razor, MyRentals.razor, and MyTools.razor pages
-  - Auto-refresh functionality every 5 minutes with Timer-based updates
-  - Differentiated alerts for renters (need to return) vs owners (tools are overdue)
-  - Action buttons for quick resolution (Mark as Returned, Contact Renter, View Details)
-  - Dismissible alerts with local state management for user experience
-  - Professional styling with CSS classes and progress indicators
-  - Real-time overdue progress calculation with maximum 14-day scale
-- ✅ Comprehensive Messaging System (completed January 2025)
-  - Complete database schema with Messages, Conversations, MessageAttachments tables and proper foreign key relationships
-  - RESTful API endpoints via ConversationsController and MessagesController with full CRUD operations
-  - Modern frontend interface (Messages.razor) with conversations/messages tabs, search functionality, and filtering
-  - Message statistics dashboard with real-time counts for total, unread, sent messages, and conversation counts
-  - Last message preview in conversations list with participant names, formatted timestamps, and truncated content
-  - Advanced filtering system with Read/Unread/All options and intelligent defaults (All selected by default)
-  - Database migration fixes resolving MessageAttachments schema inconsistencies and improved data seeding logic
-  - DTO consistency fixes standardizing property mapping between backend (LastMessageContent) and frontend DTOs
-  - MudBlazor 8.x compatibility fixes resolving component type parameters and property binding issues
-  - Professional UI design with modern conversation list, user avatars, unread indicators, and responsive layout
-  - Comprehensive backend service integration with real API endpoints replacing all mockup data
-  - Messaging integration across Tool Details, User Profile, and Rental Details pages with proper context linking
-  - NewMessageDialog with proper recipient population, tool/rental context tags, and file attachment support
-- ✅ Rental Data Transfer Object Enhancement (completed January 2025)
-  - Fixed missing Tool property in backend RentalDto class preventing frontend from accessing complete tool information
-  - Enhanced Mapster mapping configuration to include full Tool object in rental API responses
-  - Resolved "Tool Information" section display issues in RentalDetails.razor by ensuring complete tool data availability
-  - Improved message dialog context tags with meaningful tool names instead of truncated GUIDs
-  - Backend-to-frontend data flow optimization ensuring rental endpoints return complete tool details (name, description, category, brand, model, rates, condition, location, images)
-  - Verified fix through API testing with proper JWT authentication and confirmed Tool object inclusion in /api/rentals and /api/rentals/{id} responses
-- ✅ Comprehensive Messaging Moderation System (completed January 2025)
-  - Complete content moderation workflow with automated "before dispatch" hooks in MessageService.cs at lines 62-68
-  - ContentModerationService.cs implementing regex-based pattern matching for prohibited content (PII, threats, spam, illegal content)
-  - Five-tier severity system (Clean, Minor, Moderate, Severe, Critical) with automatic content modification and blocking
-  - Administrative interface (MessagingManagement.razor) with search, moderation queue, violation tracking, and analytics
-  - Individual message review system (MessageReview.razor) with approval, content editing, blocking, and user warning capabilities
-  - Real-time admin dashboard integration showing moderation statistics and critical alerts
-  - Comprehensive user enforcement system with warnings, suspensions, and escalation procedures
-  - Complete documentation in MESSAGING_MODERATION_WORKFLOW.md covering system architecture, API endpoints, and maintenance procedures
-  - User moderation history tracking with automatic flagging for repeat offenders (3+ violations in 30 days)
-- ✅ Comprehensive Favorites System (completed January 2025)
-  - Complete database schema with Favorite entity, User-Tool relationships, unique constraints, and proper indexing
-  - RESTful API endpoints via FavoritesController with full CRUD operations, status checking, and count endpoints  
-  - Entity Framework configuration with proper cascade deletion and unique constraints preventing duplicate favorites
-  - Generated database migration for favorites table with all relationships and performance indexes
-  - Frontend service layer with complete FavoritesService for API communication and comprehensive error handling
-  - Reusable FavoriteButton component for seamless integration across tool listings and details pages
-  - Dedicated favorites page (Favorites.razor) with professional grid layout, tool cards, and responsive design
-  - Smart validation preventing users from favoriting their own tools with real-time UI feedback
-  - Navigation integration with favorites accessible via user profile menu on both desktop and mobile platforms
-  - Blazor best practices implementation using separate @if blocks instead of problematic @if/@else chains for conditional rendering
+**Recently Completed** (Major features only - see CHANGELOG.md for full history):
+- ✅ .NET 9 upgrade with WSL compatibility 
+- ✅ MudBlazor 8.9.0 upgrade with dialog API fixes
+- ✅ Complete payment system with PayPal integration
+- ✅ Dispute management with evidence upload
+- ✅ Admin management interfaces
+- ✅ Messaging system with moderation
+- ✅ Favorites system with UI integration
+- ✅ **Payment workflow UX improvements** (January 2025)
+  - Fixed critical payment dialog cost calculation bug (100x multiplication issue)
+  - Enhanced payment cost accuracy with proper backend API integration
+  - Added "Pay Now to Show Commitment" functionality for pending rentals
+  - Implemented clickable tool navigation across rental interfaces
 
 See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 
 ## Important Development Notes
 
-### Recent Architecture Changes
-- **Mapster Configuration**: All object mapping now uses `TypeAdapterConfig` instead of AutoMapper profiles
-- **MudBlazor 8.x Compatibility**: Dialog creation uses simplified `DialogParameters` and `DialogOptions`
-- **WSL Development**: Universal compatibility via `Directory.Build.props` without hardcoded paths
-- **Authentication Robustness**: Enhanced token validation prevents inconsistent auth states
-- **Service Layer Expansion**: Comprehensive service architecture with payment, dispute, email, and file storage services
-- **Email Notification System**: Professional email templates with user preference management and delivery tracking
 
 ### Known Working Patterns
-- **Dialog Creation**: Use `new DialogParameters()` and `.Add()` method instead of generic syntax
-- **Date Picker Events**: Use `@bind-Date:after="Method"` instead of `OnDateChanged`
-- **Authentication**: State automatically syncs between localStorage/sessionStorage and auth provider
-- **WSL Builds**: All .NET commands work universally without path modifications
-- **Service Injection**: All services are registered in DI and available via `[Inject]` in Blazor or constructor injection in backend
-- **Email Notifications**: Use specific notification classes (e.g., `DisputeCreatedNotification`) rather than generic email sending
-- **File Uploads**: Always use `IFileStorageService` for consistent validation and storage abstraction
-- **Payment Processing**: All payment operations go through `IPaymentService` with automatic fraud detection and receipt generation
-- **DTO Design**: Backend DTOs must be classes (not records) with nullable reference properties for Mapster compatibility
-- **API Response Structure**: All endpoints include nested objects when frontend needs complete information (e.g., Tool object within RentalDto)
-- **Mapster Configuration**: Use explicit `.Map(dest => dest.Property, src => src.Property)` for complex object mappings in `MappingProfile.cs`
+- **MudBlazor 8.x**: Use `new DialogParameters()` and `.Add()` method; `@bind-Date:after` for events
+- **Authentication**: JWT tokens auto-injected via `AuthenticatedHttpClientHandler`
+- **DTOs**: Must be classes (not records) for Mapster compatibility
+- **Services**: All registered in DI, use `[Inject]` or constructor injection
+- **Payment Cost Calculation**: Always use `PaymentService.CalculateRentalCostAsync()` API instead of local calculations
+- **Payment Dialog**: Pass pre-calculated values from `RentalCostCalculationResponse` to avoid double fee calculation
 
 ## Common Troubleshooting
 
-### Port Configuration Issues
-- Frontend HttpClient is configured to detect and use correct backend URL
-- CORS is configured for cross-origin requests between frontend/backend
+- **Authentication**: Check `AuthenticatedHttpClientHandler` and browser localStorage
+- **Database**: MySQL container must be running; check `docker-compose logs mysql`
+- **Services**: Auto-registered in `DependencyInjection.cs`; PayPal config required for payments
 
-### Authentication Token Issues
-- Check `AuthenticatedHttpClientHandler` for automatic token injection
-- Verify tokens in browser localStorage
-- Authentication state persists across browser sessions via `CustomAuthenticationStateProvider`
+## Available Services
 
-### Database Connection Issues
-- MySQL container must be running before API starts
-- Connection string in `appsettings.json` should match Docker container settings
-- Use `docker-compose logs mysql` for MySQL container debugging
+**Core**: `IAuthService`, `IToolsService`, `IRentalsService`, `IUserService`
+**Payment**: `IPaymentService`, `IPaymentProvider`, `IFraudDetectionService`
+**Communication**: `IDisputeService`, `IEmailNotificationService`, `IFileStorageService`, `IMessageService`
+**Infrastructure**: `IRepository<T>`, `IUnitOfWork`, `IJwtTokenService`
 
-### Service Registration Issues
-- All services are automatically registered in `DependencyInjection.cs`
-- Payment services require PayPal configuration in `appsettings.json`
-- Email services require SMTP configuration for production use
-- File storage services use local storage by default (configurable for cloud providers)
+## Implementation Workflow
 
-## Quick Service Reference
-
-### Available Services for Dependency Injection
-
-#### Core Business Services
-- `IAuthService` - Authentication and user management
-- `IToolsService` - Tool listing and management
-- `IRentalsService` - Rental creation and management
-- `IUserService` - User profile and settings
-- `ISettingsService` - Application and user settings
-
-#### Payment and Financial Services
-- `IPaymentService` - Payment processing and management
-- `IPaymentProvider` - PayPal integration (extensible for other providers)
-- `IPaymentStatusService` - Payment status tracking and communication
-- `IPaymentReceiptService` - Receipt generation and tracking
-- `IFraudDetectionService` - Fraud prevention and monitoring
-- `IPayPalWebhookValidator` - Webhook security validation
-
-#### Dispute and Communication Services  
-- `IDisputeService` - Dispute management and resolution
-- `IDisputeNotificationService` - Dispute-specific email notifications
-- `IEmailNotificationService` - Universal email notification system
-- `IFileStorageService` - File upload and storage management
-
-#### Messaging Services
-- `IMessageService` - Message and conversation management
-- `MessageService` (frontend) - Frontend service for API communication
-- `ConversationsController` - RESTful API for conversation operations
-- `MessagesController` - RESTful API for message operations
-
-#### Infrastructure Services
-- `IRepository<T>` - Generic repository pattern
-- `IUnitOfWork` - Transaction management
-- `IJwtTokenService` - JWT token generation and validation
-- `IMapper` - Mapster object mapping
-
-## Feature Implementation Workflow
-
-When implementing new features or completing tasks, follow this workflow:
-
-### Implementation Steps
-1. Use the TodoWrite tool to plan the task if required
-2. Use available search tools to understand the codebase and requirements
-3. Implement the solution using all available tools
-4. Verify the solution if possible with tests
-5. Run lint and typecheck commands (e.g., `npm run lint`, `npm run typecheck`, `ruff`, etc.) if available
-6. **NEVER commit changes unless explicitly asked by the user**
-
-### 🔄 CRITICAL: Update Documentation After Task Completion
-
-**MANDATORY FINAL STEP**: After successfully implementing any feature or completing a significant task, you MUST update the relevant documentation to reflect the progress:
-
-#### Required Documentation Updates:
-1. **`CHANGELOG.md`** (ALWAYS REQUIRED):
-   - Add entry for completed task with category (Added, Changed, Fixed, etc.)
-   - Include completion date in YYYY-MM-DD format
-   - Provide technical details and impact description
-   - Document any breaking changes or migration requirements
-
-2. **`TODO_MASTER_INDEX.md`**:
-   - Mark completed items as ✅ **COMPLETED**
-   - Update priority rankings if dependencies are resolved
-   - Add new items to "Recently Completed" section with detailed description
-   - Adjust phase timelines based on completed work
-
-3. **Specific TODO files** (e.g., `TODO_BASIC_COMMISSION_SYSTEM.md`):
-   - Mark completed sections as ✅ **COMPLETED**
-   - Update implementation status and progress
-   - Note any deviations from original plan (e.g., PayPal instead of Stripe)
-   - Document lessons learned or architectural decisions
-
-4. **`CLAUDE.md`** (this file):
-   - Update "Recently Completed" section with new achievements
-   - Add new services to Quick Service Reference if applicable
-   - Update Known Working Patterns with new implementations
-   - Document any new architectural patterns or best practices
-
-#### Documentation Update Order:
-1. **First**: Update `CHANGELOG.md` with completed task entry
-2. **Second**: Update relevant TODO files with completion status
-3. **Third**: Update `CLAUDE.md` if architectural changes were made
-
-#### Example CHANGELOG Entry:
-```markdown
-### Fixed
-- **Task Description** (2025-01-20)
-  - Technical implementation details
-  - Impact on users or system functionality
-  - Any breaking changes or migration requirements
-```
+1. Use TodoWrite tool to plan complex tasks
+2. Search/understand codebase requirements  
+3. Implement solution and verify with tests
+4. **NEVER commit unless explicitly asked**
+5. **MANDATORY**: Update `CHANGELOG.md` after completing significant features

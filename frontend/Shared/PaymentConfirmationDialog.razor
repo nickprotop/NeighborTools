@@ -41,11 +41,73 @@
                 </MudPaper>
             }
 
-            <PaymentBreakdownComponent RentalAmount="@RentalAmount" 
-                                       SecurityDeposit="@SecurityDeposit"
-                                       ShowCommissionForRenter="true"
-                                       ShowOwnerPayout="false"
-                                       OnFeesCalculated="OnFeesCalculated" />
+            <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px; background: var(--mud-palette-surface-variant);">
+                <div class="d-flex align-center mb-3">
+                    <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" Class="mr-2" />
+                    <MudText Typo="Typo.h6">Payment Breakdown</MudText>
+                </div>
+
+                <MudGrid>
+                    <MudItem xs="8">
+                        <MudText Typo="Typo.body2">Rental Amount:</MudText>
+                    </MudItem>
+                    <MudItem xs="4" Class="text-right">
+                        <MudText Typo="Typo.body1">$@RentalAmount.ToString("F2")</MudText>
+                    </MudItem>
+
+                    @if (SecurityDeposit > 0)
+                    {
+                        <MudItem xs="8">
+                            <MudText Typo="Typo.body2">Security Deposit:</MudText>
+                        </MudItem>
+                        <MudItem xs="4" Class="text-right">
+                            <MudText Typo="Typo.body1">$@SecurityDeposit.ToString("F2")</MudText>
+                        </MudItem>
+                    }
+
+                    @if (CommissionAmount > 0)
+                    {
+                        <MudItem xs="8">
+                            <MudText Typo="Typo.body2">Platform Fee (@((CommissionRate * 100).ToString("F1"))%):</MudText>
+                        </MudItem>
+                        <MudItem xs="4" Class="text-right">
+                            <MudText Typo="Typo.body1">$@CommissionAmount.ToString("F2")</MudText>
+                        </MudItem>
+                    }
+
+                    <MudItem xs="12">
+                        <MudDivider Class="my-2" />
+                    </MudItem>
+
+                    <MudItem xs="8">
+                        <MudText Typo="Typo.h6" Color="Color.Primary"><strong>Total Amount:</strong></MudText>
+                    </MudItem>
+                    <MudItem xs="4" Class="text-right">
+                        <MudText Typo="Typo.h6" Color="Color.Primary"><strong>$@TotalAmount.ToString("F2")</strong></MudText>
+                    </MudItem>
+
+                    @if (SecurityDeposit > 0)
+                    {
+                        <MudItem xs="12" Class="mt-3">
+                            <MudAlert Severity="Severity.Info" Dense="true">
+                                <MudText Typo="Typo.caption">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" /> 
+                                    Security deposit will be refunded after the rental is completed and the tool is returned in good condition.
+                                </MudText>
+                            </MudAlert>
+                        </MudItem>
+                    }
+
+                    <MudItem xs="12" Class="mt-2">
+                        <MudAlert Severity="Severity.Info" Dense="true">
+                            <MudText Typo="Typo.caption">
+                                <MudIcon Icon="@Icons.Material.Filled.Payment" Size="Size.Small" /> 
+                                Payment will be processed securely via PayPal.
+                            </MudText>
+                        </MudAlert>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
 
             <div class="mt-4">
                 <MudAlert Severity="Severity.Warning" Dense="true" Class="mb-3">
@@ -74,7 +136,7 @@
         <MudButton OnClick="ConfirmPayment" 
                    Variant="Variant.Filled" 
                    Color="Color.Primary"
-                   Disabled="@(isProcessing || feeBreakdown == null)"
+                   Disabled="@isProcessing"
                    StartIcon="@(isProcessing ? null : Icons.Material.Filled.Payment)">
             @if (isProcessing)
             {
@@ -83,7 +145,7 @@
             }
             else
             {
-                <MudText>Pay $@(feeBreakdown?.TotalPayerAmount.ToString("F2") ?? "0.00") via PayPal</MudText>
+                <MudText>Pay $@TotalAmount.ToString("F2") via PayPal</MudText>
             }
         </MudButton>
     </DialogActions>
@@ -95,25 +157,16 @@
     [Parameter] public Tool? Tool { get; set; }
     [Parameter] public decimal RentalAmount { get; set; }
     [Parameter] public decimal SecurityDeposit { get; set; }
+    [Parameter] public decimal CommissionAmount { get; set; }
+    [Parameter] public decimal CommissionRate { get; set; }
+    [Parameter] public decimal TotalAmount { get; set; }
     [Parameter] public DateTime StartDate { get; set; }
     [Parameter] public DateTime EndDate { get; set; }
 
-    private CalculateFeesResponse? feeBreakdown;
     private bool isProcessing = false;
-
-    private void OnFeesCalculated(CalculateFeesResponse fees)
-    {
-        feeBreakdown = fees;
-        StateHasChanged();
-    }
 
     private async Task ConfirmPayment()
     {
-        if (feeBreakdown == null)
-        {
-            Snackbar.Add("Payment calculation is still loading. Please wait.", Severity.Warning);
-            return;
-        }
 
         try
         {

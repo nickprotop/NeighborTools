@@ -41,7 +41,9 @@
                         <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" Class="mr-3" Style="font-size: 2.5rem;" />
                         <div>
                             <MudText Typo="Typo.h4" Color="Color.Primary">Rental Details</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary">@rental.Tool?.Name</MudText>
+                            <MudLink Href="@($"/tools/{rental.ToolId}")" Typo="Typo.body2" Color="Color.Secondary">
+                        @rental.Tool?.Name
+                    </MudLink>
                         </div>
                     </div>
 
@@ -116,64 +118,213 @@
                         </div>
                     }
 
-                    @if (transaction != null)
-                    {
-                        <MudDivider Class="my-4" />
-                        <MudText Typo="Typo.h6" Class="mb-3">Financial Summary</MudText>
-                        <MudSimpleTable Elevation="0" Bordered="true">
-                            <tbody>
-                                <tr>
-                                    <td>Rental Amount</td>
-                                    <td class="text-right">$@transaction.RentalAmount.ToString("F2")</td>
-                                </tr>
-                                @if (transaction.SecurityDeposit > 0)
-                                {
-                                    <tr>
-                                        <td>Security Deposit</td>
-                                        <td class="text-right">$@transaction.SecurityDeposit.ToString("F2")</td>
-                                    </tr>
-                                }
-                                <tr>
-                                    <td><strong>Total Amount</strong></td>
-                                    <td class="text-right"><strong>$@transaction.TotalAmount.ToString("F2")</strong></td>
-                                </tr>
-                                @if (isOwner)
-                                {
-                                    <tr>
-                                        <td>Platform Commission (@((transaction.CommissionRate * 100).ToString("F1"))%)</td>
-                                        <td class="text-right">-$@transaction.CommissionAmount.ToString("F2")</td>
-                                    </tr>
-                                    <tr>
-                                        <td><strong>Your Payout</strong></td>
-                                        <td class="text-right"><strong>$@transaction.OwnerPayoutAmount.ToString("F2")</strong></td>
-                                    </tr>
-                                }
-                            </tbody>
-                        </MudSimpleTable>
+                    @* Enhanced Payment Information Section *@
+                    <MudExpansionPanels Variant="Variant.Outlined" Elevation="0" Class="my-4">
+                        <MudExpansionPanel Text="Payment Information" Icon="@Icons.Material.Filled.Payment" IsInitiallyExpanded="@(rental.Status != "Pending")">
+                            @if (transaction != null)
+                            {
+                                <div class="pa-2">
+                                    <div class="d-flex align-center mb-3">
+                                        <MudIcon Icon="@GetPaymentStatusIcon(transaction.Status)" Color="@GetPaymentStatusColor(transaction.Status)" Class="mr-2" />
+                                        <div>
+                                            <MudText Typo="Typo.h6">@GetPaymentStatusText(transaction.Status)</MudText>
+                                            @if (transaction.PaymentCompletedAt.HasValue)
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    Completed: @transaction.PaymentCompletedAt.Value.ToString("MMM dd, yyyy 'at' HH:mm")
+                                                </MudText>
+                                            }
+                                        </div>
+                                    </div>
 
-                        <div class="mt-3">
-                            <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Payment Status</MudText>
-                            <MudChip T="string" Color="@GetPaymentStatusColor(transaction.Status)" 
-                                     Icon="@GetPaymentStatusIcon(transaction.Status)">
-                                @GetPaymentStatusText(transaction.Status)
-                            </MudChip>
-                        </div>
-                    }
+                                    <MudGrid>
+                                        <MudItem xs="12" md="6">
+                                            <MudPaper Class="pa-3" Elevation="1">
+                                                <MudText Typo="Typo.subtitle2" Class="mb-2">Cost Breakdown</MudText>
+                                                <MudSimpleTable Dense="true" Hover="false" Elevation="0">
+                                                    <tbody>
+                                                        <tr>
+                                                            <td>Rental Amount</td>
+                                                            <td class="text-right">$@transaction.RentalAmount.ToString("F2")</td>
+                                                        </tr>
+                                                        @if (transaction.SecurityDeposit > 0)
+                                                        {
+                                                            <tr>
+                                                                <td>Security Deposit</td>
+                                                                <td class="text-right">$@transaction.SecurityDeposit.ToString("F2")</td>
+                                                            </tr>
+                                                        }
+                                                        <tr>
+                                                            <td>Platform Fee</td>
+                                                            <td class="text-right">$@transaction.CommissionAmount.ToString("F2")</td>
+                                                        </tr>
+                                                        <tr style="font-weight: bold; border-top: 1px solid var(--mud-palette-divider);">
+                                                            <td>Total</td>
+                                                            <td class="text-right">$@transaction.TotalAmount.ToString("F2")</td>
+                                                        </tr>
+                                                        @if (isOwner)
+                                                        {
+                                                            <tr style="border-top: 1px solid var(--mud-palette-divider);">
+                                                                <td><strong>Your Payout</strong></td>
+                                                                <td class="text-right"><strong>$@transaction.OwnerPayoutAmount.ToString("F2")</strong></td>
+                                                            </tr>
+                                                        }
+                                                    </tbody>
+                                                </MudSimpleTable>
+                                            </MudPaper>
+                                        </MudItem>
+                                        <MudItem xs="12" md="6">
+                                            <MudPaper Class="pa-3" Elevation="1">
+                                                <MudText Typo="Typo.subtitle2" Class="mb-2">Payment Timeline</MudText>
+                                                <MudTimeline TimelineOrientation="TimelineOrientation.Vertical" Reverse="false">
+                                                    @if (transaction.PaymentCompletedAt.HasValue)
+                                                    {
+                                                        <MudTimelineItem Size="Size.Small" Color="Color.Success">
+                                                            <MudText Typo="Typo.body2">Payment Completed</MudText>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@transaction.PaymentCompletedAt.Value.ToString("MMM dd, HH:mm")</MudText>
+                                                        </MudTimelineItem>
+                                                    }
+                                                    @if (transaction.PayoutScheduledAt.HasValue)
+                                                    {
+                                                        <MudTimelineItem Size="Size.Small" Color="@(transaction.PayoutCompletedAt.HasValue ? Color.Success : Color.Info)">
+                                                            <MudText Typo="Typo.body2">Owner Payout @(transaction.PayoutCompletedAt.HasValue ? "Completed" : "Scheduled")</MudText>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                @((transaction.PayoutCompletedAt ?? transaction.PayoutScheduledAt).Value.ToString("MMM dd, HH:mm"))
+                                                            </MudText>
+                                                        </MudTimelineItem>
+                                                    }
+                                                    @if (transaction.DepositRefundedAt.HasValue)
+                                                    {
+                                                        <MudTimelineItem Size="Size.Small" Color="Color.Success">
+                                                            <MudText Typo="Typo.body2">Security Deposit Refunded</MudText>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@transaction.DepositRefundedAt.Value.ToString("MMM dd, HH:mm")</MudText>
+                                                        </MudTimelineItem>
+                                                    }
+                                                </MudTimeline>
+                                            </MudPaper>
+                                        </MudItem>
+                                    </MudGrid>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="pa-2">
+                                    <MudAlert Severity="Severity.Info">
+                                        @if (rental.Status == "Pending")
+                                        {
+                                            <MudText>Payment information will be available once the rental is approved by the owner.</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudText>No payment information available for this rental.</MudText>
+                                        }
+                                    </MudAlert>
+                                </div>
+                            }
+                        </MudExpansionPanel>
+                    </MudExpansionPanels>
 
+                    @* Enhanced Payment Actions Section *@
                     <div class="mt-4">
-                        @if (isRenter && rental.Status == "Approved" && (transaction == null || transaction.Status == "Pending"))
+                        @if (isRenter)
                         {
-                            <MudButton Variant="Variant.Filled" 
-                                       Color="Color.Primary" 
-                                       StartIcon="@Icons.Material.Filled.Payment"
-                                       OnClick="InitiatePayment"
-                                       Disabled="isProcessingPayment">
-                                @if (isProcessingPayment)
+                            @if (rental.Status == "Pending")
+                            {
+                                <MudAlert Severity="Severity.Info" Class="mb-3">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="mr-2" />
+                                        <div>
+                                            <MudText Typo="Typo.subtitle2">Awaiting Owner Approval</MudText>
+                                            <MudText Typo="Typo.body2">Your rental request has been sent to the owner. You'll be notified when they respond.</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                                <strong>Optional:</strong> Pay now to demonstrate serious interest. This shows the owner you're committed and may increase your chances of approval.
+                                            </MudText>
+                                        </div>
+                                    </div>
+                                </MudAlert>
+                                
+                                <MudButton Variant="Variant.Text" 
+                                           Color="Color.Primary" 
+                                           StartIcon="@Icons.Material.Filled.VerifiedUser"
+                                           OnClick="InitiatePayment"
+                                           Disabled="isProcessingPayment"
+                                           Class="mb-3">
+                                    @if (isProcessingPayment)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        <span>Processing...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Pay Now to Show Commitment</span>
+                                    }
+                                </MudButton>
+                            }
+                            else if (rental.Status == "Approved" && (transaction == null || transaction.Status == "Pending" || transaction.Status == "PaymentProcessing"))
+                            {
+                                <MudAlert Severity="Severity.Success" Class="mb-3">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Class="mr-2" />
+                                        <div>
+                                            <MudText Typo="Typo.subtitle2">Rental Approved!</MudText>
+                                            <MudText Typo="Typo.body2">Complete your payment to confirm the rental.</MudText>
+                                        </div>
+                                    </div>
+                                </MudAlert>
+                                
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Primary" 
+                                           Size="Size.Large"
+                                           StartIcon="@Icons.Material.Filled.Payment"
+                                           OnClick="InitiatePayment"
+                                           Disabled="isProcessingPayment"
+                                           Class="mr-2">
+                                    @if (isProcessingPayment)
+                                    {
+                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                        <span>Processing...</span>
+                                    }
+                                    else
+                                    {
+                                        <span>Pay Now@(calculatedRentalCost.HasValue ? $" - ${calculatedRentalCost.Value:F2}" : "")</span>
+                                    }
+                                </MudButton>
+                                
+                                @if (transaction?.Status == "PaymentProcessing")
                                 {
-                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                    <MudButton Variant="Variant.Text" 
+                                               Color="Color.Warning" 
+                                               StartIcon="@Icons.Material.Filled.Cancel"
+                                               OnClick="CancelPayment"
+                                               Disabled="isProcessingPayment">
+                                        Cancel Payment
+                                    </MudButton>
                                 }
-                                Pay Now
-                            </MudButton>
+                            }
+                            else if (rental.Status == "Approved" && transaction?.Status == "PaymentCompleted")
+                            {
+                                <MudAlert Severity="Severity.Success" Class="mb-3">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.Verified" Class="mr-2" />
+                                        <div>
+                                            <MudText Typo="Typo.subtitle2">Payment Complete!</MudText>
+                                            <MudText Typo="Typo.body2">Your rental is confirmed. The owner will contact you about pickup arrangements.</MudText>
+                                        </div>
+                                    </div>
+                                </MudAlert>
+                            }
+                            else if (rental.Status == "Rejected")
+                            {
+                                <MudAlert Severity="Severity.Error" Class="mb-3">
+                                    <div class="d-flex align-center">
+                                        <MudIcon Icon="@Icons.Material.Filled.Cancel" Class="mr-2" />
+                                        <div>
+                                            <MudText Typo="Typo.subtitle2">Rental Request Rejected</MudText>
+                                            <MudText Typo="Typo.body2">Unfortunately, the owner has declined your rental request.</MudText>
+                                        </div>
+                                    </div>
+                                </MudAlert>
+                            }
                         }
                         
                         @if (isOwner && rental.Status == "Pending")
@@ -261,7 +412,9 @@
                     <MudText Typo="Typo.h6" Class="mb-3">Tool Information</MudText>
                     
                     <!-- Show basic tool info from rental object -->
-                    <MudText Typo="Typo.subtitle1" GutterBottom="true">@rental.ToolName</MudText>
+                    <MudLink Href="@($"/tools/{rental.ToolId}")" Typo="Typo.subtitle1" Color="Color.Primary" GutterBottom="true">
+                        @rental.ToolName
+                    </MudLink>
                     
                     @if (rental.Tool != null)
                     {
@@ -406,6 +559,7 @@
     private bool isProcessingPayment = false;
     private string? currentUserId;
     private List<FraudAlert> fraudAlerts = new();
+    private decimal? calculatedRentalCost = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -440,6 +594,24 @@
 
                 // Load fraud alerts for this rental/payment
                 LoadFraudAlerts();
+
+                // Calculate rental cost for display on Pay Now button
+                if (rental.Tool != null && Guid.TryParse(rental.Tool.Id, out var toolGuid))
+                {
+                    try
+                    {
+                        var costResult = await PaymentService.CalculateRentalCostAsync(toolGuid, rental.StartDate, rental.EndDate);
+                        if (costResult.Success && costResult.Data != null)
+                        {
+                            calculatedRentalCost = costResult.Data.TotalPayerAmount;
+                        }
+                    }
+                    catch
+                    {
+                        // Silently fail - button will show without cost
+                        calculatedRentalCost = null;
+                    }
+                }
             }
             else
             {
@@ -468,17 +640,29 @@
         {
             isProcessingPayment = true;
             
-            // Calculate rental cost based on the period
-            var rentalDays = (int)(rental.EndDate - rental.StartDate).TotalDays;
-            var rentalAmount = CalculateRentalCost(rental.Tool, rentalDays);
-            var securityDeposit = rental.Tool.DepositRequired > 0 ? rental.Tool.DepositRequired : 0;
+            // Calculate rental cost using the backend API for accuracy
+            if (!Guid.TryParse(rental.Tool.Id, out var toolGuid))
+            {
+                Snackbar.Add("Invalid tool ID format", Severity.Error);
+                return;
+            }
+
+            var costResult = await PaymentService.CalculateRentalCostAsync(toolGuid, rental.StartDate, rental.EndDate);
+            if (!costResult.Success || costResult.Data == null)
+            {
+                Snackbar.Add($"Failed to calculate rental cost: {costResult.Message}", Severity.Error);
+                return;
+            }
             
             var parameters = new DialogParameters 
             { 
                 { "RentalId", RentalId },
                 { "Tool", rental.Tool },
-                { "RentalAmount", rentalAmount },
-                { "SecurityDeposit", securityDeposit },
+                { "RentalAmount", costResult.Data.RentalAmount },
+                { "SecurityDeposit", costResult.Data.SecurityDeposit },
+                { "CommissionAmount", costResult.Data.CommissionAmount },
+                { "CommissionRate", costResult.Data.CommissionRate },
+                { "TotalAmount", costResult.Data.TotalPayerAmount },
                 { "StartDate", rental.StartDate },
                 { "EndDate", rental.EndDate }
             };
@@ -502,6 +686,36 @@
         catch (Exception ex)
         {
             Snackbar.Add($"Error opening payment dialog: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessingPayment = false;
+        }
+    }
+
+    private async Task CancelPayment()
+    {
+        if (rental == null) return;
+        
+        try
+        {
+            isProcessingPayment = true;
+            
+            var result = await PaymentService.CancelPaymentAsync(RentalId);
+            
+            if (result.Success)
+            {
+                Snackbar.Add("Payment cancelled successfully. You can now initiate a new payment.", Severity.Success);
+                await LoadRentalDetails();
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to cancel payment", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error cancelling payment: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -666,28 +880,6 @@
         _ => status
     };
 
-    private decimal CalculateRentalCost(Tool tool, int rentalDays)
-    {
-        // Calculate best rate (similar to backend logic)
-        decimal dailyCost = tool.DailyRate * rentalDays;
-        decimal weeklyCost = tool.WeeklyRate.HasValue && rentalDays >= 7 ? 
-            tool.WeeklyRate.Value * (rentalDays / 7) + tool.DailyRate * (rentalDays % 7) : decimal.MaxValue;
-        decimal monthlyCost = tool.MonthlyRate.HasValue && rentalDays >= 30 ? 
-            tool.MonthlyRate.Value * (rentalDays / 30) + tool.DailyRate * (rentalDays % 30) : decimal.MaxValue;
-
-        if (monthlyCost < dailyCost && monthlyCost < weeklyCost)
-        {
-            return monthlyCost;
-        }
-        else if (weeklyCost < dailyCost)
-        {
-            return weeklyCost;
-        }
-        else
-        {
-            return dailyCost;
-        }
-    }
 
     private void LoadFraudAlerts()
     {
