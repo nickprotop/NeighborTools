@@ -13,6 +13,10 @@ public interface IPaymentService
     Task<PaymentStatusResult> GetPaymentStatusAsync(string paymentId);
     Task<CreatePaymentResult> CancelPaymentAsync(Guid rentalId, string userId);
     
+    // Bundle payment operations
+    Task<CreatePaymentResult> InitiateBundleRentalPaymentAsync(Guid bundleRentalId, string userId);
+    Task<CapturePaymentResult> CompleteBundleRentalPaymentAsync(string paymentId, string payerId);
+    
     // Refund operations
     Task<RefundResult> RefundRentalAsync(Guid rentalId, decimal amount, string reason);
     Task<RefundResult> RefundSecurityDepositAsync(Guid rentalId);

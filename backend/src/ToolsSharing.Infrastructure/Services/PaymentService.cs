@@ -1323,4 +1323,223 @@ This may affect your payout for this rental.",
             };
         }
     }
+
+    public async Task<CreatePaymentResult> InitiateBundleRentalPaymentAsync(Guid bundleRentalId, string userId)
+    {
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var bundleRental = await _context.BundleRentals
+                .Include(br => br.Bundle)
+                    .ThenInclude(b => b.User)
+                .Include(br => br.RenterUser)
+                .Where(br => br.Id == bundleRentalId && br.RenterUserId == userId)
+                .FirstOrDefaultAsync();
+
+            if (bundleRental == null)
+            {
+                return new CreatePaymentResult
+                {
+                    Success = false,
+                    ErrorMessage = "Bundle rental not found or you don't have permission to pay for it"
+                };
+            }
+
+            if (bundleRental.Status != "Pending")
+            {
+                return new CreatePaymentResult
+                {
+                    Success = false,
+                    ErrorMessage = "Bundle rental is not in a state that allows payment"
+                };
+            }
+
+            // Check if payment already exists
+            var existingTransaction = await _context.Transactions
+                .FirstOrDefaultAsync(t => t.BundleRentalId == bundleRentalId);
+
+            if (existingTransaction != null)
+            {
+                return new CreatePaymentResult
+                {
+                    Success = false,
+                    ErrorMessage = "Payment has already been initiated for this bundle rental"
+                };
+            }
+
+            // TODO: Implement proper fraud detection for bundles
+            var fraudResult = new { IsAllowed = true, Reason = (string?)null };
+            if (!fraudResult.IsAllowed)
+            {
+                _logger.LogWarning("Fraud detection blocked bundle payment for user {UserId}: {Reason}", userId, fraudResult.Reason);
+                return new CreatePaymentResult
+                {
+                    Success = false,
+                    ErrorMessage = "Unable to process payment at this time"
+                };
+            }
+
+            // Calculate financial breakdown using proper payment calculations
+            var financials = CalculateRentalFinancials(bundleRental.FinalCost, bundleRental.FinalCost * 0.2m, bundleRental.Bundle.UserId);
+
+            // Create transaction record
+            var transaction = new Transaction
+            {
+                Id = Guid.NewGuid(),
+                RentalId = Guid.Empty, // Bundle rentals don't have regular rental IDs
+                BundleRentalId = bundleRentalId,
+                TotalAmount = financials.TotalPayerAmount,
+                RentalAmount = bundleRental.FinalCost,
+                SecurityDeposit = bundleRental.FinalCost * 0.2m,
+                CommissionRate = 0.10m, // 10% commission
+                CommissionAmount = financials.TotalPayerAmount * 0.10m,
+                OwnerPayoutAmount = financials.OwnerPayoutAmount,
+                Status = TransactionStatus.Pending,
+                CreatedAt = DateTime.UtcNow
+            };
+
+            _context.Transactions.Add(transaction);
+
+            // Create PayPal payment
+            var paymentRequest = new CreatePaymentRequest
+            {
+                RentalId = Guid.Empty, // Bundle rentals don't have regular rental IDs
+                PayerId = userId,
+                PayeeId = bundleRental.Bundle.UserId,
+                Amount = financials.TotalPayerAmount,
+                Currency = _config.DefaultCurrency,
+                Description = $"Bundle Rental: {bundleRental.Bundle.Name}",
+                ReturnUrl = $"{_config.FrontendBaseUrl}/bundle-payment/success?bundleRentalId={bundleRentalId}",
+                CancelUrl = $"{_config.FrontendBaseUrl}/bundle-payment/cancel?bundleRentalId={bundleRentalId}",
+                IsMarketplacePayment = true,
+                PlatformFee = financials.TotalPayerAmount * 0.10m,
+                Metadata = new Dictionary<string, string>
+                {
+                    ["BundleRentalId"] = bundleRentalId.ToString(),
+                    ["BundleId"] = bundleRental.BundleId.ToString(),
+                    ["PaymentType"] = "BundleRental"
+                }
+            };
+
+            var paymentResult = await _paymentProvider.CreatePaymentAsync(paymentRequest);
+
+            if (!paymentResult.Success)
+            {
+                _logger.LogError("Failed to create PayPal payment for bundle rental {BundleRentalId}: {Error}", 
+                    bundleRentalId, paymentResult.ErrorMessage);
+                return new CreatePaymentResult
+                {
+                    Success = false,
+                    ErrorMessage = "Failed to create payment with PayPal"
+                };
+            }
+
+            // Update transaction with PayPal payment ID
+            transaction.PaymentProviderId = paymentResult.PaymentId;
+            transaction.ExternalTransactionId = paymentResult.PaymentId;
+
+            await _context.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+
+            _logger.LogInformation("Bundle payment initiated for bundle rental {BundleRentalId}, transaction {TransactionId}", 
+                bundleRentalId, transaction.Id);
+
+            return new CreatePaymentResult
+            {
+                Success = true,
+                PaymentId = paymentResult.PaymentId,
+                ApprovalUrl = paymentResult.ApprovalUrl
+            };
+        }
+        catch (Exception ex)
+        {
+            await dbTransaction.RollbackAsync();
+            _logger.LogError(ex, "Error initiating bundle payment for bundle rental {BundleRentalId}", bundleRentalId);
+            return new CreatePaymentResult
+            {
+                Success = false,
+                ErrorMessage = "An error occurred while processing the payment"
+            };
+        }
+    }
+
+    public async Task<CapturePaymentResult> CompleteBundleRentalPaymentAsync(string paymentId, string payerId)
+    {
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var transaction = await _context.Transactions
+                .Include(t => t.BundleRental)
+                    .ThenInclude(br => br.Bundle)
+                        .ThenInclude(b => b.User)
+                .Include(t => t.BundleRental)
+                    .ThenInclude(br => br.RenterUser)
+                .FirstOrDefaultAsync(t => t.PaymentProviderId == paymentId);
+
+            if (transaction == null)
+            {
+                return new CapturePaymentResult
+                {
+                    Success = false,
+                    ErrorMessage = "Transaction not found"
+                };
+            }
+
+            if (transaction.Status != TransactionStatus.Pending)
+            {
+                return new CapturePaymentResult
+                {
+                    Success = false,
+                    ErrorMessage = "Transaction is not in pending status"
+                };
+            }
+
+            // Capture payment with PayPal
+            var captureRequest = new CapturePaymentRequest
+            {
+                PaymentId = paymentId,
+                PayerId = payerId
+            };
+            var captureResult = await _paymentProvider.CapturePaymentAsync(captureRequest);
+
+            if (!captureResult.Success)
+            {
+                _logger.LogError("Failed to capture PayPal payment {PaymentId}: {Error}", paymentId, captureResult.ErrorMessage);
+                return captureResult;
+            }
+
+            // Update transaction status
+            transaction.Status = TransactionStatus.PaymentCompleted;
+            transaction.PaymentCompletedAt = DateTime.UtcNow;
+            transaction.ExternalTransactionId = captureResult.TransactionId;
+
+            // Update bundle rental status
+            if (transaction.BundleRental != null)
+            {
+                transaction.BundleRental.Status = "Approved";
+                transaction.BundleRental.UpdatedAt = DateTime.UtcNow;
+            }
+
+            await _context.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+
+            // TODO: Implement proper email notifications for bundle payments
+            _logger.LogInformation("Bundle payment completed - email notifications to be implemented");
+
+            _logger.LogInformation("Bundle payment completed successfully for payment {PaymentId}, transaction {TransactionId}", 
+                paymentId, transaction.Id);
+
+            return captureResult;
+        }
+        catch (Exception ex)
+        {
+            await dbTransaction.RollbackAsync();
+            _logger.LogError(ex, "Error completing bundle payment for payment {PaymentId}", paymentId);
+            return new CapturePaymentResult
+            {
+                Success = false,
+                ErrorMessage = "An error occurred while completing the payment"
+            };
+        }
+    }
 }

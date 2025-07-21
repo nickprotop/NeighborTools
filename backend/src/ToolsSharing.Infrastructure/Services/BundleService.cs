@@ -27,16 +27,16 @@ namespace ToolsSharing.Infrastructure.Services
         {
             try
             {
-                // Validate that all tools exist and belong to the user or are available for bundle creation
+                // SECURITY: Validate that all tools exist and belong to the user
                 var toolIds = request.Tools.Select(t => t.ToolId).ToList();
                 var tools = await _context.Tools
-                    .Where(t => toolIds.Contains(t.Id) && !t.IsDeleted)
+                    .Where(t => toolIds.Contains(t.Id) && !t.IsDeleted && t.OwnerId == userId)
                     .Include(t => t.Owner)
                     .ToListAsync();
 
                 if (tools.Count != toolIds.Count)
                 {
-                    return ApiResponse<BundleDto>.CreateFailure("One or more tools not found or not available.");
+                    return ApiResponse<BundleDto>.CreateFailure("One or more tools not found or you can only create bundles with your own tools.");
                 }
 
                 // Create the bundle
@@ -326,20 +326,28 @@ namespace ToolsSharing.Infrastructure.Services
                 var bundleDiscountAmount = totalCost * (bundle.BundleDiscount / 100);
                 var finalCost = totalCost - bundleDiscountAmount;
 
-                // Calculate platform fee and security deposit using payment service
-                var securityDeposit = finalCost * 0.2m; // 20% security deposit
-                var platformFee = finalCost * 0.05m; // 5% platform fee
-                var grandTotal = finalCost + securityDeposit + platformFee;
+                // Use payment service for proper calculations with configurable rates
+                // For bundles, we need to consider the bundle owner (who owns all tools in bundle)
+                var bundleOwnerId = bundle.UserId;
+                
+                // Calculate security deposit (standard 20% for now, could be configurable later)
+                var securityDeposit = finalCost * 0.2m;
+                
+                // Use payment service to calculate commission properly
+                var financialBreakdown = _paymentService.CalculateRentalFinancials(finalCost, securityDeposit, bundleOwnerId);
+                var grandTotal = financialBreakdown.TotalPayerAmount;
 
                 var response = new BundleCostCalculationResponse
                 {
                     TotalCost = totalCost,
                     BundleDiscountAmount = bundleDiscountAmount,
                     FinalCost = finalCost,
-                    SecurityDeposit = securityDeposit,
-                    PlatformFee = platformFee,
-                    GrandTotal = grandTotal,
-                    ToolCosts = toolCosts
+                    SecurityDeposit = financialBreakdown.SecurityDeposit,
+                    PlatformFee = financialBreakdown.CommissionAmount,
+                    GrandTotal = financialBreakdown.TotalPayerAmount,
+                    ToolCosts = toolCosts,
+                    CommissionRate = financialBreakdown.CommissionRate,
+                    OwnerPayoutAmount = financialBreakdown.OwnerPayoutAmount
                 };
 
                 return ApiResponse<BundleCostCalculationResponse>.CreateSuccess(response);
@@ -453,8 +461,78 @@ namespace ToolsSharing.Infrastructure.Services
         // Implement remaining interface methods...
         public async Task<ApiResponse<BundleDto>> UpdateBundleAsync(Guid bundleId, CreateBundleRequest request, string userId)
         {
-            // Implementation for update bundle
-            throw new NotImplementedException("UpdateBundleAsync not yet implemented");
+            try
+            {
+                // Find the existing bundle and verify ownership
+                var existingBundle = await _context.Bundles
+                    .Include(b => b.BundleTools)
+                    .FirstOrDefaultAsync(b => b.Id == bundleId && !b.IsDeleted);
+
+                if (existingBundle == null)
+                {
+                    return ApiResponse<BundleDto>.CreateFailure("Bundle not found");
+                }
+
+                if (existingBundle.UserId != userId)
+                {
+                    return ApiResponse<BundleDto>.CreateFailure("You can only update your own bundles");
+                }
+
+                // SECURITY: Validate that all tools exist and belong to the user
+                var toolIds = request.Tools.Select(t => t.ToolId).ToList();
+                var tools = await _context.Tools
+                    .Where(t => toolIds.Contains(t.Id) && !t.IsDeleted && t.OwnerId == userId)
+                    .Include(t => t.Owner)
+                    .ToListAsync();
+
+                if (tools.Count != toolIds.Count)
+                {
+                    return ApiResponse<BundleDto>.CreateFailure("One or more tools not found or you can only create bundles with your own tools.");
+                }
+
+                // Update bundle properties
+                existingBundle.Name = request.Name;
+                existingBundle.Description = request.Description;
+                existingBundle.Guidelines = request.Guidelines;
+                existingBundle.RequiredSkillLevel = request.RequiredSkillLevel;
+                existingBundle.EstimatedProjectDuration = request.EstimatedProjectDuration;
+                existingBundle.ImageUrl = request.ImageUrl;
+                existingBundle.BundleDiscount = request.BundleDiscount;
+                existingBundle.IsPublished = request.IsPublished;
+                existingBundle.Category = request.Category;
+                existingBundle.Tags = request.Tags;
+                existingBundle.UpdatedAt = DateTime.UtcNow;
+
+                // Remove existing bundle tools
+                _context.BundleTools.RemoveRange(existingBundle.BundleTools);
+
+                // Add new bundle tools
+                foreach (var toolRequest in request.Tools)
+                {
+                    var bundleTool = new BundleTool
+                    {
+                        Id = Guid.NewGuid(),
+                        BundleId = existingBundle.Id,
+                        ToolId = toolRequest.ToolId,
+                        UsageNotes = toolRequest.UsageNotes,
+                        OrderInBundle = toolRequest.OrderInBundle,
+                        IsOptional = toolRequest.IsOptional,
+                        QuantityNeeded = toolRequest.QuantityNeeded
+                    };
+
+                    _context.BundleTools.Add(bundleTool);
+                }
+
+                await _context.SaveChangesAsync();
+
+                // Return the updated bundle
+                var result = await GetBundleByIdAsync(existingBundle.Id);
+                return result;
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<BundleDto>.CreateFailure($"Error updating bundle: {ex.Message}");
+            }
         }
 
         public async Task<ApiResponse<bool>> DeleteBundleAsync(Guid bundleId, string userId)

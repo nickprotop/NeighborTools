@@ -15,6 +15,7 @@ public class SampleDataConstants
 {
     public const string USERS = "Users";
     public const string TOOLS = "Tools";
+    public const string BUNDLES = "Bundles";
     public const string RENTALS = "Rentals";
     public const string REVIEWS = "Reviews";
     public const string MESSAGES = "Messages";
@@ -24,6 +25,7 @@ public class SampleDataConstants
     {
         { USERS, "Sample Users" },
         { TOOLS, "Sample Tools" },
+        { BUNDLES, "Sample Bundles" },
         { RENTALS, "Sample Rentals" },
         { REVIEWS, "Sample Reviews" },
         { MESSAGES, "Sample Messages" },
@@ -34,6 +36,7 @@ public class SampleDataConstants
     {
         { USERS, "2 test users (john.doe@email.com, jane.smith@email.com)" },
         { TOOLS, "4 sample tools with different categories and conditions" },
+        { BUNDLES, "3 sample bundles for different project types (Woodworking, Home Improvement, Gardening)" },
         { RENTALS, "3 sample rental transactions with various statuses" },
         { REVIEWS, "4 sample reviews and ratings between users" },
         { MESSAGES, "8 sample messages across multiple conversations" },
@@ -52,6 +55,11 @@ public static class SampleDataIds
     public static readonly Guid SAW_TOOL_ID = Guid.Parse("00000000-0000-0000-0000-000000000002");
     public static readonly Guid LADDER_TOOL_ID = Guid.Parse("00000000-0000-0000-0000-000000000003");
     public static readonly Guid PRESSURE_WASHER_TOOL_ID = Guid.Parse("00000000-0000-0000-0000-000000000004");
+    
+    // Bundle IDs
+    public static readonly Guid WOODWORKING_BUNDLE_ID = Guid.Parse("00000000-0000-0000-0000-000000000011");
+    public static readonly Guid HOME_IMPROVEMENT_BUNDLE_ID = Guid.Parse("00000000-0000-0000-0000-000000000012");
+    public static readonly Guid GARDEN_PREP_BUNDLE_ID = Guid.Parse("00000000-0000-0000-0000-000000000013");
     
     // Rental IDs
     public static readonly Guid RENTAL_1_ID = Guid.Parse("00000000-0000-0000-0000-000000000001");

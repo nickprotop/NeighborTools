@@ -657,6 +657,74 @@ public class PaymentsController : ControllerBase
             });
         }
     }
+
+    [HttpPost("bundle/initiate/{bundleRentalId}")]
+    public async Task<IActionResult> InitiateBundlePayment(Guid bundleRentalId)
+    {
+        try
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var result = await _paymentService.InitiateBundleRentalPaymentAsync(bundleRentalId, userId);
+
+            if (result.Success)
+            {
+                return Ok(ApiResponse<PaymentInitiationResponseDto>.SuccessResult(
+                    new PaymentInitiationResponseDto
+                    {
+                        PaymentId = result.PaymentId ?? "",
+                        ApprovalUrl = result.ApprovalUrl ?? ""
+                    }));
+            }
+
+            return BadRequest(ApiResponse<PaymentInitiationResponseDto>.ErrorResult(
+                result.ErrorMessage ?? "Failed to initiate bundle payment"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error initiating bundle payment for bundle rental {BundleRentalId}", bundleRentalId);
+            return StatusCode(500, ApiResponse<PaymentInitiationResponseDto>.ErrorResult(
+                "An error occurred while processing your request"));
+        }
+    }
+
+    [HttpPost("bundle/complete")]
+    public async Task<IActionResult> CompleteBundlePayment([FromBody] CompletePaymentRequest request)
+    {
+        try
+        {
+            var result = await _paymentService.CompleteBundleRentalPaymentAsync(request.PaymentId, request.PayerId);
+
+            if (result.Success)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    captureId = result.TransactionId,
+                    message = "Bundle payment completed successfully"
+                });
+            }
+
+            return BadRequest(new
+            {
+                success = false,
+                message = result.ErrorMessage ?? "Failed to complete bundle payment"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error completing bundle payment {PaymentId}", request.PaymentId);
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "An error occurred while processing your request"
+            });
+        }
+    }
 }
 
 // Request DTOs

@@ -8,6 +8,14 @@ public class Transaction : BaseEntity
     public Guid RentalId { get; set; }
     public Rental? Rental { get; set; }
     
+    // Bundle rental support
+    public Guid? BundleRentalId { get; set; }
+    public BundleRental? BundleRental { get; set; }
+    
+    // Payment provider tracking
+    public string? PaymentProviderId { get; set; }    // PayPal payment ID
+    public string? ExternalTransactionId { get; set; } // External transaction reference
+    
     // Financial breakdown
     public decimal RentalAmount { get; set; }      // Base rental cost
     public decimal SecurityDeposit { get; set; }   // Security deposit amount

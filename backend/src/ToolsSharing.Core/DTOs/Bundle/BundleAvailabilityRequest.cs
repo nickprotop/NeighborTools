@@ -36,6 +36,8 @@ namespace ToolsSharing.Core.DTOs.Bundle
         public decimal SecurityDeposit { get; set; }
         public decimal PlatformFee { get; set; }
         public decimal GrandTotal { get; set; }
+        public decimal CommissionRate { get; set; }
+        public decimal OwnerPayoutAmount { get; set; }
         public List<ToolCostBreakdown> ToolCosts { get; set; } = new();
     }
     

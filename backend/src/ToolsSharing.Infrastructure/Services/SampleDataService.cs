@@ -86,6 +86,7 @@ public class SampleDataService : ISampleDataService
         {
             SampleDataConstants.USERS => await _context.Users.AnyAsync(u => u.Id == SampleDataIds.JOHN_DOE_USER_ID || u.Id == SampleDataIds.JANE_SMITH_USER_ID),
             SampleDataConstants.TOOLS => await _context.Tools.AnyAsync(t => t.Id == SampleDataIds.DRILL_TOOL_ID),
+            SampleDataConstants.BUNDLES => await _context.Bundles.AnyAsync(b => b.Id == SampleDataIds.WOODWORKING_BUNDLE_ID),
             SampleDataConstants.RENTALS => await _context.Rentals.AnyAsync(r => r.Id == SampleDataIds.RENTAL_1_ID),
             SampleDataConstants.REVIEWS => await _context.Reviews.AnyAsync(r => r.ToolId == SampleDataIds.DRILL_TOOL_ID),
             SampleDataConstants.MESSAGES => await _context.Messages.AnyAsync(m => m.ConversationId == SampleDataIds.CONVERSATION_1_ID),
@@ -108,6 +109,7 @@ public class SampleDataService : ISampleDataService
         {
             SampleDataConstants.USERS => await _context.Users.CountAsync(u => u.Id == SampleDataIds.JOHN_DOE_USER_ID || u.Id == SampleDataIds.JANE_SMITH_USER_ID),
             SampleDataConstants.TOOLS => await _context.Tools.CountAsync(t => t.OwnerId == SampleDataIds.JOHN_DOE_USER_ID || t.OwnerId == SampleDataIds.JANE_SMITH_USER_ID),
+            SampleDataConstants.BUNDLES => await _context.Bundles.CountAsync(b => b.UserId == SampleDataIds.JOHN_DOE_USER_ID || b.UserId == SampleDataIds.JANE_SMITH_USER_ID),
             SampleDataConstants.RENTALS => await _context.Rentals.CountAsync(r => r.RenterId == SampleDataIds.JOHN_DOE_USER_ID || r.RenterId == SampleDataIds.JANE_SMITH_USER_ID),
             SampleDataConstants.REVIEWS => await _context.Reviews.CountAsync(r => r.ReviewerId == SampleDataIds.JOHN_DOE_USER_ID || r.ReviewerId == SampleDataIds.JANE_SMITH_USER_ID),
             SampleDataConstants.MESSAGES => await _context.Messages.CountAsync(m => m.SenderId == SampleDataIds.JOHN_DOE_USER_ID || m.SenderId == SampleDataIds.JANE_SMITH_USER_ID),
@@ -125,6 +127,9 @@ public class SampleDataService : ISampleDataService
                 break;
             case SampleDataConstants.TOOLS:
                 await ApplySampleToolsAsync();
+                break;
+            case SampleDataConstants.BUNDLES:
+                await ApplySampleBundlesAsync();
                 break;
             case SampleDataConstants.RENTALS:
                 await ApplySampleRentalsAsync();
@@ -156,6 +161,9 @@ public class SampleDataService : ISampleDataService
                 break;
             case SampleDataConstants.RENTALS:
                 await RemoveSampleRentalsAsync();
+                break;
+            case SampleDataConstants.BUNDLES:
+                await RemoveSampleBundlesAsync();
                 break;
             case SampleDataConstants.TOOLS:
                 await RemoveSampleToolsAsync();
@@ -314,6 +322,16 @@ public class SampleDataService : ISampleDataService
         {
             _context.Rentals.RemoveRange(rentals);
             _logger.LogInformation("Removed {Count} sample rentals", rentals.Count);
+        }
+
+        // Remove bundles (must be before tools since bundles reference tools)
+        var bundles = await _context.Bundles
+            .Where(b => sampleUserIds.Contains(b.UserId))
+            .ToListAsync();
+        if (bundles.Any())
+        {
+            _context.Bundles.RemoveRange(bundles);
+            _logger.LogInformation("Removed {Count} sample bundles", bundles.Count);
         }
 
         // Remove tools
@@ -594,6 +612,179 @@ public class SampleDataService : ISampleDataService
             _context.Messages.RemoveRange(messages);
             await _context.SaveChangesAsync();
             _logger.LogInformation("Removed {Count} sample messages", messages.Count);
+        }
+    }
+
+    private async Task ApplySampleBundlesAsync()
+    {
+        if (await _context.Bundles.AnyAsync(b => b.Id == SampleDataIds.WOODWORKING_BUNDLE_ID))
+        {
+            _logger.LogInformation("Sample bundles already exist, skipping");
+            return;
+        }
+
+        _logger.LogInformation("Creating sample bundles...");
+
+        var bundles = new[]
+        {
+            new Bundle
+            {
+                Id = SampleDataIds.WOODWORKING_BUNDLE_ID,
+                Name = "Complete Woodworking Project Kit",
+                Description = "Everything you need for basic woodworking projects like shelves, tables, or DIY furniture",
+                Guidelines = "Perfect for beginners to intermediate woodworkers. This bundle includes essential power tools for cutting, drilling, and finishing wood projects. Great for making shelves, small tables, picture frames, or other home furniture pieces.",
+                Category = "Woodworking",
+                RequiredSkillLevel = "Intermediate",
+                EstimatedProjectDuration = 8, // 8 hours
+                ImageUrl = "/images/bundles/woodworking-kit.jpg",
+                UserId = SampleDataIds.JOHN_DOE_USER_ID,
+                BundleDiscount = 15.0m, // 15% discount
+                IsPublished = true,
+                IsFeatured = true,
+                Tags = "woodworking,furniture,DIY,power tools,beginner friendly",
+                ViewCount = 45,
+                CreatedAt = DateTime.UtcNow.AddDays(-30),
+                UpdatedAt = DateTime.UtcNow.AddDays(-5)
+            },
+            new Bundle
+            {
+                Id = SampleDataIds.HOME_IMPROVEMENT_BUNDLE_ID,
+                Name = "Home Improvement Essentials",
+                Description = "Complete toolkit for home renovation and improvement projects",
+                Guidelines = "Ideal for DIY enthusiasts tackling home improvement projects. This comprehensive bundle covers most common tasks like installing fixtures, painting prep, basic construction, and cleaning. Suitable for bathroom renovations, kitchen updates, or general home maintenance.",
+                Category = "Home Improvement",
+                RequiredSkillLevel = "Beginner",
+                EstimatedProjectDuration = 16, // 16 hours (2 days)
+                ImageUrl = "/images/bundles/home-improvement.jpg",
+                UserId = SampleDataIds.JANE_SMITH_USER_ID,
+                BundleDiscount = 10.0m, // 10% discount
+                IsPublished = true,
+                IsFeatured = false,
+                Tags = "home improvement,renovation,DIY,maintenance,upgrade",
+                ViewCount = 23,
+                CreatedAt = DateTime.UtcNow.AddDays(-20),
+                UpdatedAt = DateTime.UtcNow.AddDays(-3)
+            },
+            new Bundle
+            {
+                Id = SampleDataIds.GARDEN_PREP_BUNDLE_ID,
+                Name = "Garden Preparation & Cleanup",
+                Description = "Essential tools for spring garden prep and seasonal cleanup",
+                Guidelines = "Perfect for seasonal garden preparation and maintenance. This bundle helps with cleaning, organizing, and preparing your outdoor spaces. Great for spring cleaning, fall preparation, or general yard maintenance throughout the year.",
+                Category = "Gardening",
+                RequiredSkillLevel = "Beginner",
+                EstimatedProjectDuration = 6, // 6 hours
+                ImageUrl = "/images/bundles/garden-cleanup.jpg",
+                UserId = SampleDataIds.JANE_SMITH_USER_ID,
+                BundleDiscount = 12.0m, // 12% discount
+                IsPublished = true,
+                IsFeatured = true,
+                Tags = "gardening,cleanup,maintenance,outdoor,seasonal",
+                ViewCount = 31,
+                CreatedAt = DateTime.UtcNow.AddDays(-15),
+                UpdatedAt = DateTime.UtcNow.AddDays(-2)
+            }
+        };
+
+        _context.Bundles.AddRange(bundles);
+
+        // Create bundle tools (linking tools to bundles)
+        var bundleTools = new[]
+        {
+            // Woodworking Bundle Tools
+            new BundleTool
+            {
+                Id = Guid.NewGuid(),
+                BundleId = SampleDataIds.WOODWORKING_BUNDLE_ID,
+                ToolId = SampleDataIds.DRILL_TOOL_ID,
+                QuantityNeeded = 1,
+                IsOptional = false,
+                OrderInBundle = 1,
+                UsageNotes = "Primary tool for drilling pilot holes and driving screws"
+            },
+            new BundleTool
+            {
+                Id = Guid.NewGuid(),
+                BundleId = SampleDataIds.WOODWORKING_BUNDLE_ID,
+                ToolId = SampleDataIds.SAW_TOOL_ID,
+                QuantityNeeded = 1,
+                IsOptional = false,
+                OrderInBundle = 2,
+                UsageNotes = "Essential for cutting wood to size and making precision cuts"
+            },
+
+            // Home Improvement Bundle Tools
+            new BundleTool
+            {
+                Id = Guid.NewGuid(),
+                BundleId = SampleDataIds.HOME_IMPROVEMENT_BUNDLE_ID,
+                ToolId = SampleDataIds.DRILL_TOOL_ID,
+                QuantityNeeded = 1,
+                IsOptional = false,
+                OrderInBundle = 1,
+                UsageNotes = "Versatile tool for mounting, fixture installation, and general assembly"
+            },
+            new BundleTool
+            {
+                Id = Guid.NewGuid(),
+                BundleId = SampleDataIds.HOME_IMPROVEMENT_BUNDLE_ID,
+                ToolId = SampleDataIds.LADDER_TOOL_ID,
+                QuantityNeeded = 1,
+                IsOptional = false,
+                OrderInBundle = 2,
+                UsageNotes = "Safe access for ceiling work, light fixtures, and high installations"
+            },
+            new BundleTool
+            {
+                Id = Guid.NewGuid(),
+                BundleId = SampleDataIds.HOME_IMPROVEMENT_BUNDLE_ID,
+                ToolId = SampleDataIds.PRESSURE_WASHER_TOOL_ID,
+                QuantityNeeded = 1,
+                IsOptional = true,
+                OrderInBundle = 3,
+                UsageNotes = "Optional for exterior cleaning and surface preparation"
+            },
+
+            // Garden Preparation Bundle Tools
+            new BundleTool
+            {
+                Id = Guid.NewGuid(),
+                BundleId = SampleDataIds.GARDEN_PREP_BUNDLE_ID,
+                ToolId = SampleDataIds.LADDER_TOOL_ID,
+                QuantityNeeded = 1,
+                IsOptional = false,
+                OrderInBundle = 1,
+                UsageNotes = "Access for pruning trees and cleaning gutters"
+            },
+            new BundleTool
+            {
+                Id = Guid.NewGuid(),
+                BundleId = SampleDataIds.GARDEN_PREP_BUNDLE_ID,
+                ToolId = SampleDataIds.PRESSURE_WASHER_TOOL_ID,
+                QuantityNeeded = 1,
+                IsOptional = false,
+                OrderInBundle = 2,
+                UsageNotes = "Clean patios, decks, driveways, and outdoor furniture"
+            }
+        };
+
+        _context.BundleTools.AddRange(bundleTools);
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Created {BundleCount} sample bundles with {ToolCount} bundle tools", bundles.Length, bundleTools.Length);
+    }
+
+    private async Task RemoveSampleBundlesAsync()
+    {
+        var sampleUserIds = new[] { SampleDataIds.JOHN_DOE_USER_ID, SampleDataIds.JANE_SMITH_USER_ID };
+        var bundles = await _context.Bundles
+            .Where(b => sampleUserIds.Contains(b.UserId))
+            .ToListAsync();
+
+        if (bundles.Any())
+        {
+            _context.Bundles.RemoveRange(bundles);
+            await _context.SaveChangesAsync();
+            _logger.LogInformation("Removed {Count} sample bundles", bundles.Count);
         }
     }
 }
