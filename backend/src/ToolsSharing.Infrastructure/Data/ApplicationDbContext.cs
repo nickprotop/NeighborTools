@@ -56,6 +56,11 @@ public class ApplicationDbContext : IdentityDbContext<User>
     // Mutual dispute closure entities
     public DbSet<MutualDisputeClosure> MutualDisputeClosures { get; set; }
     public DbSet<MutualClosureAuditLog> MutualClosureAuditLogs { get; set; }
+    
+    // Bundle entities
+    public DbSet<Bundle> Bundles { get; set; }
+    public DbSet<BundleTool> BundleTools { get; set; }
+    public DbSet<BundleRental> BundleRentals { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

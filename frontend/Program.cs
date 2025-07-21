@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor.Services;
 using frontend;
 using frontend.Services;
+using ToolsSharing.Frontend.Services;
 using ToolsSharing.Frontend.Configuration;
 using System.Text.Json;
 
@@ -81,6 +82,7 @@ builder.Services.AddScoped<FavoritesService>();
 builder.Services.AddScoped<SampleDataService>();
 builder.Services.AddScoped<ToolsSharing.Frontend.Services.MutualClosureService>();
 builder.Services.AddScoped<AdminMutualClosureService>();
+builder.Services.AddScoped<BundleService>();
 
 var app = builder.Build();
 

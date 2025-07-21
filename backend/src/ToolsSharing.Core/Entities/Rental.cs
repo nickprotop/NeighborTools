@@ -20,6 +20,10 @@ public class Rental : BaseEntity
     public DateTime? CancelledAt { get; set; }
     public string? CancellationReason { get; set; }
     
+    // Bundle rental reference (if this rental is part of a bundle)
+    public Guid? BundleRentalId { get; set; }
+    public BundleRental? BundleRental { get; set; }
+    
     // Navigation properties
     public Tool Tool { get; set; } = null!;
     public User Renter { get; set; } = null!;

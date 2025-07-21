@@ -1,0 +1,236 @@
+@page "/bundles"
+@using ToolsSharing.Frontend.Models
+@using ToolsSharing.Frontend.Services
+@using frontend.Models
+@using frontend.Components.Bundles
+@inject BundleService BundleService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+<PageTitle>Tool Bundles - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudPaper Class="pa-6" Elevation="0">
+        <MudGrid>
+            <!-- Header Section -->
+            <MudItem xs="12">
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <div>
+                        <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-2">Tool Bundles</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">
+                            Discover curated tool collections for your projects
+                        </MudText>
+                    </div>
+                    <AuthorizeView>
+                        <Authorized>
+                            <MudButton Variant="Variant.Filled" 
+                                     Color="Color.Primary" 
+                                     StartIcon="@Icons.Material.Filled.Add"
+                                     Href="/bundles/create">
+                                Create Bundle
+                            </MudButton>
+                        </Authorized>
+                    </AuthorizeView>
+                </MudStack>
+            </MudItem>
+
+            <!-- Filters Section -->
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                        <!-- Search -->
+                        <MudTextField @bind-Value="searchTerm" 
+                                    Label="Search bundles" 
+                                    Variant="Variant.Outlined" 
+                                    AdornmentIcon="@Icons.Material.Filled.Search"
+                                    Adornment="Adornment.Start"
+                                    Immediate="true"
+                                    DebounceInterval="500"
+                                    OnDebounceIntervalElapsed="LoadBundles" />
+
+                        <!-- Category Filter -->
+                        <MudSelect @bind-Value="selectedCategory" 
+                                 Label="Category" 
+                                 Variant="Variant.Outlined"
+                                 AnchorOrigin="Origin.BottomCenter">
+                            <MudSelectItem Value="@("")">All Categories</MudSelectItem>
+                            @foreach (var category in availableCategories)
+                            {
+                                <MudSelectItem Value="@category.Key">@category.Key (@category.Value)</MudSelectItem>
+                            }
+                        </MudSelect>
+
+                        <!-- Featured Filter -->
+                        <MudSwitch @bind-Value="featuredOnly" Label="Featured Only" Color="Color.Primary" />
+
+                        <!-- Apply Filters -->
+                        <MudButton Variant="Variant.Filled" 
+                                 Color="Color.Secondary" 
+                                 OnClick="LoadBundles"
+                                 StartIcon="@Icons.Material.Filled.FilterList">
+                            Apply Filters
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Results Section -->
+            <MudItem xs="12">
+                @if (isLoading)
+                {
+                    <MudGrid>
+                        @for (int i = 0; i < 6; i++)
+                        {
+                            <MudItem xs="12" sm="6" md="4">
+                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+                else if (bundles?.Items?.Any() == true)
+                {
+                    <!-- Results Header -->
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                        <MudText Typo="Typo.h6">
+                            Found @bundles.TotalCount bundle@(bundles.TotalCount != 1 ? "s" : "")
+                        </MudText>
+                        
+                        <!-- Sort Options -->
+                        <MudSelect @bind-Value="sortBy" 
+                                 Label="Sort by" 
+                                 Variant="Variant.Outlined"
+                                 AnchorOrigin="Origin.BottomCenter">
+                            <MudSelectItem Value="@("featured")">Featured First</MudSelectItem>
+                            <MudSelectItem Value="@("newest")">Newest First</MudSelectItem>
+                            <MudSelectItem Value="@("popular")">Most Popular</MudSelectItem>
+                            <MudSelectItem Value="@("price-low")">Price: Low to High</MudSelectItem>
+                            <MudSelectItem Value="@("price-high")">Price: High to Low</MudSelectItem>
+                        </MudSelect>
+                    </MudStack>
+
+                    <!-- Bundle Cards -->
+                    <MudGrid>
+                        @foreach (var bundle in bundles.Items)
+                        {
+                            <MudItem xs="12" sm="6" md="4">
+                                <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
+                            </MudItem>
+                        }
+                    </MudGrid>
+
+                    <!-- Pagination -->
+                    @if (bundles.TotalPages > 1)
+                    {
+                        <MudStack AlignItems="AlignItems.Center" Class="mt-6">
+                            <MudPagination Count="bundles.TotalPages" 
+                                         Selected="currentPage" 
+                                         SelectedChanged="OnPageChanged"
+                                         Color="Color.Primary" 
+                                         Size="Size.Large" />
+                        </MudStack>
+                    }
+                }
+                else
+                {
+                    <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" />
+                        <MudText Typo="Typo.h6" Class="mt-4">No bundles found</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">
+                            Try adjusting your search criteria or explore different categories.
+                        </MudText>
+                        @if (hasFiltersApplied)
+                        {
+                            <MudButton Variant="Variant.Text" 
+                                     Color="Color.Primary" 
+                                     OnClick="ClearFilters" 
+                                     Class="mt-2">
+                                Clear Filters
+                            </MudButton>
+                        }
+                    </MudStack>
+                }
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    private PagedResult<BundleModel>? bundles;
+    private Dictionary<string, int> availableCategories = new();
+    private bool isLoading = true;
+    
+    // Filter parameters
+    private string searchTerm = "";
+    private string selectedCategory = "";
+    private bool featuredOnly = false;
+    private string sortBy = "featured";
+    private int currentPage = 1;
+    private const int pageSize = 12;
+
+    private bool hasFiltersApplied => 
+        !string.IsNullOrWhiteSpace(searchTerm) || 
+        !string.IsNullOrWhiteSpace(selectedCategory) || 
+        featuredOnly;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadCategories();
+        await LoadBundles();
+    }
+
+    private async Task LoadCategories()
+    {
+        var result = await BundleService.GetBundleCategoriesAsync();
+        if (result.Success && result.Data != null)
+        {
+            availableCategories = result.Data;
+        }
+    }
+
+    private async Task LoadBundles()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        var result = await BundleService.GetBundlesAsync(
+            page: currentPage,
+            pageSize: pageSize,
+            category: string.IsNullOrWhiteSpace(selectedCategory) ? null : selectedCategory,
+            searchTerm: string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
+            featuredOnly: featuredOnly
+        );
+
+        if (result.Success && result.Data != null)
+        {
+            bundles = result.Data;
+        }
+        else
+        {
+            Snackbar.Add(result.Message ?? "Failed to load bundles", Severity.Error);
+            bundles = new PagedResult<BundleModel> { Items = new List<BundleModel>() };
+        }
+
+        isLoading = false;
+        StateHasChanged();
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        currentPage = page;
+        await LoadBundles();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = "";
+        selectedCategory = "";
+        featuredOnly = false;
+        currentPage = 1;
+        _ = LoadBundles();
+    }
+
+    private void ViewBundle(Guid bundleId)
+    {
+        Navigation.NavigateTo($"/bundles/{bundleId}");
+    }
+}

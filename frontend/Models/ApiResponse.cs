@@ -28,6 +28,7 @@ public class ApiResponse<T>
             Errors = errors ?? new List<string>()
         };
     }
+
 }
 
 public class ApiResponse

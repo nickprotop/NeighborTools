@@ -1,0 +1,594 @@
+@page "/bundles/{BundleId:guid}/edit"
+@using ToolsSharing.Frontend.Models
+@using frontend.Models
+@using ToolsSharing.Frontend.Services
+@using frontend.Services
+@using System.ComponentModel.DataAnnotations
+@inject BundleService BundleService
+@inject IToolService ToolService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@attribute [Authorize]
+
+<PageTitle>Edit Bundle - NeighborTools</PageTitle>
+
+@if (isLoading)
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="600px" />
+    </MudContainer>
+}
+else if (bundle == null)
+{
+    <MudContainer MaxWidth="MaxWidth.Medium" Class="mt-8">
+        <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+            <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" />
+            <MudText Typo="Typo.h5" Class="mt-4">Bundle Not Found</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                The bundle you're trying to edit doesn't exist or you don't have permission to edit it.
+            </MudText>
+            <MudButton Variant="Variant.Filled" 
+                     Color="Color.Primary" 
+                     Href="/my-bundles" 
+                     Class="mt-4">
+                Back to My Bundles
+            </MudButton>
+        </MudStack>
+    </MudContainer>
+}
+else
+{
+    <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        <MudPaper Class="pa-6" Elevation="0">
+            <MudForm @ref="form" Model="@editBundle" Validation="@(new DataAnnotationsValidator())">
+                <MudGrid>
+                    <!-- Header -->
+                    <MudItem xs="12">
+                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                            <div>
+                                <MudText Typo="Typo.h4" Color="Color.Primary">Edit Bundle</MudText>
+                                <MudText Typo="Typo.body1" Color="Color.Secondary">
+                                    Update your tool bundle information
+                                </MudText>
+                            </div>
+                            <MudStack Row Spacing="2">
+                                <MudButton Variant="Variant.Text" 
+                                           Color="Color.Secondary" 
+                                           StartIcon="@Icons.Material.Filled.Visibility"
+                                           Href="@($"/bundles/{BundleId}")">
+                                    View Bundle
+                                </MudButton>
+                                <MudButton Variant="Variant.Text" 
+                                           Color="Color.Secondary" 
+                                           StartIcon="@Icons.Material.Filled.ArrowBack"
+                                           Href="/my-bundles">
+                                    Back to My Bundles
+                                </MudButton>
+                            </MudStack>
+                        </MudStack>
+                    </MudItem>
+
+                    <!-- Basic Information -->
+                    <MudItem xs="12">
+                        <MudCard>
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Basic Information</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudGrid>
+                                    <MudItem xs="12" md="8">
+                                        <MudTextField @bind-Value="editBundle.Name"
+                                                    Label="Bundle Name"
+                                                    Required="true"
+                                                    MaxLength="200"
+                                                    Counter="200"
+                                                    HelperText="Give your bundle a descriptive name"
+                                                    For="@(() => editBundle.Name)" />
+                                    </MudItem>
+                                    <MudItem xs="12" md="4">
+                                        <MudSelect @bind-Value="editBundle.Category"
+                                                 Label="Category"
+                                                 Required="true"
+                                                 For="@(() => editBundle.Category)">
+                                            <MudSelectItem Value="@("")">Select Category</MudSelectItem>
+                                            <MudSelectItem Value="@("Woodworking")">Woodworking</MudSelectItem>
+                                            <MudSelectItem Value="@("Home Improvement")">Home Improvement</MudSelectItem>
+                                            <MudSelectItem Value="@("Gardening")">Gardening</MudSelectItem>
+                                            <MudSelectItem Value="@("Automotive")">Automotive</MudSelectItem>
+                                            <MudSelectItem Value="@("Plumbing")">Plumbing</MudSelectItem>
+                                            <MudSelectItem Value="@("Electrical")">Electrical</MudSelectItem>
+                                            <MudSelectItem Value="@("Painting")">Painting</MudSelectItem>
+                                            <MudSelectItem Value="@("Cleaning")">Cleaning</MudSelectItem>
+                                            <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+                                        </MudSelect>
+                                    </MudItem>
+                                    <MudItem xs="12">
+                                        <MudTextField @bind-Value="editBundle.Description"
+                                                    Label="Description"
+                                                    Required="true"
+                                                    Lines="3"
+                                                    MaxLength="2000"
+                                                    Counter="2000"
+                                                    HelperText="Describe what this bundle helps accomplish"
+                                                    For="@(() => editBundle.Description)" />
+                                    </MudItem>
+                                    <MudItem xs="12">
+                                        <MudTextField @bind-Value="editBundle.Guidelines"
+                                                    Label="Guidelines & Instructions"
+                                                    Lines="4"
+                                                    MaxLength="5000"
+                                                    Counter="5000"
+                                                    HelperText="Optional: Provide step-by-step instructions or safety guidelines"
+                                                    For="@(() => editBundle.Guidelines)" />
+                                    </MudItem>
+                                </MudGrid>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <!-- Project Details -->
+                    <MudItem xs="12">
+                        <MudCard>
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Project Details</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudGrid>
+                                    <MudItem xs="12" sm="4">
+                                        <MudSelect @bind-Value="editBundle.RequiredSkillLevel"
+                                                 Label="Required Skill Level">
+                                            <MudSelectItem Value="@("Beginner")">Beginner</MudSelectItem>
+                                            <MudSelectItem Value="@("Intermediate")">Intermediate</MudSelectItem>
+                                            <MudSelectItem Value="@("Advanced")">Advanced</MudSelectItem>
+                                            <MudSelectItem Value="@("Expert")">Expert</MudSelectItem>
+                                        </MudSelect>
+                                    </MudItem>
+                                    <MudItem xs="12" sm="4">
+                                        <MudNumericField @bind-Value="editBundle.EstimatedProjectDuration"
+                                                       Label="Estimated Duration (hours)"
+                                                       Min="1"
+                                                       Max="1000"
+                                                       Required="true"
+                                                       For="@(() => editBundle.EstimatedProjectDuration)" />
+                                    </MudItem>
+                                    <MudItem xs="12" sm="4">
+                                        <MudNumericField @bind-Value="editBundle.BundleDiscount"
+                                                       Label="Bundle Discount (%)"
+                                                       Min="0"
+                                                       Max="50"
+                                                       Adornment="Adornment.End"
+                                                       AdornmentText="%"
+                                                       HelperText="Discount compared to individual tool rentals"
+                                                       For="@(() => editBundle.BundleDiscount)" />
+                                    </MudItem>
+                                    <MudItem xs="12">
+                                        <MudTextField @bind-Value="editBundle.Tags"
+                                                    Label="Tags"
+                                                    HelperText="Comma-separated tags (e.g., furniture, beginner, weekend-project)"
+                                                    Placeholder="furniture, beginner, weekend-project" />
+                                    </MudItem>
+                                </MudGrid>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <!-- Tools Selection -->
+                    <MudItem xs="12">
+                        <MudCard>
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudText Typo="Typo.h6">Tools in Bundle</MudText>
+                                        <MudButton Variant="Variant.Filled"
+                                                 Color="Color.Primary"
+                                                 StartIcon="@Icons.Material.Filled.Add"
+                                                 OnClick="@(() => showToolSelector = true)"
+                                                 Disabled="isLoading">
+                                            Add Tools
+                                        </MudButton>
+                                    </MudStack>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                @if (editBundle.Tools.Any())
+                                {
+                                    @foreach (var bundleTool in editBundle.Tools.OrderBy(t => t.OrderInBundle))
+                                    {
+                                        var tool = availableTools.FirstOrDefault(t => Guid.TryParse(t.Id, out var toolGuid) && toolGuid == bundleTool.ToolId);
+                                        <MudPaper Class="pa-3 mb-2" Elevation="1">
+                                            <MudGrid AlignItems="Center">
+                                                <MudItem xs="12" sm="6">
+                                                    <MudStack Row Spacing="2" AlignItems="AlignItems.Center">
+                                                        <MudIcon Icon="@Icons.Material.Filled.DragHandle" 
+                                                               Color="Color.Secondary" />
+                                                        <div>
+                                                            <MudText Typo="Typo.subtitle1">@(tool?.Name ?? "Tool not found")</MudText>
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                $@((tool?.DailyRate ?? 0).ToString("F2"))/day
+                                                            </MudText>
+                                                        </div>
+                                                    </MudStack>
+                                                </MudItem>
+                                                <MudItem xs="6" sm="2">
+                                                    <MudNumericField @bind-Value="bundleTool.QuantityNeeded"
+                                                                   Label="Qty"
+                                                                   Min="1"
+                                                                   Max="10" />
+                                                </MudItem>
+                                                <MudItem xs="6" sm="2">
+                                                    <MudSwitch @bind-Value="bundleTool.IsOptional"
+                                                             Label="Optional"
+                                                             Color="Color.Primary" />
+                                                </MudItem>
+                                                <MudItem xs="12" sm="2">
+                                                    <MudButton Variant="Variant.Text"
+                                                             Color="Color.Error"
+                                                             StartIcon="@Icons.Material.Filled.Delete"
+                                                             OnClick="@(() => RemoveTool(bundleTool))">
+                                                        Remove
+                                                    </MudButton>
+                                                </MudItem>
+                                                @if (!string.IsNullOrWhiteSpace(bundleTool.UsageNotes))
+                                                {
+                                                    <MudItem xs="12">
+                                                        <MudTextField @bind-Value="bundleTool.UsageNotes"
+                                                                    Label="Usage Notes"
+                                                                    Lines="2"
+                                                                    HelperText="Special instructions for this tool in the bundle" />
+                                                    </MudItem>
+                                                }
+                                                else
+                                                {
+                                                    <MudItem xs="12">
+                                                        <MudButton Variant="Variant.Text"
+                                                                 Size="Size.Small"
+                                                                 StartIcon="@Icons.Material.Filled.Note"
+                                                                 OnClick="@(() => bundleTool.UsageNotes = "Add usage notes here...")">
+                                                            Add Usage Notes
+                                                        </MudButton>
+                                                    </MudItem>
+                                                }
+                                            </MudGrid>
+                                        </MudPaper>
+                                    }
+                                }
+                                else
+                                {
+                                    <MudAlert Severity="Severity.Info">
+                                        <MudText>No tools in bundle. Click "Add Tools" to select tools for your bundle.</MudText>
+                                    </MudAlert>
+                                }
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <!-- Publishing Options -->
+                    <MudItem xs="12">
+                        <MudCard>
+                            <MudCardHeader>
+                                <CardHeaderContent>
+                                    <MudText Typo="Typo.h6">Publishing Options</MudText>
+                                </CardHeaderContent>
+                            </MudCardHeader>
+                            <MudCardContent>
+                                <MudSwitch @bind-Value="editBundle.IsPublished"
+                                         Label="Publish Bundle"
+                                         Color="Color.Primary">
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                        Published bundles are visible to other users and can be rented
+                                    </MudText>
+                                </MudSwitch>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+
+                    <!-- Actions -->
+                    <MudItem xs="12">
+                        <MudStack Row Justify="Justify.FlexEnd" Spacing="3" Class="mt-4">
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Secondary"
+                                       OnClick="Cancel"
+                                       Disabled="isSubmitting">
+                                Cancel
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled"
+                                       Color="Color.Primary"
+                                       OnClick="SaveBundle"
+                                       Disabled="isSubmitting || !editBundle.Tools.Any()"
+                                       StartIcon="@Icons.Material.Filled.Save">
+                                @if (isSubmitting)
+                                {
+                                    <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                                    <MudText Class="ms-2">Saving...</MudText>
+                                }
+                                else
+                                {
+                                    <MudText>Save Changes</MudText>
+                                }
+                            </MudButton>
+                        </MudStack>
+                    </MudItem>
+                </MudGrid>
+            </MudForm>
+        </MudPaper>
+    </MudContainer>
+}
+
+<!-- Tool Selector Dialog -->
+<MudDialog @bind-Visible="showToolSelector" Options="toolSelectorDialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-3" />
+            Select Tools for Bundle
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div style="min-height: 400px; max-height: 600px; overflow-y: auto;">
+            <MudTextField @bind-Value="toolSearchTerm"
+                        Label="Search tools"
+                        Immediate="true"
+                        Adornment="Adornment.Start"
+                        AdornmentIcon="@Icons.Material.Filled.Search"
+                        Class="mb-4" />
+            
+            @if (isLoadingTools)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            }
+            else
+            {
+                @foreach (var tool in filteredTools)
+                {
+                    var isSelected = editBundle.Tools.Any(bt => Guid.TryParse(tool.Id, out var toolGuid) && bt.ToolId == toolGuid);
+                    <MudPaper Class="pa-3 mb-2" Elevation="@(isSelected ? 2 : 0)" 
+                            Style="@(isSelected ? "border: 2px solid var(--mud-palette-primary);" : "border: 1px solid var(--mud-palette-lines-default);")">
+                        <MudGrid AlignItems="Center">
+                            <MudItem xs="1">
+                                <MudCheckBox Value="@isSelected"
+                                           ValueChanged="@((bool value) => ToggleToolSelection(tool, value))"
+                                           Color="Color.Primary" />
+                            </MudItem>
+                            <MudItem xs="11">
+                                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1">@tool.Name</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@tool.Description</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            Owner: @tool.OwnerName
+                                        </MudText>
+                                    </div>
+                                    <MudChip Color="Color.Primary" Text="@($"${tool.DailyRate:F2}/day")" T="string" />
+                                </MudStack>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                }
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="@(() => showToolSelector = false)">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@(() => showToolSelector = false)">
+            Done (@editBundle.Tools.Count selected)
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public Guid BundleId { get; set; }
+
+    private MudForm form = null!;
+    private BundleModel? bundle;
+    private CreateBundleModel editBundle = new();
+    private bool isLoading = true;
+    private bool isSubmitting = false;
+    private bool isLoadingTools = false;
+    
+    // Tool selection
+    private bool showToolSelector = false;
+    private List<Tool> availableTools = new();
+    private string toolSearchTerm = "";
+    
+    private DialogOptions toolSelectorDialogOptions = new() 
+    { 
+        CloseOnEscapeKey = true, 
+        MaxWidth = MaxWidth.Large,
+        FullWidth = true
+    };
+
+    private List<Tool> filteredTools => string.IsNullOrWhiteSpace(toolSearchTerm)
+        ? availableTools
+        : availableTools.Where(t => 
+            t.Name.Contains(toolSearchTerm, StringComparison.OrdinalIgnoreCase) ||
+            t.Description.Contains(toolSearchTerm, StringComparison.OrdinalIgnoreCase) ||
+            t.OwnerName.Contains(toolSearchTerm, StringComparison.OrdinalIgnoreCase)
+        ).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBundle();
+        await LoadAvailableTools();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (bundle?.Id != BundleId)
+        {
+            await LoadBundle();
+        }
+    }
+
+    private async Task LoadBundle()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await BundleService.GetBundleByIdAsync(BundleId);
+            
+            if (result.Success && result.Data != null)
+            {
+                bundle = result.Data;
+                // Convert BundleModel to CreateBundleModel for editing
+                editBundle = new CreateBundleModel
+                {
+                    Name = bundle.Name,
+                    Description = bundle.Description,
+                    Guidelines = bundle.Guidelines,
+                    RequiredSkillLevel = bundle.RequiredSkillLevel,
+                    EstimatedProjectDuration = bundle.EstimatedProjectDuration,
+                    ImageUrl = bundle.ImageUrl,
+                    BundleDiscount = bundle.BundleDiscount,
+                    Category = bundle.Category,
+                    Tags = string.Join(", ", bundle.Tags),
+                    IsPublished = bundle.IsPublished,
+                    Tools = bundle.Tools.Select(t => new CreateBundleToolModel
+                    {
+                        ToolId = t.Id,
+                        UsageNotes = t.UsageNotes,
+                        OrderInBundle = t.OrderInBundle,
+                        IsOptional = t.IsOptional,
+                        QuantityNeeded = t.QuantityNeeded
+                    }).ToList()
+                };
+            }
+            else
+            {
+                bundle = null;
+                if (!string.IsNullOrEmpty(result.Message))
+                {
+                    Snackbar.Add(result.Message, Severity.Warning);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load bundle: {ex.Message}", Severity.Error);
+            bundle = null;
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadAvailableTools()
+    {
+        isLoadingTools = true;
+        StateHasChanged();
+
+        var result = await ToolService.GetToolsAsync();
+        if (result.Success && result.Data != null)
+        {
+            availableTools = result.Data;
+        }
+        else
+        {
+            Snackbar.Add("Failed to load available tools", Severity.Error);
+            availableTools = new();
+        }
+
+        isLoadingTools = false;
+        StateHasChanged();
+    }
+
+    private void ToggleToolSelection(Tool tool, bool isSelected)
+    {
+        if (!Guid.TryParse(tool.Id, out var toolGuid))
+            return; // Skip if ID is not a valid GUID
+
+        if (isSelected)
+        {
+            if (!editBundle.Tools.Any(bt => bt.ToolId == toolGuid))
+            {
+                editBundle.Tools.Add(new CreateBundleToolModel
+                {
+                    ToolId = toolGuid,
+                    OrderInBundle = editBundle.Tools.Count + 1,
+                    QuantityNeeded = 1,
+                    IsOptional = false,
+                    UsageNotes = ""
+                });
+            }
+        }
+        else
+        {
+            var existingTool = editBundle.Tools.FirstOrDefault(bt => bt.ToolId == toolGuid);
+            if (existingTool != null)
+            {
+                editBundle.Tools.Remove(existingTool);
+                // Reorder remaining tools
+                for (int i = 0; i < editBundle.Tools.Count; i++)
+                {
+                    editBundle.Tools[i].OrderInBundle = i + 1;
+                }
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void RemoveTool(CreateBundleToolModel bundleTool)
+    {
+        editBundle.Tools.Remove(bundleTool);
+        // Reorder remaining tools
+        for (int i = 0; i < editBundle.Tools.Count; i++)
+        {
+            editBundle.Tools[i].OrderInBundle = i + 1;
+        }
+        StateHasChanged();
+    }
+
+    private async Task SaveBundle()
+    {
+        if (!editBundle.Tools.Any())
+        {
+            Snackbar.Add("Please add at least one tool to the bundle", Severity.Warning);
+            return;
+        }
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            await form.Validate();
+            if (!form.IsValid)
+            {
+                Snackbar.Add("Please fix validation errors", Severity.Warning);
+                return;
+            }
+
+            var result = await BundleService.UpdateBundleAsync(BundleId, editBundle);
+            
+            if (result.Success)
+            {
+                Snackbar.Add($"Bundle '{editBundle.Name}' updated successfully!", Severity.Success);
+                Navigation.NavigateTo($"/bundles/{BundleId}");
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to update bundle", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error updating bundle: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel()
+    {
+        Navigation.NavigateTo($"/bundles/{BundleId}");
+    }
+}

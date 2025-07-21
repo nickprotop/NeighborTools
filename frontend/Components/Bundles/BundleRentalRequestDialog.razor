@@ -1,0 +1,418 @@
+@using Microsoft.AspNetCore.Components
+@using MudBlazor
+@using frontend.Models
+@using ToolsSharing.Frontend.Models
+@using frontend.Services
+@using ToolsSharing.Frontend.Services
+@using frontend.Components
+@using frontend.Shared
+@inject BundleService BundleService
+@inject IPaymentService PaymentService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudDialog>
+    <DialogContent>
+        <MudText Typo="Typo.h6" Class="mb-4">Request Bundle Rental - @Bundle?.Name</MudText>
+        
+        @if (Bundle != null)
+        {
+            <MudGrid>
+                <MudItem xs="12" Class="mb-4">
+                    <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px;">
+                        <div class="d-flex align-center gap-3">
+                            @if (!string.IsNullOrEmpty(Bundle.ImageUrl))
+                            {
+                                <img src="@Bundle.ImageUrl" alt="@Bundle.Name" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" />
+                            }
+                            else
+                            {
+                                <div class="d-flex align-center justify-center" style="width: 80px; height: 80px; background: var(--mud-palette-surface-variant); border-radius: 8px;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Inventory" Color="Color.Secondary" />
+                                </div>
+                            }
+                            <div>
+                                <MudText Typo="Typo.h6">@Bundle.Name</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    Owner: <UserLink UserId="@Bundle.UserId" DisplayName="@Bundle.OwnerName" ShowAvatar="false" />
+                                </MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Location: @Bundle.OwnerLocation</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Primary">
+                                    @Bundle.Tools.Count tool@(Bundle.Tools.Count != 1 ? "s" : "") included
+                                </MudText>
+                            </div>
+                        </div>
+                    </MudPaper>
+                </MudItem>
+
+                <!-- Bundle Availability Check -->
+                @if (isCheckingAvailability)
+                {
+                    <MudItem xs="12">
+                        <MudPaper Elevation="1" Class="pa-4" Style="border-radius: 8px;">
+                            <div class="d-flex justify-center align-center py-4">
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-3" />
+                                <MudText Typo="Typo.body2">Checking bundle availability...</MudText>
+                            </div>
+                        </MudPaper>
+                    </MudItem>
+                }
+                else if (availabilityResult != null && !availabilityResult.IsAvailable)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Error">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">Bundle Not Available</MudText>
+                            <MudText Typo="Typo.body2">@availabilityResult.Message</MudText>
+                            
+                            @if (availabilityResult.ToolAvailability.Any())
+                            {
+                                <div class="mt-3">
+                                    <MudText Typo="Typo.body2" Class="mb-2">Tool Availability Status:</MudText>
+                                    @foreach (var toolStatus in availabilityResult.ToolAvailability.Where(t => !t.IsAvailable))
+                                    {
+                                        <div class="d-flex align-center gap-2 mb-1">
+                                            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                                            <MudText Typo="Typo.caption" Color="Color.Error">
+                                                @toolStatus.ToolName: @toolStatus.UnavailabilityReason
+                                                @if (toolStatus.AvailableFromDate.HasValue)
+                                                {
+                                                    <span> (Available from @toolStatus.AvailableFromDate.Value.ToString("MMM dd, yyyy"))</span>
+                                                }
+                                            </MudText>
+                                        </div>
+                                    }
+                                </div>
+                            }
+
+                            @if (availabilityResult.EarliestAvailableDate.HasValue)
+                            {
+                                <MudText Typo="Typo.body2" Class="mt-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /> 
+                                    Earliest available date: <strong>@availabilityResult.EarliestAvailableDate.Value.ToString("MMM dd, yyyy")</strong>
+                                </MudText>
+                            }
+                        </MudAlert>
+                    </MudItem>
+                }
+                else
+                {
+                    <MudItem xs="12" md="6">
+                        <MudDatePicker @bind-Date="startDate" 
+                                       @bind-Date:after="CheckAvailabilityAndCalculateCost"
+                                       Label="Start Date" 
+                                       Variant="Variant.Outlined"
+                                       MinDate="DateTime.Today.AddDays(1)"
+                                       Required="true"
+                                       HelperText="Bundle rental start date" />
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6">
+                        <MudDatePicker @bind-Date="endDate" 
+                                       @bind-Date:after="CheckAvailabilityAndCalculateCost"
+                                       Label="End Date" 
+                                       Variant="Variant.Outlined"
+                                       MinDate="startDate ?? DateTime.Today.AddDays(2)"
+                                       Required="true" />
+                    </MudItem>
+
+                    <MudItem xs="12">
+                        <MudTextField @bind-Value="notes" 
+                                      Label="Notes (Optional)" 
+                                      Variant="Variant.Outlined"
+                                      Lines="3"
+                                      Placeholder="Any special requirements or project details..."
+                                      AdornmentIcon="@Icons.Material.Filled.Notes" 
+                                      Adornment="Adornment.Start" />
+                    </MudItem>
+
+                    @if (availabilityResult != null && availabilityResult.IsAvailable)
+                    {
+                        <MudItem xs="12">
+                            <MudPaper Elevation="1" Class="pa-3" Style="border-radius: 8px; background: var(--mud-palette-success-container-low);">
+                                <div class="d-flex align-center gap-2 mb-2">
+                                    <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success" />
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Success">Bundle Available!</MudText>
+                                </div>
+                                <MudText Typo="Typo.body2">All tools in this bundle are available for your selected dates.</MudText>
+                            </MudPaper>
+                        </MudItem>
+                    }
+
+                    @if (isCalculatingCost)
+                    {
+                        <MudItem xs="12">
+                            <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px;">
+                                <div class="d-flex justify-center align-center py-4">
+                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-3" />
+                                    <MudText Typo="Typo.body2">Calculating bundle rental cost...</MudText>
+                                </div>
+                            </MudPaper>
+                        </MudItem>
+                    }
+                    else if (costCalculation != null)
+                    {
+                        <MudItem xs="12">
+                            <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px; background: var(--mud-palette-surface-variant);">
+                                <div class="d-flex align-center mb-3">
+                                    <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" Class="mr-2" />
+                                    <MudText Typo="Typo.h6">Bundle Rental Breakdown</MudText>
+                                </div>
+
+                                <MudGrid>
+                                    <MudItem xs="8">
+                                        <MudText Typo="Typo.body2">Rental Duration:</MudText>
+                                    </MudItem>
+                                    <MudItem xs="4" Class="text-right">
+                                        <MudText Typo="Typo.body1"><strong>@GetRentalDays() day@(GetRentalDays() != 1 ? "s" : "")</strong></MudText>
+                                    </MudItem>
+
+                                    <MudItem xs="8">
+                                        <MudText Typo="Typo.body2">Total Tool Cost:</MudText>
+                                    </MudItem>
+                                    <MudItem xs="4" Class="text-right">
+                                        <MudText Typo="Typo.body1">$@costCalculation.TotalCost.ToString("F2")</MudText>
+                                    </MudItem>
+
+                                    @if (costCalculation.BundleDiscountAmount > 0)
+                                    {
+                                        <MudItem xs="8">
+                                            <MudText Typo="Typo.body2" Color="Color.Success">Bundle Discount (@Bundle.BundleDiscount.ToString("F0")%):</MudText>
+                                        </MudItem>
+                                        <MudItem xs="4" Class="text-right">
+                                            <MudText Typo="Typo.body1" Color="Color.Success">-$@costCalculation.BundleDiscountAmount.ToString("F2")</MudText>
+                                        </MudItem>
+                                    }
+
+                                    @if (costCalculation.SecurityDeposit > 0)
+                                    {
+                                        <MudItem xs="8">
+                                            <MudText Typo="Typo.body2">Security Deposit:</MudText>
+                                        </MudItem>
+                                        <MudItem xs="4" Class="text-right">
+                                            <MudText Typo="Typo.body1">$@costCalculation.SecurityDeposit.ToString("F2")</MudText>
+                                        </MudItem>
+                                    }
+
+                                    <MudItem xs="8">
+                                        <MudText Typo="Typo.body2">Platform Fee:</MudText>
+                                    </MudItem>
+                                    <MudItem xs="4" Class="text-right">
+                                        <MudText Typo="Typo.body1">$@costCalculation.PlatformFee.ToString("F2")</MudText>
+                                    </MudItem>
+
+                                    <MudItem xs="12">
+                                        <MudDivider Class="my-2" />
+                                    </MudItem>
+
+                                    <MudItem xs="8">
+                                        <MudText Typo="Typo.h6" Color="Color.Primary"><strong>Total Amount:</strong></MudText>
+                                    </MudItem>
+                                    <MudItem xs="4" Class="text-right">
+                                        <MudText Typo="Typo.h6" Color="Color.Primary"><strong>$@costCalculation.GrandTotal.ToString("F2")</strong></MudText>
+                                    </MudItem>
+
+                                    @if (costCalculation.SecurityDeposit > 0)
+                                    {
+                                        <MudItem xs="12" Class="mt-3">
+                                            <MudAlert Severity="Severity.Info" Dense="true">
+                                                <MudText Typo="Typo.caption">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" /> 
+                                                    Security deposit will be refunded after all tools are returned in good condition.
+                                                </MudText>
+                                            </MudAlert>
+                                        </MudItem>
+                                    }
+
+                                    <MudItem xs="12" Class="mt-2">
+                                        <MudAlert Severity="Severity.Info" Dense="true">
+                                            <MudText Typo="Typo.caption">
+                                                <MudIcon Icon="@Icons.Material.Filled.Payment" Size="Size.Small" /> 
+                                                Payment will be processed securely via PayPal.
+                                            </MudText>
+                                        </MudAlert>
+                                    </MudItem>
+
+                                    <!-- Tool Breakdown -->
+                                    <MudItem xs="12" Class="mt-3">
+                                        <MudExpansionPanels Elevation="0">
+                                            <MudExpansionPanel IsExpanded="false" Text="View Tool Cost Breakdown">
+                                                <MudList T="string" Dense="true">
+                                                    @foreach (var toolCost in costCalculation.ToolCosts)
+                                                    {
+                                                        <MudListItem T="string">
+                                                            <div class="d-flex justify-space-between align-center">
+                                                                <MudText Typo="Typo.body2">
+                                                                    @toolCost.ToolName @(toolCost.QuantityNeeded > 1 ? $"(x{toolCost.QuantityNeeded})" : "")
+                                                                </MudText>
+                                                                <MudText Typo="Typo.body2">$@toolCost.TotalCost.ToString("F2")</MudText>
+                                                            </div>
+                                                        </MudListItem>
+                                                    }
+                                                </MudList>
+                                            </MudExpansionPanel>
+                                        </MudExpansionPanels>
+                                    </MudItem>
+                                </MudGrid>
+                            </MudPaper>
+                        </MudItem>
+                    }
+                }
+            </MudGrid>
+        }
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled" 
+                   OnClick="SubmitRequest"
+                   Disabled="!CanSubmitRequest()"
+                   StartIcon="@Icons.Material.Filled.ShoppingCart">
+            @if (isSubmitting)
+            {
+                <MudProgressCircular Class="ms-n1" Size="Size.Small" Indeterminate="true"/>
+                <span class="ms-2">Requesting...</span>
+            }
+            else
+            {
+                <span>Request Bundle Rental</span>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public BundleModel Bundle { get; set; } = default!;
+
+    private DateTime? startDate;
+    private DateTime? endDate;
+    private string notes = "";
+    private bool isCheckingAvailability = false;
+    private bool isCalculatingCost = false;
+    private bool isSubmitting = false;
+    
+    private BundleAvailabilityResponseModel? availabilityResult;
+    private BundleCostCalculationModel? costCalculation;
+
+    private async Task CheckAvailabilityAndCalculateCost()
+    {
+        if (startDate == null || endDate == null || Bundle == null)
+        {
+            availabilityResult = null;
+            costCalculation = null;
+            return;
+        }
+
+        isCheckingAvailability = true;
+        isCalculatingCost = true;
+        StateHasChanged();
+
+        try
+        {
+            var availabilityRequest = new BundleAvailabilityModel
+            {
+                BundleId = Bundle.Id,
+                StartDate = startDate.Value,
+                EndDate = endDate.Value
+            };
+
+            // Check availability first
+            var availabilityResponse = await BundleService.CheckBundleAvailabilityAsync(availabilityRequest);
+            
+            if (availabilityResponse.Success && availabilityResponse.Data != null)
+            {
+                availabilityResult = availabilityResponse.Data;
+                
+                // If available, calculate cost
+                if (availabilityResult.IsAvailable)
+                {
+                    var costResponse = await BundleService.CalculateBundleCostAsync(Bundle.Id, startDate.Value, endDate.Value);
+                    
+                    if (costResponse.Success && costResponse.Data != null)
+                    {
+                        costCalculation = costResponse.Data;
+                    }
+                }
+            }
+            else
+            {
+                Snackbar.Add(availabilityResponse.Message ?? "Failed to check bundle availability", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error checking availability: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isCheckingAvailability = false;
+            isCalculatingCost = false;
+            StateHasChanged();
+        }
+    }
+
+    private int GetRentalDays()
+    {
+        if (startDate == null || endDate == null) return 0;
+        return (int)(endDate.Value - startDate.Value).TotalDays + 1;
+    }
+
+    private bool CanSubmitRequest()
+    {
+        return !isSubmitting && 
+               startDate.HasValue && 
+               endDate.HasValue && 
+               availabilityResult?.IsAvailable == true &&
+               costCalculation != null;
+    }
+
+    private async Task SubmitRequest()
+    {
+        if (!CanSubmitRequest() || Bundle == null || startDate == null || endDate == null)
+            return;
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var rentalRequest = new CreateBundleRentalModel
+            {
+                BundleId = Bundle.Id,
+                RentalDate = startDate.Value,
+                ReturnDate = endDate.Value,
+                RenterNotes = string.IsNullOrWhiteSpace(notes) ? null : notes
+            };
+
+            var result = await BundleService.CreateBundleRentalAsync(rentalRequest);
+            
+            if (result.Success && result.Data != null)
+            {
+                Snackbar.Add("Bundle rental request submitted successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(result.Data));
+                
+                // Navigate to rental details or payment
+                Navigation.NavigateTo($"/bundle-rentals/{result.Data.Id}");
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to submit bundle rental request", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error submitting request: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+            StateHasChanged();
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

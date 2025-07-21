@@ -4,10 +4,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Architecture
 
-NeighborTools is a **community tool sharing platform** with a .NET 9 Web API backend and Blazor WebAssembly frontend. Clean Architecture with:
+NeighborTools is a **comprehensive tool sharing platform** with advanced bundle management capabilities. Built with .NET 9 Web API backend and Blazor WebAssembly frontend. Clean Architecture with:
 - **ToolsSharing.Core** - Domain entities, commands/queries, and interfaces
 - **ToolsSharing.Infrastructure** - Data access, Mapster, and external services  
 - **ToolsSharing.API** - Controllers, JWT authentication, and API configuration
+
+### Major Platform Features
+- **Individual Tool Rentals** - Traditional single-tool rental system
+- **🆕 Bundle System** - Curated tool collections for complete project solutions (see BUNDLE_SYSTEM_DOCUMENTATION.md)
+- **Advanced Payment Processing** - PayPal integration with security deposits and platform fees
+- **Comprehensive User Management** - Authentication, profiles, and rental history
+- **Dispute Resolution** - Complete dispute management with evidence upload
+- **Admin Dashboard** - Full platform administration capabilities
 
 ## ⚠️ CRITICAL: MudBlazor Version 8.x Requirements
 
@@ -521,6 +529,11 @@ See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 - **Services**: All registered in DI, use `[Inject]` or constructor injection
 - **Payment Cost Calculation**: Always use `PaymentService.CalculateRentalCostAsync()` API instead of local calculations
 - **Payment Dialog**: Pass pre-calculated values from `RentalCostCalculationResponse` to avoid double fee calculation
+- **🆕 Bundle System**: 
+  - Use `BundleService.CheckBundleAvailabilityAsync()` for availability checking across all bundle tools
+  - Bundle cost calculation via `BundleService.CalculateBundleCostAsync()` includes discount application
+  - Bundle rental requests create `BundleRental` entities with coordinated tool availability
+  - Bundle UI uses responsive grid layout (12/6/4 columns) with BundleCard components
 
 ## Common Troubleshooting
 
@@ -531,6 +544,7 @@ See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 ## Available Services
 
 **Core**: `IAuthService`, `IToolsService`, `IRentalsService`, `IUserService`
+**🆕 Bundle System**: `IBundleService` - Complete bundle lifecycle management with 12+ methods
 **Payment**: `IPaymentService`, `IPaymentProvider`, `IFraudDetectionService`
 **Communication**: `IDisputeService`, `IEmailNotificationService`, `IFileStorageService`, `IMessageService`
 **Infrastructure**: `IRepository<T>`, `IUnitOfWork`, `IJwtTokenService`

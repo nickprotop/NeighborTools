@@ -1,6 +1,6 @@
 # NeighborTools - Community Tool Sharing Platform
 
-A modern full-stack application for community tool sharing, built with .NET 9 backend and Blazor WebAssembly frontend.
+A comprehensive full-stack platform for community tool sharing with advanced bundle management, built with .NET 9 backend and Blazor WebAssembly frontend.
 
 ## 🚀 Quick Start
 
@@ -21,11 +21,22 @@ This will start both backend and frontend services with interactive setup.
 
 NeighborTools enables community members to share tools with each other through a modern web platform featuring:
 
+### Core Features
 - **Tool Catalog** - Browse available tools with detailed descriptions and images
 - **Rental System** - Request tool rentals with approval workflow
 - **User Management** - Secure registration and authentication
 - **My Tools** - Manage your own tool listings
 - **Rental History** - Track rental requests and history
+
+### 🆕 Advanced Bundle System
+- **Bundle Creation** - Create curated tool collections for specific projects
+- **Project Solutions** - Complete tool sets for "Build a Table", "Garden Prep", etc.
+- **Smart Availability** - Coordinated availability checking across all bundle tools
+- **Dynamic Pricing** - Bundle discounts with real-time cost calculation
+- **Bundle Marketplace** - Advanced browsing, filtering, and discovery
+- **Bundle Rentals** - Complete rental workflow for tool bundles
+
+📋 **[Complete Bundle System Documentation](BUNDLE_SYSTEM_DOCUMENTATION.md)**
 
 ## 🏗️ Architecture
 

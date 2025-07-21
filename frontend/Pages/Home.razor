@@ -3,8 +3,13 @@
 @using Microsoft.AspNetCore.Components.Authorization
 @using MudBlazor
 @using frontend.Models
+@using ToolsSharing.Frontend.Models
 @using frontend.Services
+@using ToolsSharing.Frontend.Services
+@using frontend.Components.Bundles
 @inject IToolService ToolService
+@inject BundleService BundleService
+@inject NavigationManager Navigation
 @attribute [AllowAnonymous]
 
 <PageTitle>NeighborTools - Share and Borrow Tools</PageTitle>
@@ -122,14 +127,14 @@
     <MudItem xs="12" sm="6" md="4">
         <MudCard Elevation="0" Class="modern-card animate-fade-in-up animate-delay-300" Style="height: 100%;">
             <MudCardContent Class="d-flex flex-column align-center text-center pa-6">
-                <MudIcon Icon="@Icons.Material.Filled.Groups" Color="Color.Info" Size="Size.Large" Class="mb-4 animate-pulse" Style="font-size: 3.5rem;" />
-                <MudText Typo="Typo.h5" Color="Color.Info" GutterBottom="true" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-semibold);">Build Community</MudText>
+                <MudIcon Icon="@Icons.Material.Filled.Inventory" Color="Color.Info" Size="Size.Large" Class="mb-4 animate-pulse" Style="font-size: 3.5rem;" />
+                <MudText Typo="Typo.h5" Color="Color.Info" GutterBottom="true" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-semibold);">Tool Bundles</MudText>
                 <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4" Style="font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-relaxed);">
-                    Connect with neighbors and build stronger community relationships.
+                    Discover curated tool collections for complete projects.
                 </MudText>
                 <MudSpacer />
-                <MudButton Variant="Variant.Filled" Color="Color.Info" Href="/profile" StartIcon="@Icons.Material.Filled.Person" Style="border-radius: var(--mud-radius-full); font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium);">
-                    Your Profile
+                <MudButton Variant="Variant.Filled" Color="Color.Info" Href="/bundles" StartIcon="@Icons.Material.Filled.Inventory" Style="border-radius: var(--mud-radius-full); font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium);">
+                    Browse Bundles
                 </MudButton>
             </MudCardContent>
         </MudCard>
@@ -234,6 +239,44 @@ else
     </MudPaper>
 }
 
+<!-- Featured Bundles Section -->
+@if (isLoadingBundles)
+{
+    <MudPaper Class="pa-8 text-center animate-fade-in-scale mt-8" Elevation="0" Style="border-radius: var(--mud-radius-xl); background: var(--mud-palette-surface-container-low);">
+        <MudProgressCircular Color="Color.Secondary" Size="Size.Large" Indeterminate="true" />
+        <MudText Typo="Typo.h6" Class="mt-4" Style="font-family: var(--mud-font-family-sans); color: var(--mud-text-secondary);">Loading featured bundles...</MudText>
+    </MudPaper>
+}
+else if (featuredBundles != null && featuredBundles.Any())
+{
+    <div class="mt-8">
+        <MudText Typo="Typo.h4" Color="Color.Secondary" GutterBottom="true" Class="mb-6 animate-fade-in-up" Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-bold);">
+            <MudIcon Icon="@Icons.Material.Filled.Inventory" Class="mr-2" />
+            Featured Tool Bundles
+        </MudText>
+        
+        <MudGrid>
+            @foreach (var bundle in featuredBundles.Take(6))
+            {
+                <MudItem xs="12" sm="6" md="4">
+                    <BundleCard Bundle="bundle" OnClick="@(() => Navigation.NavigateTo($"/bundles/{bundle.Id}"))" />
+                </MudItem>
+            }
+        </MudGrid>
+        
+        <div class="d-flex justify-center mt-6">
+            <MudButton Variant="Variant.Outlined" 
+                       Color="Color.Secondary" 
+                       Size="Size.Large"
+                       Href="/bundles"
+                       StartIcon="@Icons.Material.Filled.ViewList"
+                       Style="font-family: var(--mud-font-family-sans); font-weight: var(--mud-font-weight-medium); border-radius: var(--mud-radius-full); padding: var(--mud-spacing-lg) var(--mud-spacing-2xl);">
+                View All Bundles
+            </MudButton>
+        </div>
+    </div>
+}
+
 <style>
     .hover-card:hover {
         transform: translateY(-8px);
@@ -244,11 +287,13 @@ else
 
 @code {
     private List<Tool>? featuredTools;
+    private List<BundleModel>? featuredBundles;
     private bool isLoading = true;
+    private bool isLoadingBundles = true;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadFeaturedTools();
+        await Task.WhenAll(LoadFeaturedTools(), LoadFeaturedBundles());
     }
 
     private async Task LoadFeaturedTools()
@@ -271,6 +316,29 @@ else
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task LoadFeaturedBundles()
+    {
+        isLoadingBundles = true;
+
+        try
+        {
+            var result = await BundleService.GetFeaturedBundlesAsync(6);
+            
+            if (result.Success)
+            {
+                featuredBundles = result.Data;
+            }
+        }
+        catch (Exception)
+        {
+            // Silently handle errors for featured bundles
+        }
+        finally
+        {
+            isLoadingBundles = false;
         }
     }
 }

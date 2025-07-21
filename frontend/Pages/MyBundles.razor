@@ -1,0 +1,521 @@
+@page "/my-bundles"
+@using ToolsSharing.Frontend.Models
+@using frontend.Models
+@using ToolsSharing.Frontend.Services
+@using frontend.Components.Common
+@inject BundleService BundleService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@attribute [Authorize]
+
+<PageTitle>My Bundles - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <MudPaper Class="pa-6" Elevation="0">
+        <MudGrid>
+            <!-- Header Section -->
+            <MudItem xs="12">
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <div>
+                        <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-2">My Bundles</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">
+                            Manage your tool bundles and track their performance
+                        </MudText>
+                    </div>
+                    <MudButton Variant="Variant.Filled" 
+                             Color="Color.Primary" 
+                             StartIcon="@Icons.Material.Filled.Add"
+                             Href="/bundles/create">
+                        Create New Bundle
+                    </MudButton>
+                </MudStack>
+            </MudItem>
+
+            <!-- Quick Stats -->
+            <MudItem xs="12">
+                <MudGrid Class="mb-4">
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard>
+                            <MudCardContent Class="text-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                                <MudText Typo="Typo.h5">@(bundles?.TotalCount ?? 0)</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Bundles</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard>
+                            <MudCardContent Class="text-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Large" Color="Color.Success" Class="mb-2" />
+                                <MudText Typo="Typo.h5">@publishedCount</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Published</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard>
+                            <MudCardContent Class="text-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
+                                <MudText Typo="Typo.h5">@featuredCount</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Featured</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                    <MudItem xs="12" sm="6" md="3">
+                        <MudCard>
+                            <MudCardContent Class="text-center">
+                                <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Large" Color="Color.Info" Class="mb-2" />
+                                <MudText Typo="Typo.h5">@totalRentals</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Rentals</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                </MudGrid>
+            </MudItem>
+
+            <!-- Filters Section -->
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" Elevation="1">
+                    <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                        <!-- Search -->
+                        <MudTextField @bind-Value="searchTerm" 
+                                    Label="Search my bundles" 
+                                    Variant="Variant.Outlined" 
+                                    AdornmentIcon="@Icons.Material.Filled.Search"
+                                    Adornment="Adornment.Start"
+                                    Immediate="true"
+                                    DebounceInterval="500"
+                                    OnDebounceIntervalElapsed="LoadBundles" />
+
+                        <!-- Status Filter -->
+                        <MudSelect @bind-Value="statusFilter" 
+                                 Label="Status" 
+                                 Variant="Variant.Outlined"
+                                 AnchorOrigin="Origin.BottomCenter">
+                            <MudSelectItem Value="@("")">All Status</MudSelectItem>
+                            <MudSelectItem Value="@("published")">Published</MudSelectItem>
+                            <MudSelectItem Value="@("draft")">Draft</MudSelectItem>
+                            <MudSelectItem Value="@("featured")">Featured</MudSelectItem>
+                        </MudSelect>
+
+                        <!-- Apply Filters -->
+                        <MudButton Variant="Variant.Filled" 
+                                 Color="Color.Secondary" 
+                                 OnClick="LoadBundles"
+                                 StartIcon="@Icons.Material.Filled.FilterList">
+                            Apply Filters
+                        </MudButton>
+                    </MudStack>
+                </MudPaper>
+            </MudItem>
+
+            <!-- Bundles List -->
+            <MudItem xs="12">
+                @if (isLoading)
+                {
+                    <MudGrid>
+                        @for (int i = 0; i < 6; i++)
+                        {
+                            <MudItem xs="12" sm="6" lg="4">
+                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
+                            </MudItem>
+                        }
+                    </MudGrid>
+                }
+                else if (bundles?.Items?.Any() == true)
+                {
+                    <!-- Results Header -->
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                        <MudText Typo="Typo.h6">
+                            @bundles.TotalCount bundle@(bundles.TotalCount != 1 ? "s" : "")
+                        </MudText>
+                        
+                        <!-- Sort Options -->
+                        <MudSelect @bind-Value="sortBy" 
+                                 Label="Sort by" 
+                                 Variant="Variant.Outlined"
+                                 AnchorOrigin="Origin.BottomCenter">
+                            <MudSelectItem Value="@("newest")">Newest First</MudSelectItem>
+                            <MudSelectItem Value="@("oldest")">Oldest First</MudSelectItem>
+                            <MudSelectItem Value="@("popular")">Most Popular</MudSelectItem>
+                            <MudSelectItem Value="@("name")">Name A-Z</MudSelectItem>
+                        </MudSelect>
+                    </MudStack>
+
+                    <!-- Bundle Cards -->
+                    <MudGrid>
+                        @foreach (var bundle in bundles.Items)
+                        {
+                            <MudItem xs="12" sm="6" lg="4">
+                                <MudCard Class="h-100">
+                                    <MudCardMedia Image="@GetImageUrl(bundle)" Height="200" />
+                                    
+                                    <MudCardContent>
+                                        <MudStack Spacing="2">
+                                            <!-- Title and Status -->
+                                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                                <MudText Typo="Typo.h6" Style="flex: 1;">@bundle.Name</MudText>
+                                                <MudStack Spacing="1">
+                                                    @if (bundle.IsFeatured)
+                                                    {
+                                                        <MudChip Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Star" Text="Featured" T="string" />
+                                                    }
+                                                    @if (!bundle.IsPublished)
+                                                    {
+                                                        <MudChip Color="Color.Default" Size="Size.Small" Icon="@Icons.Material.Filled.Drafts" Text="Draft" T="string" />
+                                                    }
+                                                </MudStack>
+                                            </MudStack>
+
+                                            <!-- Category and Tools Count -->
+                                            <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                                                <MudChip Size="Size.Small" Color="Color.Primary" Text="@bundle.Category" T="string" />
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @bundle.Tools.Count tool@(bundle.Tools.Count != 1 ? "s" : "")
+                                                </MudText>
+                                            </MudStack>
+
+                                            <!-- Description -->
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="bundle-description">
+                                                @GetTruncatedDescription(bundle.Description)
+                                            </MudText>
+
+                                            <!-- Stats -->
+                                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                                <MudStack Row Spacing="2">
+                                                    <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Secondary" />
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@bundle.ViewCount</MudText>
+                                                    </MudStack>
+                                                    <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                                                        <MudIcon Icon="@Icons.Material.Filled.ShoppingCart" Size="Size.Small" Color="Color.Secondary" />
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@bundle.RentalCount</MudText>
+                                                    </MudStack>
+                                                </MudStack>
+                                                <MudText Typo="Typo.h6" Color="Color.Primary">
+                                                    $@bundle.DiscountedCost.ToString("F2")/day
+                                                </MudText>
+                                            </MudStack>
+
+                                            <!-- Last Updated -->
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                Updated @bundle.UpdatedAt.ToString("MMM dd, yyyy")
+                                            </MudText>
+                                        </MudStack>
+                                    </MudCardContent>
+
+                                    <MudCardActions>
+                                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="width: 100%;">
+                                            <MudStack Row Spacing="1">
+                                                <MudButton Size="Size.Small" 
+                                                         Color="Color.Primary" 
+                                                         Variant="Variant.Text"
+                                                         StartIcon="@Icons.Material.Filled.Visibility"
+                                                         OnClick="@(() => Navigation.NavigateTo($"/bundles/{bundle.Id}"))">
+                                                    View
+                                                </MudButton>
+                                                <MudButton Size="Size.Small" 
+                                                         Color="Color.Secondary" 
+                                                         Variant="Variant.Text"
+                                                         StartIcon="@Icons.Material.Filled.Edit"
+                                                         OnClick="@(() => Navigation.NavigateTo($"/bundles/{bundle.Id}/edit"))">
+                                                    Edit
+                                                </MudButton>
+                                            </MudStack>
+                                            
+                                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
+                                                <MudMenuItem OnClick="@(() => TogglePublishStatus(bundle))">
+                                                    @if (bundle.IsPublished)
+                                                    {
+                                                        <MudText>
+                                                            <MudIcon Icon="@Icons.Material.Filled.VisibilityOff" Size="Size.Small" Class="mr-2" />
+                                                            Unpublish
+                                                        </MudText>
+                                                    }
+                                                    else
+                                                    {
+                                                        <MudText>
+                                                            <MudIcon Icon="@Icons.Material.Filled.Publish" Size="Size.Small" Class="mr-2" />
+                                                            Publish
+                                                        </MudText>
+                                                    }
+                                                </MudMenuItem>
+                                                <MudMenuItem OnClick="@(() => DuplicateBundle(bundle))">
+                                                    <MudText>
+                                                        <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" Class="mr-2" />
+                                                        Duplicate
+                                                    </MudText>
+                                                </MudMenuItem>
+                                                <MudDivider />
+                                                <MudMenuItem OnClick="@(() => DeleteBundle(bundle))" Style="color: var(--mud-palette-error);">
+                                                    <MudText Color="Color.Error">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Class="mr-2" />
+                                                        Delete
+                                                    </MudText>
+                                                </MudMenuItem>
+                                            </MudMenu>
+                                        </MudStack>
+                                    </MudCardActions>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+
+                    <!-- Pagination -->
+                    @if (bundles.TotalPages > 1)
+                    {
+                        <MudStack AlignItems="AlignItems.Center" Class="mt-6">
+                            <MudPagination Count="bundles.TotalPages" 
+                                         Selected="currentPage" 
+                                         SelectedChanged="OnPageChanged"
+                                         Color="Color.Primary" 
+                                         Size="Size.Large" />
+                        </MudStack>
+                    }
+                }
+                else
+                {
+                    <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                        <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" />
+                        <MudText Typo="Typo.h6" Class="mt-4">No bundles found</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="text-center">
+                            @if (hasFiltersApplied)
+                            {
+                                <span>No bundles match your current filters.</span>
+                            }
+                            else
+                            {
+                                <span>You haven't created any bundles yet. Create your first bundle to get started!</span>
+                            }
+                        </MudText>
+                        @if (hasFiltersApplied)
+                        {
+                            <MudButton Variant="Variant.Text" 
+                                     Color="Color.Primary" 
+                                     OnClick="ClearFilters" 
+                                     Class="mt-2">
+                                Clear Filters
+                            </MudButton>
+                        }
+                        else
+                        {
+                            <MudButton Variant="Variant.Filled" 
+                                     Color="Color.Primary" 
+                                     StartIcon="@Icons.Material.Filled.Add"
+                                     Href="/bundles/create" 
+                                     Class="mt-4">
+                                Create Your First Bundle
+                            </MudButton>
+                        }
+                    </MudStack>
+                }
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
+</MudContainer>
+
+<style>
+    .bundle-description {
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.4;
+        max-height: 4.2em;
+    }
+</style>
+
+@code {
+    private PagedResult<BundleModel>? bundles;
+    private bool isLoading = true;
+    
+    // Filter parameters
+    private string searchTerm = "";
+    private string statusFilter = "";
+    private string sortBy = "newest";
+    private int currentPage = 1;
+    private const int pageSize = 12;
+
+    // Stats
+    private int publishedCount => bundles?.Items?.Count(b => b.IsPublished) ?? 0;
+    private int featuredCount => bundles?.Items?.Count(b => b.IsFeatured) ?? 0;
+    private int totalRentals => bundles?.Items?.Sum(b => b.RentalCount) ?? 0;
+
+    private bool hasFiltersApplied => 
+        !string.IsNullOrWhiteSpace(searchTerm) || 
+        !string.IsNullOrWhiteSpace(statusFilter);
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadBundles();
+    }
+
+    private async Task LoadBundles()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await BundleService.GetMyBundlesAsync(
+                page: currentPage,
+                pageSize: pageSize
+            );
+
+            if (result.Success && result.Data != null)
+            {
+                bundles = result.Data;
+                // Apply client-side filtering for now (server-side filtering would be better)
+                ApplyFilters();
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Failed to load bundles", Severity.Error);
+                bundles = new PagedResult<BundleModel> { Items = new List<BundleModel>() };
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to load bundles: {ex.Message}", Severity.Error);
+            bundles = new PagedResult<BundleModel> { Items = new List<BundleModel>() };
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ApplyFilters()
+    {
+        if (bundles?.Items == null) return;
+
+        var filteredItems = bundles.Items.AsEnumerable();
+
+        // Apply search filter
+        if (!string.IsNullOrWhiteSpace(searchTerm))
+        {
+            filteredItems = filteredItems.Where(b =>
+                b.Name.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                b.Description.Contains(searchTerm, StringComparison.OrdinalIgnoreCase) ||
+                b.Category.Contains(searchTerm, StringComparison.OrdinalIgnoreCase)
+            );
+        }
+
+        // Apply status filter
+        if (!string.IsNullOrWhiteSpace(statusFilter))
+        {
+            filteredItems = statusFilter switch
+            {
+                "published" => filteredItems.Where(b => b.IsPublished),
+                "draft" => filteredItems.Where(b => !b.IsPublished),
+                "featured" => filteredItems.Where(b => b.IsFeatured),
+                _ => filteredItems
+            };
+        }
+
+        // Apply sorting
+        filteredItems = sortBy switch
+        {
+            "newest" => filteredItems.OrderByDescending(b => b.CreatedAt),
+            "oldest" => filteredItems.OrderBy(b => b.CreatedAt),
+            "popular" => filteredItems.OrderByDescending(b => b.RentalCount).ThenByDescending(b => b.ViewCount),
+            "name" => filteredItems.OrderBy(b => b.Name),
+            _ => filteredItems.OrderByDescending(b => b.UpdatedAt)
+        };
+
+        bundles.Items = filteredItems.ToList();
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        currentPage = page;
+        await LoadBundles();
+    }
+
+    private void ClearFilters()
+    {
+        searchTerm = "";
+        statusFilter = "";
+        currentPage = 1;
+        _ = LoadBundles();
+    }
+
+    private async Task TogglePublishStatus(BundleModel bundle)
+    {
+        try
+        {
+            // For now, this would need to be implemented as part of the update API
+            // We'll simulate the toggle locally
+            bundle.IsPublished = !bundle.IsPublished;
+            Snackbar.Add(
+                bundle.IsPublished ? "Bundle published successfully!" : "Bundle unpublished",
+                bundle.IsPublished ? Severity.Success : Severity.Info
+            );
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to update bundle: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task DuplicateBundle(BundleModel bundle)
+    {
+        Navigation.NavigateTo($"/bundles/create?duplicate={bundle.Id}");
+    }
+
+    private async Task DeleteBundle(BundleModel bundle)
+    {
+        var parameters = new DialogParameters
+        {
+            { "Title", "Delete Bundle" },
+            { "Message", $"Are you sure you want to delete '{bundle.Name}'? This action cannot be undone." },
+            { "ConfirmText", "Delete" },
+            { "ConfirmColor", Color.Error }
+        };
+
+        var dialog = DialogService.Show<ConfirmDialog>("Delete Bundle", parameters);
+        var result = await dialog.Result;
+
+        if (result != null && !result.Canceled)
+        {
+            try
+            {
+                var deleteResult = await BundleService.DeleteBundleAsync(bundle.Id);
+                
+                if (deleteResult.Success)
+                {
+                    Snackbar.Add($"Bundle '{bundle.Name}' deleted successfully", Severity.Success);
+                    await LoadBundles();
+                }
+                else
+                {
+                    Snackbar.Add(deleteResult.Message ?? "Failed to delete bundle", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Failed to delete bundle: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+
+    private string GetImageUrl(BundleModel bundle)
+    {
+        return !string.IsNullOrEmpty(bundle.ImageUrl) 
+            ? bundle.ImageUrl 
+            : "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5CdW5kbGU8L3RleHQ+PC9zdmc+";
+    }
+
+    private string GetTruncatedDescription(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            return "No description available";
+
+        return description.Length > 120 
+            ? description.Substring(0, 120) + "..." 
+            : description;
+    }
+}

@@ -51,6 +51,7 @@ public static class DependencyInjection
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<ISettingsService, SettingsService>();
         services.AddScoped<IPublicProfileService, PublicProfileService>();
+        services.AddScoped<IBundleService, BundleService>();
 
         // Email Notification Service
         services.AddScoped<IEmailNotificationService, EmailNotificationService>();
