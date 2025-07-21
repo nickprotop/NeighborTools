@@ -52,12 +52,6 @@
                                        StartIcon="@Icons.Material.Filled.Assignment">
                                 My Rentals
                             </MudButton>
-                            <MudButton Variant="Variant.Text" 
-                                       Href="/bundles" 
-                                       Class="nav-link"
-                                       StartIcon="@Icons.Material.Filled.Inventory">
-                                Bundles
-                            </MudButton>
                             <MudBadge Content="@unreadMessageCount" 
                                       Color="Color.Error" 
                                       Overlap="true" 
@@ -111,9 +105,6 @@
                                     </MudMenuItem>
                                     <MudMenuItem Icon="@Icons.Material.Filled.Favorite" Href="/favorites">
                                         Favorites
-                                    </MudMenuItem>
-                                    <MudMenuItem Icon="@Icons.Material.Filled.Inventory2" Href="/my-bundles">
-                                        My Bundles
                                     </MudMenuItem>
                                     <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="/settings">
                                         Settings
@@ -204,14 +195,6 @@
                                    Class="mobile-nav-item"
                                    OnClick="CloseMobileMenu">
                             My Rentals
-                        </MudButton>
-                        <MudButton Variant="Variant.Text" 
-                                   Href="/bundles" 
-                                   FullWidth="true"
-                                   StartIcon="@Icons.Material.Filled.Inventory"
-                                   Class="mobile-nav-item"
-                                   OnClick="CloseMobileMenu">
-                            Bundles
                         </MudButton>
                         <MudBadge Content="@unreadMessageCount" 
                                   Color="Color.Error" 

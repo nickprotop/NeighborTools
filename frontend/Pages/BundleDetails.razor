@@ -102,29 +102,64 @@ else
                         </div>
 
                         <!-- Availability Status -->
-                        @if (bundle.IsAvailable)
+                        @if (isCheckingAvailability)
                         {
-                            <MudChip Color="Color.Success" 
-                                   Size="Size.Medium" 
-                                   Icon="@Icons.Material.Filled.CheckCircle" 
-                                   Text="Available Now" 
-                                   T="string" />
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                <MudChip Color="Color.Info" 
+                                       Size="Size.Medium" 
+                                       Icon="@Icons.Material.Filled.Refresh" 
+                                       Text="Checking Availability..." 
+                                       T="string" />
+                            </MudStack>
+                        }
+                        else if (bundle.IsAvailable)
+                        {
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                <MudChip Color="Color.Success" 
+                                       Size="Size.Medium" 
+                                       Icon="@Icons.Material.Filled.CheckCircle" 
+                                       Text="Available Now" 
+                                       T="string" />
+                                @if (quickAvailability != null)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        (Next 3 days checked)
+                                    </MudText>
+                                }
+                            </MudStack>
                         }
                         else if (bundle.AvailableFromDate.HasValue)
                         {
-                            <MudChip Color="Color.Warning" 
-                                   Size="Size.Medium" 
-                                   Icon="@Icons.Material.Filled.Schedule" 
-                                   Text="@($"Available {bundle.AvailableFromDate.Value:MMM dd}")" 
-                                   T="string" />
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                <MudChip Color="Color.Warning" 
+                                       Size="Size.Medium" 
+                                       Icon="@Icons.Material.Filled.Schedule" 
+                                       Text="@($"Available {bundle.AvailableFromDate.Value:MMM dd}")" 
+                                       T="string" />
+                                @if (quickAvailability?.ToolAvailability.Any(t => !t.IsAvailable) == true)
+                                {
+                                    <MudTooltip Text="@GetUnavailableToolsTooltip()">
+                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Secondary" />
+                                    </MudTooltip>
+                                }
+                            </MudStack>
                         }
                         else
                         {
-                            <MudChip Color="Color.Error" 
-                                   Size="Size.Medium" 
-                                   Icon="@Icons.Material.Filled.Block" 
-                                   Text="Currently Unavailable" 
-                                   T="string" />
+                            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                                <MudChip Color="Color.Error" 
+                                       Size="Size.Medium" 
+                                       Icon="@Icons.Material.Filled.Block" 
+                                       Text="Currently Unavailable" 
+                                       T="string" />
+                                @if (quickAvailability?.ToolAvailability.Any(t => !t.IsAvailable) == true)
+                                {
+                                    <MudTooltip Text="@GetUnavailableToolsTooltip()">
+                                        <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Color="Color.Error" />
+                                    </MudTooltip>
+                                }
+                            </MudStack>
                         }
 
                         <!-- Action Button -->
@@ -330,10 +365,16 @@ else
     
     private BundleModel? bundle;
     private bool isLoading = true;
+    private bool isCheckingAvailability = false;
+    private BundleAvailabilityResponseModel? quickAvailability;
 
     protected override async Task OnInitializedAsync()
     {
         await LoadBundle();
+        if (bundle != null)
+        {
+            await CheckQuickAvailability();
+        }
     }
 
     protected override async Task OnParametersSetAsync()
@@ -407,6 +448,52 @@ else
         }
     }
 
+    private async Task CheckQuickAvailability()
+    {
+        if (bundle == null) return;
+
+        isCheckingAvailability = true;
+        StateHasChanged();
+
+        try
+        {
+            // Check availability for tomorrow to next week
+            var startDate = DateTime.Today.AddDays(1);
+            var endDate = DateTime.Today.AddDays(3); // 3-day rental
+
+            var availabilityRequest = new BundleAvailabilityModel
+            {
+                BundleId = bundle.Id,
+                StartDate = startDate,
+                EndDate = endDate
+            };
+
+            var result = await BundleService.CheckBundleAvailabilityAsync(availabilityRequest);
+            
+            if (result.Success && result.Data != null)
+            {
+                quickAvailability = result.Data;
+                
+                // Update the bundle's availability properties based on real data
+                bundle.IsAvailable = quickAvailability.IsAvailable;
+                if (!quickAvailability.IsAvailable && quickAvailability.EarliestAvailableDate.HasValue)
+                {
+                    bundle.AvailableFromDate = quickAvailability.EarliestAvailableDate;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            // Silently fail for availability check - don't disrupt the page load
+            Console.WriteLine($"Failed to check bundle availability: {ex.Message}");
+        }
+        finally
+        {
+            isCheckingAvailability = false;
+            StateHasChanged();
+        }
+    }
+
     private async Task OpenRentalDialog()
     {
         if (bundle == null) return;
@@ -427,6 +514,25 @@ else
             // Bundle rental request was successful
             // The dialog handles navigation to the bundle rental details
             Snackbar.Add("Bundle rental request submitted successfully!", Severity.Success);
+            
+            // Refresh availability after successful rental
+            await CheckQuickAvailability();
         }
+    }
+
+    private string GetUnavailableToolsTooltip()
+    {
+        if (quickAvailability?.ToolAvailability == null) 
+            return "Check specific dates for detailed availability";
+
+        var unavailableTools = quickAvailability.ToolAvailability
+            .Where(t => !t.IsAvailable)
+            .Select(t => $"{t.ToolName}: {t.UnavailabilityReason}")
+            .ToList();
+
+        if (!unavailableTools.Any())
+            return "All tools available";
+
+        return $"Unavailable tools:\n{string.Join("\n", unavailableTools)}";
     }
 }

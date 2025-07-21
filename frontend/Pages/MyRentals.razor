@@ -5,7 +5,10 @@
 @using frontend.Services
 @using frontend.Components
 @using frontend.Shared
+@using ToolsSharing.Frontend.Models
+@using ToolsSharing.Frontend.Services
 @inject IRentalService RentalService
+@inject BundleService BundleService
 @inject IPaymentService PaymentService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -322,15 +325,132 @@
             </MudPaper>
         }
     </MudTabPanel>
+
+    <MudTabPanel Text="Bundle Rentals" Icon="@Icons.Material.Filled.Inventory">
+        <div class="d-flex justify-space-between align-center mb-4">
+            <MudText Typo="Typo.h6">Bundle Rental Requests</MudText>
+            <div class="d-flex justify-end">
+                <MudSelect T="string" @bind-Value="selectedBundleStatus" Label="Status Filter" Variant="Variant.Outlined" Dense="true" Style="width: fit-content;">
+                    <MudSelectItem T="string" Value="@string.Empty">All Status</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Pending")">Pending</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Approved")">Approved</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Rejected")">Rejected</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("Cancelled")">Cancelled</MudSelectItem>
+                </MudSelect>
+            </div>
+        </div>
+        
+        @if (isLoadingBundleRentals)
+        {
+            <div class="text-center pa-8">
+                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                <MudText Typo="Typo.h6" Class="mt-4">Loading bundle rentals...</MudText>
+            </div>
+        }
+        else if (GetFilteredBundleRentals()?.Any() == true)
+        {
+            <MudGrid>
+                @foreach (var bundleRental in GetFilteredBundleRentals())
+                {
+                    <MudItem xs="12" md="6" lg="4">
+                        <MudCard Elevation="2" Style="border-radius: 12px;">
+                            <MudCardContent>
+                                <MudLink Href="@($"/bundles/{bundleRental.BundleId}")" Typo="Typo.h6" Color="Color.Primary" GutterBottom="true">
+                                    @bundleRental.BundleName
+                                </MudLink>
+                                
+                                <div class="d-flex justify-space-between align-center mb-2">
+                                    <MudChip T="string" Color="@GetBundleStatusColor(bundleRental.Status)" Size="Size.Small">
+                                        @bundleRental.Status
+                                    </MudChip>
+                                    <MudText Typo="Typo.h6" Color="Color.Primary">
+                                        $@bundleRental.FinalCost.ToString("F2")
+                                    </MudText>
+                                </div>
+                                
+                                @if (bundleRental.Status == "Pending")
+                                {
+                                    <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
+                                        <MudText Typo="Typo.caption">
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /> Awaiting bundle owner approval
+                                        </MudText>
+                                    </MudAlert>
+                                }
+                                else if (bundleRental.Status == "Approved")
+                                {
+                                    <MudAlert Severity="Severity.Success" Dense="true" Class="mb-2">
+                                        <MudText Typo="Typo.caption">
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" /> Bundle rental approved - Ready for coordination
+                                        </MudText>
+                                    </MudAlert>
+                                }
+                                
+                                <MudText Typo="Typo.body2" Class="mb-2">
+                                    <strong>Renter:</strong> 
+                                    <UserLink UserId="@bundleRental.RenterUserId" 
+                                              DisplayName="@bundleRental.RenterName" 
+                                              ShowAsLink="true" 
+                                              ShowAvatar="false" />
+                                </MudText>
+                                
+                                <MudText Typo="Typo.body2" Class="mb-2">
+                                    <strong>Period:</strong> @bundleRental.RentalDate.ToString("MMM dd") - @bundleRental.ReturnDate.ToString("MMM dd, yyyy")
+                                </MudText>
+                                
+                                @if (!string.IsNullOrEmpty(bundleRental.RenterNotes))
+                                {
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Notes:</strong> @bundleRental.RenterNotes
+                                    </MudText>
+                                }
+                                
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    Created: @bundleRental.CreatedAt.ToString("MMM dd, yyyy")
+                                </MudText>
+                            </MudCardContent>
+                            
+                            <MudCardActions>
+                                @if (bundleRental.Status == "Pending")
+                                {
+                                    <MudButton Variant="Variant.Text" Color="Color.Success" OnClick="() => ApproveBundleRental(bundleRental.Id)" StartIcon="@Icons.Material.Filled.Check" Size="Size.Small">
+                                        Approve
+                                    </MudButton>
+                                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => RejectBundleRental(bundleRental.Id)" StartIcon="@Icons.Material.Filled.Close" Size="Size.Small">
+                                        Reject
+                                    </MudButton>
+                                }
+                            </MudCardActions>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        else
+        {
+            <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+                <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No bundle rental requests found</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                    Bundle rental requests will appear here when users request to rent your bundles.
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/bundles" StartIcon="@Icons.Material.Filled.Search">
+                    Browse Bundles
+                </MudButton>
+            </MudPaper>
+        }
+    </MudTabPanel>
 </MudTabs>
 
 @code {
     private List<Rental>? renterRentals;
     private List<Rental>? ownerRentals;
+    private List<BundleRentalModel>? bundleRentals;
     private bool isLoadingRenterRentals = true;
     private bool isLoadingOwnerRentals = true;
+    private bool isLoadingBundleRentals = true;
     private string selectedRenterStatus = string.Empty;
     private string selectedOwnerStatus = string.Empty;
+    private string selectedBundleStatus = string.Empty;
     private int activeTab = 0;
     private Dictionary<string, decimal?> rentalCosts = new();
 
@@ -338,7 +458,8 @@
     {
         await Task.WhenAll(
             LoadRenterRentals(),
-            LoadOwnerRentals()
+            LoadOwnerRentals(),
+            LoadBundleRentals()
         );
     }
 
@@ -628,6 +749,120 @@
         }
         
         StateHasChanged();
+    }
+
+    private async Task LoadBundleRentals()
+    {
+        isLoadingBundleRentals = true;
+        try
+        {
+            var result = await BundleService.GetUserBundleRentalsAsync();
+            if (result.Success && result.Data != null)
+            {
+                bundleRentals = result.Data.Items;
+            }
+            else
+            {
+                Snackbar.Add($"Error loading bundle rentals: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading bundle rentals: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoadingBundleRentals = false;
+        }
+    }
+
+    private List<BundleRentalModel> GetFilteredBundleRentals()
+    {
+        if (bundleRentals == null) return new List<BundleRentalModel>();
+        
+        return string.IsNullOrEmpty(selectedBundleStatus) 
+            ? bundleRentals.ToList()
+            : bundleRentals.Where(br => br.Status == selectedBundleStatus).ToList();
+    }
+
+    private Color GetBundleStatusColor(string status)
+    {
+        return status switch
+        {
+            "Pending" => Color.Warning,
+            "Approved" => Color.Success,
+            "Rejected" => Color.Error,
+            "Cancelled" => Color.Secondary,
+            _ => Color.Default
+        };
+    }
+
+    private async Task ApproveBundleRental(Guid bundleRentalId)
+    {
+        try
+        {
+            var result = await BundleService.ApproveBundleRentalAsync(bundleRentalId);
+            
+            if (result.Success)
+            {
+                Snackbar.Add("Bundle rental approved successfully!", Severity.Success);
+                await LoadBundleRentals();
+            }
+            else
+            {
+                Snackbar.Add($"Error approving bundle rental: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error approving bundle rental: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RejectBundleRental(Guid bundleRentalId)
+    {
+        // Show confirmation dialog with reason input
+        var parameters = new DialogParameters
+        {
+            { "Title", "Reject Bundle Rental Request" },
+            { "Message", "Are you sure you want to reject this bundle rental request?" },
+            { "ShowReasonInput", true },
+            { "ReasonLabel", "Rejection reason (optional)" },
+            { "ConfirmText", "Reject Request" },
+            { "ConfirmColor", Color.Error }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = DialogService.Show<ConfirmationDialog>("Reject Bundle Rental", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is ConfirmationDialogResult dialogResult && dialogResult.Confirmed)
+        {
+            try
+            {
+                var apiResult = await BundleService.RejectBundleRentalAsync(bundleRentalId, dialogResult.Reason ?? "Rejected by owner");
+                
+                if (apiResult.Success)
+                {
+                    Snackbar.Add("Bundle rental rejected.", Severity.Info);
+                    await LoadBundleRentals();
+                }
+                else
+                {
+                    Snackbar.Add($"Error rejecting bundle rental: {apiResult.Message}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error rejecting bundle rental: {ex.Message}", Severity.Error);
+            }
+        }
     }
 
 }

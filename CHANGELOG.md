@@ -18,6 +18,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
   - **Database Schema**: Bundle, BundleTool, and BundleRental entities with proper relationships
   - **Bundle Analytics**: View counts, rental statistics, and performance metrics
   - **Multi-Owner Support**: Handle bundles containing tools from different owners with approval coordination
+  - **Bundle Rental Approval Workflow**: Complete owner management interface in MyRentals.razor with third tab for bundle rental requests
+  - **Approval/Rejection System**: Streamlined approve/reject actions with confirmation dialogs and reason tracking
+  - **Real-time Status Updates**: Automatic refresh after bundle rental status changes with user feedback
 
 - **Enhanced Payment Workflow and Navigation** (2025-01-21)
   - Added "Pay Now to Show Commitment" functionality for pending rentals in RentalDetails.razor

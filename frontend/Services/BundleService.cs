@@ -308,5 +308,97 @@ namespace ToolsSharing.Frontend.Services
                 return ApiResponse<BundleRentalModel>.CreateFailure($"Network error: {ex.Message}");
             }
         }
+
+        public async Task<ApiResponse<PagedResult<BundleRentalModel>>> GetUserBundleRentalsAsync(int page = 1, int pageSize = 20)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/bundles/rentals?page={page}&pageSize={pageSize}");
+                var json = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse<PagedResult<BundleRentalModel>>>(json, _jsonOptions);
+                    return result ?? ApiResponse<PagedResult<BundleRentalModel>>.CreateFailure("Failed to deserialize response");
+                }
+
+                var errorResult = JsonSerializer.Deserialize<ApiResponse<PagedResult<BundleRentalModel>>>(json, _jsonOptions);
+                return errorResult ?? ApiResponse<PagedResult<BundleRentalModel>>.CreateFailure("Request failed");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<PagedResult<BundleRentalModel>>.CreateFailure($"Network error: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> ApproveBundleRentalAsync(Guid rentalId)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"api/bundles/rentals/{rentalId}/approve", null);
+                var json = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse<bool>>(json, _jsonOptions);
+                    return result ?? ApiResponse<bool>.CreateFailure("Failed to deserialize response");
+                }
+
+                var errorResult = JsonSerializer.Deserialize<ApiResponse<bool>>(json, _jsonOptions);
+                return errorResult ?? ApiResponse<bool>.CreateFailure("Request failed");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.CreateFailure($"Network error: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> RejectBundleRentalAsync(Guid rentalId, string reason)
+        {
+            try
+            {
+                var requestBody = new { reason };
+                var json = JsonSerializer.Serialize(requestBody, _jsonOptions);
+                var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+                var response = await _httpClient.PostAsync($"api/bundles/rentals/{rentalId}/reject", content);
+                var responseJson = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse<bool>>(responseJson, _jsonOptions);
+                    return result ?? ApiResponse<bool>.CreateFailure("Failed to deserialize response");
+                }
+
+                var errorResult = JsonSerializer.Deserialize<ApiResponse<bool>>(responseJson, _jsonOptions);
+                return errorResult ?? ApiResponse<bool>.CreateFailure("Request failed");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.CreateFailure($"Network error: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> CancelBundleRentalAsync(Guid rentalId)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsync($"api/bundles/rentals/{rentalId}/cancel", null);
+                var json = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse<bool>>(json, _jsonOptions);
+                    return result ?? ApiResponse<bool>.CreateFailure("Failed to deserialize response");
+                }
+
+                var errorResult = JsonSerializer.Deserialize<ApiResponse<bool>>(json, _jsonOptions);
+                return errorResult ?? ApiResponse<bool>.CreateFailure("Request failed");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.CreateFailure($"Network error: {ex.Message}");
+            }
+        }
     }
 }

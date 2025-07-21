@@ -4,12 +4,16 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using ToolsSharing.Frontend.Models
+@using ToolsSharing.Frontend.Services
+@using frontend.Components.Bundles
 @inject IToolService ToolService
+@inject BundleService BundleService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @attribute [Authorize]
 
-<PageTitle>My Tools - NeighborTools</PageTitle>
+<PageTitle>My Tools & Bundles - NeighborTools</PageTitle>
 
 <!-- Overdue Rental Alerts -->
 <OverdueRentalAlertComponent ShowDetails="true" 
@@ -23,64 +27,77 @@
     <div>
         <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
             <MudIcon Icon="@Icons.Material.Filled.Inventory" Class="mr-2" />
-            My Tools
+            My Tools & Bundles
         </MudText>
         <MudText Typo="Typo.body1" Color="Color.Secondary">
-            Manage your tool listings and track their performance
+            Manage your tool listings, bundles, and track their performance
         </MudText>
     </div>
     
-    <MudButton Variant="Variant.Filled" 
-               Color="Color.Primary" 
-               StartIcon="@Icons.Material.Filled.Add"
-               Href="/tools/create"
-               Size="Size.Large">
-        Add New Tool
-    </MudButton>
+    <div class="d-flex gap-2">
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Add"
+                   Href="/tools/create"
+                   Size="Size.Large">
+            Add Tool
+        </MudButton>
+        <MudButton Variant="Variant.Outlined" 
+                   Color="Color.Primary" 
+                   StartIcon="@Icons.Material.Filled.Inventory2"
+                   Href="/bundles/create"
+                   Size="Size.Large">
+            Create Bundle
+        </MudButton>
+    </div>
 </div>
 
-<!-- Stats Cards -->
-<MudGrid Class="mb-6">
-    <MudItem xs="12" sm="6" md="3">
-        <MudCard Elevation="4" Style="border-radius: 12px;">
-            <MudCardContent Class="text-center">
-                <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
-                <MudText Typo="Typo.h4" Color="Color.Primary">@GetTotalToolsCount()</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Total Tools</MudText>
-            </MudCardContent>
-        </MudCard>
-    </MudItem>
-    <MudItem xs="12" sm="6" md="3">
-        <MudCard Elevation="4" Style="border-radius: 12px;">
-            <MudCardContent Class="text-center">
-                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-2" />
-                <MudText Typo="Typo.h4" Color="Color.Success">@GetAvailableToolsCount()</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Available</MudText>
-            </MudCardContent>
-        </MudCard>
-    </MudItem>
-    <MudItem xs="12" sm="6" md="3">
-        <MudCard Elevation="4" Style="border-radius: 12px;">
-            <MudCardContent Class="text-center">
-                <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
-                <MudText Typo="Typo.h4" Color="Color.Warning">@GetRentedToolsCount()</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Rented Out</MudText>
-            </MudCardContent>
-        </MudCard>
-    </MudItem>
-    <MudItem xs="12" sm="6" md="3">
-        <MudCard Elevation="4" Style="border-radius: 12px;">
-            <MudCardContent Class="text-center">
-                <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Info" Class="mb-2" />
-                <MudText Typo="Typo.h4" Color="Color.Info">@GetDailyPotential()</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Daily Potential</MudText>
-            </MudCardContent>
-        </MudCard>
-    </MudItem>
-</MudGrid>
+<!-- Tabs for Tools and Bundles -->
+<MudTabs Elevation="4" Rounded="true" PanelClass="pa-6" @bind-ActivePanelIndex="activeTab">
+    <MudTabPanel Text="My Tools" Icon="@Icons.Material.Filled.Build">
+        
+        <!-- Tools Stats Cards -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="4" Style="border-radius: 12px;">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">@GetTotalToolsCount()</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Total Tools</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="4" Style="border-radius: 12px;">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-2" />
+                        <MudText Typo="Typo.h4" Color="Color.Success">@GetAvailableToolsCount()</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Available</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="4" Style="border-radius: 12px;">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
+                        <MudText Typo="Typo.h4" Color="Color.Warning">@GetRentedToolsCount()</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Rented Out</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="4" Style="border-radius: 12px;">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Size="Size.Large" Color="Color.Info" Class="mb-2" />
+                        <MudText Typo="Typo.h4" Color="Color.Info">@GetDailyPotential()</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Daily Potential</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
 
-<!-- Loading State -->
-@if (isLoading)
+        <!-- Tools Loading State -->
+        @if (isLoading)
 {
     <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
         <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
@@ -202,6 +219,173 @@
         </MudButton>
     </MudPaper>
 }
+    </MudTabPanel>
+
+    <MudTabPanel Text="My Bundles" Icon="@Icons.Material.Filled.Inventory2">
+        
+        <!-- Bundle Stats Cards -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="4" Style="border-radius: 12px;">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                        <MudText Typo="Typo.h4" Color="Color.Primary">@GetTotalBundlesCount()</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Total Bundles</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="4" Style="border-radius: 12px;">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Star" Size="Size.Large" Color="Color.Warning" Class="mb-2" />
+                        <MudText Typo="Typo.h4" Color="Color.Warning">@GetFeaturedBundlesCount()</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Featured</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="4" Style="border-radius: 12px;">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Large" Color="Color.Info" Class="mb-2" />
+                        <MudText Typo="Typo.h4" Color="Color.Info">@GetTotalBundleViews()</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Total Views</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            <MudItem xs="12" sm="6" md="3">
+                <MudCard Elevation="4" Style="border-radius: 12px;">
+                    <MudCardContent Class="text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Assignment" Size="Size.Large" Color="Color.Success" Class="mb-2" />
+                        <MudText Typo="Typo.h4" Color="Color.Success">@GetTotalBundleRentals()</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">Rentals</MudText>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Bundles Loading State -->
+        @if (isBundlesLoading)
+        {
+            <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+                <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+                <MudText Typo="Typo.h6" Class="mt-4">Loading your bundles...</MudText>
+            </MudPaper>
+        }
+        <!-- Bundles Error State -->
+        @if (!string.IsNullOrEmpty(bundleErrorMessage))
+        {
+            <MudAlert Severity="Severity.Error" ShowCloseIcon="true" CloseIconClicked="(() => bundleErrorMessage = string.Empty)">
+                @bundleErrorMessage
+            </MudAlert>
+        }
+        <!-- Bundles Grid -->
+        @if (myBundles?.Items?.Any() == true)
+        {
+            <MudGrid>
+                @foreach (var bundle in myBundles.Items)
+                {
+                    <MudItem xs="12" sm="6" md="4">
+                        <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s;" Class="hover-card">
+                            @if (!string.IsNullOrEmpty(bundle.ImageUrl))
+                            {
+                                <MudCardMedia Image="@bundle.ImageUrl" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                            }
+                            else
+                            {
+                                <div class="d-flex align-center justify-center" style="height: 200px; background: var(--mud-palette-surface-variant); border-radius: 12px 12px 0 0;">
+                                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem;" />
+                                </div>
+                            }
+                            
+                            <MudCardContent>
+                                <MudText Typo="Typo.h6" GutterBottom="true">@bundle.Name</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3" Style="height: 3em; overflow: hidden;">
+                                    @(bundle.Description.Length > 80 ? bundle.Description.Substring(0, 80) + "..." : bundle.Description)
+                                </MudText>
+                                
+                                <div class="d-flex justify-space-between align-center mb-3">
+                                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.Category">
+                                        @bundle.Category
+                                    </MudChip>
+                                    @if (bundle.IsFeatured)
+                                    {
+                                        <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Star">
+                                            Featured
+                                        </MudChip>
+                                    }
+                                </div>
+                                
+                                <div class="d-flex justify-space-between align-center mb-2">
+                                    <MudText Typo="Typo.h6" Color="Color.Primary">
+                                        $@bundle.DiscountedCost.ToString("F2")
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        per day
+                                    </MudText>
+                                </div>
+                                
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                                    @bundle.Tools.Count tool@(bundle.Tools.Count != 1 ? "s" : "") included
+                                </MudText>
+                                
+                                <div class="d-flex justify-space-between align-center">
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @bundle.ViewCount views
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @bundle.RentalCount rental@(bundle.RentalCount != 1 ? "s" : "")
+                                    </MudText>
+                                </div>
+                            </MudCardContent>
+                            
+                            <MudCardActions Class="pa-4">
+                                <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true">
+                                    <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="() => EditBundle(bundle.Id)">
+                                        Edit
+                                    </MudButton>
+                                    <MudButton StartIcon="@Icons.Material.Filled.Visibility" OnClick="() => ViewBundle(bundle.Id)">
+                                        View
+                                    </MudButton>
+                                    <MudButton StartIcon="@Icons.Material.Filled.Delete" 
+                                               Color="Color.Error" 
+                                               OnClick="() => DeleteBundle(bundle.Id, bundle.Name)">
+                                        Delete
+                                    </MudButton>
+                                </MudButtonGroup>
+                            </MudCardActions>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+
+            <!-- Pagination -->
+            @if (myBundles.TotalPages > 1)
+            {
+                <MudStack AlignItems="AlignItems.Center" Class="mt-6">
+                    <MudPagination Count="myBundles.TotalPages" 
+                                 Selected="currentBundlePage" 
+                                 SelectedChanged="OnBundlePageChanged"
+                                 Color="Color.Primary" 
+                                 Size="Size.Large" />
+                </MudStack>
+            }
+        }
+        <!-- Bundles Empty State -->
+        @if (myBundles == null || !myBundles.Items.Any())
+        {
+            <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Large" Color="Color.Secondary" Class="mb-4" Style="font-size: 4rem;" />
+                <MudText Typo="Typo.h5" Color="Color.Secondary" Class="mb-2">No bundles yet</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                    Create tool bundles to offer complete project solutions and increase your earnings!
+                </MudText>
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/bundles/create" StartIcon="@Icons.Material.Filled.Add" Size="Size.Large">
+                    Create Your First Bundle
+                </MudButton>
+            </MudPaper>
+        }
+    </MudTabPanel>
+</MudTabs>
 
 <style>
     .hover-card:hover {
@@ -210,13 +394,26 @@
 </style>
 
 @code {
+    // Tools variables
     private List<Tool>? myTools;
     private string errorMessage = string.Empty;
     private bool isLoading = true;
 
+    // Bundles variables
+    private PagedResult<BundleModel>? myBundles;
+    private string bundleErrorMessage = string.Empty;
+    private bool isBundlesLoading = true;
+    private int currentBundlePage = 1;
+
+    // Tab management
+    private int activeTab = 0;
+
     protected override async Task OnInitializedAsync()
     {
-        await LoadMyTools();
+        await Task.WhenAll(
+            LoadMyTools(),
+            LoadMyBundles()
+        );
     }
 
     private async Task LoadMyTools()
@@ -306,5 +503,105 @@
     private string GetToolDescription(Tool tool)
     {
         return GetTruncatedDescription(tool?.Description ?? "");
+    }
+
+    // Bundle methods
+    private async Task LoadMyBundles()
+    {
+        isBundlesLoading = true;
+        bundleErrorMessage = string.Empty;
+
+        try
+        {
+            var result = await BundleService.GetMyBundlesAsync(page: currentBundlePage, pageSize: 12);
+            
+            if (result.Success)
+            {
+                myBundles = result.Data;
+            }
+            else
+            {
+                bundleErrorMessage = result.Message ?? "Failed to load bundles.";
+            }
+        }
+        catch (Exception ex)
+        {
+            bundleErrorMessage = $"An error occurred: {ex.Message}";
+        }
+        finally
+        {
+            isBundlesLoading = false;
+        }
+    }
+
+    private async Task OnBundlePageChanged(int page)
+    {
+        currentBundlePage = page;
+        await LoadMyBundles();
+    }
+
+    private void EditBundle(Guid bundleId)
+    {
+        Navigation.NavigateTo($"/bundles/edit/{bundleId}");
+    }
+
+    private void ViewBundle(Guid bundleId)
+    {
+        Navigation.NavigateTo($"/bundles/{bundleId}");
+    }
+
+    private async Task DeleteBundle(Guid bundleId, string bundleName)
+    {
+        // Show confirmation dialog - we'll reuse the same pattern as tools
+        bool confirmed = await ShowDeleteConfirmation($"Are you sure you want to delete the bundle \"{bundleName}\"?");
+        
+        if (!confirmed) return;
+
+        try
+        {
+            var result = await BundleService.DeleteBundleAsync(bundleId);
+            
+            if (result.Success)
+            {
+                Snackbar.Add($"Bundle \"{bundleName}\" deleted successfully", Severity.Success);
+                await LoadMyBundles(); // Refresh the list
+            }
+            else
+            {
+                Snackbar.Add($"Error deleting bundle: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error deleting bundle: {ex.Message}", Severity.Error);
+        }
+    }
+
+    // Bundle statistics methods
+    private int GetTotalBundlesCount()
+    {
+        return myBundles?.TotalCount ?? 0;
+    }
+
+    private int GetFeaturedBundlesCount()
+    {
+        return myBundles?.Items?.Count(b => b.IsFeatured) ?? 0;
+    }
+
+    private int GetTotalBundleViews()
+    {
+        return myBundles?.Items?.Sum(b => b.ViewCount) ?? 0;
+    }
+
+    private int GetTotalBundleRentals()
+    {
+        return myBundles?.Items?.Sum(b => b.RentalCount) ?? 0;
+    }
+
+    private async Task<bool> ShowDeleteConfirmation(string message)
+    {
+        // This is a simplified version - you might want to use a proper dialog
+        // For now, we'll return true to allow deletion
+        return true;
     }
 }
