@@ -230,7 +230,8 @@ public class PayPalWebhookValidationMiddleware
     public async Task InvokeAsync(HttpContext context)
     {
         // Only validate PayPal webhook endpoints
-        if (context.Request.Path.StartsWithSegments("/api/payments/webhook/paypal"))
+        if (context.Request.Path.StartsWithSegments("/api/payments/webhook/paypal") ||
+            context.Request.Path.StartsWithSegments("/api/disputes/webhook/paypal"))
         {
             // Resolve validator from request scope
             var validator = context.RequestServices.GetRequiredService<IPayPalWebhookValidator>();
@@ -268,14 +269,27 @@ public class PayPalWebhookValidationMiddleware
             using var reader = new StreamReader(bodyStream, leaveOpen: true);
             var webhookBody = await reader.ReadToEndAsync();
 
-            // Get webhook ID from configuration
-            var webhookId = context.RequestServices
-                .GetRequiredService<IConfiguration>()["Payment:PayPal:WebhookId"];
-
-            if (string.IsNullOrEmpty(webhookId))
+            // Get webhook ID from configuration based on endpoint
+            var configuration = context.RequestServices.GetRequiredService<IConfiguration>();
+            string? webhookId;
+            
+            if (context.Request.Path.StartsWithSegments("/api/disputes/webhook/paypal"))
             {
-                _logger.LogError("PayPal webhook ID not configured");
-                return false;
+                webhookId = configuration["Payment:PayPal:DisputeWebhookId"];
+                if (string.IsNullOrEmpty(webhookId))
+                {
+                    _logger.LogError("PayPal dispute webhook ID not configured");
+                    return false;
+                }
+            }
+            else
+            {
+                webhookId = configuration["Payment:PayPal:WebhookId"];
+                if (string.IsNullOrEmpty(webhookId))
+                {
+                    _logger.LogError("PayPal payment webhook ID not configured");
+                    return false;
+                }
             }
 
             // Validate signature

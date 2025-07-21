@@ -12,10 +12,19 @@ public record CreateRentalCommand(
     string? Notes = null
 );
 
+// DTO for frontend requests
+public class CreateRentalDto
+{
+    public string ToolId { get; set; } = string.Empty;
+    public DateTime StartDate { get; set; }
+    public DateTime EndDate { get; set; }
+    public string? Notes { get; set; }
+}
+
 public class RentalDto
 {
-    public Guid Id { get; set; }
-    public Guid ToolId { get; set; }
+    public string Id { get; set; } = "";  // Changed to string to match frontend
+    public string ToolId { get; set; } = "";  // Changed to string to match frontend
     public string ToolName { get; set; } = "";
     public string RenterId { get; set; } = "";
     public string RenterName { get; set; } = "";
@@ -29,6 +38,14 @@ public class RentalDto
     public string? Notes { get; set; }
     public DateTime? PickupDate { get; set; }
     public DateTime? ReturnDate { get; set; }
+    public string? ReturnConditionNotes { get; set; }  // Added to match frontend
+    public string? ReturnedByUserId { get; set; }  // Added to match frontend
+    public DateTime? DisputeDeadline { get; set; }  // Added to match frontend
+    public DateTime? ApprovedAt { get; set; }  // Added to match frontend
+    public DateTime? CancelledAt { get; set; }  // Added to match frontend
+    public string? CancellationReason { get; set; }  // Added to match frontend
+    public DateTime CreatedAt { get; set; }  // Added to match frontend
+    public DateTime UpdatedAt { get; set; }  // Added to match frontend
     public bool IsPaid { get; set; }
     public ToolDto? Tool { get; set; }
 }

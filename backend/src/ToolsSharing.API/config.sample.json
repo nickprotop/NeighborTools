@@ -2,7 +2,10 @@
   "_instructions": "Copy this file to 'config.json' and update with your actual values",
   "_comment": "This file contains all user-configurable settings including secrets, business logic, and environment-specific configurations",
   "JwtSettings": {
-    "SecretKey": "GENERATE_A_SECURE_256_BIT_JWT_SECRET_KEY_HERE_MINIMUM_32_CHARACTERS_LONG"
+    "SecretKey": "GENERATE_A_SECURE_256_BIT_JWT_SECRET_KEY_HERE_MINIMUM_32_CHARACTERS_LONG",
+    "Issuer": "NeighborTools",
+    "Audience": "NeighborTools-Users", 
+    "ExpiresInMinutes": "60"
   },
   "ConnectionStrings": {
     "DefaultConnection": "server=localhost;port=3306;database=toolssharing;uid=toolsuser;pwd=YOUR_MYSQL_PASSWORD_HERE"
@@ -11,11 +14,13 @@
     "DefaultCommissionRate": 0.10,
     "MinimumPayoutAmount": 10.00,
     "DefaultCurrency": "USD",
+    "FrontendBaseUrl": "http://localhost:5000",
     "PayPal": {
       "ClientId": "YOUR_PAYPAL_SANDBOX_CLIENT_ID_HERE",
       "ClientSecret": "YOUR_PAYPAL_SANDBOX_CLIENT_SECRET_HERE",
       "Mode": "sandbox",
-      "WebhookId": "YOUR_PAYPAL_WEBHOOK_ID_HERE",
+      "WebhookId": "YOUR_PAYPAL_PAYMENT_WEBHOOK_ID_HERE",
+      "DisputeWebhookId": "YOUR_PAYPAL_DISPUTE_WEBHOOK_ID_HERE",
       "IsEnabled": true
     }
   },
@@ -35,6 +40,13 @@
   },
   "Frontend": {
     "BaseUrl": "http://localhost:5000"
+  },
+  "FileStorage": {
+    "_Comment": "File storage configuration for uploads and user content",
+    "BasePath": "wwwroot/uploads",
+    "BaseUrl": "/uploads",
+    "MaxFileSizeMB": 10,
+    "AllowedExtensions": [".jpg", ".jpeg", ".png", ".pdf", ".doc", ".docx"]
   },
   "FraudDetection": {
     "DailyAmountLimit": 5000.00,

@@ -68,15 +68,25 @@
             }
             
             <div class="d-flex justify-center gap-3">
-                <MudButton Variant="Variant.Filled" 
+                @if (!string.IsNullOrEmpty(returnTo))
+                {
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               Size="Size.Large"
+                               Href="@returnTo"
+                               StartIcon="@Icons.Material.Filled.ArrowBack">
+                        Back to Rental
+                    </MudButton>
+                }
+                <MudButton Variant="Variant.Outlined" 
                            Color="Color.Primary" 
                            Size="Size.Large"
                            Href="/my-rentals"
                            StartIcon="@Icons.Material.Filled.Receipt">
                     View My Rentals
                 </MudButton>
-                <MudButton Variant="Variant.Outlined" 
-                           Color="Color.Primary" 
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Secondary" 
                            Size="Size.Large"
                            Href="/tools"
                            StartIcon="@Icons.Material.Filled.Search">
@@ -99,13 +109,13 @@
                 @(errorMessage ?? "We were unable to process your payment. Please try again or contact support if the problem persists.")
             </MudText>
             
-            @if (!string.IsNullOrEmpty(rentalId))
+            @if (!string.IsNullOrEmpty(returnTo))
             {
                 <div class="d-flex justify-center gap-3 mt-6">
                     <MudButton Variant="Variant.Outlined" 
                                Color="Color.Secondary" 
                                Size="Size.Large"
-                               Href="@($"/rentals/{rentalId}")"
+                               Href="@returnTo"
                                StartIcon="@Icons.Material.Filled.ArrowBack">
                         Back to Rental
                     </MudButton>
@@ -139,6 +149,7 @@
     private string? rentalId;
     private string? paymentId;
     private string? payerId;
+    private string? returnTo;
     private Transaction? transactionDetails;
 
     protected override async Task OnInitializedAsync()
@@ -162,12 +173,31 @@
             payerId = payerIdValue.ToString();
         }
 
+        if (queryParams.TryGetValue("returnTo", out var returnToValue))
+        {
+            returnTo = Uri.UnescapeDataString(returnToValue.ToString());
+        }
+
         // Check if this is a cancellation
         if (queryParams.ContainsKey("cancelled") || string.IsNullOrEmpty(paymentId) || string.IsNullOrEmpty(payerId))
         {
+            // Auto-cancel the payment if user cancelled at PayPal
+            if (!string.IsNullOrEmpty(rentalId) && Guid.TryParse(rentalId, out var cancelRentalGuid))
+            {
+                try
+                {
+                    await PaymentService.CancelPaymentAsync(cancelRentalGuid);
+                }
+                catch (Exception ex)
+                {
+                    // Log the error but don't fail the cancellation flow
+                    Console.WriteLine($"Error auto-canceling payment: {ex.Message}");
+                }
+            }
+            
             isProcessing = false;
             paymentSuccessful = false;
-            errorMessage = "Payment was cancelled. You can try again when you're ready.";
+            errorMessage = "Payment was cancelled. The payment session has been cleared, so you can try again when you're ready.";
             return;
         }
 

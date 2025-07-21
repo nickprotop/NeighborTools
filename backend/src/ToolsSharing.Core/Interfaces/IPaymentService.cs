@@ -11,6 +11,7 @@ public interface IPaymentService
     Task<CreatePaymentResult> InitiateRentalPaymentAsync(Guid rentalId, string userId);
     Task<CapturePaymentResult> CompleteRentalPaymentAsync(string paymentId, string payerId);
     Task<PaymentStatusResult> GetPaymentStatusAsync(string paymentId);
+    Task<CreatePaymentResult> CancelPaymentAsync(Guid rentalId, string userId);
     
     // Refund operations
     Task<RefundResult> RefundRentalAsync(Guid rentalId, decimal amount, string reason);
@@ -52,7 +53,7 @@ public class UpdatePaymentSettingsDto
 {
     public string? PayPalEmail { get; set; }
     public decimal? CustomCommissionRate { get; set; }
-    public PayoutSchedule? PayoutSchedule { get; set; }
+    public string? PayoutSchedule { get; set; }  // Accept as string, convert to enum in service
     public decimal? MinimumPayoutAmount { get; set; }
     public bool? NotifyOnPaymentReceived { get; set; }
     public bool? NotifyOnPayoutSent { get; set; }

@@ -12,6 +12,7 @@ public interface IRentalService
     Task<ApiResponse<Rental>> CreateRentalAsync(CreateRentalRequest request);
     Task<ApiResponse> ApproveRentalAsync(string id, RentalApprovalRequest request);
     Task<ApiResponse> RejectRentalAsync(string id, RentalApprovalRequest request);
+    Task<ApiResponse> CancelRentalAsync(string id, string? reason = null);
     Task<ApiResponse<List<Rental>>> GetMyRentalsAsync(string? status = null);
     Task<ApiResponse<List<Rental>>> GetMyToolRentalsAsync(string? status = null);
     Task<ApiResponse> ConfirmPickupAsync(Guid rentalId, string? notes = null);
@@ -151,6 +152,30 @@ public class RentalService : IRentalService
             { 
                 Success = false, 
                 Message = $"Failed to reject rental: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse> CancelRentalAsync(string id, string? reason = null)
+    {
+        try
+        {
+            var response = await _httpClient.PatchAsJsonAsync($"/api/rentals/{id}/cancel", reason);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse 
+            { 
+                Success = false, 
+                Message = $"Failed to cancel rental: {ex.Message}" 
             };
         }
     }

@@ -74,13 +74,65 @@ public class PaymentService : IPaymentService
                 .Where(t => t.RentalId == rentalId)
                 .FirstOrDefaultAsync();
 
-            if (existingTransaction != null && existingTransaction.Status != TransactionStatus.Cancelled)
+            if (existingTransaction != null)
             {
-                return new CreatePaymentResult
+                // Allow retry if transaction was cancelled or if it's been processing for too long (abandoned)
+                if (existingTransaction.Status == TransactionStatus.Cancelled)
                 {
-                    Success = false,
-                    ErrorMessage = "Payment already initiated for this rental"
-                };
+                    // Remove cancelled transaction to start fresh
+                    _context.Transactions.Remove(existingTransaction);
+                    await _context.SaveChangesAsync();
+                    existingTransaction = null;
+                }
+                else if (existingTransaction.Status == TransactionStatus.PaymentProcessing)
+                {
+                    // Check if payment has been abandoned (processing for more than 1 minute)
+                    // Since users go directly to PayPal checkout, this should be very quick
+                    var timeSinceCreated = DateTime.UtcNow - existingTransaction.CreatedAt;
+                    if (timeSinceCreated.TotalMinutes > 1)
+                    {
+                        _logger.LogInformation("Cleaning up abandoned payment for rental {RentalId}, transaction age: {Minutes} minutes", 
+                            rentalId, timeSinceCreated.TotalMinutes);
+                        
+                        // Cancel the abandoned transaction and associated payments
+                        existingTransaction.Status = TransactionStatus.Cancelled;
+                        
+                        var existingPayments = await _context.Payments
+                            .Where(p => p.RentalId == rentalId && p.Status == PaymentStatus.Pending)
+                            .ToListAsync();
+                        
+                        foreach (var payment in existingPayments)
+                        {
+                            payment.Status = PaymentStatus.Cancelled;
+                            payment.FailedAt = DateTime.UtcNow;
+                            payment.FailureReason = "Payment abandoned - exceeded 1 minute timeout";
+                        }
+                        
+                        await _context.SaveChangesAsync();
+                        
+                        // Remove the transaction to start fresh
+                        _context.Transactions.Remove(existingTransaction);
+                        await _context.SaveChangesAsync();
+                        existingTransaction = null;
+                    }
+                    else
+                    {
+                        var timeRemaining = 1 - timeSinceCreated.TotalMinutes;
+                        return new CreatePaymentResult
+                        {
+                            Success = false,
+                            ErrorMessage = $"Payment already initiated for this rental. Please wait {timeRemaining:F0} more minute(s) and try again, or use the Cancel Payment option to retry immediately."
+                        };
+                    }
+                }
+                else
+                {
+                    return new CreatePaymentResult
+                    {
+                        Success = false,
+                        ErrorMessage = "Payment already initiated for this rental"
+                    };
+                }
             }
 
             // Calculate financial breakdown
@@ -116,11 +168,11 @@ public class PaymentService : IPaymentService
                 Amount = financials.TotalPayerAmount,
                 Currency = _config.DefaultCurrency,
                 Description = $"Rental of {rental.Tool.Name} from {rental.StartDate:MMM dd} to {rental.EndDate:MMM dd}",
-                ReturnUrl = $"/payments/complete?rentalId={rentalId}",
-                CancelUrl = $"/rentals/{rentalId}",
-                IsMarketplacePayment = true,
-                PlatformFee = financials.CommissionAmount,
-                PayeeEmail = ownerSettings.PayPalEmail,
+                ReturnUrl = $"{_config.FrontendBaseUrl}/payments/complete?rentalId={rentalId}&returnTo={Uri.EscapeDataString($"/rentals/{rentalId}")}",
+                CancelUrl = $"{_config.FrontendBaseUrl}/payments/complete?rentalId={rentalId}&cancelled=true&returnTo={Uri.EscapeDataString($"/rentals/{rentalId}")}",
+                IsMarketplacePayment = false,
+                PlatformFee = null,
+                PayeeEmail = null, // Disable for now - requires marketplace approval
                 Metadata = new Dictionary<string, string>
                 {
                     ["rental_id"] = rentalId.ToString(),
@@ -142,8 +194,8 @@ public class PaymentService : IPaymentService
                     Provider = PaymentProvider.PayPal,
                     Amount = financials.TotalPayerAmount,
                     Currency = _config.DefaultCurrency,
-                    ExternalPaymentId = result.PaymentId,
-                    ExternalOrderId = result.OrderId
+                    ExternalPaymentId = string.IsNullOrEmpty(result.PaymentId) ? null : result.PaymentId,
+                    ExternalOrderId = string.IsNullOrEmpty(result.OrderId) ? null : result.OrderId
                 };
 
                 _context.Payments.Add(payment);
@@ -1038,8 +1090,11 @@ public class PaymentService : IPaymentService
         if (dto.CustomCommissionRate.HasValue)
             settings.CustomCommissionRate = dto.CustomCommissionRate.Value;
 
-        if (dto.PayoutSchedule.HasValue)
-            settings.PayoutSchedule = dto.PayoutSchedule.Value;
+        if (!string.IsNullOrEmpty(dto.PayoutSchedule))
+        {
+            if (Enum.TryParse<PayoutSchedule>(dto.PayoutSchedule, true, out var schedule))
+                settings.PayoutSchedule = schedule;
+        }
 
         if (dto.MinimumPayoutAmount.HasValue)
             settings.MinimumPayoutAmount = dto.MinimumPayoutAmount.Value;
@@ -1084,22 +1139,26 @@ The owner has been notified and will arrange pickup details with you.",
             // Email to owner
             if (ownerSettings.NotifyOnPaymentReceived)
             {
-                var ownerNotification = SimpleEmailNotification.Create(
-                    rental.Owner.Email!,
-                    "Rental Payment Received",
-                    $@"Great news! {rental.Renter.FirstName} {rental.Renter.LastName} has paid for the rental of your {rental.Tool.Name}.
-
-Rental Details:
-- Dates: {rental.StartDate:MMM dd, yyyy} to {rental.EndDate:MMM dd, yyyy}
-- Rental Amount: ${transaction.RentalAmount:F2}
-- Platform Fee ({transaction.CommissionRate:P0}): ${transaction.CommissionAmount:F2}
-- Your Payout: ${transaction.OwnerPayoutAmount:F2}
-
-Your payout will be processed within 24 hours after the rental is completed.
-
-Please contact the renter to arrange pickup details.",
-                    EmailNotificationType.PaymentProcessed);
-                ownerNotification.UserId = rental.OwnerId;
+                var ownerNotification = new PaymentCompletedNotification
+                {
+                    RecipientEmail = rental.Owner.Email!,
+                    RecipientName = $"{rental.Owner.FirstName} {rental.Owner.LastName}",
+                    UserId = rental.OwnerId,
+                    OwnerName = $"{rental.Owner.FirstName} {rental.Owner.LastName}",
+                    RenterName = $"{rental.Renter.FirstName} {rental.Renter.LastName}",
+                    ToolName = rental.Tool.Name,
+                    RentalId = rental.Id.ToString(),
+                    PaidAmount = payment.Amount,
+                    SecurityDeposit = transaction.SecurityDeposit,
+                    PlatformFee = transaction.CommissionAmount,
+                    NetAmount = transaction.OwnerPayoutAmount,
+                    PaymentDate = DateTime.UtcNow,
+                    RentalStartDate = rental.StartDate,
+                    RentalEndDate = rental.EndDate,
+                    PaymentMethod = "PayPal",
+                    RentalDetailsUrl = $"{_config.FrontendBaseUrl}/rentals/{rental.Id}",
+                    MessagesUrl = $"{_config.FrontendBaseUrl}/messages?rental={rental.Id}"
+                };
                 await _emailService.SendNotificationAsync(ownerNotification);
             }
         }
@@ -1172,6 +1231,96 @@ This may affect your payout for this rental.",
         {
             _logger.LogError(ex, "Error getting tool {ToolId} for calculation", toolId);
             return null;
+        }
+    }
+
+    public async Task<CreatePaymentResult> CancelPaymentAsync(Guid rentalId, string userId)
+    {
+        using var dbTransaction = await _context.Database.BeginTransactionAsync();
+        try
+        {
+            var rental = await _context.Rentals
+                .FirstOrDefaultAsync(r => r.Id == rentalId);
+
+            if (rental == null)
+            {
+                return new CreatePaymentResult
+                {
+                    Success = false,
+                    ErrorMessage = "Rental not found"
+                };
+            }
+
+            if (rental.RenterId != userId)
+            {
+                return new CreatePaymentResult
+                {
+                    Success = false,
+                    ErrorMessage = "Unauthorized: You are not the renter"
+                };
+            }
+
+            // Find existing transaction
+            var existingTransaction = await _context.Transactions
+                .Where(t => t.RentalId == rentalId)
+                .FirstOrDefaultAsync();
+
+            if (existingTransaction == null)
+            {
+                return new CreatePaymentResult
+                {
+                    Success = false,
+                    ErrorMessage = "No payment found to cancel"
+                };
+            }
+
+            // Only allow cancellation of processing payments
+            if (existingTransaction.Status != TransactionStatus.PaymentProcessing)
+            {
+                return new CreatePaymentResult
+                {
+                    Success = false,
+                    ErrorMessage = $"Cannot cancel payment in {existingTransaction.Status} status"
+                };
+            }
+
+            // Cancel the transaction
+            existingTransaction.Status = TransactionStatus.Cancelled;
+
+            // Cancel any pending payments
+            var existingPayments = await _context.Payments
+                .Where(p => p.RentalId == rentalId && p.Status == PaymentStatus.Pending)
+                .ToListAsync();
+
+            foreach (var payment in existingPayments)
+            {
+                payment.Status = PaymentStatus.Cancelled;
+                payment.FailedAt = DateTime.UtcNow;
+                payment.FailureReason = "Payment cancelled by user";
+            }
+
+            await _context.SaveChangesAsync();
+            await dbTransaction.CommitAsync();
+
+            _logger.LogInformation("Payment cancelled successfully for rental {RentalId} by user {UserId}", 
+                rentalId, userId);
+
+            return new CreatePaymentResult
+            {
+                Success = true,
+                PaymentId = null,
+                ApprovalUrl = null
+            };
+        }
+        catch (Exception ex)
+        {
+            await dbTransaction.RollbackAsync();
+            _logger.LogError(ex, "Error cancelling payment for rental {RentalId}", rentalId);
+            return new CreatePaymentResult
+            {
+                Success = false,
+                ErrorMessage = "An error occurred while cancelling the payment"
+            };
         }
     }
 }

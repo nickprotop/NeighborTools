@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -40,20 +41,34 @@ public class PayPalPaymentProvider : IPaymentProvider
             return _accessToken;
         }
 
-        var authRequest = new HttpRequestMessage(HttpMethod.Post, $"{_config.BaseUrl}/v1/oauth2/token");
+        var authUrl = $"{_config.BaseUrl}/v1/oauth2/token";
+        _logger.LogDebug("PayPal auth request to: {Url}", authUrl);
+        
+        var authRequest = new HttpRequestMessage(HttpMethod.Post, authUrl);
         var credentials = Convert.ToBase64String(Encoding.UTF8.GetBytes($"{_config.ClientId}:{_config.ClientSecret}"));
         authRequest.Headers.Authorization = new AuthenticationHeaderValue("Basic", credentials);
         authRequest.Content = new StringContent("grant_type=client_credentials", Encoding.UTF8, "application/x-www-form-urlencoded");
+        
+        _logger.LogDebug("PayPal auth with ClientId: {ClientId} (Mode: {Mode})", 
+            _config.ClientId?.Substring(0, Math.Min(8, _config.ClientId.Length)) + "...", _config.Mode);
 
         var response = await _httpClient.SendAsync(authRequest);
-        response.EnsureSuccessStatusCode();
-
         var responseContent = await response.Content.ReadAsStringAsync();
+        
+        if (!response.IsSuccessStatusCode)
+        {
+            _logger.LogError("PayPal authentication failed. Status: {StatusCode}, Response: {Response}", 
+                response.StatusCode, responseContent);
+            throw new InvalidOperationException($"PayPal authentication failed: {response.StatusCode} - {responseContent}");
+        }
+        _logger.LogDebug("PayPal auth response: {Response}", responseContent);
         var tokenResponse = JsonSerializer.Deserialize<PayPalTokenResponse>(responseContent);
         
         _accessToken = tokenResponse?.AccessToken ?? throw new InvalidOperationException("Failed to obtain PayPal access token");
         _tokenExpiry = DateTime.UtcNow.AddSeconds(tokenResponse.ExpiresIn - 60); // Subtract 60 seconds for safety
 
+        _logger.LogDebug("PayPal authentication successful. Token length: {Length}, expires at: {Expiry}", 
+            _accessToken?.Length ?? 0, _tokenExpiry);
         return _accessToken;
     }
 
@@ -61,7 +76,10 @@ public class PayPalPaymentProvider : IPaymentProvider
     {
         try
         {
+            _logger.LogDebug("Starting PayPal order creation for rental {RentalId}", request.RentalId);
             var accessToken = await GetAccessTokenAsync();
+            _logger.LogDebug("Successfully obtained PayPal access token: {TokenPreview}...", 
+                accessToken?.Substring(0, Math.Min(20, accessToken.Length)));
             
             var orderRequest = new
             {
@@ -110,6 +128,9 @@ public class PayPalPaymentProvider : IPaymentProvider
             var httpRequest = new HttpRequestMessage(HttpMethod.Post, $"{_config.BaseUrl}/v2/checkout/orders");
             httpRequest.Headers.Authorization = new AuthenticationHeaderValue("Bearer", accessToken);
             httpRequest.Content = new StringContent(JsonSerializer.Serialize(orderRequest), Encoding.UTF8, "application/json");
+            
+            _logger.LogDebug("PayPal order request URL: {Url}", $"{_config.BaseUrl}/v2/checkout/orders");
+            _logger.LogDebug("PayPal Bearer token length: {Length}", accessToken?.Length ?? 0);
 
             var response = await _httpClient.SendAsync(httpRequest);
             var responseContent = await response.Content.ReadAsStringAsync();
@@ -117,15 +138,21 @@ public class PayPalPaymentProvider : IPaymentProvider
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogError("PayPal order creation failed: {StatusCode} - {Response}", response.StatusCode, responseContent);
+                _logger.LogError("Request headers: {Headers}", string.Join(", ", httpRequest.Headers.Select(h => $"{h.Key}: {string.Join(",", h.Value)}")));
                 return new CreatePaymentResult
                 {
                     Success = false,
-                    ErrorMessage = $"PayPal order creation failed: {response.StatusCode}"
+                    ErrorMessage = $"PayPal order creation failed: {response.StatusCode} - {responseContent}"
                 };
             }
 
+            _logger.LogDebug("PayPal order response: {Response}", responseContent);
             var orderResponse = JsonSerializer.Deserialize<PayPalOrderResponse>(responseContent);
+            _logger.LogDebug("Deserialized order ID: {OrderId}, Links count: {LinksCount}", 
+                orderResponse?.Id, orderResponse?.Links?.Count ?? 0);
+            
             var approvalUrl = orderResponse?.Links?.FirstOrDefault(l => l.Rel == "approve")?.Href;
+            _logger.LogDebug("Found approval URL: {ApprovalUrl}", approvalUrl);
 
             return new CreatePaymentResult
             {
@@ -494,25 +521,47 @@ public class PayPalPaymentProvider : IPaymentProvider
     // PayPal API response models
     private class PayPalTokenResponse
     {
+        [JsonPropertyName("access_token")]
         public string AccessToken { get; set; } = string.Empty;
+        
+        [JsonPropertyName("expires_in")]
         public int ExpiresIn { get; set; }
     }
 
     private class PayPalOrderResponse
     {
+        [JsonPropertyName("id")]
         public string Id { get; set; } = string.Empty;
+        
+        [JsonPropertyName("status")]
         public string Status { get; set; } = string.Empty;
+        
+        [JsonPropertyName("create_time")]
         public DateTime? CreateTime { get; set; }
+        
+        [JsonPropertyName("update_time")]
         public DateTime? UpdateTime { get; set; }
+        
+        [JsonPropertyName("links")]
         public List<PayPalLink> Links { get; set; } = new();
+        
+        [JsonPropertyName("purchase_units")]
         public List<PayPalPurchaseUnit> PurchaseUnits { get; set; } = new();
+        
+        [JsonPropertyName("payer")]
         public PayPalPayer? Payer { get; set; }
     }
 
     private class PayPalLink
     {
+        [JsonPropertyName("href")]
         public string Href { get; set; } = string.Empty;
+        
+        [JsonPropertyName("rel")]
         public string Rel { get; set; } = string.Empty;
+        
+        [JsonPropertyName("method")]
+        public string Method { get; set; } = string.Empty;
     }
 
     private class PayPalPurchaseUnit

@@ -46,8 +46,24 @@ public class RentalsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> CreateRental([FromBody] CreateRentalCommand command)
+    public async Task<IActionResult> CreateRental([FromBody] CreateRentalDto dto)
     {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        // Convert string ToolId to Guid
+        if (!Guid.TryParse(dto.ToolId, out var toolId))
+            return BadRequest("Invalid ToolId format");
+
+        var command = new CreateRentalCommand(
+            toolId,
+            userId,
+            dto.StartDate,
+            dto.EndDate,
+            dto.Notes
+        );
+
         var result = await _rentalsService.CreateRentalAsync(command);
         
         if (!result.Success)
@@ -81,6 +97,22 @@ public class RentalsController : ControllerBase
             
         var command = new RejectRentalCommand(id, userId, reason);
         var result = await _rentalsService.RejectRentalAsync(command);
+        
+        if (!result.Success)
+            return BadRequest(result);
+            
+        return Ok(result);
+    }
+
+    [HttpPatch("{id}/cancel")]
+    public async Task<IActionResult> CancelRental(Guid id, [FromBody] string? reason = null)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+            
+        var command = new CancelRentalCommand(id, userId, reason);
+        var result = await _rentalsService.CancelRentalAsync(command);
         
         if (!result.Success)
             return BadRequest(result);

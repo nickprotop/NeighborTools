@@ -45,20 +45,19 @@ public class PaymentsController : ControllerBase
 
             if (result.Success)
             {
-                return Ok(new
-                {
-                    success = true,
-                    paymentId = result.PaymentId,
-                    approvalUrl = result.ApprovalUrl,
-                    message = "Payment initiated successfully"
-                });
+                return Ok(ApiResponse<PaymentInitiationResponseDto>.SuccessResult(
+                    new PaymentInitiationResponseDto
+                    {
+                        PaymentId = result.PaymentId ?? string.Empty,
+                        ApprovalUrl = result.ApprovalUrl ?? string.Empty
+                    },
+                    "Payment initiated successfully"
+                ));
             }
 
-            return BadRequest(new
-            {
-                success = false,
-                message = result.ErrorMessage ?? "Failed to initiate payment"
-            });
+            return BadRequest(ApiResponse<PaymentInitiationResponseDto>.ErrorResult(
+                result.ErrorMessage ?? "Failed to initiate payment"
+            ));
         }
         catch (Exception ex)
         {
@@ -616,6 +615,45 @@ public class PaymentsController : ControllerBase
             {
                 success = false,
                 message = "An error occurred while checking payment settings"
+            });
+        }
+    }
+
+    [HttpPost("cancel/{rentalId}")]
+    public async Task<IActionResult> CancelPayment(Guid rentalId)
+    {
+        try
+        {
+            var userId = _userManager.GetUserId(User);
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var result = await _paymentService.CancelPaymentAsync(rentalId, userId);
+
+            if (result.Success)
+            {
+                return Ok(new
+                {
+                    success = true,
+                    message = "Payment cancelled successfully"
+                });
+            }
+
+            return BadRequest(new
+            {
+                success = false,
+                message = result.ErrorMessage ?? "Failed to cancel payment"
+            });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error cancelling payment for rental {RentalId}", rentalId);
+            return StatusCode(500, new
+            {
+                success = false,
+                message = "An error occurred while cancelling payment"
             });
         }
     }

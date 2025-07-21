@@ -5,6 +5,7 @@ public class PaymentConfiguration
     public decimal DefaultCommissionRate { get; set; } = 0.10m; // 10% default
     public decimal MinimumPayoutAmount { get; set; } = 10.00m;
     public string DefaultCurrency { get; set; } = "USD";
+    public string FrontendBaseUrl { get; set; } = "http://localhost:5000";
     public PayPalConfiguration PayPal { get; set; } = new();
 }
 

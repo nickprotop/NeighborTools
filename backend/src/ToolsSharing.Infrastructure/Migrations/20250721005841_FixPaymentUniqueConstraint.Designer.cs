@@ -12,8 +12,8 @@ using ToolsSharing.Infrastructure.Data;
 namespace ToolsSharing.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    [Migration("20250720130730_AddEssentialAdminUser")]
-    partial class AddEssentialAdminUser
+    [Migration("20250721005841_FixPaymentUniqueConstraint")]
+    partial class FixPaymentUniqueConstraint
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -1075,6 +1075,175 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.HasIndex("MessageId");
 
                     b.ToTable("MessageAttachments");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.MutualClosureAuditLog", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("ActionType")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("varchar(50)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("IpAddress")
+                        .HasMaxLength(45)
+                        .HasColumnType("varchar(45)");
+
+                    b.Property<string>("Metadata")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<Guid>("MutualClosureId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("UserAgent")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<string>("UserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActionType")
+                        .HasDatabaseName("IX_MutualClosureAuditLogs_ActionType");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_MutualClosureAuditLogs_CreatedAt");
+
+                    b.HasIndex("MutualClosureId")
+                        .HasDatabaseName("IX_MutualClosureAuditLogs_MutualClosureId");
+
+                    b.HasIndex("UserId")
+                        .HasDatabaseName("IX_MutualClosureAuditLogs_UserId");
+
+                    b.HasIndex("MutualClosureId", "CreatedAt")
+                        .HasDatabaseName("IX_MutualClosureAuditLogs_MutualClosureId_CreatedAt");
+
+                    b.ToTable("MutualClosureAuditLogs", (string)null);
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.MutualDisputeClosure", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("AdminNotes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<DateTime?>("AdminReviewedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<decimal?>("AgreedRefundAmount")
+                        .HasColumnType("decimal(10,2)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("DisputeId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("InitiatedByUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<string>("ProposedResolution")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<int?>("RefundRecipient")
+                        .HasColumnType("int");
+
+                    b.Property<string>("RefundTransactionId")
+                        .HasMaxLength(100)
+                        .HasColumnType("varchar(100)");
+
+                    b.Property<string>("RejectionReason")
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
+
+                    b.Property<bool>("RequiresPaymentAction")
+                        .HasColumnType("tinyint(1)");
+
+                    b.Property<string>("ResolutionDetails")
+                        .HasMaxLength(2000)
+                        .HasColumnType("varchar(2000)");
+
+                    b.Property<DateTime?>("RespondedAt")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("ResponseMessage")
+                        .HasMaxLength(1000)
+                        .HasColumnType("varchar(1000)");
+
+                    b.Property<string>("ResponseRequiredFromUserId")
+                        .IsRequired()
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<string>("ReviewedByAdminId")
+                        .HasMaxLength(450)
+                        .HasColumnType("varchar(450)");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt")
+                        .HasDatabaseName("IX_MutualDisputeClosures_CreatedAt");
+
+                    b.HasIndex("DisputeId")
+                        .HasDatabaseName("IX_MutualDisputeClosures_DisputeId");
+
+                    b.HasIndex("ExpiresAt")
+                        .HasDatabaseName("IX_MutualDisputeClosures_ExpiresAt");
+
+                    b.HasIndex("InitiatedByUserId")
+                        .HasDatabaseName("IX_MutualDisputeClosures_InitiatedByUserId");
+
+                    b.HasIndex("ResponseRequiredFromUserId")
+                        .HasDatabaseName("IX_MutualDisputeClosures_ResponseRequiredFromUserId");
+
+                    b.HasIndex("ReviewedByAdminId");
+
+                    b.HasIndex("Status")
+                        .HasDatabaseName("IX_MutualDisputeClosures_Status");
+
+                    b.HasIndex("DisputeId", "Status")
+                        .HasDatabaseName("IX_MutualDisputeClosures_DisputeId_Status_Unique")
+                        .HasFilter("[Status] = 0");
+
+                    b.HasIndex("InitiatedByUserId", "Status")
+                        .HasDatabaseName("IX_MutualDisputeClosures_InitiatedByUserId_Status");
+
+                    b.HasIndex("ResponseRequiredFromUserId", "Status")
+                        .HasDatabaseName("IX_MutualDisputeClosures_ResponseRequiredFromUserId_Status");
+
+                    b.HasIndex("Status", "ExpiresAt")
+                        .HasDatabaseName("IX_MutualDisputeClosures_Status_ExpiresAt");
+
+                    b.ToTable("MutualDisputeClosures", (string)null);
                 });
 
             modelBuilder.Entity("ToolsSharing.Core.Entities.Payment", b =>
@@ -2651,6 +2820,59 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.Navigation("Message");
                 });
 
+            modelBuilder.Entity("ToolsSharing.Core.Entities.MutualClosureAuditLog", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.MutualDisputeClosure", "MutualClosure")
+                        .WithMany("AuditLogs")
+                        .HasForeignKey("MutualClosureId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("MutualClosure");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.MutualDisputeClosure", b =>
+                {
+                    b.HasOne("ToolsSharing.Core.Entities.Dispute", "Dispute")
+                        .WithMany()
+                        .HasForeignKey("DisputeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "InitiatedByUser")
+                        .WithMany()
+                        .HasForeignKey("InitiatedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "ResponseRequiredFromUser")
+                        .WithMany()
+                        .HasForeignKey("ResponseRequiredFromUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ToolsSharing.Core.Entities.User", "ReviewedByAdmin")
+                        .WithMany()
+                        .HasForeignKey("ReviewedByAdminId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Dispute");
+
+                    b.Navigation("InitiatedByUser");
+
+                    b.Navigation("ResponseRequiredFromUser");
+
+                    b.Navigation("ReviewedByAdmin");
+                });
+
             modelBuilder.Entity("ToolsSharing.Core.Entities.Payment", b =>
                 {
                     b.HasOne("ToolsSharing.Core.Entities.User", "Payee")
@@ -2882,6 +3104,11 @@ namespace ToolsSharing.Infrastructure.Migrations
             modelBuilder.Entity("ToolsSharing.Core.Entities.Message", b =>
                 {
                     b.Navigation("Attachments");
+                });
+
+            modelBuilder.Entity("ToolsSharing.Core.Entities.MutualDisputeClosure", b =>
+                {
+                    b.Navigation("AuditLogs");
                 });
 
             modelBuilder.Entity("ToolsSharing.Core.Entities.Rental", b =>

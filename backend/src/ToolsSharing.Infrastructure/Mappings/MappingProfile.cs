@@ -46,6 +46,8 @@ public static class MappingConfig
         // Rental mappings
         TypeAdapterConfig<Rental, RentalDto>
             .NewConfig()
+            .Map(dest => dest.Id, src => src.Id.ToString()) // Convert Guid to string
+            .Map(dest => dest.ToolId, src => src.ToolId.ToString()) // Convert Guid to string
             .Map(dest => dest.ToolName, src => src.Tool.Name)
             .Map(dest => dest.RenterName, src => $"{src.Renter.FirstName} {src.Renter.LastName}")
             .Map(dest => dest.OwnerId, src => src.Tool.OwnerId)

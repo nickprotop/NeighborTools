@@ -482,31 +482,18 @@
 
             if (result.Success && result.Data != null)
             {
-                // If rental was created successfully, initiate payment
-                if (Guid.TryParse(result.Data.Id, out var rentalGuid))
+                // Show success message based on approval status
+                if (autoApprovalEnabled)
                 {
-                    var paymentResult = await PaymentService.InitiatePaymentAsync(rentalGuid);
-                
-                    if (paymentResult.Success && !string.IsNullOrEmpty(paymentResult.Data?.ApprovalUrl))
-                    {
-                        // Store rental info in session storage for after payment completion
-                        var localStorage = Navigation.ToAbsoluteUri(Navigation.Uri).Host;
-                        
-                        // Close dialog and redirect to PayPal
-                        MudDialog.Close(DialogResult.Ok(result.Data));
-                        Navigation.NavigateTo(paymentResult.Data.ApprovalUrl, true);
-                    }
-                    else
-                    {
-                        // Payment initiation failed - show error but rental was created
-                        errorMessage = paymentResult.Message ?? "Rental created but payment initiation failed. Please contact support.";
-                        Snackbar.Add("Rental created but payment could not be initiated. Please try paying from My Rentals page.", Severity.Warning);
-                    }
+                    Snackbar.Add("Rental request approved automatically! You can now proceed with payment.", Severity.Success);
                 }
                 else
                 {
-                    errorMessage = "Invalid rental ID format.";
+                    Snackbar.Add("Rental request sent successfully! You'll be notified when the owner responds.", Severity.Success);
                 }
+                
+                // Close dialog with success result
+                MudDialog.Close(DialogResult.Ok(result.Data));
             }
             else
             {

@@ -122,7 +122,10 @@ public class RentalsService : IRentalsService
             
             foreach (var rentalDto in rentalDtos)
             {
-                rentalDto.IsPaid = paidRentalIds.Contains(rentalDto.Id);
+                if (Guid.TryParse(rentalDto.Id, out var rentalGuid))
+                {
+                    rentalDto.IsPaid = paidRentalIds.Contains(rentalGuid);
+                }
             }
 
             return ApiResponse<List<RentalDto>>.CreateSuccess(rentalDtos, "Rentals retrieved successfully");
@@ -277,6 +280,7 @@ public class RentalsService : IRentalsService
                 Id = Guid.NewGuid(),
                 ToolId = command.ToolId,
                 RenterId = command.RenterId,
+                OwnerId = tool.OwnerId, // Set the owner ID from the tool
                 StartDate = command.StartDate,
                 EndDate = command.EndDate,
                 TotalCost = totalCost,
@@ -518,6 +522,74 @@ public class RentalsService : IRentalsService
         catch (Exception ex)
         {
             return ApiResponse<bool>.CreateFailure($"Error rejecting rental: {ex.Message}");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> CancelRentalAsync(CancelRentalCommand command)
+    {
+        try
+        {
+            var rental = await _context.Rentals
+                .Include(r => r.Tool)
+                    .ThenInclude(t => t.Owner)
+                .Include(r => r.Tool.Images)
+                .Include(r => r.Renter)
+                .FirstOrDefaultAsync(r => r.Id == command.RentalId);
+
+            if (rental == null)
+            {
+                return ApiResponse<bool>.CreateFailure("Rental not found");
+            }
+
+            // Check if the user is the renter
+            if (rental.RenterId != command.RenterId)
+            {
+                return ApiResponse<bool>.CreateFailure("Only the renter can cancel their own rental");
+            }
+
+            // Check if rental is in pending status (only pending rentals can be cancelled by renter)
+            if (rental.Status != RentalStatus.Pending)
+            {
+                return ApiResponse<bool>.CreateFailure("Only pending rentals can be cancelled");
+            }
+
+            rental.Status = RentalStatus.Cancelled;
+            rental.UpdatedAt = DateTime.UtcNow;
+            rental.CancelledAt = DateTime.UtcNow;
+            rental.CancellationReason = command.Reason ?? "Cancelled by renter";
+
+            await _context.SaveChangesAsync();
+
+            // Send cancellation notification to owner
+            try
+            {
+                var cancellationNotification = new RentalRejectedNotification
+                {
+                    RecipientEmail = rental.Tool.Owner.Email!,
+                    RecipientName = $"{rental.Tool.Owner.FirstName} {rental.Tool.Owner.LastName}",
+                    UserId = rental.Tool.OwnerId,
+                    RenterName = $"{rental.Renter.FirstName} {rental.Renter.LastName}",
+                    ToolName = rental.Tool.Name,
+                    StartDate = rental.StartDate,
+                    EndDate = rental.EndDate,
+                    RejectionReason = rental.CancellationReason,
+                    BrowseToolsUrl = "/tools",
+                    Priority = EmailPriority.Normal
+                };
+                
+                await _emailNotificationService.SendNotificationAsync(cancellationNotification);
+            }
+            catch (Exception emailEx)
+            {
+                // Log email error but don't fail the cancellation
+                Console.WriteLine($"Email notification failed: {emailEx.Message}");
+            }
+
+            return ApiResponse<bool>.CreateSuccess(true, "Rental cancelled successfully");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<bool>.CreateFailure($"Error cancelling rental: {ex.Message}");
         }
     }
 

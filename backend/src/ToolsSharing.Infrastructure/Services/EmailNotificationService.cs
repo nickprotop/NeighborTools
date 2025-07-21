@@ -99,6 +99,7 @@ public class EmailNotificationService : IEmailNotificationService
             DisputeResolutionNotification disputeResolution => GenerateDisputeResolutionTemplate(disputeResolution, frontendUrl),
             DisputeEvidenceNotification disputeEvidence => GenerateDisputeEvidenceTemplate(disputeEvidence, frontendUrl),
             DisputeOverdueNotification disputeOverdue => GenerateDisputeOverdueTemplate(disputeOverdue, frontendUrl),
+            PaymentCompletedNotification paymentCompleted => GeneratePaymentCompletedTemplate(paymentCompleted, frontendUrl),
             NewMessageNotification newMessage => GenerateNewMessageTemplate(newMessage, frontendUrl),
             MessageReplyNotification messageReply => GenerateMessageReplyTemplate(messageReply, frontendUrl),
             MessageModerationNotification messageModeration => GenerateMessageModerationTemplate(messageModeration, frontendUrl),
@@ -648,6 +649,76 @@ public class EmailNotificationService : IEmailNotificationService
             _ = Task.Run(() => SendNotificationAsync(notification, cancellationToken));
         }
         return Task.FromResult(ids);
+    }
+
+    private string GeneratePaymentCompletedTemplate(PaymentCompletedNotification notification, string frontendUrl)
+    {
+        return $@"
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        body {{ font-family: Arial, sans-serif; line-height: 1.6; color: #333; }}
+        .container {{ max-width: 600px; margin: 0 auto; padding: 20px; }}
+        .header {{ background-color: #28a745; color: white; padding: 20px; text-align: center; }}
+        .content {{ padding: 20px; background-color: #f9f9f9; }}
+        .button {{ background-color: #594AE2; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; display: inline-block; margin: 5px; }}
+        .payment-details {{ background-color: white; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+        .amount-breakdown {{ background-color: #e9ecef; padding: 15px; border-radius: 5px; margin: 15px 0; }}
+        .highlight {{ background-color: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }}
+        .footer {{ padding: 20px; text-align: center; color: #666; font-size: 12px; }}
+    </style>
+</head>
+<body>
+    <div class=""container"">
+        <div class=""header"">
+            <h1>💰 Payment Received!</h1>
+        </div>
+        <div class=""content"">
+            <h2>Great news, {notification.OwnerName}!</h2>
+            <p><strong>{notification.RenterName}</strong> has completed their payment for your tool rental.</p>
+            
+            <div class=""payment-details"">
+                <h3>{notification.ToolName}</h3>
+                <p><strong>Rental Period:</strong> {notification.RentalStartDate:d} to {notification.RentalEndDate:d} ({(notification.RentalEndDate - notification.RentalStartDate).Days} days)</p>
+                <p><strong>Payment Date:</strong> {notification.PaymentDate:f}</p>
+                <p><strong>Payment Method:</strong> {notification.PaymentMethod}</p>
+                <p><strong>Rental ID:</strong> {notification.RentalId}</p>
+            </div>
+            
+            <div class=""amount-breakdown"">
+                <h4>Payment Breakdown:</h4>
+                <p><strong>Total Paid by Renter:</strong> ${notification.PaidAmount:F2}</p>
+                {(notification.SecurityDeposit.HasValue ? $"<p><strong>Security Deposit:</strong> ${notification.SecurityDeposit:F2}</p>" : "")}
+                {(notification.PlatformFee.HasValue ? $"<p><strong>Platform Fee:</strong> -${notification.PlatformFee:F2}</p>" : "")}
+                <hr style=""margin: 10px 0;"">
+                <p><strong>Your Net Amount:</strong> <span style=""font-size: 1.2em; color: #28a745;"">${notification.NetAmount:F2}</span></p>
+            </div>
+            
+            <div class=""highlight"">
+                <h4>Next Steps:</h4>
+                <ul>
+                    <li>Coordinate with {notification.RenterName} for tool pickup</li>
+                    <li>Ensure the tool is ready and in described condition</li>
+                    <li>Confirm pickup details and location</li>
+                </ul>
+            </div>
+            
+            <p style=""text-align: center; margin: 30px 0;"">
+                <a href=""{notification.RentalDetailsUrl}"" class=""button"">View Rental Details</a>
+                <a href=""{notification.MessagesUrl}"" class=""button"" style=""background-color: #17a2b8;"">Message Renter</a>
+            </p>
+            
+            <p>The rental is now active and ready for pickup. Thank you for being part of the NeighborTools community!</p>
+            <p>Best regards,<br>The NeighborTools Team</p>
+        </div>
+        <div class=""footer"">
+            <p>© {DateTime.UtcNow.Year} NeighborTools. All rights reserved.</p>
+            <p>This is an automated message, please do not reply to this email.</p>
+        </div>
+    </div>
+</body>
+</html>";
     }
 
     public Task<bool> CancelQueuedNotificationAsync(Guid notificationId, CancellationToken cancellationToken = default)

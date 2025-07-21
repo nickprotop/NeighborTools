@@ -8,6 +8,7 @@ public interface IPaymentService
     Task<ApiResponse<PaymentInitiationResponse>> InitiatePaymentAsync(Guid rentalId);
     Task<ApiResponse<PaymentCompletionResponse>> CompletePaymentAsync(string paymentId, string payerId);
     Task<ApiResponse<PaymentStatusResponse>> GetPaymentStatusAsync(string paymentId);
+    Task<ApiResponse<object>> CancelPaymentAsync(Guid rentalId); // Used for auto-cancellation
     Task<ApiResponse<TransactionDetailsResponse>> GetTransactionDetailsAsync(Guid rentalId);
     Task<ApiResponse<CalculateFeesResponse>> CalculateFeesAsync(decimal rentalAmount, decimal securityDeposit);
     Task<ApiResponse<PaymentSettingsResponse>> GetPaymentSettingsAsync();
@@ -269,6 +270,29 @@ public class PaymentService : IPaymentService
             { 
                 Success = false, 
                 Message = $"Error calculating rental cost: {ex.Message}" 
+            };
+        }
+    }
+
+    // Internal method used only for auto-cancellation in PaymentComplete page
+    public async Task<ApiResponse<object>> CancelPaymentAsync(Guid rentalId)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync($"api/payments/cancel/{rentalId}", null);
+            return await response.Content.ReadFromJsonAsync<ApiResponse<object>>() 
+                ?? new ApiResponse<object> 
+                { 
+                    Success = false, 
+                    Message = "Failed to parse response" 
+                };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<object> 
+            { 
+                Success = false, 
+                Message = $"Error cancelling payment: {ex.Message}" 
             };
         }
     }
