@@ -1,6 +1,7 @@
 using System.Text.Json;
 using ToolsSharing.Frontend.Models;
 using frontend.Models;
+using Microsoft.AspNetCore.Components.Forms;
 
 namespace ToolsSharing.Frontend.Services
 {
@@ -398,6 +399,70 @@ namespace ToolsSharing.Frontend.Services
             catch (Exception ex)
             {
                 return ApiResponse<bool>.CreateFailure($"Network error: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<BundleApprovalStatusDto>> GetBundleApprovalStatusAsync(Guid bundleId)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/bundles/{bundleId}/approval-status");
+                var json = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse<BundleApprovalStatusDto>>(json, _jsonOptions);
+                    return result ?? ApiResponse<BundleApprovalStatusDto>.CreateFailure("Failed to deserialize response");
+                }
+
+                var errorResult = JsonSerializer.Deserialize<ApiResponse<BundleApprovalStatusDto>>(json, _jsonOptions);
+                return errorResult ?? ApiResponse<BundleApprovalStatusDto>.CreateFailure("Request failed");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<BundleApprovalStatusDto>.CreateFailure($"Network error: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<string>> UploadBundleImageAsync(IBrowserFile file)
+        {
+            try
+            {
+                using var content = new MultipartFormDataContent();
+                var fileContent = new StreamContent(file.OpenReadStream(5 * 1024 * 1024)); // 5MB limit
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(file.ContentType);
+                content.Add(fileContent, "file", file.Name);
+
+                var response = await _httpClient.PostAsync("api/bundles/upload-image", content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                var result = JsonSerializer.Deserialize<ApiResponse<string>>(responseContent, _jsonOptions);
+                return result ?? ApiResponse<string>.CreateFailure("Invalid response");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<string>.CreateFailure($"Failed to upload image: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<string>> UploadBundleImageAsync(byte[] imageData, string contentType, string fileName)
+        {
+            try
+            {
+                using var content = new MultipartFormDataContent();
+                var fileContent = new ByteArrayContent(imageData);
+                fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
+                content.Add(fileContent, "file", fileName);
+
+                var response = await _httpClient.PostAsync("api/bundles/upload-image", content);
+                var responseContent = await response.Content.ReadAsStringAsync();
+                
+                var result = JsonSerializer.Deserialize<ApiResponse<string>>(responseContent, _jsonOptions);
+                return result ?? ApiResponse<string>.CreateFailure("Invalid response");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<string>.CreateFailure($"Failed to upload image: {ex.Message}");
             }
         }
     }

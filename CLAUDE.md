@@ -2,6 +2,31 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## ⚠️ CRITICAL: Placeholder Code Reporting Policy
+
+**⚠️ MANDATORY: Claude MUST report ALL placeholder/mockup code implementations!**
+
+**When implementing placeholder code, Claude MUST:**
+1. **Immediately report** the placeholder in conversation output
+2. **Update PLACEHOLDERS.md** with location, description, and priority
+3. **Mark entry as "pending" implementation**
+4. **Never leave placeholders unreported or undocumented**
+
+**When fixing/completing placeholder code, Claude MUST:**
+1. **Update PLACEHOLDERS.md** to mark the entry as "✅ Completed"
+2. **Report the completion** in conversation output
+3. **Add completion date and brief description** of the implementation
+4. **Remove placeholder behavior description** and update with actual implementation details
+
+**Examples of placeholder code that MUST be reported:**
+- `throw new NotImplementedException()` methods
+- TODO comments with implementation needed
+- Hardcoded mock data or test values
+- Simplified implementations marked for future enhancement
+- Methods that return fixed/dummy values
+
+**Failure to report placeholder code is unacceptable and prevents proper project maintenance.**
+
 ## Project Architecture
 
 NeighborTools is a **comprehensive tool sharing platform** with advanced bundle management capabilities. Built with .NET 9 Web API backend and Blazor WebAssembly frontend. Clean Architecture with:

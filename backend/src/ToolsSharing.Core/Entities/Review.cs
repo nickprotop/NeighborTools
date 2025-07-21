@@ -4,6 +4,8 @@ public class Review : BaseEntity
 {
     public Guid? ToolId { get; set; }
     public Guid? RentalId { get; set; }
+    public Guid? BundleId { get; set; }
+    public Guid? BundleRentalId { get; set; }
     public string ReviewerId { get; set; } = string.Empty;
     public string RevieweeId { get; set; } = string.Empty;
     public int Rating { get; set; }
@@ -14,6 +16,8 @@ public class Review : BaseEntity
     // Navigation properties
     public Tool? Tool { get; set; }
     public Rental? Rental { get; set; }
+    public Bundle? Bundle { get; set; }
+    public BundleRental? BundleRental { get; set; }
     public User Reviewer { get; set; } = null!;
     public User Reviewee { get; set; } = null!;
 }
@@ -21,5 +25,6 @@ public class Review : BaseEntity
 public enum ReviewType
 {
     ToolReview,
-    UserReview
+    UserReview,
+    BundleReview
 }

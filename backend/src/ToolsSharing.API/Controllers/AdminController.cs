@@ -9,6 +9,8 @@ using ToolsSharing.Core.Features.Messaging;
 using ToolsSharing.Core.Features.Users;
 using ToolsSharing.Core.DTOs.Messaging;
 using ToolsSharing.Core.DTOs.Dispute;
+using ToolsSharing.Core.DTOs.Tools;
+using ToolsSharing.Core.DTOs.Bundle;
 using ToolsSharing.Core.Entities;
 using UpdateDisputeStatusRequest = ToolsSharing.Core.DTOs.Dispute.UpdateDisputeStatusRequest;
 using ResolveDisputeRequest = ToolsSharing.Core.Interfaces.ResolveDisputeRequest;
@@ -1350,6 +1352,228 @@ public class AdminController : ControllerBase
             return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to verify user"));
         }
     }
+
+    /// <summary>
+    /// Get pending tools awaiting approval
+    /// </summary>
+    [HttpGet("tools/pending")]
+    public async Task<IActionResult> GetPendingTools([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        try
+        {
+            var query = _context.Tools
+                .Include(t => t.Owner)
+                .Include(t => t.Images)
+                .Where(t => t.PendingApproval && !t.IsDeleted);
+
+            var totalCount = await query.CountAsync();
+            var tools = await query
+                .OrderByDescending(t => t.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+
+            return Ok(ApiResponse<object>.CreateSuccess(new
+            {
+                Items = toolDtos,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            }, "Pending tools retrieved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving pending tools");
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to retrieve pending tools"));
+        }
+    }
+
+    /// <summary>
+    /// Approve a tool
+    /// </summary>
+    [HttpPost("tools/{toolId}/approve")]
+    public async Task<IActionResult> ApproveTool(Guid toolId, [FromBody] ApprovalRequest request)
+    {
+        try
+        {
+            var tool = await _context.Tools.FindAsync(toolId);
+            if (tool == null)
+            {
+                return NotFound(ApiResponse<object>.CreateFailure("Tool not found"));
+            }
+
+            var adminUserId = User.FindFirst("sub")?.Value ?? User.FindFirst("id")?.Value;
+            
+            tool.IsApproved = true;
+            tool.PendingApproval = false;
+            tool.ApprovedAt = DateTime.UtcNow;
+            tool.ApprovedById = adminUserId;
+            tool.RejectionReason = null;
+            tool.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Tool {ToolId} approved by admin {AdminId}", toolId, adminUserId);
+
+            return Ok(ApiResponse<object>.CreateSuccess(new { ToolId = toolId }, "Tool approved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error approving tool {ToolId}", toolId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to approve tool"));
+        }
+    }
+
+    /// <summary>
+    /// Reject a tool
+    /// </summary>
+    [HttpPost("tools/{toolId}/reject")]
+    public async Task<IActionResult> RejectTool(Guid toolId, [FromBody] RejectionRequest request)
+    {
+        try
+        {
+            var tool = await _context.Tools.FindAsync(toolId);
+            if (tool == null)
+            {
+                return NotFound(ApiResponse<object>.CreateFailure("Tool not found"));
+            }
+
+            var adminUserId = User.FindFirst("sub")?.Value ?? User.FindFirst("id")?.Value;
+            
+            tool.IsApproved = false;
+            tool.PendingApproval = false;
+            tool.ApprovedAt = null;
+            tool.ApprovedById = adminUserId;
+            tool.RejectionReason = request.Reason;
+            tool.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Tool {ToolId} rejected by admin {AdminId} with reason: {Reason}", toolId, adminUserId, request.Reason);
+
+            return Ok(ApiResponse<object>.CreateSuccess(new { ToolId = toolId }, "Tool rejected successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error rejecting tool {ToolId}", toolId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to reject tool"));
+        }
+    }
+
+    /// <summary>
+    /// Get pending bundles awaiting approval
+    /// </summary>
+    [HttpGet("bundles/pending")]
+    public async Task<IActionResult> GetPendingBundles([FromQuery] int page = 1, [FromQuery] int pageSize = 20)
+    {
+        try
+        {
+            var query = _context.Bundles
+                .Include(b => b.User)
+                .Include(b => b.BundleTools)
+                    .ThenInclude(bt => bt.Tool)
+                        .ThenInclude(t => t.Owner)
+                .Where(b => b.PendingApproval && !b.IsDeleted);
+
+            var totalCount = await query.CountAsync();
+            var bundles = await query
+                .OrderByDescending(b => b.CreatedAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .ToListAsync();
+
+            var bundleDtos = _mapper.Map<List<BundleDto>>(bundles);
+
+            return Ok(ApiResponse<object>.CreateSuccess(new
+            {
+                Items = bundleDtos,
+                TotalCount = totalCount,
+                Page = page,
+                PageSize = pageSize
+            }, "Pending bundles retrieved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving pending bundles");
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to retrieve pending bundles"));
+        }
+    }
+
+    /// <summary>
+    /// Approve a bundle
+    /// </summary>
+    [HttpPost("bundles/{bundleId}/approve")]
+    public async Task<IActionResult> ApproveBundle(Guid bundleId, [FromBody] ApprovalRequest request)
+    {
+        try
+        {
+            var bundle = await _context.Bundles.FindAsync(bundleId);
+            if (bundle == null)
+            {
+                return NotFound(ApiResponse<object>.CreateFailure("Bundle not found"));
+            }
+
+            var adminUserId = User.FindFirst("sub")?.Value ?? User.FindFirst("id")?.Value;
+            
+            bundle.IsApproved = true;
+            bundle.PendingApproval = false;
+            bundle.ApprovedAt = DateTime.UtcNow;
+            bundle.ApprovedById = adminUserId;
+            bundle.RejectionReason = null;
+            bundle.IsPublished = true; // Auto-publish when approved
+            bundle.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Bundle {BundleId} approved by admin {AdminId}", bundleId, adminUserId);
+
+            return Ok(ApiResponse<object>.CreateSuccess(new { BundleId = bundleId }, "Bundle approved successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error approving bundle {BundleId}", bundleId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to approve bundle"));
+        }
+    }
+
+    /// <summary>
+    /// Reject a bundle
+    /// </summary>
+    [HttpPost("bundles/{bundleId}/reject")]
+    public async Task<IActionResult> RejectBundle(Guid bundleId, [FromBody] RejectionRequest request)
+    {
+        try
+        {
+            var bundle = await _context.Bundles.FindAsync(bundleId);
+            if (bundle == null)
+            {
+                return NotFound(ApiResponse<object>.CreateFailure("Bundle not found"));
+            }
+
+            var adminUserId = User.FindFirst("sub")?.Value ?? User.FindFirst("id")?.Value;
+            
+            bundle.IsApproved = false;
+            bundle.PendingApproval = false;
+            bundle.ApprovedAt = null;
+            bundle.ApprovedById = adminUserId;
+            bundle.RejectionReason = request.Reason;
+            bundle.IsPublished = false;
+            bundle.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Bundle {BundleId} rejected by admin {AdminId} with reason: {Reason}", bundleId, adminUserId, request.Reason);
+
+            return Ok(ApiResponse<object>.CreateSuccess(new { BundleId = bundleId }, "Bundle rejected successfully"));
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error rejecting bundle {BundleId}", bundleId);
+            return StatusCode(500, ApiResponse<object>.CreateFailure("Failed to reject bundle"));
+        }
+    }
 }
 
 /// <summary>
@@ -1375,4 +1599,20 @@ public class AdminUpdateUserRequest
     public string? PublicLocation { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public bool EmailConfirmed { get; set; }
+}
+
+/// <summary>
+/// Request model for approving tools/bundles
+/// </summary>
+public class ApprovalRequest
+{
+    public string? Notes { get; set; }
+}
+
+/// <summary>
+/// Request model for rejecting tools/bundles
+/// </summary>
+public class RejectionRequest
+{
+    public string Reason { get; set; } = string.Empty;
 }

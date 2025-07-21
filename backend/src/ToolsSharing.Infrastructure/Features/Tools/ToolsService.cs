@@ -1,9 +1,11 @@
 using MapsterMapper;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Features.Tools;
+using ToolsSharing.Core.Interfaces;
 using ToolsSharing.Infrastructure.Data;
 
 namespace ToolsSharing.Infrastructure.Features.Tools;
@@ -13,12 +15,21 @@ public class ToolsService : IToolsService
     private readonly IUnitOfWork _unitOfWork;
     private readonly IMapper _mapper;
     private readonly ApplicationDbContext _context;
+    private readonly IFileStorageService _fileStorageService;
+    private readonly ILogger<ToolsService> _logger;
 
-    public ToolsService(IUnitOfWork unitOfWork, IMapper mapper, ApplicationDbContext context)
+    public ToolsService(
+        IUnitOfWork unitOfWork, 
+        IMapper mapper, 
+        ApplicationDbContext context,
+        IFileStorageService fileStorageService,
+        ILogger<ToolsService> logger)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _context = context;
+        _fileStorageService = fileStorageService;
+        _logger = logger;
     }
 
     public async Task<ApiResponse<List<ToolDto>>> GetToolsAsync(GetToolsQuery query)
@@ -28,7 +39,7 @@ public class ToolsService : IToolsService
             var toolsQuery = _context.Tools
                 .Include(t => t.Owner)
                 .Include(t => t.Images)
-                .Where(t => !t.IsDeleted);
+                .Where(t => !t.IsDeleted && t.IsApproved);
 
             // Apply filters
             if (!string.IsNullOrEmpty(query.Category))
@@ -212,7 +223,10 @@ public class ToolsService : IToolsService
                 OwnerId = command.OwnerId,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
-                IsDeleted = false
+                IsDeleted = false,
+                // Approval fields - new tools require approval
+                IsApproved = false,
+                PendingApproval = true
             };
 
             // Add images if provided
@@ -284,9 +298,11 @@ public class ToolsService : IToolsService
             // Update images if provided
             if (command.ImageUrls != null)
             {
-                // Remove existing images
+                // Collect old image URLs for cleanup before removing from database
+                var oldImageUrls = new List<string>();
                 if (tool.Images != null && tool.Images.Any())
                 {
+                    oldImageUrls.AddRange(tool.Images.Select(img => img.ImageUrl));
                     _context.ToolImages.RemoveRange(tool.Images);
                 }
 
@@ -298,9 +314,17 @@ public class ToolsService : IToolsService
                     ImageUrl = url,
                     CreatedAt = DateTime.UtcNow
                 }).ToList();
-            }
 
-            await _context.SaveChangesAsync();
+                // Save changes first to ensure database consistency
+                await _context.SaveChangesAsync();
+
+                // Clean up old images from storage (best effort - don't fail the operation if cleanup fails)
+                await CleanupOldImagesAsync(oldImageUrls, command.ImageUrls);
+            }
+            else
+            {
+                await _context.SaveChangesAsync();
+            }
 
             var toolDto = _mapper.Map<ToolDto>(tool);
             return ApiResponse<ToolDto>.CreateSuccess(toolDto, "Tool updated successfully");
@@ -352,5 +376,85 @@ public class ToolsService : IToolsService
         {
             return ApiResponse<bool>.CreateFailure($"Error deleting tool: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// Cleans up old image files from storage when tool images are updated.
+    /// This is best-effort cleanup - failures are logged but don't fail the main operation.
+    /// </summary>
+    private async Task CleanupOldImagesAsync(List<string> oldImageUrls, List<string> newImageUrls)
+    {
+        if (!oldImageUrls.Any()) return;
+
+        try
+        {
+            // Find images that are being removed (in old but not in new)
+            var imagesToDelete = oldImageUrls.Except(newImageUrls).ToList();
+            
+            foreach (var imageUrl in imagesToDelete)
+            {
+                try
+                {
+                    var storagePath = ExtractStoragePathFromUrl(imageUrl);
+                    if (!string.IsNullOrEmpty(storagePath))
+                    {
+                        var deleted = await _fileStorageService.DeleteFileAsync(storagePath);
+                        if (deleted)
+                        {
+                            _logger.LogInformation("Cleaned up old tool image: {ImageUrl}", imageUrl);
+                        }
+                        else
+                        {
+                            _logger.LogWarning("Old tool image not found or already deleted: {ImageUrl}", imageUrl);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Failed to delete old tool image: {ImageUrl}", imageUrl);
+                    // Continue with other images - don't let one failure stop cleanup
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during tool image cleanup process");
+        }
+    }
+
+    /// <summary>
+    /// Extracts the storage path from a file URL for deletion
+    /// </summary>
+    private string ExtractStoragePathFromUrl(string imageUrl)
+    {
+        if (string.IsNullOrEmpty(imageUrl)) return "";
+
+        try
+        {
+            // Handle relative URLs like "/uploads/images/filename.jpg"
+            if (imageUrl.StartsWith("/uploads/"))
+            {
+                return imageUrl.Substring("/uploads/".Length);
+            }
+
+            // Handle absolute URLs - extract the path after /uploads/
+            var uploadsIndex = imageUrl.IndexOf("/uploads/", StringComparison.OrdinalIgnoreCase);
+            if (uploadsIndex >= 0)
+            {
+                return imageUrl.Substring(uploadsIndex + "/uploads/".Length);
+            }
+
+            // If it's just the filename/path without URL prefix, return as-is
+            if (!imageUrl.StartsWith("http"))
+            {
+                return imageUrl;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error extracting storage path from URL: {ImageUrl}", imageUrl);
+        }
+
+        return "";
     }
 }

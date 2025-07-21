@@ -286,4 +286,52 @@ public class MutualClosureService
         }
     }
 
+    /// <summary>
+    /// Admin review of a mutual closure request (admin-only method)
+    /// </summary>
+    /// <param name="request">The admin review request</param>
+    /// <returns>Result of the admin review operation</returns>
+    public async Task<ApiResponse<MutualClosureDto>?> AdminReviewMutualClosureAsync(AdminReviewMutualClosureRequest request)
+    {
+        try
+        {
+            _logger.LogInformation("Admin reviewing mutual closure {MutualClosureId} with action {Action}", 
+                request.MutualClosureId, request.Action);
+            
+            var response = await _httpClient.PostAsJsonAsync($"/api/admin/mutual-closure/{request.MutualClosureId}/review", request);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            if (response.IsSuccessStatusCode)
+            {
+                var result = JsonSerializer.Deserialize<ApiResponse<MutualClosureDto>>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                
+                _logger.LogInformation("Successfully reviewed mutual closure {MutualClosureId}", request.MutualClosureId);
+                return result;
+            }
+            else
+            {
+                _logger.LogWarning("Failed to review mutual closure: {StatusCode} - {Content}", response.StatusCode, content);
+                return new ApiResponse<MutualClosureDto>
+                {
+                    Success = false,
+                    Message = $"Admin review failed: {response.StatusCode}",
+                    Data = null
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error in admin review of mutual closure {MutualClosureId}", request.MutualClosureId);
+            return new ApiResponse<MutualClosureDto>
+            {
+                Success = false,
+                Message = "An error occurred during admin review",
+                Data = null
+            };
+        }
+    }
+
 }

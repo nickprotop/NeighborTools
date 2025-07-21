@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Mapster;
 using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Core.DTOs.Bundle;
@@ -16,11 +17,19 @@ namespace ToolsSharing.Infrastructure.Services
     {
         private readonly ApplicationDbContext _context;
         private readonly IPaymentService _paymentService;
+        private readonly IFileStorageService _fileStorageService;
+        private readonly ILogger<BundleService> _logger;
 
-        public BundleService(ApplicationDbContext context, IPaymentService paymentService)
+        public BundleService(
+            ApplicationDbContext context, 
+            IPaymentService paymentService,
+            IFileStorageService fileStorageService,
+            ILogger<BundleService> logger)
         {
             _context = context;
             _paymentService = paymentService;
+            _fileStorageService = fileStorageService;
+            _logger = logger;
         }
 
         public async Task<ApiResponse<BundleDto>> CreateBundleAsync(CreateBundleRequest request, string userId)
@@ -53,7 +62,10 @@ namespace ToolsSharing.Infrastructure.Services
                     BundleDiscount = request.BundleDiscount,
                     IsPublished = request.IsPublished,
                     Category = request.Category,
-                    Tags = request.Tags
+                    Tags = request.Tags,
+                    // Approval fields - new bundles require approval
+                    IsApproved = false,
+                    PendingApproval = true
                 };
 
                 _context.Bundles.Add(bundle);
@@ -122,7 +134,9 @@ namespace ToolsSharing.Infrastructure.Services
                     .Include(b => b.BundleTools)
                         .ThenInclude(bt => bt.Tool)
                             .ThenInclude(t => t.Owner)
-                    .Where(b => b.IsPublished && !b.IsDeleted);
+                    .Where(b => b.IsPublished && b.IsApproved && !b.IsDeleted)
+                    // SAFEGUARD: Only show bundles where ALL tools are approved
+                    .Where(b => !b.BundleTools.Any() || b.BundleTools.All(bt => bt.Tool.IsApproved));
 
                 if (featuredOnly)
                 {
@@ -288,6 +302,50 @@ namespace ToolsSharing.Infrastructure.Services
             }
         }
 
+        private async Task<(bool IsAvailable, DateTime? EarliestAvailableDate)> CheckBundleAvailabilityForPeriod(Guid bundleId, DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                var bundle = await _context.Bundles
+                    .Include(b => b.BundleTools)
+                        .ThenInclude(bt => bt.Tool)
+                    .Where(b => b.Id == bundleId && !b.IsDeleted)
+                    .FirstOrDefaultAsync();
+
+                if (bundle == null)
+                {
+                    return (false, null);
+                }
+
+                var allToolsAvailable = true;
+                DateTime? earliestAvailableDate = null;
+
+                // Check availability for each required tool in the bundle
+                foreach (var bundleTool in bundle.BundleTools.Where(bt => !bt.IsDeleted && !bt.IsOptional))
+                {
+                    var toolAvailability = await CheckToolAvailability(bundleTool.Tool, startDate, endDate, bundleTool.QuantityNeeded);
+                    
+                    if (!toolAvailability.IsAvailable)
+                    {
+                        allToolsAvailable = false;
+                        if (toolAvailability.AvailableFromDate.HasValue)
+                        {
+                            if (!earliestAvailableDate.HasValue || toolAvailability.AvailableFromDate.Value > earliestAvailableDate.Value)
+                            {
+                                earliestAvailableDate = toolAvailability.AvailableFromDate.Value;
+                            }
+                        }
+                    }
+                }
+
+                return (allToolsAvailable, earliestAvailableDate);
+            }
+            catch
+            {
+                return (false, null);
+            }
+        }
+
         public async Task<ApiResponse<BundleCostCalculationResponse>> CalculateBundleCostAsync(Guid bundleId, DateTime startDate, DateTime endDate)
         {
             try
@@ -358,16 +416,93 @@ namespace ToolsSharing.Infrastructure.Services
             }
         }
 
+        private async Task<ApiResponse<BundleCostCalculationResponse>> CalculateBundleCostForSelectedToolsAsync(
+            Bundle bundle, List<BundleTool> selectedTools, DateTime startDate, DateTime endDate)
+        {
+            try
+            {
+                var rentalDays = (endDate - startDate).Days + 1;
+                var toolCosts = new List<ToolCostBreakdown>();
+                decimal totalCost = 0;
+
+                foreach (var bundleTool in selectedTools.Where(bt => !bt.IsDeleted))
+                {
+                    var toolCost = bundleTool.Tool.DailyRate * rentalDays * bundleTool.QuantityNeeded;
+                    totalCost += toolCost;
+
+                    toolCosts.Add(new ToolCostBreakdown
+                    {
+                        ToolId = bundleTool.ToolId,
+                        ToolName = bundleTool.Tool.Name,
+                        DailyRate = bundleTool.Tool.DailyRate,
+                        RentalDays = rentalDays,
+                        QuantityNeeded = bundleTool.QuantityNeeded,
+                        TotalCost = toolCost
+                    });
+                }
+
+                // Apply bundle discount
+                var bundleDiscountAmount = totalCost * (bundle.BundleDiscount / 100m);
+                var finalCost = totalCost - bundleDiscountAmount;
+
+                // Get bundle owner for commission calculation
+                var bundleOwnerId = bundle.UserId;
+
+                // Calculate security deposit (standard 20% for now, could be configurable later)
+                var securityDeposit = finalCost * 0.2m;
+                
+                // Use payment service to calculate commission properly
+                var financialBreakdown = _paymentService.CalculateRentalFinancials(finalCost, securityDeposit, bundleOwnerId);
+
+                var response = new BundleCostCalculationResponse
+                {
+                    TotalCost = totalCost,
+                    BundleDiscountAmount = bundleDiscountAmount,
+                    FinalCost = finalCost,
+                    SecurityDeposit = financialBreakdown.SecurityDeposit,
+                    PlatformFee = financialBreakdown.CommissionAmount,
+                    GrandTotal = financialBreakdown.TotalPayerAmount,
+                    ToolCosts = toolCosts,
+                    CommissionRate = financialBreakdown.CommissionRate,
+                    OwnerPayoutAmount = financialBreakdown.OwnerPayoutAmount
+                };
+
+                return ApiResponse<BundleCostCalculationResponse>.CreateSuccess(response);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<BundleCostCalculationResponse>.CreateFailure($"Error calculating bundle cost for selected tools: {ex.Message}");
+            }
+        }
+
         // Helper methods continue in next part...
         private async Task<BundleDto> MapBundleToDto(Bundle bundle)
         {
-            var bundleDto = bundle.Adapt<BundleDto>();
+            // Manually map all properties to avoid Mapster casting issue with Tags
+            var bundleDto = new BundleDto
+            {
+                Id = bundle.Id,
+                Name = bundle.Name,
+                Description = bundle.Description,
+                Guidelines = bundle.Guidelines,
+                RequiredSkillLevel = bundle.RequiredSkillLevel,
+                EstimatedProjectDuration = bundle.EstimatedProjectDuration,
+                ImageUrl = bundle.ImageUrl,
+                UserId = bundle.UserId,
+                BundleDiscount = bundle.BundleDiscount,
+                IsPublished = bundle.IsPublished,
+                IsFeatured = bundle.IsFeatured,
+                ViewCount = bundle.ViewCount,
+                Category = bundle.Category,
+                CreatedAt = bundle.CreatedAt,
+                UpdatedAt = bundle.UpdatedAt
+            };
             
             // Map owner information
             bundleDto.OwnerName = bundle.User.UserName ?? bundle.User.Email ?? "";
             bundleDto.OwnerLocation = bundle.User.City ?? "";
             
-            // Parse tags
+            // Parse tags from string to List<string>
             if (!string.IsNullOrEmpty(bundle.Tags))
             {
                 bundleDto.Tags = bundle.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -404,6 +539,19 @@ namespace ToolsSharing.Infrastructure.Services
             bundleDto.RentalCount = await _context.BundleRentals
                 .Where(br => br.BundleId == bundle.Id && !br.IsDeleted)
                 .CountAsync();
+
+            // Get review statistics
+            var reviews = await _context.Reviews
+                .Where(r => r.BundleId == bundle.Id && r.Type == ReviewType.BundleReview)
+                .ToListAsync();
+            
+            bundleDto.ReviewCount = reviews.Count;
+            bundleDto.AverageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0;
+
+            // Check availability for quick display (next 7 days)
+            var availabilityCheck = await CheckBundleAvailabilityForPeriod(bundle.Id, DateTime.Today, DateTime.Today.AddDays(7));
+            bundleDto.IsAvailable = availabilityCheck.IsAvailable;
+            bundleDto.AvailableFromDate = availabilityCheck.EarliestAvailableDate;
 
             return bundleDto;
         }
@@ -490,6 +638,9 @@ namespace ToolsSharing.Infrastructure.Services
                     return ApiResponse<BundleDto>.CreateFailure("One or more tools not found or you can only create bundles with your own tools.");
                 }
 
+                // Capture old image URL for cleanup
+                var oldImageUrl = existingBundle.ImageUrl;
+
                 // Update bundle properties
                 existingBundle.Name = request.Name;
                 existingBundle.Description = request.Description;
@@ -525,6 +676,9 @@ namespace ToolsSharing.Infrastructure.Services
 
                 await _context.SaveChangesAsync();
 
+                // Clean up old bundle image if it was replaced (best effort - don't fail the operation if cleanup fails)
+                await CleanupOldBundleImageAsync(oldImageUrl, request.ImageUrl);
+
                 // Return the updated bundle
                 var result = await GetBundleByIdAsync(existingBundle.Id);
                 return result;
@@ -537,20 +691,112 @@ namespace ToolsSharing.Infrastructure.Services
 
         public async Task<ApiResponse<bool>> DeleteBundleAsync(Guid bundleId, string userId)
         {
-            // Implementation for delete bundle
-            throw new NotImplementedException("DeleteBundleAsync not yet implemented");
+            try
+            {
+                // Find the bundle and verify ownership
+                var bundle = await _context.Bundles
+                    .Include(b => b.BundleTools)
+                    .FirstOrDefaultAsync(b => b.Id == bundleId && b.UserId == userId && !b.IsDeleted);
+
+                if (bundle == null)
+                {
+                    return ApiResponse<bool>.CreateFailure("Bundle not found or you don't have permission to delete it");
+                }
+
+                // Check if the bundle has active rentals
+                var activeRentals = await _context.BundleRentals
+                    .Where(br => br.BundleId == bundleId && 
+                                br.Status == "Active" && 
+                                !br.IsDeleted)
+                    .CountAsync();
+
+                if (activeRentals > 0)
+                {
+                    return ApiResponse<bool>.CreateFailure("Cannot delete bundle with active rentals");
+                }
+
+                // Soft delete the bundle
+                bundle.IsDeleted = true;
+                bundle.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                return ApiResponse<bool>.CreateSuccess(true, "Bundle deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.CreateFailure($"Failed to delete bundle: {ex.Message}");
+            }
         }
 
         public async Task<ApiResponse<PagedResult<BundleDto>>> GetUserBundlesAsync(string userId, int page = 1, int pageSize = 20)
         {
-            // Implementation for get user bundles
-            throw new NotImplementedException("GetUserBundlesAsync not yet implemented");
+            try
+            {
+                var query = _context.Bundles
+                    .Include(b => b.User)
+                    .Include(b => b.BundleTools)
+                        .ThenInclude(bt => bt.Tool)
+                            .ThenInclude(t => t.Owner)
+                    .Where(b => b.UserId == userId && !b.IsDeleted);
+
+                var totalCount = await query.CountAsync();
+                var bundles = await query
+                    .OrderByDescending(b => b.IsPublished)
+                    .ThenByDescending(b => b.IsFeatured)
+                    .ThenByDescending(b => b.UpdatedAt)
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToListAsync();
+
+                var bundleDtos = new List<BundleDto>();
+                foreach (var bundle in bundles)
+                {
+                    bundleDtos.Add(await MapBundleToDto(bundle));
+                }
+
+                var result = new PagedResult<BundleDto>
+                {
+                    Items = bundleDtos,
+                    TotalCount = totalCount,
+                    PageNumber = page,
+                    PageSize = pageSize
+                };
+
+                return ApiResponse<PagedResult<BundleDto>>.CreateSuccess(result, "User bundles retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<PagedResult<BundleDto>>.CreateFailure($"Failed to retrieve user bundles: {ex.Message}");
+            }
         }
 
         public async Task<ApiResponse<bool>> SetFeaturedStatusAsync(Guid bundleId, bool isFeatured, string adminUserId)
         {
-            // Implementation for set featured status
-            throw new NotImplementedException("SetFeaturedStatusAsync not yet implemented");
+            try
+            {
+                // Find the bundle
+                var bundle = await _context.Bundles
+                    .FirstOrDefaultAsync(b => b.Id == bundleId && !b.IsDeleted);
+
+                if (bundle == null)
+                {
+                    return ApiResponse<bool>.CreateFailure("Bundle not found");
+                }
+
+                // Update featured status
+                bundle.IsFeatured = isFeatured;
+                bundle.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                var action = isFeatured ? "featured" : "unfeatured";
+                return ApiResponse<bool>.CreateSuccess(true, $"Bundle successfully {action}");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.CreateFailure($"Failed to update featured status: {ex.Message}");
+            }
         }
 
         public async Task<ApiResponse<BundleRentalDto>> CreateBundleRentalAsync(CreateBundleRentalRequest request, string userId)
@@ -608,8 +854,39 @@ namespace ToolsSharing.Infrastructure.Services
                         availabilityResult.Data?.Message ?? "Bundle is not available for the selected dates");
                 }
 
-                // Calculate bundle rental costs
-                var costCalculation = await CalculateBundleCostAsync(request.BundleId, request.RentalDate, request.ReturnDate);
+                // Determine which tools to include in rental
+                var toolsToRent = bundle.BundleTools.ToList();
+                
+                // If specific tools are selected, validate and filter
+                if (request.SelectedToolIds.Any())
+                {
+                    // Validate all selected tools exist in bundle
+                    var selectedToolsExist = request.SelectedToolIds.All(id => 
+                        bundle.BundleTools.Any(bt => bt.ToolId == id));
+                    
+                    if (!selectedToolsExist)
+                    {
+                        return ApiResponse<BundleRentalDto>.CreateFailure("One or more selected tools are not part of this bundle");
+                    }
+                    
+                    // Ensure all required tools are selected
+                    var requiredToolsSelected = bundle.BundleTools
+                        .Where(bt => !bt.IsOptional)
+                        .All(bt => request.SelectedToolIds.Contains(bt.ToolId));
+                    
+                    if (!requiredToolsSelected)
+                    {
+                        return ApiResponse<BundleRentalDto>.CreateFailure("All required tools must be selected");
+                    }
+                    
+                    // Filter to selected tools only
+                    toolsToRent = bundle.BundleTools
+                        .Where(bt => request.SelectedToolIds.Contains(bt.ToolId))
+                        .ToList();
+                }
+
+                // Calculate bundle rental costs based on selected tools
+                var costCalculation = await CalculateBundleCostForSelectedToolsAsync(bundle, toolsToRent, request.RentalDate, request.ReturnDate);
                 if (!costCalculation.Success || costCalculation.Data == null)
                 {
                     return ApiResponse<BundleRentalDto>.CreateFailure("Failed to calculate bundle rental cost");
@@ -633,6 +910,34 @@ namespace ToolsSharing.Infrastructure.Services
                 };
 
                 _context.BundleRentals.Add(bundleRental);
+                await _context.SaveChangesAsync();
+
+                // Create individual tool rentals for each selected tool
+                var individualRentals = new List<Rental>();
+                foreach (var bundleTool in toolsToRent)
+                {
+                    var toolRental = new Rental
+                    {
+                        Id = Guid.NewGuid(),
+                        ToolId = bundleTool.ToolId,
+                        RenterId = userId,
+                        OwnerId = bundleTool.Tool.OwnerId,
+                        StartDate = request.RentalDate,
+                        EndDate = request.ReturnDate,
+                        TotalCost = costCalculation.Data.ToolCosts
+                            .FirstOrDefault(tc => tc.ToolId == bundleTool.ToolId)?.TotalCost ?? 0,
+                        DepositAmount = 0, // Deposit handled at bundle level
+                        Status = RentalStatus.Pending,
+                        Notes = $"Part of bundle rental: {bundle.Name}",
+                        BundleRentalId = bundleRental.Id,
+                        CreatedAt = DateTime.UtcNow,
+                        UpdatedAt = DateTime.UtcNow
+                    };
+                    
+                    individualRentals.Add(toolRental);
+                }
+
+                _context.Rentals.AddRange(individualRentals);
                 await _context.SaveChangesAsync();
 
                 // Map to DTO
@@ -912,14 +1217,410 @@ namespace ToolsSharing.Infrastructure.Services
 
         public async Task<ApiResponse<bool>> IncrementViewCountAsync(Guid bundleId)
         {
-            // Implementation for increment view count
-            throw new NotImplementedException("IncrementViewCountAsync not yet implemented");
+            try
+            {
+                // Find the bundle
+                var bundle = await _context.Bundles
+                    .FirstOrDefaultAsync(b => b.Id == bundleId && !b.IsDeleted);
+
+                if (bundle == null)
+                {
+                    return ApiResponse<bool>.CreateFailure("Bundle not found");
+                }
+
+                // Increment view count
+                bundle.ViewCount++;
+                bundle.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                return ApiResponse<bool>.CreateSuccess(true, "View count incremented successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.CreateFailure($"Failed to increment view count: {ex.Message}");
+            }
         }
 
         public async Task<ApiResponse<Dictionary<string, int>>> GetBundleCategoryCountsAsync()
         {
-            // Implementation for get bundle category counts
-            throw new NotImplementedException("GetBundleCategoryCountsAsync not yet implemented");
+            try
+            {
+                // Get bundle counts by category (only published and non-deleted bundles)
+                var categoryCounts = await _context.Bundles
+                    .Where(b => b.IsPublished && !b.IsDeleted)
+                    .GroupBy(b => b.Category)
+                    .Select(g => new { Category = g.Key, Count = g.Count() })
+                    .ToDictionaryAsync(x => x.Category, x => x.Count);
+
+                return ApiResponse<Dictionary<string, int>>.CreateSuccess(categoryCounts, "Bundle category counts retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<Dictionary<string, int>>.CreateFailure($"Failed to get bundle category counts: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<BundleReviewDto>> CreateBundleReviewAsync(CreateBundleReviewRequest request, string userId)
+        {
+            try
+            {
+                // Check if user can review this bundle
+                var canReview = await CanUserReviewBundleAsync(request.BundleId, userId);
+                if (!canReview.Success || !canReview.Data)
+                {
+                    return ApiResponse<BundleReviewDto>.CreateFailure(canReview.Message ?? "You cannot review this bundle");
+                }
+
+                // Check if user has already reviewed this bundle
+                var existingReview = await _context.Reviews
+                    .FirstOrDefaultAsync(r => r.BundleId == request.BundleId && 
+                                            r.ReviewerId == userId && 
+                                            r.Type == ReviewType.BundleReview);
+
+                if (existingReview != null)
+                {
+                    return ApiResponse<BundleReviewDto>.CreateFailure("You have already reviewed this bundle");
+                }
+
+                // Create the review
+                var review = new Review
+                {
+                    Id = Guid.NewGuid(),
+                    BundleId = request.BundleId,
+                    BundleRentalId = request.BundleRentalId,
+                    ReviewerId = userId,
+                    RevieweeId = "", // Bundle reviews don't have reviewees
+                    Rating = request.Rating,
+                    Title = request.Title,
+                    Comment = request.Comment,
+                    Type = ReviewType.BundleReview,
+                    CreatedAt = DateTime.UtcNow,
+                    UpdatedAt = DateTime.UtcNow
+                };
+
+                _context.Reviews.Add(review);
+                await _context.SaveChangesAsync();
+
+                // Return the created review with populated data
+                var reviewDto = await GetBundleReviewByIdAsync(review.Id);
+                return ApiResponse<BundleReviewDto>.CreateSuccess(reviewDto, "Bundle review created successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<BundleReviewDto>.CreateFailure($"Failed to create bundle review: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<PagedResult<BundleReviewDto>>> GetBundleReviewsAsync(Guid bundleId, int page = 1, int pageSize = 10)
+        {
+            try
+            {
+                var query = _context.Reviews
+                    .Where(r => r.BundleId == bundleId && r.Type == ReviewType.BundleReview)
+                    .Include(r => r.Reviewer)
+                    .Include(r => r.Bundle)
+                    .Include(r => r.BundleRental)
+                    .OrderByDescending(r => r.CreatedAt);
+
+                var totalCount = await query.CountAsync();
+                var reviews = await query
+                    .Skip((page - 1) * pageSize)
+                    .Take(pageSize)
+                    .Select(r => new BundleReviewDto
+                    {
+                        Id = r.Id,
+                        BundleId = r.BundleId!.Value,
+                        BundleRentalId = r.BundleRentalId,
+                        ReviewerId = r.ReviewerId,
+                        ReviewerName = r.Reviewer.FirstName + " " + r.Reviewer.LastName,
+                        ReviewerAvatar = r.Reviewer.ProfilePictureUrl ?? "",
+                        Rating = r.Rating,
+                        Title = r.Title,
+                        Comment = r.Comment,
+                        CreatedAt = r.CreatedAt,
+                        BundleName = r.Bundle!.Name,
+                        RentalStartDate = r.BundleRental != null ? r.BundleRental.RentalDate : null,
+                        RentalEndDate = r.BundleRental != null ? r.BundleRental.ReturnDate : null,
+                        RentalDuration = r.BundleRental != null ? (r.BundleRental.ReturnDate - r.BundleRental.RentalDate).Days + 1 : 0
+                    })
+                    .ToListAsync();
+
+                var result = new PagedResult<BundleReviewDto>
+                {
+                    Items = reviews,
+                    TotalCount = totalCount,
+                    PageNumber = page,
+                    PageSize = pageSize
+                };
+
+                return ApiResponse<PagedResult<BundleReviewDto>>.CreateSuccess(result, "Bundle reviews retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<PagedResult<BundleReviewDto>>.CreateFailure($"Failed to get bundle reviews: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<BundleReviewSummaryDto>> GetBundleReviewSummaryAsync(Guid bundleId)
+        {
+            try
+            {
+                var reviews = await _context.Reviews
+                    .Where(r => r.BundleId == bundleId && r.Type == ReviewType.BundleReview)
+                    .Include(r => r.Reviewer)
+                    .Include(r => r.Bundle)
+                    .Include(r => r.BundleRental)
+                    .OrderByDescending(r => r.CreatedAt)
+                    .ToListAsync();
+
+                var summary = new BundleReviewSummaryDto
+                {
+                    TotalReviews = reviews.Count,
+                    AverageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0,
+                    FiveStarCount = reviews.Count(r => r.Rating == 5),
+                    FourStarCount = reviews.Count(r => r.Rating == 4),
+                    ThreeStarCount = reviews.Count(r => r.Rating == 3),
+                    TwoStarCount = reviews.Count(r => r.Rating == 2),
+                    OneStarCount = reviews.Count(r => r.Rating == 1),
+                    LatestReviews = reviews.Take(3).Select(r => new BundleReviewDto
+                    {
+                        Id = r.Id,
+                        BundleId = r.BundleId!.Value,
+                        BundleRentalId = r.BundleRentalId,
+                        ReviewerId = r.ReviewerId,
+                        ReviewerName = r.Reviewer.FirstName + " " + r.Reviewer.LastName,
+                        ReviewerAvatar = r.Reviewer.ProfilePictureUrl ?? "",
+                        Rating = r.Rating,
+                        Title = r.Title,
+                        Comment = r.Comment,
+                        CreatedAt = r.CreatedAt,
+                        BundleName = r.Bundle!.Name,
+                        RentalStartDate = r.BundleRental != null ? r.BundleRental.RentalDate : null,
+                        RentalEndDate = r.BundleRental != null ? r.BundleRental.ReturnDate : null,
+                        RentalDuration = r.BundleRental != null ? (r.BundleRental.ReturnDate - r.BundleRental.RentalDate).Days + 1 : 0
+                    }).ToList()
+                };
+
+                return ApiResponse<BundleReviewSummaryDto>.CreateSuccess(summary, "Bundle review summary retrieved successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<BundleReviewSummaryDto>.CreateFailure($"Failed to get bundle review summary: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> CanUserReviewBundleAsync(Guid bundleId, string userId)
+        {
+            try
+            {
+                // Check if bundle exists
+                var bundle = await _context.Bundles
+                    .FirstOrDefaultAsync(b => b.Id == bundleId && !b.IsDeleted);
+
+                if (bundle == null)
+                {
+                    return ApiResponse<bool>.CreateFailure("Bundle not found");
+                }
+
+                // Users cannot review their own bundles
+                if (bundle.UserId == userId)
+                {
+                    return ApiResponse<bool>.CreateFailure("You cannot review your own bundle");
+                }
+
+                // Check if user has completed at least one rental of this bundle
+                var hasCompletedRental = await _context.BundleRentals
+                    .AnyAsync(br => br.BundleId == bundleId && 
+                                   br.RenterUserId == userId && 
+                                   br.Status == "Completed");
+
+                if (!hasCompletedRental)
+                {
+                    return ApiResponse<bool>.CreateFailure("You can only review bundles you have rented and completed");
+                }
+
+                return ApiResponse<bool>.CreateSuccess(true, "User can review this bundle");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.CreateFailure($"Failed to check review eligibility: {ex.Message}");
+            }
+        }
+
+        public async Task<ApiResponse<bool>> DeleteBundleReviewAsync(Guid reviewId, string userId)
+        {
+            try
+            {
+                var review = await _context.Reviews
+                    .FirstOrDefaultAsync(r => r.Id == reviewId && r.Type == ReviewType.BundleReview);
+
+                if (review == null)
+                {
+                    return ApiResponse<bool>.CreateFailure("Bundle review not found");
+                }
+
+                // Only the reviewer can delete their own review
+                if (review.ReviewerId != userId)
+                {
+                    return ApiResponse<bool>.CreateFailure("You can only delete your own reviews");
+                }
+
+                _context.Reviews.Remove(review);
+                await _context.SaveChangesAsync();
+
+                return ApiResponse<bool>.CreateSuccess(true, "Bundle review deleted successfully");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<bool>.CreateFailure($"Failed to delete bundle review: {ex.Message}");
+            }
+        }
+
+        private async Task<BundleReviewDto> GetBundleReviewByIdAsync(Guid reviewId)
+        {
+            var review = await _context.Reviews
+                .Include(r => r.Reviewer)
+                .Include(r => r.Bundle)
+                .Include(r => r.BundleRental)
+                .FirstAsync(r => r.Id == reviewId);
+
+            return new BundleReviewDto
+            {
+                Id = review.Id,
+                BundleId = review.BundleId!.Value,
+                BundleRentalId = review.BundleRentalId,
+                ReviewerId = review.ReviewerId,
+                ReviewerName = review.Reviewer.FirstName + " " + review.Reviewer.LastName,
+                ReviewerAvatar = review.Reviewer.ProfilePictureUrl ?? "",
+                Rating = review.Rating,
+                Title = review.Title,
+                Comment = review.Comment,
+                CreatedAt = review.CreatedAt,
+                BundleName = review.Bundle!.Name,
+                RentalStartDate = review.BundleRental?.RentalDate,
+                RentalEndDate = review.BundleRental?.ReturnDate,
+                RentalDuration = review.BundleRental != null ? (review.BundleRental.ReturnDate - review.BundleRental.RentalDate).Days + 1 : 0
+            };
+        }
+
+        public async Task<ApiResponse<BundleApprovalStatusDto>> GetBundleApprovalStatusAsync(Guid bundleId, string userId)
+        {
+            try
+            {
+                var bundle = await _context.Bundles
+                    .Include(b => b.BundleTools)
+                        .ThenInclude(bt => bt.Tool)
+                    .FirstOrDefaultAsync(b => b.Id == bundleId && b.UserId == userId && !b.IsDeleted);
+
+                if (bundle == null)
+                {
+                    return ApiResponse<BundleApprovalStatusDto>.CreateFailure("Bundle not found or you don't have permission to view it");
+                }
+
+                var unapprovedTools = bundle.BundleTools
+                    .Where(bt => !bt.Tool.IsApproved)
+                    .Select(bt => new UnapprovedToolInfo
+                    {
+                        ToolId = bt.Tool.Id,
+                        ToolName = bt.Tool.Name,
+                        IsPending = bt.Tool.PendingApproval,
+                        RejectionReason = bt.Tool.RejectionReason
+                    })
+                    .ToList();
+
+                var status = new BundleApprovalStatusDto
+                {
+                    BundleId = bundle.Id,
+                    BundleName = bundle.Name,
+                    BundleIsApproved = bundle.IsApproved,
+                    BundleIsPending = bundle.PendingApproval,
+                    BundleRejectionReason = bundle.RejectionReason,
+                    HasUnapprovedTools = unapprovedTools.Any(),
+                    UnapprovedTools = unapprovedTools,
+                    CanBePubliclyVisible = bundle.IsApproved && !unapprovedTools.Any(),
+                    WarningMessage = unapprovedTools.Any() 
+                        ? $"This bundle contains {unapprovedTools.Count} unapproved tools and will not be visible to other users until all tools are approved."
+                        : null
+                };
+
+                return ApiResponse<BundleApprovalStatusDto>.CreateSuccess(status);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<BundleApprovalStatusDto>.CreateFailure($"Error checking bundle approval status: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Cleans up old bundle image from storage when bundle image is updated.
+        /// This is best-effort cleanup - failures are logged but don't fail the main operation.
+        /// </summary>
+        private async Task CleanupOldBundleImageAsync(string? oldImageUrl, string? newImageUrl)
+        {
+            if (string.IsNullOrEmpty(oldImageUrl)) return;
+
+            // Don't delete if it's the same image
+            if (!string.IsNullOrEmpty(newImageUrl) && oldImageUrl.Equals(newImageUrl, StringComparison.OrdinalIgnoreCase))
+                return;
+
+            try
+            {
+                var storagePath = ExtractStoragePathFromUrl(oldImageUrl);
+                if (!string.IsNullOrEmpty(storagePath))
+                {
+                    var deleted = await _fileStorageService.DeleteFileAsync(storagePath);
+                    if (deleted)
+                    {
+                        _logger.LogInformation("Cleaned up old bundle image: {ImageUrl}", oldImageUrl);
+                    }
+                    else
+                    {
+                        _logger.LogWarning("Old bundle image not found or already deleted: {ImageUrl}", oldImageUrl);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to delete old bundle image: {ImageUrl}", oldImageUrl);
+                // Don't rethrow - this is best effort cleanup
+            }
+        }
+
+        /// <summary>
+        /// Extracts the storage path from a file URL for deletion
+        /// </summary>
+        private string ExtractStoragePathFromUrl(string imageUrl)
+        {
+            if (string.IsNullOrEmpty(imageUrl)) return "";
+
+            try
+            {
+                // Handle relative URLs like "/uploads/images/filename.jpg"
+                if (imageUrl.StartsWith("/uploads/"))
+                {
+                    return imageUrl.Substring("/uploads/".Length);
+                }
+
+                // Handle absolute URLs - extract the path after /uploads/
+                var uploadsIndex = imageUrl.IndexOf("/uploads/", StringComparison.OrdinalIgnoreCase);
+                if (uploadsIndex >= 0)
+                {
+                    return imageUrl.Substring(uploadsIndex + "/uploads/".Length);
+                }
+
+                // If it's just the filename/path without URL prefix, return as-is
+                if (!imageUrl.StartsWith("http"))
+                {
+                    return imageUrl;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error extracting storage path from URL: {ImageUrl}", imageUrl);
+            }
+
+            return "";
         }
     }
 }

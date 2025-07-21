@@ -33,7 +33,7 @@ namespace ToolsSharing.Infrastructure.Configurations
                 .HasMaxLength(500);
                 
             builder.Property(b => b.ImageUrl)
-                .HasMaxLength(500);
+                .HasMaxLength(2000);
                 
             builder.Property(b => b.BundleDiscount)
                 .HasPrecision(5, 2)

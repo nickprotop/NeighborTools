@@ -24,6 +24,13 @@ namespace ToolsSharing.Core.Entities
         public bool IsFeatured { get; set; } = false;
         public int ViewCount { get; set; } = 0;
         
+        // Approval/Moderation fields
+        public bool IsApproved { get; set; } = false;
+        public bool PendingApproval { get; set; } = true;
+        public string? RejectionReason { get; set; }
+        public DateTime? ApprovedAt { get; set; }
+        public string? ApprovedById { get; set; }
+        
         // Categories/Tags
         public string Category { get; set; } = ""; // e.g., "Home Improvement", "Gardening", "Woodworking"
         public string Tags { get; set; } = ""; // Comma-separated tags
@@ -31,5 +38,6 @@ namespace ToolsSharing.Core.Entities
         // Navigation properties
         public ICollection<BundleTool> BundleTools { get; set; } = new List<BundleTool>();
         public ICollection<BundleRental> BundleRentals { get; set; } = new List<BundleRental>();
+        public ICollection<Review> Reviews { get; set; } = new List<Review>();
     }
 }

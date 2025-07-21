@@ -1,0 +1,146 @@
+@using ToolsSharing.Frontend.Models
+@using ToolsSharing.Frontend.Services
+@using frontend.Models
+@namespace frontend.Components
+@inject BundleReviewService BundleReviewService
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.RateReview" Class="mr-2" />
+            Review @BundleName
+        </MudText>
+    </TitleContent>
+    
+    <DialogContent>
+        <MudContainer Style="max-width: none;">
+            <EditForm Model="@reviewRequest" OnValidSubmit="@SubmitReview">
+                <DataAnnotationsValidator />
+                
+                <MudStack Spacing="4">
+                    <!-- Rating -->
+                    <div>
+                        <MudText Typo="Typo.subtitle1" Class="mb-2">Overall Rating *</MudText>
+                        <MudRating @bind-SelectedValue="@reviewRequest.Rating" 
+                                  MaxValue="5" 
+                                  Size="Size.Large" 
+                                  Color="Color.Primary" />
+                        @if (reviewRequest.Rating == 0)
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Error">Please select a rating</MudText>
+                        }
+                    </div>
+
+                    <!-- Title -->
+                    <MudTextField @bind-Value="@reviewRequest.Title"
+                                 Label="Review Title"
+                                 Placeholder="Summarize your experience..."
+                                 MaxLength="100"
+                                 Counter="100"
+                                 Variant="Variant.Outlined"
+                                 Required="true"
+                                 For="@(() => reviewRequest.Title)" />
+
+                    <!-- Comment -->
+                    <MudTextField @bind-Value="@reviewRequest.Comment"
+                                 Label="Your Review"
+                                 Placeholder="Share details about your experience with this bundle..."
+                                 Lines="5"
+                                 MaxLength="1000"
+                                 Counter="1000"
+                                 Variant="Variant.Outlined"
+                                 Required="true"
+                                 For="@(() => reviewRequest.Comment)" />
+
+                    <!-- Guidelines -->
+                    <MudAlert Severity="Severity.Info" ContentAlignment="HorizontalAlignment.Left">
+                        <MudText Typo="Typo.body2">
+                            <strong>Review Guidelines:</strong><br />
+                            • Be honest and constructive in your feedback<br />
+                            • Focus on the bundle quality and your rental experience<br />
+                            • Keep your language respectful and appropriate
+                        </MudText>
+                    </MudAlert>
+                </MudStack>
+            </EditForm>
+        </MudContainer>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton OnClick="Cancel" 
+                  StartIcon="@Icons.Material.Filled.Cancel"
+                  Variant="Variant.Text">
+            Cancel
+        </MudButton>
+        <MudButton OnClick="SubmitReview" 
+                  StartIcon="@Icons.Material.Filled.Send"
+                  Variant="Variant.Filled" 
+                  Color="Color.Primary"
+                  Disabled="@(isSubmitting || !IsFormValid())">
+            @if (isSubmitting)
+            {
+                <MudProgressCircular Size="Size.Small" Class="mr-2" />
+            }
+            Submit Review
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public Guid BundleId { get; set; }
+    [Parameter] public string BundleName { get; set; } = "";
+    
+    private CreateBundleReviewRequest reviewRequest = new();
+    private bool isSubmitting = false;
+
+    protected override void OnInitialized()
+    {
+        reviewRequest.BundleId = BundleId;
+    }
+
+    private bool IsFormValid()
+    {
+        return reviewRequest.Rating > 0 && 
+               !string.IsNullOrWhiteSpace(reviewRequest.Title) && 
+               !string.IsNullOrWhiteSpace(reviewRequest.Comment) &&
+               reviewRequest.Title.Length <= 100 &&
+               reviewRequest.Comment.Length <= 1000;
+    }
+
+    private async Task SubmitReview()
+    {
+        if (!IsFormValid() || isSubmitting) return;
+
+        isSubmitting = true;
+        
+        try
+        {
+            var result = await BundleReviewService.CreateBundleReviewAsync(BundleId, reviewRequest);
+            
+            if (result.Success)
+            {
+                Snackbar.Add("Review submitted successfully!", Severity.Success);
+                MudDialog.Close(DialogResult.Ok(result.Data));
+            }
+            else
+            {
+                Snackbar.Add($"Failed to submit review: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"An error occurred: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
+        }
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+}

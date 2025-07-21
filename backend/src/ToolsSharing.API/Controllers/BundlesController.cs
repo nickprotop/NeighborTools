@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using ToolsSharing.Core.DTOs.Bundle;
 using ToolsSharing.Core.Interfaces;
+using ToolsSharing.Core.Common.Models;
 
 namespace ToolsSharing.API.Controllers
 {
@@ -11,10 +12,12 @@ namespace ToolsSharing.API.Controllers
     public class BundlesController : ControllerBase
     {
         private readonly IBundleService _bundleService;
+        private readonly IFileStorageService _fileStorageService;
 
-        public BundlesController(IBundleService bundleService)
+        public BundlesController(IBundleService bundleService, IFileStorageService fileStorageService)
         {
             _bundleService = bundleService;
+            _fileStorageService = fileStorageService;
         }
 
         /// <summary>
@@ -328,6 +331,185 @@ namespace ToolsSharing.API.Controllers
 
             var result = await _bundleService.SetFeaturedStatusAsync(id, request.IsFeatured, userId);
             return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Create a review for a bundle (requires authentication and completed rental)
+        /// </summary>
+        [HttpPost("{bundleId:guid}/reviews")]
+        [Authorize]
+        public async Task<IActionResult> CreateBundleReview(Guid bundleId, [FromBody] CreateBundleReviewRequest request)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            // Validate request
+            if (request.Rating < 1 || request.Rating > 5)
+            {
+                return BadRequest("Rating must be between 1 and 5");
+            }
+
+            if (string.IsNullOrEmpty(request.Title) || request.Title.Length > 100)
+            {
+                return BadRequest("Title is required and must be 100 characters or less");
+            }
+
+            if (string.IsNullOrEmpty(request.Comment) || request.Comment.Length > 1000)
+            {
+                return BadRequest("Comment is required and must be 1000 characters or less");
+            }
+
+            // Set the bundle ID from the route
+            request.BundleId = bundleId;
+
+            var result = await _bundleService.CreateBundleReviewAsync(request, userId);
+            if (!result.Success)
+            {
+                return BadRequest(result);
+            }
+
+            return CreatedAtAction(nameof(GetBundleReviews), new { bundleId = bundleId }, result);
+        }
+
+        /// <summary>
+        /// Get reviews for a bundle with pagination
+        /// </summary>
+        [HttpGet("{bundleId:guid}/reviews")]
+        public async Task<IActionResult> GetBundleReviews(
+            Guid bundleId,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10)
+        {
+            var result = await _bundleService.GetBundleReviewsAsync(bundleId, page, pageSize);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Get bundle review summary (ratings distribution and latest reviews)
+        /// </summary>
+        [HttpGet("{bundleId:guid}/reviews/summary")]
+        public async Task<IActionResult> GetBundleReviewSummary(Guid bundleId)
+        {
+            var result = await _bundleService.GetBundleReviewSummaryAsync(bundleId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Check if user can review a bundle (requires authentication)
+        /// </summary>
+        [HttpGet("{bundleId:guid}/can-review")]
+        [Authorize]
+        public async Task<IActionResult> CanReviewBundle(Guid bundleId)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var result = await _bundleService.CanUserReviewBundleAsync(bundleId, userId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Delete a bundle review (requires authentication and ownership of review)
+        /// </summary>
+        [HttpDelete("reviews/{reviewId:guid}")]
+        [Authorize]
+        public async Task<IActionResult> DeleteBundleReview(Guid reviewId)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var result = await _bundleService.DeleteBundleReviewAsync(reviewId, userId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Get bundle approval status for bundle owners (requires authentication)
+        /// </summary>
+        [HttpGet("{id:guid}/approval-status")]
+        [Authorize]
+        public async Task<IActionResult> GetBundleApprovalStatus(Guid id)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var result = await _bundleService.GetBundleApprovalStatusAsync(id, userId);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Upload a single image for bundle (requires authentication)
+        /// </summary>
+        [HttpPost("upload-image")]
+        [Authorize]
+        public async Task<IActionResult> UploadBundleImage(IFormFile file)
+        {
+            try
+            {
+                if (file == null)
+                {
+                    return BadRequest(new ApiResponse<string>
+                    {
+                        Success = false,
+                        Message = "No file provided",
+                        Errors = new List<string> { "A file must be provided" }
+                    });
+                }
+
+                var allowedTypes = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                
+                if (!allowedTypes.Contains(extension))
+                {
+                    return BadRequest(new ApiResponse<string>
+                    {
+                        Success = false,
+                        Message = $"Invalid file type: {file.FileName}",
+                        Errors = new List<string> { "Only JPG, JPEG, PNG, GIF, and WebP files are allowed" }
+                    });
+                }
+
+                if (file.Length > 5 * 1024 * 1024) // 5MB
+                {
+                    return BadRequest(new ApiResponse<string>
+                    {
+                        Success = false,
+                        Message = $"File too large: {file.FileName}",
+                        Errors = new List<string> { "Maximum file size is 5MB" }
+                    });
+                }
+
+                using var stream = file.OpenReadStream();
+                var fileName = $"{Guid.NewGuid()}{extension}";
+                var fileUrl = await _fileStorageService.UploadFileAsync(stream, fileName, file.ContentType, "images");
+
+                return Ok(new ApiResponse<string>
+                {
+                    Success = true,
+                    Data = fileUrl,
+                    Message = "Image uploaded successfully"
+                });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new ApiResponse<string>
+                {
+                    Success = false,
+                    Message = "An error occurred while uploading image",
+                    Errors = new List<string> { ex.Message }
+                });
+            }
         }
     }
 

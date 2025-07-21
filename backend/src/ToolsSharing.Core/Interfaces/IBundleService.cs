@@ -35,5 +35,15 @@ namespace ToolsSharing.Core.Interfaces
         // Bundle statistics
         Task<ApiResponse<bool>> IncrementViewCountAsync(Guid bundleId);
         Task<ApiResponse<Dictionary<string, int>>> GetBundleCategoryCountsAsync();
+        
+        // Bundle reviews
+        Task<ApiResponse<BundleReviewDto>> CreateBundleReviewAsync(CreateBundleReviewRequest request, string userId);
+        Task<ApiResponse<PagedResult<BundleReviewDto>>> GetBundleReviewsAsync(Guid bundleId, int page = 1, int pageSize = 10);
+        Task<ApiResponse<BundleReviewSummaryDto>> GetBundleReviewSummaryAsync(Guid bundleId);
+        Task<ApiResponse<bool>> CanUserReviewBundleAsync(Guid bundleId, string userId);
+        Task<ApiResponse<bool>> DeleteBundleReviewAsync(Guid reviewId, string userId);
+        
+        // Bundle approval status
+        Task<ApiResponse<BundleApprovalStatusDto>> GetBundleApprovalStatusAsync(Guid bundleId, string userId);
     }
 }

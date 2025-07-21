@@ -7,10 +7,12 @@
 @using ToolsSharing.Frontend.Models
 @using ToolsSharing.Frontend.Services
 @using frontend.Components.Bundles
+@using frontend.Components
 @inject IToolService ToolService
 @inject BundleService BundleService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject IDialogService DialogService
 @attribute [Authorize]
 
 <PageTitle>My Tools & Bundles - NeighborTools</PageTitle>
@@ -120,7 +122,7 @@
             @if (tool != null)
             {
                 <MudItem xs="12" sm="6" md="4" lg="3">
-                    <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s;" Class="hover-card">
+                    <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s; cursor: pointer;" Class="hover-card" @onclick="() => ViewTool(tool.Id ?? string.Empty)">
                         @if (tool.ImageUrls != null && tool.ImageUrls.Any())
                     {
                         <MudCardMedia Image="@tool.ImageUrls.First()" Height="200" Style="border-radius: 12px 12px 0 0;" />
@@ -184,7 +186,7 @@
                         }
                     </MudCardContent>
                     
-                    <MudCardActions Class="pa-4">
+                    <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
                         <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true">
                             <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="() => EditTool(tool.Id ?? string.Empty)">
                                 Edit
@@ -285,7 +287,7 @@
                 @foreach (var bundle in myBundles.Items)
                 {
                     <MudItem xs="12" sm="6" md="4">
-                        <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s;" Class="hover-card">
+                        <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s; cursor: pointer;" Class="hover-card" @onclick="() => ViewBundle(bundle.Id)">
                             @if (!string.IsNullOrEmpty(bundle.ImageUrl))
                             {
                                 <MudCardMedia Image="@bundle.ImageUrl" Height="200" Style="border-radius: 12px 12px 0 0;" />
@@ -338,7 +340,7 @@
                                 </div>
                             </MudCardContent>
                             
-                            <MudCardActions Class="pa-4">
+                            <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
                                 <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true">
                                     <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="() => EditBundle(bundle.Id)">
                                         Edit
@@ -542,7 +544,7 @@
 
     private void EditBundle(Guid bundleId)
     {
-        Navigation.NavigateTo($"/bundles/edit/{bundleId}");
+        Navigation.NavigateTo($"/bundles/{bundleId}/edit");
     }
 
     private void ViewBundle(Guid bundleId)
@@ -600,8 +602,24 @@
 
     private async Task<bool> ShowDeleteConfirmation(string message)
     {
-        // This is a simplified version - you might want to use a proper dialog
-        // For now, we'll return true to allow deletion
-        return true;
+        var parameters = new DialogParameters
+        {
+            { "Title", "Delete Bundle" },
+            { "Message", message },
+            { "ConfirmText", "Delete" },
+            { "ConfirmColor", Color.Error }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = DialogService.Show<ConfirmationDialog>("Delete Bundle", parameters, options);
+        var result = await dialog.Result;
+
+        return !result.Canceled && result.Data is ConfirmationDialogResult dialogResult && dialogResult.Confirmed;
     }
 }

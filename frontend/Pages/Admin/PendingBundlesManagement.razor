@@ -1,0 +1,249 @@
+@page "/admin/bundles/pending"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@using ToolsSharing.Frontend.Models
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Pending Bundles - Admin - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
+    <MudPaper Class="pa-6" Elevation="3">
+        <div class="d-flex align-center mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.Inventory" Color="Color.Secondary" Size="Size.Large" Class="mr-3" />
+            <MudText Typo="Typo.h4">Pending Bundle Approvals</MudText>
+            <MudSpacer />
+            <MudChip T="string" Color="Color.Warning" Size="Size.Medium">
+                @(pendingBundles?.Count ?? 0) pending
+            </MudChip>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="d-flex justify-center pa-8">
+                <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+            </div>
+        }
+        else if (pendingBundles?.Any() == true)
+        {
+            <MudDataGrid T="BundleModel" Items="@pendingBundles" Filterable="true" Sortable="true" Groupable="false">
+                <Columns>
+                    <PropertyColumn Property="x => x.Name" Title="Bundle Name" Sortable="true">
+                        <CellTemplate>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Inventory" Class="mr-2" />
+                                <div>
+                                    <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Item.Name</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        @context.Item.Tools.Count tools in bundle
+                                    </MudText>
+                                </div>
+                            </div>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <PropertyColumn Property="x => x.Category" Title="Category" Sortable="true">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary">@context.Item.Category</MudChip>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <PropertyColumn Property="x => x.OwnerName" Title="Owner" Sortable="true">
+                        <CellTemplate>
+                            <div class="d-flex align-center">
+                                <MudAvatar Size="Size.Small" Class="mr-2">
+                                    @context.Item.OwnerName?.FirstOrDefault()
+                                </MudAvatar>
+                                <MudText Typo="Typo.body2">@context.Item.OwnerName</MudText>
+                            </div>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <PropertyColumn Property="x => x.DiscountedCost" Title="Bundle Cost" Sortable="true">
+                        <CellTemplate>
+                            <div>
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">$@context.Item.DiscountedCost.ToString("F2")</MudText>
+                                @if (context.Item.BundleDiscount > 0)
+                                {
+                                    <MudText Typo="Typo.caption" Color="Color.Success">@context.Item.BundleDiscount% discount</MudText>
+                                }
+                            </div>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <PropertyColumn Property="x => x.RequiredSkillLevel" Title="Skill Level" Sortable="true">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small" Color="@GetSkillLevelColor(context.Item.RequiredSkillLevel)">
+                                @context.Item.RequiredSkillLevel
+                            </MudChip>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <PropertyColumn Property="x => x.CreatedAt" Title="Submitted" Sortable="true">
+                        <CellTemplate>
+                            <MudText Typo="Typo.caption">@context.Item.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <TemplateColumn Title="Actions" Sortable="false">
+                        <CellTemplate>
+                            <div class="d-flex gap-2">
+                                <MudButton Size="Size.Small" 
+                                          Variant="Variant.Filled" 
+                                          Color="Color.Success" 
+                                          StartIcon="@Icons.Material.Filled.Check"
+                                          OnClick="@(() => ApproveBundle(context.Item.Id))">
+                                    Approve
+                                </MudButton>
+                                <MudButton Size="Size.Small" 
+                                          Variant="Variant.Outlined" 
+                                          Color="Color.Error" 
+                                          StartIcon="@Icons.Material.Filled.Close"
+                                          OnClick="@(() => RejectBundle(context.Item.Id))">
+                                    Reject
+                                </MudButton>
+                                <MudButton Size="Size.Small" 
+                                          Variant="Variant.Text" 
+                                          Color="Color.Primary" 
+                                          StartIcon="@Icons.Material.Filled.Visibility"
+                                          Href="@($"/bundles/{context.Item.Id}")" 
+                                          Target="_blank">
+                                    View
+                                </MudButton>
+                            </div>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+        }
+        else
+        {
+            <div class="text-center pa-8">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-4" />
+                <MudText Typo="Typo.h6" Color="Color.Success">All Bundles Approved!</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    There are no bundles pending approval at this time.
+                </MudText>
+            </div>
+        }
+
+        <div class="d-flex justify-space-between align-center mt-6">
+            <MudButton Variant="Variant.Outlined" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.ArrowBack"
+                      Href="/admin">
+                Back to Dashboard
+            </MudButton>
+            
+            <MudButton Variant="Variant.Outlined" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.Refresh"
+                      OnClick="LoadPendingBundles"
+                      Disabled="isLoading">
+                @if (isLoading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ml-2">Refreshing...</MudText>
+                }
+                else
+                {
+                    <MudText>Refresh</MudText>
+                }
+            </MudButton>
+        </div>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Inject] private HttpClient HttpClient { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    
+    private List<BundleModel>? pendingBundles = null;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingBundles();
+    }
+
+    private async Task LoadPendingBundles()
+    {
+        try
+        {
+            isLoading = true;
+            var response = await HttpClient.GetAsync("api/admin/bundles/pending?pageSize=100");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<PaginatedResponse<BundleModel>>>();
+                if (result?.Success == true && result.Data?.Items != null)
+                {
+                    pendingBundles = result.Data.Items;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading pending bundles: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApproveBundle(Guid bundleId)
+    {
+        try
+        {
+            var approvalData = new { notes = "Approved via admin bundles management" };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/bundles/{bundleId}/approve", approvalData);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Bundle approved successfully", Severity.Success);
+                await LoadPendingBundles(); // Refresh the list
+            }
+            else
+            {
+                Snackbar.Add("Failed to approve bundle", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error approving bundle: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RejectBundle(Guid bundleId)
+    {
+        try
+        {
+            var rejectionData = new { reason = "Does not meet quality standards" };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/bundles/{bundleId}/reject", rejectionData);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Bundle rejected", Severity.Warning);
+                await LoadPendingBundles(); // Refresh the list
+            }
+            else
+            {
+                Snackbar.Add("Failed to reject bundle", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error rejecting bundle: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetSkillLevelColor(string skillLevel)
+    {
+        return skillLevel switch
+        {
+            "Beginner" => Color.Success,
+            "Intermediate" => Color.Primary,
+            "Advanced" => Color.Warning,
+            "Expert" => Color.Error,
+            _ => Color.Default
+        };
+    }
+}

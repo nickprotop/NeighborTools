@@ -5,6 +5,7 @@ using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Core.Features.Tools;
 using ToolsSharing.Core.Interfaces;
+using ToolsSharing.Core.DTOs.Tools;
 
 namespace ToolsSharing.API.Controllers;
 
@@ -14,11 +15,13 @@ public class ToolsController : ControllerBase
 {
     private readonly IToolsService _toolsService;
     private readonly ISettingsService _settingsService;
+    private readonly IFileStorageService _fileStorageService;
 
-    public ToolsController(IToolsService toolsService, ISettingsService settingsService)
+    public ToolsController(IToolsService toolsService, ISettingsService settingsService, IFileStorageService fileStorageService)
     {
         _toolsService = toolsService;
         _settingsService = settingsService;
+        _fileStorageService = fileStorageService;
     }
 
     [HttpGet]
@@ -115,8 +118,29 @@ public class ToolsController : ControllerBase
 
     [HttpPost]
     [Authorize]
-    public async Task<IActionResult> CreateTool([FromBody] CreateToolCommand command)
+    public async Task<IActionResult> CreateTool([FromBody] CreateToolRequest request)
     {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var command = new CreateToolCommand(
+            request.Name,
+            request.Description,
+            request.Category,
+            request.Brand ?? string.Empty,
+            request.Model ?? string.Empty,
+            request.DailyRate,
+            request.WeeklyRate ?? 0,
+            request.MonthlyRate ?? 0,
+            request.DepositRequired,
+            request.Condition,
+            request.Location,
+            userId,
+            request.LeadTimeHours,
+            request.ImageUrls
+        );
+        
         var result = await _toolsService.CreateToolAsync(command);
         
         if (!result.Success)
@@ -127,10 +151,30 @@ public class ToolsController : ControllerBase
 
     [HttpPut("{id}")]
     [Authorize]
-    public async Task<IActionResult> UpdateTool(Guid id, [FromBody] UpdateToolCommand command)
+    public async Task<IActionResult> UpdateTool(Guid id, [FromBody] UpdateToolRequest request)
     {
-        if (id != command.Id)
-            return BadRequest("ID mismatch");
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+
+        var command = new UpdateToolCommand(
+            id,
+            request.Name,
+            request.Description,
+            request.Category,
+            request.Brand ?? string.Empty,
+            request.Model ?? string.Empty,
+            request.DailyRate,
+            request.WeeklyRate ?? 0,
+            request.MonthlyRate ?? 0,
+            request.DepositRequired,
+            request.Condition,
+            request.Location,
+            request.IsAvailable,
+            request.LeadTimeHours,
+            userId,
+            request.ImageUrls ?? new List<string>()
+        );
             
         var result = await _toolsService.UpdateToolAsync(command);
         
@@ -155,5 +199,81 @@ public class ToolsController : ControllerBase
             return BadRequest(result);
             
         return NoContent();
+    }
+
+    [HttpPost("upload-images")]
+    [Authorize]
+    public async Task<IActionResult> UploadImages(List<IFormFile> files)
+    {
+        try
+        {
+            if (files == null || !files.Any())
+            {
+                return BadRequest(new ApiResponse<List<string>>
+                {
+                    Success = false,
+                    Message = "No files provided",
+                    Errors = new List<string> { "At least one file must be provided" }
+                });
+            }
+
+            if (files.Count > 5)
+            {
+                return BadRequest(new ApiResponse<List<string>>
+                {
+                    Success = false,
+                    Message = "Too many files",
+                    Errors = new List<string> { "Maximum 5 images allowed" }
+                });
+            }
+
+            var uploadedUrls = new List<string>();
+            var allowedTypes = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+
+            foreach (var file in files)
+            {
+                var extension = Path.GetExtension(file.FileName).ToLowerInvariant();
+                if (!allowedTypes.Contains(extension))
+                {
+                    return BadRequest(new ApiResponse<List<string>>
+                    {
+                        Success = false,
+                        Message = $"Invalid file type: {file.FileName}",
+                        Errors = new List<string> { "Only JPG, JPEG, PNG, GIF, and WebP files are allowed" }
+                    });
+                }
+
+                if (file.Length > 5 * 1024 * 1024) // 5MB
+                {
+                    return BadRequest(new ApiResponse<List<string>>
+                    {
+                        Success = false,
+                        Message = $"File too large: {file.FileName}",
+                        Errors = new List<string> { "Maximum file size is 5MB" }
+                    });
+                }
+
+                using var stream = file.OpenReadStream();
+                var fileName = $"{Guid.NewGuid()}{extension}";
+                var fileUrl = await _fileStorageService.UploadFileAsync(stream, fileName, file.ContentType, "images");
+                uploadedUrls.Add(fileUrl);
+            }
+
+            return Ok(new ApiResponse<List<string>>
+            {
+                Success = true,
+                Data = uploadedUrls,
+                Message = $"Successfully uploaded {uploadedUrls.Count} image(s)"
+            });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new ApiResponse<List<string>>
+            {
+                Success = false,
+                Message = "An error occurred while uploading images",
+                Errors = new List<string> { ex.Message }
+            });
+        }
     }
 }

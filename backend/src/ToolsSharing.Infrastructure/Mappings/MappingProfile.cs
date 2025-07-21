@@ -4,6 +4,7 @@ using ToolsSharing.Core.Features.Tools;
 using ToolsSharing.Core.Features.Rentals;
 using ToolsSharing.Core.DTOs.Messaging;
 using ToolsSharing.Core.DTOs.Dispute;
+using ToolsSharing.Core.DTOs.Bundle;
 
 namespace ToolsSharing.Infrastructure.Mappings;
 
@@ -127,5 +128,20 @@ public static class MappingConfig
         TypeAdapterConfig<MutualClosureAuditLog, MutualClosureAuditLogDto>
             .NewConfig()
             .Map(dest => dest.UserName, src => $"{src.User.FirstName} {src.User.LastName}");
+
+        // Bundle mappings
+        TypeAdapterConfig<Bundle, BundleDto>
+            .NewConfig()
+            .Ignore(dest => dest.Tags) // Tags will be handled manually to convert string to List<string>
+            .Ignore(dest => dest.OwnerName) // Will be mapped manually from User.UserName
+            .Ignore(dest => dest.OwnerLocation) // Will be mapped manually from User.City
+            .Ignore(dest => dest.Tools) // Will be mapped manually from BundleTools
+            .Ignore(dest => dest.UnavailableDates) // Not implemented yet
+            .Ignore(dest => dest.IsAvailable) // Will be calculated manually
+            .Ignore(dest => dest.AvailableFromDate) // Will be calculated manually
+            .Ignore(dest => dest.RentalCount) // Will be calculated manually
+            .Ignore(dest => dest.AverageRating) // Not implemented yet
+            .Ignore(dest => dest.TotalCost) // Will be calculated manually
+            .Ignore(dest => dest.DiscountedCost); // Will be calculated manually
     }
 }

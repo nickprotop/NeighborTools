@@ -83,6 +83,7 @@ builder.Services.AddScoped<SampleDataService>();
 builder.Services.AddScoped<ToolsSharing.Frontend.Services.MutualClosureService>();
 builder.Services.AddScoped<AdminMutualClosureService>();
 builder.Services.AddScoped<BundleService>();
+builder.Services.AddScoped<BundleReviewService>();
 
 var app = builder.Build();
 

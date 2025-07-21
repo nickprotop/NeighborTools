@@ -125,7 +125,7 @@ else if (filteredTools != null && filteredTools.Any())
         @foreach (var tool in GetSortedTools())
         {
             <MudItem xs="12" sm="6" md="4" lg="3">
-                <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s;" Class="hover-card">
+                <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s; cursor: pointer;" Class="hover-card" @onclick="() => ViewTool(tool.Id)">
                     @if (tool.ImageUrls.Any())
                     {
                         <MudCardMedia Image="@tool.ImageUrls.First()" Height="200" Style="border-radius: 12px 12px 0 0;" />
@@ -186,7 +186,7 @@ else if (filteredTools != null && filteredTools.Any())
                         </div>
                     </MudCardContent>
                     
-                    <MudCardActions Class="pa-4">
+                    <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
                         <MudButton Variant="Variant.Filled" 
                                    Color="@(tool.IsAvailable ? Color.Primary : Color.Secondary)" 
                                    FullWidth="true"

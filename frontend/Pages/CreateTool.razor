@@ -261,20 +261,56 @@
                         </MudAlert>
                         
                         <!-- Image Upload Area -->
-                        <MudPaper Class="pa-8 text-center mb-4" Elevation="2" Style="border: 2px dashed var(--mud-palette-primary); border-radius: 12px;">
-                            <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
-                            <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">Upload Photos</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                                Drag and drop images here, or click to browse
-                            </MudText>
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudUpload">
-                                Choose Files
-                            </MudButton>
-                        </MudPaper>
+                        @if (previewUrls.Count < 5)
+                        {
+                            <MudFileUpload T="IReadOnlyList<IBrowserFile>" Accept=".jpg,.jpeg,.png,.gif,.webp" Multiple="true" MaximumFileCount="5" OnFilesChanged="@(async args => await OnImagesSelected(args.GetMultipleFiles()))">
+                                <ActivatorContent>
+                                    <MudPaper Class="pa-8 text-center mb-4" Elevation="2" Style="border: 2px dashed var(--mud-palette-primary); border-radius: 12px;">
+                                        <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                                        <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">Add Photos</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                                            Drag and drop images here, or click to browse<br />
+                                            <small>Images will be uploaded when you create the tool</small>
+                                        </MudText>
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudUpload" Disabled="isUploadingImages">
+                                            @if (isUploadingImages)
+                                            {
+                                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                                <MudText Class="ml-2">Processing...</MudText>
+                                            }
+                                            else
+                                            {
+                                                <MudText>Choose Files (@previewUrls.Count/5)</MudText>
+                                            }
+                                        </MudButton>
+                                    </MudPaper>
+                                </ActivatorContent>
+                            </MudFileUpload>
+                        }
                         
                         <!-- Image Preview Area -->
                         <div class="d-flex flex-wrap gap-4">
-                            @for (int i = 0; i < 5; i++)
+                            @for (int i = 0; i < Math.Min(5, previewUrls.Count); i++)
+                            {
+                                var imageUrl = previewUrls[i];
+                                var imageIndex = i;
+                                <MudPaper Class="pa-2" Style="width: 150px; height: 150px; border-radius: 12px; position: relative;">
+                                    <img src="@imageUrl" alt="Tool photo @(i + 1)" style="width: 100%; height: 130px; object-fit: cover; border-radius: 8px;" />
+                                    <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                   Size="Size.Small"
+                                                   Color="Color.Error"
+                                                   Variant="Variant.Filled"
+                                                   Style="position: absolute; top: 8px; right: 8px; padding: 4px;"
+                                                   OnClick="@(() => RemoveImage(imageIndex))" />
+                                    <MudChip Size="Size.Small" 
+                                             Color="Color.Warning" 
+                                             Style="position: absolute; bottom: 4px; left: 4px; font-size: 0.6rem;"
+                                             Text="Preview" 
+                                             T="string" />
+                                </MudPaper>
+                            }
+                            
+                            @for (int i = previewUrls.Count; i < 5; i++)
                             {
                                 <MudPaper Class="pa-4 text-center" Style="width: 150px; height: 150px; border-radius: 12px; border: 2px dashed var(--mud-palette-surface-variant);">
                                     <MudIcon Icon="@Icons.Material.Filled.Add" Color="Color.Secondary" Size="Size.Large" />
@@ -305,11 +341,18 @@
                     @if (isLoading)
                     {
                         <MudProgressCircular Color="Color.Secondary" Size="Size.Small" Indeterminate="true" />
-                        <MudText Class="ml-2">Creating Tool...</MudText>
+                        @if (isUploadingImages)
+                        {
+                            <MudText Class="ml-2">Uploading Images...</MudText>
+                        }
+                        else
+                        {
+                            <MudText Class="ml-2">Creating Tool...</MudText>
+                        }
                     }
                     else
                     {
-                        <MudText>Create Tool</MudText>
+                        <MudText>Create Tool @(pendingFiles.Any() ? $"& Upload {pendingFiles.Count} Images" : "")</MudText>
                     }
                 </MudButton>
             </div>
@@ -323,6 +366,11 @@
     private string errorMessage = string.Empty;
     private bool isLoading = false;
     private bool isInitializing = true;
+    private bool isUploadingImages = false;
+    
+    // For delayed upload pattern
+    private List<IBrowserFile> pendingFiles = new();
+    private List<string> previewUrls = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -358,11 +406,47 @@
 
         try
         {
-            // TODO: Implement actual tool creation
-            await Task.Delay(2000); // Simulate API call
+            // First upload images if there are any pending files
+            if (pendingFiles.Any())
+            {
+                isUploadingImages = true;
+                StateHasChanged();
+                
+                var uploadResponse = await ToolService.UploadImagesAsync(pendingFiles);
+                
+                if (!uploadResponse.Success)
+                {
+                    var uploadError = uploadResponse.Message ?? "Failed to upload images";
+                    if (uploadResponse.Errors?.Any() == true)
+                    {
+                        uploadError += ": " + string.Join(", ", uploadResponse.Errors);
+                    }
+                    errorMessage = uploadError;
+                    return;
+                }
+                
+                // Use uploaded URLs
+                createToolRequest.ImageUrls = uploadResponse.Data ?? new List<string>();
+                isUploadingImages = false;
+                StateHasChanged();
+            }
+
+            // Then create the tool with uploaded image URLs
+            var response = await ToolService.CreateToolAsync(createToolRequest);
             
-            Snackbar.Add("Tool created successfully! It will be available for rent once approved.", Severity.Success);
-            Navigation.NavigateTo("/my-tools");
+            if (response.Success && response.Data != null)
+            {
+                Snackbar.Add("Tool created successfully! It will be available for rent once approved.", Severity.Success);
+                Navigation.NavigateTo("/my-tools");
+            }
+            else
+            {
+                errorMessage = response.Message ?? "Failed to create tool. Please try again.";
+                if (response.Errors?.Any() == true)
+                {
+                    errorMessage += "\n" + string.Join("\n", response.Errors);
+                }
+            }
         }
         catch (Exception ex)
         {
@@ -371,11 +455,76 @@
         finally
         {
             isLoading = false;
+            isUploadingImages = false;
         }
     }
 
     private void Cancel()
     {
         Navigation.NavigateTo("/my-tools");
+    }
+
+    private async Task OnImagesSelected(IReadOnlyList<IBrowserFile> files)
+    {
+        if (files == null || !files.Any()) return;
+
+        isUploadingImages = true;
+        StateHasChanged();
+
+        try
+        {
+            var filesToProcess = files.Take(5 - previewUrls.Count).ToList();
+            
+            // Validate files before processing
+            foreach (var file in filesToProcess)
+            {
+                if (file.Size > 5 * 1024 * 1024) // 5MB limit
+                {
+                    Snackbar.Add($"File {file.Name} is too large. Maximum size is 5MB.", Severity.Warning);
+                    return;
+                }
+                
+                // Validate file type
+                var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+                var allowedTypes = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                if (!allowedTypes.Contains(extension))
+                {
+                    Snackbar.Add($"Invalid file type: {file.Name}. Only JPG, JPEG, PNG, GIF, and WebP files are allowed.", Severity.Warning);
+                    return;
+                }
+            }
+
+            // Create Base64 previews and store files for delayed upload
+            foreach (var file in filesToProcess)
+            {
+                var buffer = new byte[file.Size];
+                await file.OpenReadStream(5 * 1024 * 1024).ReadAsync(buffer);
+                var dataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+                
+                previewUrls.Add(dataUrl);
+                pendingFiles.Add(file);
+            }
+
+            Snackbar.Add($"Added {filesToProcess.Count} image(s) for preview. They will be uploaded when you create the tool.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to process images: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isUploadingImages = false;
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveImage(int index)
+    {
+        if (index >= 0 && index < previewUrls.Count)
+        {
+            previewUrls.RemoveAt(index);
+            pendingFiles.RemoveAt(index);
+            StateHasChanged();
+        }
     }
 }

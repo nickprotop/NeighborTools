@@ -8,6 +8,7 @@ namespace ToolsSharing.Core.DTOs.Bundle
         public DateTime RentalDate { get; set; }
         public DateTime ReturnDate { get; set; }
         public string? RenterNotes { get; set; }
+        public List<Guid> SelectedToolIds { get; set; } = new(); // Optional tools selection
     }
     
     public class BundleRentalDto

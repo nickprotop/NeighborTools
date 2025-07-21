@@ -129,7 +129,7 @@ public class SampleDataService : ISampleDataService
                 await ApplySampleToolsAsync();
                 break;
             case SampleDataConstants.BUNDLES:
-                await ApplySampleBundlesAsync();
+                await ApplySampleBundlesAsync(adminUserId);
                 break;
             case SampleDataConstants.RENTALS:
                 await ApplySampleRentalsAsync();
@@ -615,7 +615,7 @@ public class SampleDataService : ISampleDataService
         }
     }
 
-    private async Task ApplySampleBundlesAsync()
+    private async Task ApplySampleBundlesAsync(string adminUserId)
     {
         if (await _context.Bundles.AnyAsync(b => b.Id == SampleDataIds.WOODWORKING_BUNDLE_ID))
         {
@@ -644,7 +644,12 @@ public class SampleDataService : ISampleDataService
                 Tags = "woodworking,furniture,DIY,power tools,beginner friendly",
                 ViewCount = 45,
                 CreatedAt = DateTime.UtcNow.AddDays(-30),
-                UpdatedAt = DateTime.UtcNow.AddDays(-5)
+                UpdatedAt = DateTime.UtcNow.AddDays(-5),
+                // Approval fields - this bundle is approved
+                IsApproved = true,
+                PendingApproval = false,
+                ApprovedAt = DateTime.UtcNow.AddDays(-25),
+                ApprovedById = adminUserId
             },
             new Bundle
             {
@@ -663,7 +668,10 @@ public class SampleDataService : ISampleDataService
                 Tags = "home improvement,renovation,DIY,maintenance,upgrade",
                 ViewCount = 23,
                 CreatedAt = DateTime.UtcNow.AddDays(-20),
-                UpdatedAt = DateTime.UtcNow.AddDays(-3)
+                UpdatedAt = DateTime.UtcNow.AddDays(-3),
+                // Approval fields - this bundle is PENDING for testing
+                IsApproved = false,
+                PendingApproval = true
             },
             new Bundle
             {
@@ -682,7 +690,12 @@ public class SampleDataService : ISampleDataService
                 Tags = "gardening,cleanup,maintenance,outdoor,seasonal",
                 ViewCount = 31,
                 CreatedAt = DateTime.UtcNow.AddDays(-15),
-                UpdatedAt = DateTime.UtcNow.AddDays(-2)
+                UpdatedAt = DateTime.UtcNow.AddDays(-2),
+                // Approval fields - this bundle is approved
+                IsApproved = true,
+                PendingApproval = false,
+                ApprovedAt = DateTime.UtcNow.AddDays(-10),
+                ApprovedById = adminUserId
             }
         };
 

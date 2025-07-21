@@ -4,6 +4,7 @@
 @using ToolsSharing.Frontend.Services
 @using frontend.Services
 @using frontend.Components.Bundles
+@using frontend.Components
 @inject BundleService BundleService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
@@ -65,10 +66,6 @@ else
                             <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Color="Color.Secondary" />
                                 <MudText Typo="Typo.body2" Color="Color.Secondary">@bundle.OwnerLocation</MudText>
-                            </MudStack>
-                            <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
-                                <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Secondary" />
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@bundle.ViewCount views</MudText>
                             </MudStack>
                         </MudStack>
                     </div>
@@ -276,11 +273,11 @@ else
 
             <!-- Sidebar -->
             <MudItem xs="12" md="4">
-                <!-- Bundle Stats -->
+                <!-- Bundle Info -->
                 <MudCard Class="mb-4">
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <MudText Typo="Typo.h6">Bundle Stats</MudText>
+                            <MudText Typo="Typo.h6">Bundle Info</MudText>
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent>
@@ -288,13 +285,6 @@ else
                             <MudStack Row Justify="Justify.SpaceBetween">
                                 <MudText Typo="Typo.body2">Times Rented:</MudText>
                                 <MudText Typo="Typo.body2" Color="Color.Primary">@bundle.RentalCount</MudText>
-                            </MudStack>
-                            <MudStack Row Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.body2">Average Rating:</MudText>
-                                <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
-                                    <MudRating ReadOnly="true" MaxValue="5" SelectedValue="(int)Math.Round(bundle.AverageRating)" Color="Color.Warning" />
-                                    <MudText Typo="Typo.caption">(@bundle.AverageRating.ToString("F1"))</MudText>
-                                </MudStack>
                             </MudStack>
                             <MudStack Row Justify="Justify.SpaceBetween">
                                 <MudText Typo="Typo.body2">Created:</MudText>
@@ -330,6 +320,9 @@ else
                         </MudCardContent>
                     </MudCard>
                 }
+
+                <!-- Reviews -->
+                <BundleReviewsComponent BundleId="@BundleId" BundleName="@(bundle?.Name ?? "")" />
 
                 <!-- Share -->
                 <MudCard>

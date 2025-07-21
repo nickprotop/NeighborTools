@@ -43,6 +43,7 @@ namespace ToolsSharing.Core.DTOs.Bundle
         // Statistics
         public int RentalCount { get; set; }
         public double AverageRating { get; set; }
+        public int ReviewCount { get; set; }
         
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
@@ -70,5 +71,27 @@ namespace ToolsSharing.Core.DTOs.Bundle
         public DateTime StartDate { get; set; }
         public DateTime EndDate { get; set; }
         public string Reason { get; set; } = "";
+    }
+
+    // DTOs for bundle approval status
+    public class BundleApprovalStatusDto
+    {
+        public Guid BundleId { get; set; }
+        public string BundleName { get; set; } = "";
+        public bool BundleIsApproved { get; set; }
+        public bool BundleIsPending { get; set; }
+        public string? BundleRejectionReason { get; set; }
+        public bool HasUnapprovedTools { get; set; }
+        public List<UnapprovedToolInfo> UnapprovedTools { get; set; } = new();
+        public bool CanBePubliclyVisible { get; set; }
+        public string? WarningMessage { get; set; }
+    }
+
+    public class UnapprovedToolInfo
+    {
+        public Guid ToolId { get; set; }
+        public string ToolName { get; set; } = "";
+        public bool IsPending { get; set; }
+        public string? RejectionReason { get; set; }
     }
 }

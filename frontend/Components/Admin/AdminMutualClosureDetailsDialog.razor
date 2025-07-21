@@ -349,9 +349,32 @@
 
         if (confirmed == true)
         {
-            // Implementation would call admin endpoint to force review
-            Snackbar.Add("Mutual closure marked for admin review", Severity.Info);
-            await LoadMutualClosureDetails();
+            try
+            {
+                var request = new AdminReviewMutualClosureRequest
+                {
+                    MutualClosureId = MutualClosureId,
+                    Action = MutualClosureAdminAction.RequireReview,
+                    AdminNotes = "Forced admin review by administrator",
+                    Reason = "Administrative review required"
+                };
+
+                var result = await MutualClosureService.AdminReviewMutualClosureAsync(request);
+                
+                if (result?.Success == true)
+                {
+                    Snackbar.Add("Mutual closure marked for admin review", Severity.Info);
+                    await LoadMutualClosureDetails();
+                }
+                else
+                {
+                    Snackbar.Add($"Failed to mark for admin review: {result?.Message ?? "Unknown error"}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error forcing admin review: {ex.Message}", Severity.Error);
+            }
         }
     }
 
@@ -365,9 +388,32 @@
 
         if (confirmed == true)
         {
-            // Implementation would call admin approval endpoint
-            Snackbar.Add("Mutual closure approved and processed", Severity.Success);
-            MudDialog.Close(DialogResult.Ok(true));
+            try
+            {
+                var request = new AdminReviewMutualClosureRequest
+                {
+                    MutualClosureId = MutualClosureId,
+                    Action = MutualClosureAdminAction.Approve,
+                    AdminNotes = "Approved by administrator",
+                    Reason = "Administrative approval granted"
+                };
+
+                var result = await MutualClosureService.AdminReviewMutualClosureAsync(request);
+                
+                if (result?.Success == true)
+                {
+                    Snackbar.Add("Mutual closure approved and processed", Severity.Success);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add($"Failed to approve mutual closure: {result?.Message ?? "Unknown error"}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error approving mutual closure: {ex.Message}", Severity.Error);
+            }
         }
     }
 
@@ -381,9 +427,32 @@
 
         if (confirmed == true)
         {
-            // Implementation would call admin rejection endpoint
-            Snackbar.Add("Mutual closure rejected - dispute continues normally", Severity.Info);
-            MudDialog.Close(DialogResult.Ok(true));
+            try
+            {
+                var request = new AdminReviewMutualClosureRequest
+                {
+                    MutualClosureId = MutualClosureId,
+                    Action = MutualClosureAdminAction.Block,
+                    AdminNotes = "Rejected by administrator",
+                    Reason = "Administrative rejection - dispute continues through normal resolution"
+                };
+
+                var result = await MutualClosureService.AdminReviewMutualClosureAsync(request);
+                
+                if (result?.Success == true)
+                {
+                    Snackbar.Add("Mutual closure rejected - dispute continues normally", Severity.Info);
+                    MudDialog.Close(DialogResult.Ok(true));
+                }
+                else
+                {
+                    Snackbar.Add($"Failed to reject mutual closure: {result?.Message ?? "Unknown error"}", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Error rejecting mutual closure: {ex.Message}", Severity.Error);
+            }
         }
     }
 

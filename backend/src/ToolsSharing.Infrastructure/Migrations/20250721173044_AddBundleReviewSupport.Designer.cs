@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ToolsSharing.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using ToolsSharing.Infrastructure.Data;
 namespace ToolsSharing.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250721173044_AddBundleReviewSupport")]
+    partial class AddBundleReviewSupport
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -175,12 +178,6 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("ApprovedById")
-                        .HasColumnType("longtext");
-
                     b.Property<decimal>("BundleDiscount")
                         .ValueGeneratedOnAdd()
                         .HasPrecision(5, 2)
@@ -209,11 +206,8 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .HasColumnType("varchar(5000)");
 
                     b.Property<string>("ImageUrl")
-                        .HasMaxLength(2000)
-                        .HasColumnType("varchar(2000)");
-
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("tinyint(1)");
+                        .HasMaxLength(500)
+                        .HasColumnType("varchar(500)");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
@@ -228,12 +222,6 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("varchar(200)");
-
-                    b.Property<bool>("PendingApproval")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("RejectionReason")
-                        .HasColumnType("longtext");
 
                     b.Property<string>("RequiredSkillLevel")
                         .IsRequired()
@@ -2095,12 +2083,6 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("char(36)");
 
-                    b.Property<DateTime?>("ApprovedAt")
-                        .HasColumnType("datetime(6)");
-
-                    b.Property<string>("ApprovedById")
-                        .HasColumnType("longtext");
-
                     b.Property<string>("Brand")
                         .IsRequired()
                         .HasMaxLength(50)
@@ -2129,9 +2111,6 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .IsRequired()
                         .HasMaxLength(1000)
                         .HasColumnType("varchar(1000)");
-
-                    b.Property<bool>("IsApproved")
-                        .HasColumnType("tinyint(1)");
 
                     b.Property<bool>("IsAvailable")
                         .HasColumnType("tinyint(1)");
@@ -2164,12 +2143,6 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("varchar(255)");
 
-                    b.Property<bool>("PendingApproval")
-                        .HasColumnType("tinyint(1)");
-
-                    b.Property<string>("RejectionReason")
-                        .HasColumnType("longtext");
-
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("datetime(6)");
 
@@ -2197,16 +2170,14 @@ namespace ToolsSharing.Infrastructure.Migrations
 
                     b.Property<string>("AltText")
                         .IsRequired()
-                        .HasMaxLength(500)
-                        .HasColumnType("varchar(500)");
+                        .HasColumnType("longtext");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("datetime(6)");
 
                     b.Property<string>("ImageUrl")
                         .IsRequired()
-                        .HasMaxLength(2000)
-                        .HasColumnType("varchar(2000)");
+                        .HasColumnType("longtext");
 
                     b.Property<bool>("IsDeleted")
                         .HasColumnType("tinyint(1)");
@@ -2224,8 +2195,6 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .HasColumnType("datetime(6)");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("IsPrimary");
 
                     b.HasIndex("ToolId");
 

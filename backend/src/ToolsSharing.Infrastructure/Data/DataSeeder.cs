@@ -195,7 +195,12 @@ public static class DataSeeder
                 IsAvailable = true,
                 OwnerId = "user1-guid-1234-5678-9012345678901",
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                // Approval fields - this tool is approved
+                IsApproved = true,
+                PendingApproval = false,
+                ApprovedAt = DateTime.UtcNow.AddMinutes(-30),
+                ApprovedById = "user1-guid-1234-5678-9012345678901" // Admin John approved it
             },
             new Tool
             {
@@ -214,7 +219,10 @@ public static class DataSeeder
                 IsAvailable = true,
                 OwnerId = "user1-guid-1234-5678-9012345678901",
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                // Approval fields - this tool is PENDING for testing
+                IsApproved = false,
+                PendingApproval = true
             },
             new Tool
             {
@@ -233,7 +241,12 @@ public static class DataSeeder
                 IsAvailable = true,
                 OwnerId = "user2-guid-1234-5678-9012345678902",
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                // Approval fields - this tool is approved
+                IsApproved = true,
+                PendingApproval = false,
+                ApprovedAt = DateTime.UtcNow.AddMinutes(-45),
+                ApprovedById = "user1-guid-1234-5678-9012345678901" // Admin John approved it
             },
             new Tool
             {
@@ -252,7 +265,12 @@ public static class DataSeeder
                 IsAvailable = true,
                 OwnerId = "user2-guid-1234-5678-9012345678902",
                 CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
+                UpdatedAt = DateTime.UtcNow,
+                // Approval fields - this tool is approved
+                IsApproved = true,
+                PendingApproval = false,
+                ApprovedAt = DateTime.UtcNow.AddMinutes(-20),
+                ApprovedById = "user1-guid-1234-5678-9012345678901" // Admin John approved it
             }
         };
         

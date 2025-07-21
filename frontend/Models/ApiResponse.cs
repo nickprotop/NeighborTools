@@ -37,3 +37,11 @@ public class ApiResponse
     public string? Message { get; set; }
     public List<string>? Errors { get; set; }
 }
+
+public class PaginatedResponse<T>
+{
+    public List<T> Items { get; set; } = new();
+    public int TotalCount { get; set; }
+    public int Page { get; set; }
+    public int PageSize { get; set; }
+}

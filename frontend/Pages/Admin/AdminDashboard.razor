@@ -3,6 +3,7 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using ToolsSharing.Frontend.Models
 @attribute [Authorize(Roles = "Admin")]
 
 <PageTitle>Admin Dashboard - NeighborTools</PageTitle>
@@ -80,6 +81,116 @@
                         </div>
                     </MudCardContent>
                 </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Pending Approvals Section -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" style="border-left: 4px solid var(--mud-palette-warning);">
+                    <div class="d-flex align-center mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.PendingActions" Color="Color.Warning" Size="Size.Medium" />
+                        <MudText Typo="Typo.h6" Class="ml-2">Pending Approvals</MudText>
+                        <MudSpacer />
+                        <MudChip T="string" Color="Color.Warning" Size="Size.Small">@((pendingTools?.Count ?? 0) + (pendingBundles?.Count ?? 0))</MudChip>
+                    </div>
+                    
+                    <MudGrid>
+                        <!-- Pending Tools -->
+                        <MudItem xs="12" md="6">
+                            <MudCard Elevation="2">
+                                <MudCardContent>
+                                    <div class="d-flex align-center mb-3">
+                                        <MudIcon Icon="@Icons.Material.Filled.Handyman" Color="Color.Primary" />
+                                        <MudText Typo="Typo.h6" Class="ml-2">Tools Awaiting Approval</MudText>
+                                        <MudSpacer />
+                                        <MudChip T="string" Color="Color.Primary" Size="Size.Small">@(pendingTools?.Count ?? 0)</MudChip>
+                                    </div>
+                                    @if (pendingTools?.Any() == true)
+                                    {
+                                        <MudList T="object">
+                                            @foreach (var tool in pendingTools.Take(3))
+                                            {
+                                                <MudListItem T="object">
+                                                    <div class="d-flex justify-space-between align-center">
+                                                        <div>
+                                                            <MudText Typo="Typo.subtitle2">@tool.Name</MudText>
+                                                            <MudText Typo="Typo.body2" Color="Color.Secondary">by @tool.OwnerName</MudText>
+                                                        </div>
+                                                        <div>
+                                                            <MudButton Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined" OnClick="@(() => ApproveTool(Guid.Parse(tool.Id)))" Class="mr-1">Approve</MudButton>
+                                                            <MudButton Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined" OnClick="@(() => RejectTool(Guid.Parse(tool.Id)))">Reject</MudButton>
+                                                        </div>
+                                                    </div>
+                                                </MudListItem>
+                                            }
+                                            @if (pendingTools.Count > 3)
+                                            {
+                                                <MudListItem T="object">
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">And @(pendingTools.Count - 3) more...</MudText>
+                                                </MudListItem>
+                                            }
+                                        </MudList>
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth Href="/admin/tools/pending" Class="mt-2">
+                                            View All Pending Tools
+                                        </MudButton>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">No tools pending approval</MudText>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+
+                        <!-- Pending Bundles -->
+                        <MudItem xs="12" md="6">
+                            <MudCard Elevation="2">
+                                <MudCardContent>
+                                    <div class="d-flex align-center mb-3">
+                                        <MudIcon Icon="@Icons.Material.Filled.Inventory" Color="Color.Secondary" />
+                                        <MudText Typo="Typo.h6" Class="ml-2">Bundles Awaiting Approval</MudText>
+                                        <MudSpacer />
+                                        <MudChip T="string" Color="Color.Secondary" Size="Size.Small">@(pendingBundles?.Count ?? 0)</MudChip>
+                                    </div>
+                                    @if (pendingBundles?.Any() == true)
+                                    {
+                                        <MudList T="object">
+                                            @foreach (var bundle in pendingBundles.Take(3))
+                                            {
+                                                <MudListItem T="object">
+                                                    <div class="d-flex justify-space-between align-center">
+                                                        <div>
+                                                            <MudText Typo="Typo.subtitle2">@bundle.Name</MudText>
+                                                            <MudText Typo="Typo.body2" Color="Color.Secondary">by @bundle.OwnerName</MudText>
+                                                        </div>
+                                                        <div>
+                                                            <MudButton Size="Size.Small" Color="Color.Success" Variant="Variant.Outlined" OnClick="@(() => ApproveBundle(bundle.Id))" Class="mr-1">Approve</MudButton>
+                                                            <MudButton Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined" OnClick="@(() => RejectBundle(bundle.Id))">Reject</MudButton>
+                                                        </div>
+                                                    </div>
+                                                </MudListItem>
+                                            }
+                                            @if (pendingBundles.Count > 3)
+                                            {
+                                                <MudListItem T="object">
+                                                    <MudText Typo="Typo.body2" Color="Color.Secondary">And @(pendingBundles.Count - 3) more...</MudText>
+                                                </MudListItem>
+                                            }
+                                        </MudList>
+                                        <MudButton Variant="Variant.Outlined" Color="Color.Secondary" FullWidth Href="/admin/bundles/pending" Class="mt-2">
+                                            View All Pending Bundles
+                                        </MudButton>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">No bundles pending approval</MudText>
+                                    }
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    </MudGrid>
+                </MudPaper>
             </MudItem>
         </MudGrid>
 
@@ -663,6 +774,10 @@
     private int failedBackgroundJobs = 0;
     private int emailQueueErrors = 0;
     private string systemHealthStatus = "Healthy";
+    
+    // Pending approvals data
+    private List<Tool>? pendingTools = null;
+    private List<BundleModel>? pendingBundles = null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -714,6 +829,9 @@
             
             // Load system health metrics (simulate for now - would be real endpoints)
             await LoadSystemHealthMetrics();
+            
+            // Load pending approvals
+            await LoadPendingApprovals();
         }
         catch (Exception ex)
         {
@@ -880,5 +998,125 @@
     {
         public int TotalAttachments { get; set; }
         public long TotalSize { get; set; }
+    }
+    
+    private async Task LoadPendingApprovals()
+    {
+        try
+        {
+            // Load pending tools
+            var pendingToolsResponse = await HttpClient.GetAsync("api/admin/tools/pending?pageSize=10");
+            if (pendingToolsResponse.IsSuccessStatusCode)
+            {
+                var pendingToolsResult = await pendingToolsResponse.Content.ReadFromJsonAsync<ApiResponse<PaginatedResponse<Tool>>>();
+                if (pendingToolsResult?.Success == true && pendingToolsResult.Data?.Items != null)
+                {
+                    pendingTools = pendingToolsResult.Data.Items;
+                }
+            }
+            
+            // Load pending bundles
+            var pendingBundlesResponse = await HttpClient.GetAsync("api/admin/bundles/pending?pageSize=10");
+            if (pendingBundlesResponse.IsSuccessStatusCode)
+            {
+                var pendingBundlesResult = await pendingBundlesResponse.Content.ReadFromJsonAsync<ApiResponse<PaginatedResponse<BundleModel>>>();
+                if (pendingBundlesResult?.Success == true && pendingBundlesResult.Data?.Items != null)
+                {
+                    pendingBundles = pendingBundlesResult.Data.Items;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading pending approvals: {ex.Message}");
+        }
+    }
+    
+    private async Task ApproveTool(Guid toolId)
+    {
+        try
+        {
+            var approvalData = new { notes = "Approved via admin dashboard" };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/tools/{toolId}/approve", approvalData);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Tool approved successfully", Severity.Success);
+                await LoadPendingApprovals(); // Refresh the list
+            }
+            else
+            {
+                Snackbar.Add("Failed to approve tool", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error approving tool: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task RejectTool(Guid toolId)
+    {
+        try
+        {
+            var rejectionData = new { reason = "Does not meet quality standards" };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/tools/{toolId}/reject", rejectionData);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Tool rejected", Severity.Warning);
+                await LoadPendingApprovals(); // Refresh the list
+            }
+            else
+            {
+                Snackbar.Add("Failed to reject tool", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error rejecting tool: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task ApproveBundle(Guid bundleId)
+    {
+        try
+        {
+            var approvalData = new { notes = "Approved via admin dashboard" };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/bundles/{bundleId}/approve", approvalData);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Bundle approved successfully", Severity.Success);
+                await LoadPendingApprovals(); // Refresh the list
+            }
+            else
+            {
+                Snackbar.Add("Failed to approve bundle", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error approving bundle: {ex.Message}", Severity.Error);
+        }
+    }
+    
+    private async Task RejectBundle(Guid bundleId)
+    {
+        try
+        {
+            var rejectionData = new { reason = "Does not meet quality standards" };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/bundles/{bundleId}/reject", rejectionData);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Bundle rejected", Severity.Warning);
+                await LoadPendingApprovals(); // Refresh the list
+            }
+            else
+            {
+                Snackbar.Add("Failed to reject bundle", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error rejecting bundle: {ex.Message}", Severity.Error);
+        }
     }
 }

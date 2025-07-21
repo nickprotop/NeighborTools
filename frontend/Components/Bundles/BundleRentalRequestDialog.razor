@@ -125,6 +125,58 @@
                                       Adornment="Adornment.Start" />
                     </MudItem>
 
+                    <!-- Tool Selection Section -->
+                    @if (Bundle?.Tools.Any(t => t.IsOptional) == true)
+                    {
+                        <MudItem xs="12">
+                            <MudPaper Elevation="1" Class="pa-4" Style="border-radius: 8px;">
+                                <div class="d-flex align-center mb-3">
+                                    <MudIcon Icon="@Icons.Material.Filled.BuildCircle" Color="Color.Primary" Class="mr-2" />
+                                    <MudText Typo="Typo.h6">Select Tools</MudText>
+                                </div>
+                                <MudText Typo="Typo.body2" Class="mb-3">
+                                    This bundle includes optional tools. Select which tools you need for your project.
+                                </MudText>
+
+                                @foreach (var tool in Bundle.Tools.OrderBy(t => t.IsOptional ? 1 : 0))
+                                {
+                                    <div class="d-flex align-center mb-2">
+                                        <MudCheckBox Value="@GetToolSelection(tool.ToolId)"
+                                                     ValueChanged="@((bool value) => OnToolSelectionChanged(tool.ToolId, value))"
+                                                     Disabled="@(!tool.IsOptional)"
+                                                     Color="Color.Primary" />
+                                        <div class="ml-2 flex-grow-1">
+                                            <div class="d-flex justify-space-between align-center">
+                                                <div>
+                                                    <MudText Typo="Typo.body1">
+                                                        @tool.ToolName
+                                                        @if (!tool.IsOptional)
+                                                        {
+                                                            <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="Required" Class="ml-2" />
+                                                        }
+                                                        else
+                                                        {
+                                                            <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Optional" Class="ml-2" />
+                                                        }
+                                                    </MudText>
+                                                    @if (tool.QuantityNeeded > 1)
+                                                    {
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                            Quantity needed: @tool.QuantityNeeded
+                                                        </MudText>
+                                                    }
+                                                </div>
+                                                <MudText Typo="Typo.body2" Class="ml-2">
+                                                    $@tool.DailyRate.ToString("F2")/day
+                                                </MudText>
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </MudPaper>
+                        </MudItem>
+                    }
+
                     @if (availabilityResult != null && availabilityResult.IsAvailable)
                     {
                         <MudItem xs="12">
@@ -294,6 +346,7 @@
     
     private BundleAvailabilityResponseModel? availabilityResult;
     private BundleCostCalculationModel? costCalculation;
+    private HashSet<Guid> selectedToolIds = new HashSet<Guid>();
 
     private async Task CheckAvailabilityAndCalculateCost()
     {
@@ -382,7 +435,8 @@
                 BundleId = Bundle.Id,
                 RentalDate = startDate.Value,
                 ReturnDate = endDate.Value,
-                RenterNotes = string.IsNullOrWhiteSpace(notes) ? null : notes
+                RenterNotes = string.IsNullOrWhiteSpace(notes) ? null : notes,
+                SelectedToolIds = selectedToolIds.ToList()
             };
 
             var result = await BundleService.CreateBundleRentalAsync(rentalRequest);
@@ -414,5 +468,38 @@
     private void Cancel()
     {
         MudDialog.Cancel();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize with all required tools selected by default
+        if (Bundle?.Tools != null)
+        {
+            foreach (var tool in Bundle.Tools.Where(t => !t.IsOptional))
+            {
+                selectedToolIds.Add(tool.ToolId);
+            }
+        }
+        await base.OnInitializedAsync();
+    }
+
+    private bool GetToolSelection(Guid toolId)
+    {
+        return selectedToolIds.Contains(toolId);
+    }
+
+    private async Task OnToolSelectionChanged(Guid toolId, bool selected)
+    {
+        if (selected)
+        {
+            selectedToolIds.Add(toolId);
+        }
+        else
+        {
+            selectedToolIds.Remove(toolId);
+        }
+
+        // Recalculate cost when tool selection changes
+        await CheckAvailabilityAndCalculateCost();
     }
 }

@@ -279,30 +279,91 @@
                             </MudAlert>
                             
                             <!-- Current Images -->
-                            @if (updateToolRequest.ImageUrls.Any())
-                            {
-                                <MudText Typo="Typo.h6" Class="mb-3">Current Photos</MudText>
-                                <div class="d-flex flex-wrap gap-4 mb-4">
-                                    @foreach (var imageUrl in updateToolRequest.ImageUrls)
-                                    {
-                                        <MudPaper Class="pa-2" Style="border-radius: 8px;">
-                                            <img src="@imageUrl" alt="Tool image" style="width: 120px; height: 120px; object-fit: cover; border-radius: 4px;" />
-                                        </MudPaper>
-                                    }
-                                </div>
-                            }
                             
                             <!-- Image Upload Area -->
-                            <MudPaper Class="pa-8 text-center mb-4" Elevation="2" Style="border: 2px dashed var(--mud-palette-primary); border-radius: 12px;">
-                                <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
-                                <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">Upload New Photos</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
-                                    Drag and drop images here, or click to browse
-                                </MudText>
-                                <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudUpload">
-                                    Choose Files
-                                </MudButton>
-                            </MudPaper>
+                            @{
+                                var totalImages = existingImageUrls.Count + previewUrls.Count;
+                            }
+                            @if (totalImages < 5)
+                            {
+                                <MudFileUpload T="IReadOnlyList<IBrowserFile>" Accept=".jpg,.jpeg,.png,.gif,.webp" Multiple="true" MaximumFileCount="5" OnFilesChanged="@(async args => await OnImagesSelected(args.GetMultipleFiles()))">
+                                    <ActivatorContent>
+                                        <MudPaper Class="pa-8 text-center mb-4" Elevation="2" Style="border: 2px dashed var(--mud-palette-primary); border-radius: 12px;">
+                                            <MudIcon Icon="@Icons.Material.Filled.CloudUpload" Size="Size.Large" Color="Color.Primary" Class="mb-2" />
+                                            <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">Add More Photos</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-4">
+                                                Drag and drop images here, or click to browse<br />
+                                                <small>New images will be uploaded when you save changes</small>
+                                            </MudText>
+                                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.CloudUpload" Disabled="isUploadingImages">
+                                                @if (isUploadingImages)
+                                                {
+                                                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                                    <MudText Class="ml-2">Processing...</MudText>
+                                                }
+                                                else
+                                                {
+                                                    <MudText>Choose Files (@totalImages/5)</MudText>
+                                                }
+                                            </MudButton>
+                                        </MudPaper>
+                                    </ActivatorContent>
+                                </MudFileUpload>
+                            }
+                            
+                            <!-- Image Preview Area -->
+                            <div class="d-flex flex-wrap gap-4">
+                                <!-- Existing Images -->
+                                @for (int i = 0; i < existingImageUrls.Count; i++)
+                                {
+                                    var imageUrl = existingImageUrls[i];
+                                    var imageIndex = i;
+                                    <MudPaper Class="pa-2" Style="width: 150px; height: 150px; border-radius: 12px; position: relative;">
+                                        <img src="@imageUrl" alt="Tool photo @(i + 1)" style="width: 100%; height: 130px; object-fit: cover; border-radius: 8px;" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                       Size="Size.Small"
+                                                       Color="Color.Error"
+                                                       Variant="Variant.Filled"
+                                                       Style="position: absolute; top: 8px; right: 8px; padding: 4px;"
+                                                       OnClick="@(() => RemoveImage(imageIndex, true))" />
+                                        <MudChip Size="Size.Small" 
+                                                 Color="Color.Success" 
+                                                 Style="position: absolute; bottom: 4px; left: 4px; font-size: 0.6rem;"
+                                                 Text="Current" 
+                                                 T="string" />
+                                    </MudPaper>
+                                }
+                                
+                                <!-- Preview Images (New) -->
+                                @for (int i = 0; i < previewUrls.Count; i++)
+                                {
+                                    var imageUrl = previewUrls[i];
+                                    var totalIndex = existingImageUrls.Count + i;
+                                    <MudPaper Class="pa-2" Style="width: 150px; height: 150px; border-radius: 12px; position: relative;">
+                                        <img src="@imageUrl" alt="New tool photo @(totalIndex + 1)" style="width: 100%; height: 130px; object-fit: cover; border-radius: 8px;" />
+                                        <MudIconButton Icon="@Icons.Material.Filled.Close"
+                                                       Size="Size.Small"
+                                                       Color="Color.Error"
+                                                       Variant="Variant.Filled"
+                                                       Style="position: absolute; top: 8px; right: 8px; padding: 4px;"
+                                                       OnClick="@(() => RemoveImage(totalIndex, false))" />
+                                        <MudChip Size="Size.Small" 
+                                                 Color="Color.Warning" 
+                                                 Style="position: absolute; bottom: 4px; left: 4px; font-size: 0.6rem;"
+                                                 Text="Preview" 
+                                                 T="string" />
+                                    </MudPaper>
+                                }
+                                
+                                <!-- Empty Slots -->
+                                @for (int i = totalImages; i < 5; i++)
+                                {
+                                    <MudPaper Class="pa-4 text-center" Style="width: 150px; height: 150px; border-radius: 12px; border: 2px dashed var(--mud-palette-surface-variant);">
+                                        <MudIcon Icon="@Icons.Material.Filled.Add" Color="Color.Secondary" Size="Size.Large" />
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Photo @(i + 1)</MudText>
+                                    </MudPaper>
+                                }
+                            </div>
                         </div>
                     </MudTabPanel>
                 </MudTabs>
@@ -357,6 +418,12 @@
     private string submitErrorMessage = string.Empty;
     private bool isLoading = true;
     private bool isSubmitting = false;
+    private bool isUploadingImages = false;
+    
+    // For delayed upload pattern
+    private List<IBrowserFile> pendingFiles = new();
+    private List<string> previewUrls = new();
+    private List<string> existingImageUrls = new(); // Track existing images separately
 
     protected override async Task OnInitializedAsync()
     {
@@ -402,6 +469,9 @@
                     LeadTimeHours = tool.LeadTimeHours,
                     ImageUrls = tool.ImageUrls?.ToList() ?? new List<string>()
                 };
+                
+                // Initialize existing images for display
+                existingImageUrls = tool.ImageUrls?.ToList() ?? new List<string>();
             }
             else
             {
@@ -425,6 +495,39 @@
 
         try
         {
+            // Upload new images if any pending files exist
+            if (pendingFiles.Any())
+            {
+                isUploadingImages = true;
+                StateHasChanged();
+                
+                var uploadResponse = await ToolService.UploadImagesAsync(pendingFiles);
+                
+                if (!uploadResponse.Success)
+                {
+                    var uploadError = uploadResponse.Message ?? "Failed to upload images";
+                    if (uploadResponse.Errors?.Any() == true)
+                    {
+                        uploadError += ": " + string.Join(", ", uploadResponse.Errors);
+                    }
+                    submitErrorMessage = uploadError;
+                    return;
+                }
+                
+                // Combine existing images with newly uploaded ones
+                var newImageUrls = uploadResponse.Data ?? new List<string>();
+                updateToolRequest.ImageUrls = existingImageUrls.Concat(newImageUrls).ToList();
+                
+                isUploadingImages = false;
+                StateHasChanged();
+            }
+            else
+            {
+                // No new images, just use existing ones
+                updateToolRequest.ImageUrls = existingImageUrls;
+            }
+
+            // Update the tool with the combined image URLs
             var result = await ToolService.UpdateToolAsync(Id, updateToolRequest);
             
             if (result.Success)
@@ -444,6 +547,7 @@
         finally
         {
             isSubmitting = false;
+            isUploadingImages = false;
         }
     }
 
@@ -455,5 +559,84 @@
     private void ViewTool()
     {
         Navigation.NavigateTo($"/tools/{Id}");
+    }
+
+    private async Task OnImagesSelected(IReadOnlyList<IBrowserFile> files)
+    {
+        if (files == null || !files.Any()) return;
+
+        isUploadingImages = true;
+        StateHasChanged();
+
+        try
+        {
+            var totalCurrentImages = existingImageUrls.Count + previewUrls.Count;
+            var filesToProcess = files.Take(5 - totalCurrentImages).ToList();
+            
+            // Validate files before processing
+            foreach (var file in filesToProcess)
+            {
+                if (file.Size > 5 * 1024 * 1024) // 5MB limit
+                {
+                    Snackbar.Add($"File {file.Name} is too large. Maximum size is 5MB.", Severity.Warning);
+                    return;
+                }
+                
+                // Validate file type
+                var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+                var allowedTypes = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+                if (!allowedTypes.Contains(extension))
+                {
+                    Snackbar.Add($"Invalid file type: {file.Name}. Only JPG, JPEG, PNG, GIF, and WebP files are allowed.", Severity.Warning);
+                    return;
+                }
+            }
+
+            // Create Base64 previews and store files for delayed upload
+            foreach (var file in filesToProcess)
+            {
+                var buffer = new byte[file.Size];
+                await file.OpenReadStream(5 * 1024 * 1024).ReadAsync(buffer);
+                var dataUrl = $"data:{file.ContentType};base64,{Convert.ToBase64String(buffer)}";
+                
+                previewUrls.Add(dataUrl);
+                pendingFiles.Add(file);
+            }
+
+            Snackbar.Add($"Added {filesToProcess.Count} image(s) for preview. They will be uploaded when you save the tool.", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to upload images: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isUploadingImages = false;
+            StateHasChanged();
+        }
+    }
+
+    private void RemoveImage(int index, bool isExisting)
+    {
+        if (isExisting)
+        {
+            // Remove from existing images
+            if (index >= 0 && index < existingImageUrls.Count)
+            {
+                existingImageUrls.RemoveAt(index);
+                StateHasChanged();
+            }
+        }
+        else
+        {
+            // Remove from preview images (adjust index for previews)
+            var previewIndex = index - existingImageUrls.Count;
+            if (previewIndex >= 0 && previewIndex < previewUrls.Count)
+            {
+                previewUrls.RemoveAt(previewIndex);
+                pendingFiles.RemoveAt(previewIndex);
+                StateHasChanged();
+            }
+        }
     }
 }

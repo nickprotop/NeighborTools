@@ -1,0 +1,254 @@
+@using ToolsSharing.Frontend.Models
+@using ToolsSharing.Frontend.Services
+@using frontend.Models
+@namespace frontend.Components
+@inject BundleReviewService BundleReviewService
+@inject IAuthService AuthService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<MudCard Class="mb-4">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Reviews & Ratings</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (reviewSummary != null)
+        {
+            <div class="mb-4">
+                <MudGrid AlignItems="Center">
+                    <MudItem xs="12" md="6">
+                        <div class="d-flex align-center">
+                            <MudText Typo="Typo.h4" Class="mr-2">@reviewSummary.AverageRating.ToString("F1")</MudText>
+                            <MudRating ReadOnly="true" SelectedValue="@((int)Math.Round(reviewSummary.AverageRating))" MaxValue="5" />
+                            <MudText Typo="Typo.body2" Class="ml-2">(@reviewSummary.TotalReviews reviews)</MudText>
+                        </div>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        @if (canReview && isAuthenticated)
+                        {
+                            <MudButton Variant="Variant.Filled" 
+                                      Color="Color.Primary" 
+                                      StartIcon="@Icons.Material.Filled.RateReview"
+                                      OnClick="OpenReviewDialog"
+                                      Class="ml-auto">
+                                Write Review
+                            </MudButton>
+                        }
+                    </MudItem>
+                </MudGrid>
+
+                <!-- Rating Distribution -->
+                @if (reviewSummary.TotalReviews > 0)
+                {
+                    <div class="mt-4">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Rating Distribution</MudText>
+                        @for (int i = 5; i >= 1; i--)
+                        {
+                            var starCount = i switch
+                            {
+                                5 => reviewSummary.FiveStarCount,
+                                4 => reviewSummary.FourStarCount,
+                                3 => reviewSummary.ThreeStarCount,
+                                2 => reviewSummary.TwoStarCount,
+                                _ => reviewSummary.OneStarCount
+                            };
+                            var percentage = (double)starCount / reviewSummary.TotalReviews * 100;
+                            
+                            <div class="d-flex align-center mb-1">
+                                <MudText Typo="Typo.body2" Class="mr-2">@i star</MudText>
+                                <MudProgressLinear Color="Color.Primary" 
+                                                  Size="Size.Medium" 
+                                                  Value="percentage" 
+                                                  Class="flex-grow-1 mx-2" />
+                                <MudText Typo="Typo.body2">@starCount</MudText>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Reviews List -->
+        @if (reviews?.Any() == true)
+        {
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.h6" Class="mb-3">Reviews</MudText>
+            
+            @foreach (var review in reviews)
+            {
+                <MudCard Outlined="true" Class="mb-3">
+                    <MudCardContent>
+                        <div class="d-flex align-center mb-2">
+                            <MudAvatar Size="Size.Small" 
+                                      Image="@(string.IsNullOrEmpty(review.ReviewerAvatar) ? null : review.ReviewerAvatar)">
+                                @if (string.IsNullOrEmpty(review.ReviewerAvatar))
+                                {
+                                    @review.ReviewerName.Substring(0, 1).ToUpper()
+                                }
+                            </MudAvatar>
+                            <div class="ml-3">
+                                <MudText Typo="Typo.subtitle1">@review.ReviewerName</MudText>
+                                <div class="d-flex align-center">
+                                    <MudRating ReadOnly="true" SelectedValue="@review.Rating" MaxValue="5" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption" Class="ml-2">@review.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(review.Title))
+                        {
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">@review.Title</MudText>
+                        }
+                        
+                        <MudText Typo="Typo.body2">@review.Comment</MudText>
+                        
+                        @if (review.RentalStartDate.HasValue)
+                        {
+                            <MudText Typo="Typo.caption" Class="mt-2">
+                                Rental: @review.RentalStartDate.Value.ToString("MMM dd") - @review.RentalEndDate?.ToString("MMM dd, yyyy") (@review.RentalDuration days)
+                            </MudText>
+                        }
+                    </MudCardContent>
+                </MudCard>
+            }
+
+            @if (hasMoreReviews)
+            {
+                <div class="text-center mt-3">
+                    <MudButton Variant="Variant.Outlined" 
+                              OnClick="LoadMoreReviews" 
+                              Disabled="@loadingMoreReviews">
+                        @if (loadingMoreReviews)
+                        {
+                            <MudProgressCircular Size="Size.Small" Class="mr-2" />
+                        }
+                        Load More Reviews
+                    </MudButton>
+                </div>
+            }
+        }
+        else if (reviewSummary?.TotalReviews == 0)
+        {
+            <div class="text-center py-4">
+                <MudIcon Icon="@Icons.Material.Filled.RateReview" Size="Size.Large" Color="Color.Surface" />
+                <MudText Typo="Typo.body1" Class="mt-2">No reviews yet</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">Be the first to review this bundle!</MudText>
+            </div>
+        }
+
+        @if (loading)
+        {
+            <div class="text-center py-4">
+                <MudProgressCircular />
+            </div>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public Guid BundleId { get; set; }
+    [Parameter] public string BundleName { get; set; } = "";
+    
+    private BundleReviewSummaryDto? reviewSummary;
+    private List<BundleReviewDto> reviews = new();
+    private bool loading = true;
+    private bool loadingMoreReviews = false;
+    private bool hasMoreReviews = false;
+    private bool canReview = false;
+    private bool isAuthenticated = false;
+    private int currentPage = 1;
+    private const int PageSize = 5;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (BundleId != Guid.Empty)
+        {
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        loading = true;
+        currentPage = 1;
+        reviews.Clear();
+
+        var authState = await AuthService.GetCurrentUserAsync();
+        isAuthenticated = authState != null;
+
+        // Load review summary
+        var summaryResult = await BundleReviewService.GetBundleReviewSummaryAsync(BundleId);
+        if (summaryResult.Success)
+        {
+            reviewSummary = summaryResult.Data;
+        }
+
+        // Load first page of reviews
+        await LoadReviewsPage(1);
+
+        // Check if user can review
+        if (isAuthenticated)
+        {
+            var canReviewResult = await BundleReviewService.CanUserReviewBundleAsync(BundleId);
+            canReview = canReviewResult.Success && canReviewResult.Data;
+        }
+
+        loading = false;
+        StateHasChanged();
+    }
+
+    private async Task LoadReviewsPage(int page)
+    {
+        var reviewsResult = await BundleReviewService.GetBundleReviewsAsync(BundleId, page, PageSize);
+        if (reviewsResult.Success && reviewsResult.Data?.Items != null)
+        {
+            if (page == 1)
+            {
+                reviews = reviewsResult.Data.Items.ToList();
+            }
+            else
+            {
+                reviews.AddRange(reviewsResult.Data.Items);
+            }
+            
+            hasMoreReviews = reviewsResult.Data.Page < reviewsResult.Data.TotalPages;
+            currentPage = reviewsResult.Data.Page;
+        }
+    }
+
+    private async Task LoadMoreReviews()
+    {
+        if (loadingMoreReviews || !hasMoreReviews) return;
+        
+        loadingMoreReviews = true;
+        await LoadReviewsPage(currentPage + 1);
+        loadingMoreReviews = false;
+        StateHasChanged();
+    }
+
+    private async Task OpenReviewDialog()
+    {
+        var parameters = new DialogParameters<BundleReviewDialog>
+        {
+            { x => x.BundleId, BundleId },
+            { x => x.BundleName, BundleName }
+        };
+        
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium };
+        var dialog = DialogService.Show<BundleReviewDialog>("Write Review", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled)
+        {
+            // Refresh reviews after submission
+            await LoadData();
+        }
+    }
+}

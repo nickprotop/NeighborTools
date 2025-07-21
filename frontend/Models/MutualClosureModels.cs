@@ -80,6 +80,21 @@ public class CancelMutualClosureRequest
     public string CancellationReason { get; set; } = string.Empty;
 }
 
+public class AdminReviewMutualClosureRequest
+{
+    [Required]
+    public Guid MutualClosureId { get; set; }
+
+    [Required]
+    public MutualClosureAdminAction Action { get; set; }
+
+    [MaxLength(1000)]
+    public string? AdminNotes { get; set; }
+
+    [MaxLength(500)]
+    public string? Reason { get; set; }
+}
+
 // Response DTOs
 public class MutualClosureDto
 {

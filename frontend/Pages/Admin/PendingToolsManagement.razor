@@ -1,0 +1,238 @@
+@page "/admin/tools/pending"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Pending Tools - Admin - NeighborTools</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
+    <MudPaper Class="pa-6" Elevation="3">
+        <div class="d-flex align-center mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.PendingActions" Color="Color.Primary" Size="Size.Large" Class="mr-3" />
+            <MudText Typo="Typo.h4">Pending Tool Approvals</MudText>
+            <MudSpacer />
+            <MudChip T="string" Color="Color.Warning" Size="Size.Medium">
+                @(pendingTools?.Count ?? 0) pending
+            </MudChip>
+        </div>
+
+        @if (isLoading)
+        {
+            <div class="d-flex justify-center pa-8">
+                <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+            </div>
+        }
+        else if (pendingTools?.Any() == true)
+        {
+            <MudDataGrid T="Tool" Items="@pendingTools" Filterable="true" Sortable="true" Groupable="false">
+                <Columns>
+                    <PropertyColumn Property="x => x.Name" Title="Tool Name" Sortable="true">
+                        <CellTemplate>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
+                                <MudText Typo="Typo.body2" Style="font-weight: 500;">@context.Item.Name</MudText>
+                            </div>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <PropertyColumn Property="x => x.Category" Title="Category" Sortable="true">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small" Color="Color.Secondary">@context.Item.Category</MudChip>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <PropertyColumn Property="x => x.OwnerName" Title="Owner" Sortable="true">
+                        <CellTemplate>
+                            <div class="d-flex align-center">
+                                <MudAvatar Size="Size.Small" Class="mr-2">
+                                    @context.Item.OwnerName?.FirstOrDefault()
+                                </MudAvatar>
+                                <MudText Typo="Typo.body2">@context.Item.OwnerName</MudText>
+                            </div>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <PropertyColumn Property="x => x.DailyRate" Title="Daily Rate" Sortable="true">
+                        <CellTemplate>
+                            <MudText Typo="Typo.body2" Style="font-weight: 500;">$@context.Item.DailyRate.ToString("F2")</MudText>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <PropertyColumn Property="x => x.Condition" Title="Condition" Sortable="true">
+                        <CellTemplate>
+                            <MudChip T="string" Size="Size.Small" Color="@GetConditionColor(context.Item.Condition)">
+                                @context.Item.Condition
+                            </MudChip>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <PropertyColumn Property="x => x.CreatedAt" Title="Submitted" Sortable="true">
+                        <CellTemplate>
+                            <MudText Typo="Typo.caption">@context.Item.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
+                    <TemplateColumn Title="Actions" Sortable="false">
+                        <CellTemplate>
+                            <div class="d-flex gap-2">
+                                <MudButton Size="Size.Small" 
+                                          Variant="Variant.Filled" 
+                                          Color="Color.Success" 
+                                          StartIcon="@Icons.Material.Filled.Check"
+                                          OnClick="@(() => ApproveTool(Guid.Parse(context.Item.Id)))">
+                                    Approve
+                                </MudButton>
+                                <MudButton Size="Size.Small" 
+                                          Variant="Variant.Outlined" 
+                                          Color="Color.Error" 
+                                          StartIcon="@Icons.Material.Filled.Close"
+                                          OnClick="@(() => RejectTool(Guid.Parse(context.Item.Id)))">
+                                    Reject
+                                </MudButton>
+                                <MudButton Size="Size.Small" 
+                                          Variant="Variant.Text" 
+                                          Color="Color.Primary" 
+                                          StartIcon="@Icons.Material.Filled.Visibility"
+                                          Href="@($"/tools/{context.Item.Id}")" 
+                                          Target="_blank">
+                                    View
+                                </MudButton>
+                            </div>
+                        </CellTemplate>
+                    </TemplateColumn>
+                </Columns>
+            </MudDataGrid>
+        }
+        else
+        {
+            <div class="text-center pa-8">
+                <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Large" Color="Color.Success" Class="mb-4" />
+                <MudText Typo="Typo.h6" Color="Color.Success">All Tools Approved!</MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    There are no tools pending approval at this time.
+                </MudText>
+            </div>
+        }
+
+        <div class="d-flex justify-space-between align-center mt-6">
+            <MudButton Variant="Variant.Outlined" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.ArrowBack"
+                      Href="/admin">
+                Back to Dashboard
+            </MudButton>
+            
+            <MudButton Variant="Variant.Outlined" 
+                      Color="Color.Primary" 
+                      StartIcon="@Icons.Material.Filled.Refresh"
+                      OnClick="LoadPendingTools"
+                      Disabled="isLoading">
+                @if (isLoading)
+                {
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    <MudText Class="ml-2">Refreshing...</MudText>
+                }
+                else
+                {
+                    <MudText>Refresh</MudText>
+                }
+            </MudButton>
+        </div>
+    </MudPaper>
+</MudContainer>
+
+@code {
+    [Inject] private HttpClient HttpClient { get; set; } = default!;
+    [Inject] private ISnackbar Snackbar { get; set; } = default!;
+    
+    private List<Tool>? pendingTools = null;
+    private bool isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPendingTools();
+    }
+
+    private async Task LoadPendingTools()
+    {
+        try
+        {
+            isLoading = true;
+            var response = await HttpClient.GetAsync("api/admin/tools/pending?pageSize=100");
+            if (response.IsSuccessStatusCode)
+            {
+                var result = await response.Content.ReadFromJsonAsync<ApiResponse<PaginatedResponse<Tool>>>();
+                if (result?.Success == true && result.Data?.Items != null)
+                {
+                    pendingTools = result.Data.Items;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading pending tools: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+        }
+    }
+
+    private async Task ApproveTool(Guid toolId)
+    {
+        try
+        {
+            var approvalData = new { notes = "Approved via admin tools management" };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/tools/{toolId}/approve", approvalData);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Tool approved successfully", Severity.Success);
+                await LoadPendingTools(); // Refresh the list
+            }
+            else
+            {
+                Snackbar.Add("Failed to approve tool", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error approving tool: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task RejectTool(Guid toolId)
+    {
+        try
+        {
+            var rejectionData = new { reason = "Does not meet quality standards" };
+            var response = await HttpClient.PostAsJsonAsync($"api/admin/tools/{toolId}/reject", rejectionData);
+            if (response.IsSuccessStatusCode)
+            {
+                Snackbar.Add("Tool rejected", Severity.Warning);
+                await LoadPendingTools(); // Refresh the list
+            }
+            else
+            {
+                Snackbar.Add("Failed to reject tool", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error rejecting tool: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private Color GetConditionColor(string condition)
+    {
+        return condition switch
+        {
+            "Excellent" => Color.Success,
+            "Very Good" => Color.Info,
+            "Good" => Color.Primary,
+            "Fair" => Color.Warning,
+            "Poor" => Color.Error,
+            _ => Color.Default
+        };
+    }
+}

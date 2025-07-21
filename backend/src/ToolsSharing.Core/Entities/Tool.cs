@@ -17,6 +17,13 @@ public class Tool : BaseEntity
     public int? LeadTimeHours { get; set; } // Nullable - falls back to owner's default if not set
     public string OwnerId { get; set; } = string.Empty;
     
+    // Approval/Moderation fields
+    public bool IsApproved { get; set; } = false;
+    public bool PendingApproval { get; set; } = true;
+    public string? RejectionReason { get; set; }
+    public DateTime? ApprovedAt { get; set; }
+    public string? ApprovedById { get; set; }
+    
     // Navigation properties
     public User Owner { get; set; } = null!;
     public ICollection<ToolImage> Images { get; set; } = new List<ToolImage>();
