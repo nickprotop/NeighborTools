@@ -75,34 +75,61 @@ while [[ $# -gt 0 ]]; do
     esac
 done
 
+# Function to read input with default
+read_input() {
+    local prompt="$1"
+    local default="$2"
+    local input
+    
+    echo -n "$prompt" >&2
+    if [ -n "$default" ]; then
+        echo -n " [default: $default]: " >&2
+    else
+        echo -n ": " >&2
+    fi
+    
+    read input
+    
+    if [ -z "$input" ] && [ -n "$default" ]; then
+        echo "$default"
+    else
+        echo "$input"
+    fi
+}
+
 # Check if no parameters were provided
 if [ "$PARAMS_PROVIDED" = false ]; then
     echo "========================================="
-    echo "Frontend Configuration Check"
+    echo "Frontend Configuration Setup"
     echo "========================================="
+    echo "No arguments provided. Interactive mode activated."
+    echo "Press Enter to use default values."
+    echo ""
     
-    # Ensure wwwroot directory exists
-    mkdir -p wwwroot
+    # Get configuration values from user
+    UPDATE_API_URL=$(read_input "API Base URL" "http://localhost:5002")
+    UPDATE_ENVIRONMENT=$(read_input "Environment (Development/Production)" "Development")
+    UPDATE_HOME_PAGE_URL=$(read_input "Home Page URL" "http://localhost")
     
-    CONFIG_FILE="wwwroot/config.json"
-    SAMPLE_FILE="config.sample.json"
+    echo ""
+    echo "========================================="
+    echo "Review your configuration:"
+    echo "   API URL: $UPDATE_API_URL"
+    echo "   Environment: $UPDATE_ENVIRONMENT"
+    echo "   Home Page URL: $UPDATE_HOME_PAGE_URL"
+    echo "========================================="
+    echo ""
+    echo -n "Proceed with configuration? [Y/n]: " >&2
+    read -r confirm
+    echo ""
     
-    # Check if config.json exists, if not create it from sample
-    if [ ! -f "$CONFIG_FILE" ]; then
-        echo "📝 Config file not found, creating from template..."
-        if [ -f "$SAMPLE_FILE" ]; then
-            cp "$SAMPLE_FILE" "$CONFIG_FILE"
-            echo "✅ Created $CONFIG_FILE from $SAMPLE_FILE"
-        else
-            echo "❌ Error: Neither $CONFIG_FILE nor $SAMPLE_FILE exists"
-            echo "   Please ensure config.sample.json exists or create wwwroot/config.json manually"
-            exit 1
-        fi
-    else
-        echo "✅ Config file already exists: $CONFIG_FILE"
-        echo "   No changes made. Use --help to see configuration options."
+    if [[ "$confirm" =~ ^[Nn]$ ]]; then
+        echo "❌ Configuration cancelled by user."
+        exit 0
     fi
-    exit 0
+    
+    # Set PARAMS_PROVIDED to true to continue with normal flow
+    PARAMS_PROVIDED=true
 fi
 
 echo "========================================="

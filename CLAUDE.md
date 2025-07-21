@@ -303,7 +303,7 @@ public class ApiResponse<T>
 ### Command/Query Pattern
 - **Commands**: Create/update operations (e.g., `CreateToolCommand`, `CreateRentalCommand`)
 - **Queries**: Read operations (e.g., `GetToolsQuery`, `GetRentalByIdQuery`) 
-- **Handlers**: MediatR pattern with separate handler classes
+- **Handlers**: Separate handler classes for each command/query
 
 ### Frontend Service Architecture
 - **HttpClient Factory**: Named client with `AuthenticatedHttpClientHandler`
@@ -506,6 +506,12 @@ The project includes detailed TODO files with prioritized roadmap:
 See `TODO_MASTER_INDEX.md` for detailed timelines and resource recommendations.
 
 ## Important Development Notes
+
+### Shell Script Line Endings
+**ALWAYS create shell scripts (.sh files) with Unix line endings (LF, not CRLF)**
+- Windows line endings cause "bad interpreter" errors on Linux/macOS
+- Use Unix line endings even when developing on Windows (WSL compatibility)
+- If line ending issues occur, fix with: `sed -i 's/\r$//' script.sh`
 
 
 ### Known Working Patterns

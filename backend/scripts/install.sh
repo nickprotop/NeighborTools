@@ -207,13 +207,17 @@ if command -v jq &> /dev/null; then
     # Use jq if available for proper JSON manipulation
     tmp=$(mktemp)
     jq --arg conn "$CONNECTION_STRING" --arg frontend "$FRONTEND_BASE_URL" \
-       '.ConnectionStrings.DefaultConnection = $conn | .Frontend.BaseUrl = $frontend' \
+       '.ConnectionStrings.DefaultConnection = $conn | .Frontend.BaseUrl = $frontend | .Payment.FrontendBaseUrl = $frontend' \
        config.json > "$tmp" && mv "$tmp" config.json
     echo "✅ Updated database connection string and Blazor WASM app URL in config.json (using jq)"
 else
     # Fallback to sed for basic replacement
     sed -i "s|\"DefaultConnection\": \".*\"|\"DefaultConnection\": \"$CONNECTION_STRING\"|g" config.json
     sed -i "s|\"BaseUrl\": \".*\"|\"BaseUrl\": \"$FRONTEND_BASE_URL\"|g" config.json
+    # Update Payment.FrontendBaseUrl if it exists
+    if grep -q "\"FrontendBaseUrl\":" config.json; then
+        sed -i "s|\"FrontendBaseUrl\": \".*\"|\"FrontendBaseUrl\": \"$FRONTEND_BASE_URL\"|g" config.json
+    fi
     echo "✅ Updated database connection string and Blazor WASM app URL in config.json (using sed)"
 fi
 
