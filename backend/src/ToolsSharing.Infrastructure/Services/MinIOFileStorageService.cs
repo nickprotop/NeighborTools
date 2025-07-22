@@ -23,8 +23,7 @@ public class MinIOFileStorageService : IFileStorageService
         _validationOptions = new FileValidationOptions();
         _bucketName = configuration["MinIO:BucketName"] ?? "toolssharing-files";
         
-        // Ensure bucket exists
-        _ = Task.Run(async () => await EnsureBucketExistsAsync());
+        // Note: Bucket existence is checked when needed in each operation
     }
 
     public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folder = "")

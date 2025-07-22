@@ -52,8 +52,8 @@ namespace ToolsSharing.API.Controllers
                 return NotFound();
             }
 
-            // Increment view count asynchronously
-            _ = Task.Run(async () => await _bundleService.IncrementViewCountAsync(id));
+            // Increment view count synchronously to avoid DbContext disposal issues
+            _ = await _bundleService.IncrementViewCountAsync(id);
 
             return Ok(result);
         }

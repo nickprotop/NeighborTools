@@ -224,23 +224,75 @@ if command -v jq &> /dev/null; then
     tmp=$(mktemp)
     jq --arg conn "$CONNECTION_STRING" --arg frontend "$FRONTEND_BASE_URL" \
        --arg minioEndpoint "$MINIO_ENDPOINT" --arg minioKey "$MINIO_ROOT_USER" --arg minioSecret "$MINIO_ROOT_PASSWORD" \
-       '.ConnectionStrings.DefaultConnection = $conn | .Frontend.BaseUrl = $frontend | .Payment.FrontendBaseUrl = $frontend | 
-        .MinIO.Endpoint = $minioEndpoint | .MinIO.AccessKey = $minioKey | .MinIO.SecretKey = $minioSecret' \
+       '
+       .ConnectionStrings.DefaultConnection = $conn |
+       .Frontend.BaseUrl = $frontend |
+       if .Payment then .Payment.FrontendBaseUrl = $frontend else . + {"Payment": {"FrontendBaseUrl": $frontend}} end |
+       . + {"MinIO": {
+         "Endpoint": $minioEndpoint,
+         "AccessKey": $minioKey, 
+         "SecretKey": $minioSecret,
+         "Secure": false,
+         "BucketName": "toolssharing-files"
+       }}
+       ' \
        config.json > "$tmp" && mv "$tmp" config.json
     echo "✅ Updated database connection, Blazor WASM app URL, and MinIO configuration in config.json (using jq)"
 else
-    # Fallback to sed for basic replacement
-    sed -i "s|\"DefaultConnection\": \".*\"|\"DefaultConnection\": \"$CONNECTION_STRING\"|g" config.json
-    sed -i "s|\"BaseUrl\": \".*\"|\"BaseUrl\": \"$FRONTEND_BASE_URL\"|g" config.json
-    # Update Payment.FrontendBaseUrl if it exists
-    if grep -q "\"FrontendBaseUrl\":" config.json; then
-        sed -i "s|\"FrontendBaseUrl\": \".*\"|\"FrontendBaseUrl\": \"$FRONTEND_BASE_URL\"|g" config.json
+    # Fallback to sed - simpler approach using Python for JSON manipulation
+    if command -v python3 &> /dev/null; then
+        # Use Python for proper JSON manipulation if jq not available
+        python3 << EOF
+import json
+import sys
+
+try:
+    with open('config.json', 'r') as f:
+        config = json.load(f)
+    
+    # Update configuration
+    config['ConnectionStrings']['DefaultConnection'] = '$CONNECTION_STRING'
+    config['Frontend']['BaseUrl'] = '$FRONTEND_BASE_URL'
+    
+    # Update or create Payment section
+    if 'Payment' not in config:
+        config['Payment'] = {}
+    config['Payment']['FrontendBaseUrl'] = '$FRONTEND_BASE_URL'
+    
+    # Always create/overwrite MinIO section
+    config['MinIO'] = {
+        'Endpoint': '$MINIO_ENDPOINT',
+        'AccessKey': '$MINIO_ROOT_USER', 
+        'SecretKey': '$MINIO_ROOT_PASSWORD',
+        'Secure': False,
+        'BucketName': 'toolssharing-files'
+    }
+    
+    # Write back to file
+    with open('config.json', 'w') as f:
+        json.dump(config, f, indent=2)
+        
+    print('✅ Updated configuration successfully')
+except Exception as e:
+    print(f'❌ Error updating config.json: {e}')
+    sys.exit(1)
+EOF
+        echo "✅ Updated database connection, Blazor WASM app URL, and MinIO configuration in config.json (using Python)"
+    else
+        # Last resort: basic sed replacements (limited functionality)
+        echo "⚠️  Neither jq nor Python3 available - using basic sed (limited functionality)"
+        sed -i "s|\"DefaultConnection\": \".*\"|\"DefaultConnection\": \"$CONNECTION_STRING\"|g" config.json
+        sed -i "s|\"BaseUrl\": \".*\"|\"BaseUrl\": \"$FRONTEND_BASE_URL\"|g" config.json
+        echo "⚠️  MinIO configuration may need manual setup in config.json"
+        echo "   Add this section to config.json:"
+        echo '   "MinIO": {'
+        echo '     "Endpoint": "'$MINIO_ENDPOINT'",'
+        echo '     "AccessKey": "'$MINIO_ROOT_USER'",'
+        echo '     "SecretKey": "'$MINIO_ROOT_PASSWORD'",'
+        echo '     "Secure": false,'
+        echo '     "BucketName": "toolssharing-files"'
+        echo '   }'
     fi
-    # Update MinIO configuration
-    sed -i "s|\"Endpoint\": \".*\"|\"Endpoint\": \"$MINIO_ENDPOINT\"|g" config.json
-    sed -i "s|\"AccessKey\": \".*\"|\"AccessKey\": \"$MINIO_ROOT_USER\"|g" config.json
-    sed -i "s|\"SecretKey\": \".*\"|\"SecretKey\": \"$MINIO_ROOT_PASSWORD\"|g" config.json
-    echo "✅ Updated database connection, Blazor WASM app URL, and MinIO configuration in config.json (using sed)"
 fi
 
 cd ../..
