@@ -9,6 +9,7 @@
 @inject IPaymentService PaymentService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject IUrlService UrlService
 
 <MudDialog>
     <DialogContent>
@@ -22,7 +23,7 @@
                         <div class="d-flex align-center gap-3">
                             @if (Tool.ImageUrls.Any())
                             {
-                                <img src="@Tool.ImageUrls.First()" alt="@Tool.Name" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" />
+                                <img src="@UrlService.GetFileUrl(Tool.ImageUrls.First())" alt="@Tool.Name" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" />
                             }
                             else
                             {

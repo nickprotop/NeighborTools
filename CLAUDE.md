@@ -496,6 +496,166 @@ Comprehensive dispute resolution system with evidence upload, communication, and
   - Configurable validation rules and storage providers
   - Security features: file type validation, size limits, secure paths
 
+## ⚠️ CRITICAL: File Storage and URL Architecture
+
+**⚠️ MANDATORY: Understanding the file storage flow is ESSENTIAL for proper development!**
+
+### 🔄 Complete File Storage Flow
+
+#### 1. **File Upload Process**
+```
+Frontend Upload → API Controller → FileStorageService → MinIO → Database Storage Path
+```
+
+**Example Upload Flow:**
+1. **Frontend**: User uploads `my-photo.jpg` via `<MudFileUpload>`
+2. **API**: `FilesController.UploadFile()` or `ToolsController.UploadImages()`
+3. **Storage**: `MinIOFileStorageService.UploadFileAsync()` saves to MinIO as `images/c1a32ec4-406a-4a64-836a-ac85a423c950.jpg`
+4. **Database**: Stores **RAW STORAGE PATH**: `images/c1a32ec4-406a-4a64-836a-ac85a423c950.jpg`
+
+#### 2. **File URL Generation (CRITICAL ARCHITECTURE)**
+
+**⚠️ DATABASE STORES RAW STORAGE PATHS, NOT URLS!**
+
+- **✅ CORRECT Database Storage**: `images/c1a32ec4-406a-4a64-836a-ac85a423c950.jpg`
+- **❌ WRONG Database Storage**: `/api/files/download/images/c1a32ec4-406a-4a64-836a-ac85a423c950.jpg`
+
+**Backend URL Generation:**
+```csharp
+// MinIOFileStorageService.GetFileUrlAsync() returns RAW STORAGE PATH
+public async Task<string> GetFileUrlAsync(string storagePath, TimeSpan? expiry = null)
+{
+    return storagePath; // Returns: "images/file.jpg" (NOT a full URL)
+}
+```
+
+**Frontend URL Construction:**
+```csharp
+// UrlService.GetFileUrl() constructs full download URLs
+public string GetFileUrl(string storagePath)
+{
+    if (string.IsNullOrEmpty(storagePath)) return string.Empty;
+    
+    // Convert storage path to full API URL
+    return $"{_apiBaseUrl}/api/files/download/{storagePath}";
+    // Returns: "http://localhost:5002/api/files/download/images/file.jpg"
+}
+```
+
+#### 3. **File Download Process**
+```
+Frontend Request → API FilesController → MinIO Retrieval → File Stream Response
+```
+
+**Download Flow:**
+1. **Frontend**: Requests `http://localhost:5002/api/files/download/images/file.jpg`
+2. **API**: `FilesController.DownloadFile("images/file.jpg")`
+3. **Storage**: `MinIOFileStorageService.DownloadFileAsync("images/file.jpg")`
+4. **Response**: File stream with proper content-type headers
+
+### 🎯 **Frontend Image Display Patterns**
+
+#### ✅ **CORRECT: Use UrlService**
+```razor
+@inject IUrlService UrlService
+
+<!-- Bundle/Tool Images -->
+<MudCardMedia Image="@UrlService.GetFileUrl(bundle.ImageUrl)" Height="200" />
+
+<!-- Tool Image Carousel -->
+@foreach (var imageUrl in tool.ImageUrls)
+{
+    <div style="background-image: url('@UrlService.GetFileUrl(imageUrl)');">
+    </div>
+}
+
+<!-- Reusable Image Component -->
+<ImageDisplay Src="@bundle.ImageUrl" Alt="Bundle image" Width="200" Height="150" />
+```
+
+#### ❌ **WRONG: Direct URL Usage**
+```razor
+<!-- DON'T DO THIS - Will cause 404 errors -->
+<MudCardMedia Image="@bundle.ImageUrl" Height="200" />
+<img src="@tool.ImageUrls.First()" alt="Tool" />
+```
+
+### 📂 **Storage Path Examples**
+
+**Tool Images**: `images/c1a32ec4-406a-4a64-836a-ac85a423c950.jpg`
+**Bundle Images**: `images/f47ac10b-58cc-4372-a567-0e02b2c3d479.png`
+**Dispute Evidence**: `evidence/8f14e45f-ceea-467a-9634-dd7e66f8e0ac.pdf`
+**User Avatars**: `avatars/9b1deb4d-3b7d-4bad-9bdd-2b0d7b3dcb6d.jpg`
+
+### 🔧 **API Endpoints**
+
+- **Upload**: `POST /api/files/upload?folder=images`
+- **Download**: `GET /api/files/download/{*fileName}`
+- **Delete**: `DELETE /api/files/delete/{*fileName}`
+- **Tool Images**: `POST /api/tools/upload-images`
+- **Bundle Images**: `POST /api/bundles/upload-image`
+
+### ⚙️ **Configuration**
+
+**Frontend (config.json):**
+```json
+{
+  "ApiSettings": {
+    "BaseUrl": "http://localhost:5002"
+  }
+}
+```
+
+**Backend MinIO:**
+```json
+{
+  "MinIO": {
+    "Endpoint": "localhost:9000",
+    "AccessKey": "minioadmin",
+    "SecretKey": "MinIOPassword123!",
+    "BucketName": "toolssharing-files"
+  }
+}
+```
+
+### 🚨 **Common Mistakes to Avoid**
+
+1. **❌ Storing Full URLs in Database**
+   - Database should store: `images/file.jpg`
+   - NOT: `/api/files/download/images/file.jpg`
+
+2. **❌ Direct Image URL Usage in Frontend**
+   - Always use: `UrlService.GetFileUrl(storagePath)`
+   - Never use: `@bundle.ImageUrl` directly
+
+3. **❌ Missing URL Service Injection**
+   - Add to component: `@inject IUrlService UrlService`
+   - Or use global import in `_Imports.razor`
+
+4. **❌ Wrong Content-Type Headers**
+   - FilesController automatically sets proper content-type
+   - Based on file extension: `.jpg` → `image/jpeg`
+
+### 🔍 **Debugging File Issues**
+
+**Check Storage Path Format:**
+```sql
+SELECT Id, Name, ImageUrl FROM Bundles WHERE ImageUrl IS NOT NULL;
+-- Should return: images/c1a32ec4-406a-4a64-836a-ac85a423c950.png
+```
+
+**Test File Download:**
+```bash
+curl -I "http://localhost:5002/api/files/download/images/c1a32ec4-406a-4a64-836a-ac85a423c950.png"
+# Should return: HTTP/1.1 200 OK
+```
+
+**Frontend URL Construction:**
+```csharp
+var fullUrl = UrlService.GetFileUrl("images/file.jpg");
+// Result: "http://localhost:5002/api/files/download/images/file.jpg"
+```
+
 
 ## Error Handling and Validation
 

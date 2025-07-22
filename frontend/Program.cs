@@ -84,6 +84,7 @@ builder.Services.AddScoped<ToolsSharing.Frontend.Services.MutualClosureService>(
 builder.Services.AddScoped<AdminMutualClosureService>();
 builder.Services.AddScoped<BundleService>();
 builder.Services.AddScoped<BundleReviewService>();
+builder.Services.AddScoped<IUrlService, UrlService>();
 
 var app = builder.Build();
 

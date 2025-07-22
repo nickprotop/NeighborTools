@@ -10,6 +10,7 @@
 @inject IToolService ToolService
 @inject BundleService BundleService
 @inject NavigationManager Navigation
+@inject IUrlService UrlService
 @attribute [AllowAnonymous]
 
 <PageTitle>NeighborTools - Share and Borrow Tools</PageTitle>
@@ -163,7 +164,7 @@ else if (featuredTools != null && featuredTools.Any())
                 <MudCard Elevation="0" Class="modern-card hover-card animate-fade-in-up" Style="height: 100%;">
                     @if (tool.ImageUrls.Any())
                     {
-                        <MudCardMedia Image="@tool.ImageUrls.First()" Height="200" Style="border-radius: var(--mud-radius-xl) var(--mud-radius-xl) 0 0;" />
+                        <MudCardMedia Image="@UrlService.GetFileUrl(tool.ImageUrls.First())" Height="200" Style="border-radius: var(--mud-radius-xl) var(--mud-radius-xl) 0 0;" />
                     }
                     else
                     {

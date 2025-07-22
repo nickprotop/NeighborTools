@@ -7,6 +7,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IUrlService UrlService
 @attribute [Authorize]
 
 <PageTitle>My Bundles - NeighborTools</PageTitle>
@@ -505,7 +506,7 @@
     private string GetImageUrl(BundleModel bundle)
     {
         return !string.IsNullOrEmpty(bundle.ImageUrl) 
-            ? bundle.ImageUrl 
+            ? UrlService.GetFileUrl(bundle.ImageUrl)
             : "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5CdW5kbGU8L3RleHQ+PC9zdmc+";
     }
 

@@ -13,6 +13,7 @@
 @inject INavigationHelperService NavigationHelper
 @inject MessageService MessageService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IUrlService UrlService
 @attribute [Authorize]
 
 <PageTitle>@(tool?.Name ?? "Tool Details") - NeighborTools</PageTitle>
@@ -51,7 +52,7 @@ else if (tool != null)
                         @foreach (var imageUrl in tool.ImageUrls)
                         {
                             <MudCarouselItem>
-                                <div class="d-flex align-center justify-center mud-width-full" style="height: 400px; background-image: url('@imageUrl'); background-size: cover; background-position: center;">
+                                <div class="d-flex align-center justify-center mud-width-full" style="height: 400px; background-image: url('@UrlService.GetFileUrl(imageUrl)'); background-size: cover; background-position: center;">
                                 </div>
                             </MudCarouselItem>
                         }

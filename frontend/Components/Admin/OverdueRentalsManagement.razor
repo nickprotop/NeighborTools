@@ -5,6 +5,7 @@
 @inject IRentalService RentalService
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject IUrlService UrlService
 @attribute [Authorize(Roles = "Admin")]
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
@@ -87,7 +88,7 @@
                         <div class="d-flex align-center">
                             @if (context.Tool?.ImageUrls?.Any() == true)
                             {
-                                <MudAvatar Image="@context.Tool.ImageUrls.First()" Size="Size.Small" Class="mr-2" />
+                                <MudAvatar Image="@UrlService.GetFileUrl(context.Tool.ImageUrls.First())" Size="Size.Small" Class="mr-2" />
                             }
                             <div>
                                 <MudText Typo="Typo.body2">@(!string.IsNullOrEmpty(context.ToolName) ? context.ToolName : context.Tool?.Name)</MudText>

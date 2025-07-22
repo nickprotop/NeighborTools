@@ -255,7 +255,8 @@ public class ToolsController : ControllerBase
 
                 using var stream = file.OpenReadStream();
                 var fileName = $"{Guid.NewGuid()}{extension}";
-                var fileUrl = await _fileStorageService.UploadFileAsync(stream, fileName, file.ContentType, "images");
+                var storagePath = await _fileStorageService.UploadFileAsync(stream, fileName, file.ContentType, "images");
+                var fileUrl = await _fileStorageService.GetFileUrlAsync(storagePath);
                 uploadedUrls.Add(fileUrl);
             }
 

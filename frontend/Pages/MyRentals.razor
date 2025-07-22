@@ -13,6 +13,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
+@inject IUrlService UrlService
 @attribute [Authorize]
 
 <PageTitle>My Rentals - NeighborTools</PageTitle>
@@ -71,7 +72,7 @@
                         <MudCard Elevation="4" Style="height: 100%; border-radius: 12px;">
                             @if (rental.Tool?.ImageUrls.Any() == true)
                             {
-                                <MudCardMedia Image="@rental.Tool.ImageUrls.First()" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                                <MudCardMedia Image="@UrlService.GetFileUrl(rental.Tool.ImageUrls.First())" Height="200" Style="border-radius: 12px 12px 0 0;" />
                             }
                             else
                             {
@@ -228,7 +229,7 @@
                         <MudCard Elevation="4" Style="height: 100%; border-radius: 12px;">
                             @if (rental.Tool?.ImageUrls.Any() == true)
                             {
-                                <MudCardMedia Image="@rental.Tool.ImageUrls.First()" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                                <MudCardMedia Image="@UrlService.GetFileUrl(rental.Tool.ImageUrls.First())" Height="200" Style="border-radius: 12px 12px 0 0;" />
                             }
                             else
                             {

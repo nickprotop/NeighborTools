@@ -11,6 +11,7 @@
 @inject BundleService BundleService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject IUrlService UrlService
 @attribute [AllowAnonymous]
 
 <PageTitle>Browse Tools & Bundles - NeighborTools</PageTitle>
@@ -128,7 +129,7 @@ else if (filteredTools != null && filteredTools.Any())
                 <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s; cursor: pointer;" Class="hover-card" @onclick="() => ViewTool(tool.Id)">
                     @if (tool.ImageUrls.Any())
                     {
-                        <MudCardMedia Image="@tool.ImageUrls.First()" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                        <MudCardMedia Image="@UrlService.GetFileUrl(tool.ImageUrls.First())" Height="200" Style="border-radius: 12px 12px 0 0;" />
                     }
                     else
                     {

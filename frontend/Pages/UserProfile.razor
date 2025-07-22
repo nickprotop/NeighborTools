@@ -10,6 +10,7 @@
 @inject MessageService MessageService
 @inject IDialogService DialogService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IUrlService UrlService
 
 <PageTitle>@GetPageTitle() - NeighborTools</PageTitle>
 
@@ -244,7 +245,7 @@
                                     <MudCard Elevation="4" Style="height: 100%; border-radius: 12px;">
                                         @if (!string.IsNullOrEmpty(tool.ImageUrl))
                                         {
-                                            <MudCardMedia Image="@tool.ImageUrl" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                                            <MudCardMedia Image="@UrlService.GetFileUrl(tool.ImageUrl)" Height="200" Style="border-radius: 12px 12px 0 0;" />
                                         }
                                         else
                                         {

@@ -133,9 +133,8 @@ public class MinIOFileStorageService : IFileStorageService
 
     public async Task<string> GetFileUrlAsync(string storagePath, TimeSpan? expiry = null)
     {
-        // Return API endpoint URL instead of direct MinIO URL for security
-        // The API will handle authentication and stream the file from MinIO
-        return $"/api/files/download/{Uri.EscapeDataString(storagePath)}";
+        // Return raw storage path for frontend URL construction
+        return storagePath;
     }
 
     public bool IsFileValid(string fileName, string contentType, long fileSize)

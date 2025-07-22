@@ -29,17 +29,25 @@ public class FilesController : ControllerBase
     {
         try
         {
+            _logger.LogInformation("=== FILE DOWNLOAD DEBUG START ===");
+            _logger.LogInformation("Raw fileName parameter: '{FileName}'", fileName);
+            
             // Decode the file name
             var decodedFileName = Uri.UnescapeDataString(fileName);
             
+            _logger.LogInformation("Decoded fileName: '{DecodedFileName}'", decodedFileName);
             _logger.LogInformation("Attempting to download file: {FileName}", decodedFileName);
 
             // Get file stream from storage
+            _logger.LogInformation("Calling _fileStorageService.DownloadFileAsync with: '{DecodedFileName}'", decodedFileName);
             var fileStream = await _fileStorageService.DownloadFileAsync(decodedFileName);
+            
+            _logger.LogInformation("FileStream result: {IsNull}", fileStream == null ? "NULL" : "NOT NULL");
             
             if (fileStream == null)
             {
                 _logger.LogWarning("File not found: {FileName}", decodedFileName);
+                _logger.LogInformation("=== FILE DOWNLOAD DEBUG END (FILE NOT FOUND) ===");
                 return NotFound(new { message = "File not found" });
             }
 
@@ -50,6 +58,8 @@ public class FilesController : ControllerBase
             var originalFileName = Path.GetFileName(decodedFileName);
             
             _logger.LogInformation("Successfully serving file: {FileName}", decodedFileName);
+            _logger.LogInformation("Content-Type: {ContentType}, Original filename: {OriginalFileName}", contentType, originalFileName);
+            _logger.LogInformation("=== FILE DOWNLOAD DEBUG END (SUCCESS) ===");
 
             // Return file stream
             return File(fileStream, contentType, originalFileName, enableRangeProcessing: true);
@@ -57,6 +67,7 @@ public class FilesController : ControllerBase
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error downloading file: {FileName}", fileName);
+            _logger.LogInformation("=== FILE DOWNLOAD DEBUG END (EXCEPTION) ===");
             return StatusCode(500, new { message = "Internal server error while downloading file" });
         }
     }

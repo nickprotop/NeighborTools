@@ -9,6 +9,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
+@inject IUrlService UrlService
 @attribute [Authorize]
 
 <PageTitle>Edit Bundle - NeighborTools</PageTitle>
@@ -271,7 +272,7 @@ else
                                         @if (!string.IsNullOrEmpty(editBundle.ImageUrl) || !string.IsNullOrEmpty(previewImageUrl))
                                         {
                                             <div class="d-flex align-center">
-                                                <MudImage Src="@(previewImageUrl ?? editBundle.ImageUrl)" 
+                                                <MudImage Src="@GetPreviewImageUrl()" 
                                                          Alt="Bundle preview" 
                                                          Width="200" 
                                                          Height="150" 
@@ -635,7 +636,7 @@ else
                                 <MudCard Elevation="2" Class="mb-4">
                                     @if (!string.IsNullOrEmpty(editBundle.ImageUrl))
                                     {
-                                        <MudImage Src="@editBundle.ImageUrl" 
+                                        <MudImage Src="@UrlService.GetFileUrl(editBundle.ImageUrl)" 
                                                  Alt="@editBundle.Name" 
                                                  Height="200" 
                                                  ObjectFit="ObjectFit.Cover" />
@@ -1420,6 +1421,14 @@ else
     private void Cancel()
     {
         Navigation.NavigateTo("/tools?tab=1"); // Navigate to bundles tab
+    }
+
+    private string GetPreviewImageUrl()
+    {
+        // Use preview image if available, otherwise use URL service for existing image
+        return !string.IsNullOrEmpty(previewImageUrl) 
+            ? previewImageUrl 
+            : UrlService.GetFileUrl(editBundle.ImageUrl);
     }
 
     // Helper methods for change tracking

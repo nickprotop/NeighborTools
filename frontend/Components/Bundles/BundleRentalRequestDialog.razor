@@ -10,6 +10,7 @@
 @inject IPaymentService PaymentService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject IUrlService UrlService
 
 <MudDialog>
     <DialogContent>
@@ -23,7 +24,7 @@
                         <div class="d-flex align-center gap-3">
                             @if (!string.IsNullOrEmpty(Bundle.ImageUrl))
                             {
-                                <img src="@Bundle.ImageUrl" alt="@Bundle.Name" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" />
+                                <img src="@UrlService.GetFileUrl(Bundle.ImageUrl)" alt="@Bundle.Name" style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px;" />
                             }
                             else
                             {
