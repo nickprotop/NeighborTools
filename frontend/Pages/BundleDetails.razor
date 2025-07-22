@@ -263,7 +263,9 @@ else
                                                         <MudChip Size="Size.Small" Color="Color.Info" Text="Optional" T="string" />
                                                     }
                                                     <div>
-                                                        <MudText Typo="Typo.subtitle1">@tool.ToolName</MudText>
+                                                        <MudLink Href="@($"/tools/{tool.ToolId}")" Typo="Typo.subtitle1" Color="Color.Primary">
+                                                            @tool.ToolName
+                                                        </MudLink>
                                                         <MudText Typo="Typo.body2" Color="Color.Secondary">@tool.ToolDescription</MudText>
                                                         @if (!string.IsNullOrWhiteSpace(tool.UsageNotes))
                                                         {

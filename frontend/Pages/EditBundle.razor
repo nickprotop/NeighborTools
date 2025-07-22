@@ -10,6 +10,7 @@
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
 @inject IUrlService UrlService
+@inject IDialogService DialogService
 @attribute [Authorize]
 
 <PageTitle>Edit Bundle - NeighborTools</PageTitle>
@@ -391,7 +392,15 @@ else
                                                     <!-- Tool Info -->
                                                     <MudItem xs="12" sm="5">
                                                         <MudStack>
-                                                            <MudText Typo="Typo.subtitle1">@tool.Name</MudText>
+                                                            <MudButton Variant="Variant.Text" 
+                                                                     Color="Color.Primary" 
+                                                                     StartIcon="@Icons.Material.Filled.Launch"
+                                                                     Size="Size.Small"
+                                                                     Class="pa-0 ma-0 text-start"
+                                                                     Style="text-transform: none; justify-content: flex-start;"
+                                                                     OnClick="@(() => NavigateToTool(tool.Id))">
+                                                                <MudText Typo="Typo.subtitle1" Style="text-decoration: underline;">@tool.Name</MudText>
+                                                            </MudButton>
                                                             <MudText Typo="Typo.body2" Color="Color.Secondary">@tool.Description</MudText>
                                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                                 $@tool.DailyRate.ToString("F2")/day
@@ -843,7 +852,15 @@ else
                                 <MudItem xs="11">
                                     <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                         <div>
-                                            <MudText Typo="Typo.subtitle1">@tool.Name</MudText>
+                                            <MudButton Variant="Variant.Text" 
+                                                     Color="Color.Primary" 
+                                                     StartIcon="@Icons.Material.Filled.Launch"
+                                                     Size="Size.Small"
+                                                     Class="pa-0 ma-0 text-start"
+                                                     Style="text-transform: none; justify-content: flex-start;"
+                                                     OnClick="@(() => NavigateToTool(tool.Id))">
+                                                <MudText Typo="Typo.subtitle1" Style="text-decoration: underline;">@tool.Name</MudText>
+                                            </MudButton>
                                             <MudText Typo="Typo.body2" Color="Color.Secondary">@tool.Description</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                 Owner: @tool.OwnerName
@@ -1477,5 +1494,48 @@ else
                    t2.IsOptional == t1.IsOptional &&
                    t2.QuantityNeeded == t1.QuantityNeeded)) &&
                pendingImageData == null; // Include pending image in change detection
+    }
+
+    private async Task NavigateToTool(string toolId)
+    {
+        if (hasChanges)
+        {
+            var parameters = new DialogParameters
+            {
+                { "Title", "Unsaved Changes" },
+                { "Message", "You have unsaved changes to this bundle. Do you want to save your changes before navigating to the tool details?" },
+                { "ConfirmText", "Save & Navigate" },
+                { "CancelText", "Navigate Without Saving" },
+                { "ShowCancelAsSecondary", true },
+                { "ConfirmColor", Color.Primary }
+            };
+
+            var options = new DialogOptions
+            {
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.Small,
+                FullWidth = true
+            };
+
+            var dialog = DialogService.Show<frontend.Components.ConfirmationDialog>("Unsaved Changes", parameters, options);
+            var result = await dialog.Result;
+
+            if (!result.Canceled && result.Data is frontend.Models.ConfirmationDialogResult dialogResult)
+            {
+                if (dialogResult.Confirmed)
+                {
+                    // User wants to save changes first
+                    await SaveAsDraft(); // Save as draft
+                }
+                // Navigate regardless of save choice
+                Navigation.NavigateTo($"/tools/{toolId}");
+            }
+            // If canceled, do nothing - stay on current page
+        }
+        else
+        {
+            // No changes, navigate directly
+            Navigation.NavigateTo($"/tools/{toolId}");
+        }
     }
 }
