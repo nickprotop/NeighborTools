@@ -13,7 +13,7 @@ cd "$(dirname "$0")/../src/ToolsSharing.API"
 
 # Check if infrastructure is running
 echo "🔍 Checking infrastructure..."
-if ! docker ps | grep -q "mysql.*Up" || ! docker ps | grep -q "redis.*Up"; then
+if ! docker ps | grep -q "mysql.*Up" || ! docker ps | grep -q "redis.*Up" || ! docker ps | grep -q "minio.*Up"; then
     echo "❌ Infrastructure is not running. Please run start-infrastructure.sh first"
     exit 1
 fi
@@ -23,6 +23,7 @@ echo ""
 echo "🚀 Starting API with dotnet run..."
 echo "🌐 API will be available at: http://localhost:5002"
 echo "📖 Swagger UI: http://localhost:5002/swagger"
+echo "📁 MinIO Console: http://localhost:9001"
 echo "🔄 Press Ctrl+C to stop"
 echo ""
 

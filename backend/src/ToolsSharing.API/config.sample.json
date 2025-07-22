@@ -41,12 +41,14 @@
   "Frontend": {
     "BaseUrl": "http://localhost:5000"
   },
-  "FileStorage": {
-    "_Comment": "File storage configuration for uploads and user content",
-    "BasePath": "wwwroot/uploads",
-    "BaseUrl": "/uploads",
-    "MaxFileSizeMB": 10,
-    "AllowedExtensions": [".jpg", ".jpeg", ".png", ".pdf", ".doc", ".docx"]
+  "MinIO": {
+    "_Comment": "MinIO object storage configuration for file uploads and user content",
+    "_Instructions": "Configure MinIO settings. Endpoint should include port (e.g., 'localhost:9000')",
+    "Endpoint": "localhost:9000", 
+    "AccessKey": "minioadmin",
+    "SecretKey": "YOUR_MINIO_PASSWORD_HERE",
+    "Secure": false,
+    "BucketName": "toolssharing-files"
   },
   "FraudDetection": {
     "DailyAmountLimit": 5000.00,

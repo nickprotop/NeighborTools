@@ -1,0 +1,893 @@
+@page "/admin/minio"
+@using Microsoft.AspNetCore.Authorization
+@using System.Text.Json
+@using System.Net.Http.Json
+@inject HttpClient Http
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>MinIO Storage Management - Admin</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraExtraLarge" Class="mt-4">
+    <MudGrid>
+        <MudItem xs="12">
+            <MudText Typo="Typo.h4" Class="mb-4">
+                <MudIcon Icon="@Icons.Material.Filled.Storage" Class="mr-2" />
+                MinIO Storage Management
+            </MudText>
+        </MudItem>
+
+        <!-- Quick Stats Cards -->
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Style="height: 120px;">
+                <MudCardContent Class="pa-0">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Total Storage</MudText>
+                            <MudText Typo="Typo.h5">@(FormatBytes(dashboardData?.DiskUsage?.UsedSpace ?? 0))</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Large" Color="Color.Primary" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Style="height: 120px;">
+                <MudCardContent Class="pa-0">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Total Files</MudText>
+                            <MudText Typo="Typo.h5">@(dashboardData?.ServerStats?.TotalObjects ?? 0)</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.InsertDriveFile" Size="Size.Large" Color="Color.Secondary" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Style="height: 120px;">
+                <MudCardContent Class="pa-0">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Status</MudText>
+                            <MudText Typo="Typo.h6" Color="@GetHealthColor()">@(dashboardData?.HealthStatus?.Status ?? "Unknown")</MudText>
+                        </div>
+                        <MudIcon Icon="@GetHealthIcon()" Size="Size.Large" Color="@GetHealthColor()" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" sm="6" md="3">
+            <MudCard Class="pa-4" Style="height: 120px;">
+                <MudCardContent Class="pa-0">
+                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <div>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Response Time</MudText>
+                            <MudText Typo="Typo.h6">@(dashboardData?.HealthStatus?.ResponseTimeMs ?? 0)ms</MudText>
+                        </div>
+                        <MudIcon Icon="@Icons.Material.Filled.Speed" Size="Size.Large" Color="Color.Info" />
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Storage Analytics Chart -->
+        <MudItem xs="12" md="8">
+            <MudCard Class="pa-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Storage Growth (30 Days)</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="RefreshStorageAnalytics" />
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (storageAnalytics != null && storageAnalytics.StorageGrowth.Any())
+                    {
+                        <div id="storageChart" style="height: 300px;"></div>
+                    }
+                    else
+                    {
+                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Disk Usage -->
+        <MudItem xs="12" md="4">
+            <MudCard Class="pa-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Disk Usage</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (dashboardData?.DiskUsage != null)
+                    {
+                        <MudStack Spacing="3">
+                            <div>
+                                <MudProgressCircular Color="Color.Primary" Size="Size.Large" 
+                                                   Value="@((double)(dashboardData.DiskUsage.UsedPercentage))" 
+                                                   Style="width: 100px; height: 100px;" Class="mx-auto">
+                                    <MudText Typo="Typo.body2">@($"{dashboardData.DiskUsage.UsedPercentage:F1}%")</MudText>
+                                </MudProgressCircular>
+                            </div>
+                            <MudStack Spacing="1">
+                                <div class="d-flex justify-space-between">
+                                    <MudText Typo="Typo.body2">Used:</MudText>
+                                    <MudText Typo="Typo.body2">@dashboardData.DiskUsage.UsedSpaceFormatted</MudText>
+                                </div>
+                                <div class="d-flex justify-space-between">
+                                    <MudText Typo="Typo.body2">Available:</MudText>
+                                    <MudText Typo="Typo.body2">@dashboardData.DiskUsage.AvailableSpaceFormatted</MudText>
+                                </div>
+                                <div class="d-flex justify-space-between">
+                                    <MudText Typo="Typo.body2">Total:</MudText>
+                                    <MudText Typo="Typo.body2">@dashboardData.DiskUsage.TotalCapacityFormatted</MudText>
+                                </div>
+                            </MudStack>
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudSkeleton SkeletonType="SkeletonType.Circle" Width="100px" Height="100px" Class="mx-auto mb-4" />
+                        <MudSkeleton SkeletonType="SkeletonType.Text" />
+                        <MudSkeleton SkeletonType="SkeletonType.Text" />
+                        <MudSkeleton SkeletonType="SkeletonType.Text" />
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Buckets Overview -->
+        <MudItem xs="12" md="6">
+            <MudCard Class="pa-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Buckets Overview</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudIconButton Icon="@Icons.Material.Filled.Refresh" OnClick="RefreshDashboard" />
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (dashboardData?.BucketStats != null && dashboardData.BucketStats.Any())
+                    {
+                        <MudStack Spacing="2">
+                            @foreach (var bucket in dashboardData.BucketStats)
+                            {
+                                <MudPaper Class="pa-3" Elevation="1">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <div>
+                                            <MudText Typo="Typo.subtitle1">@bucket.Name</MudText>
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                @bucket.ObjectCount files • @bucket.SizeFormatted
+                                            </MudText>
+                                        </div>
+                                        <MudIcon Icon="@Icons.Material.Filled.Folder" Color="Color.Primary" />
+                                    </MudStack>
+                                </MudPaper>
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="2">
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="60px" />
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="60px" />
+                        </MudStack>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Recent Operations -->
+        <MudItem xs="12" md="6">
+            <MudCard Class="pa-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Recent Operations</MudText>
+                    </CardHeaderContent>
+                    <CardHeaderActions>
+                        <MudButton Variant="Variant.Text" Size="Size.Small" OnClick="ViewAllOperations">
+                            View All
+                        </MudButton>
+                    </CardHeaderActions>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (dashboardData?.RecentOperations != null && dashboardData.RecentOperations.Any())
+                    {
+                        <MudStack Spacing="2">
+                            @foreach (var op in dashboardData.RecentOperations.Take(5))
+                            {
+                                <MudPaper Class="pa-2" Elevation="1">
+                                    <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <div class="flex-grow-1">
+                                            <MudStack Row="true" AlignItems="AlignItems.Center" Spacing="2">
+                                                <MudIcon Icon="@GetOperationIcon(op.Operation)" Size="Size.Small" Color="@GetOperationColor(op.Operation)" />
+                                                <div>
+                                                    <MudText Typo="Typo.body2">@op.FileName</MudText>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                        @op.Operation • @op.FileSizeFormatted • @op.Timestamp.ToString("HH:mm")
+                                                    </MudText>
+                                                </div>
+                                            </MudStack>
+                                        </div>
+                                        @if (op.Success)
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success" />
+                                        }
+                                        else
+                                        {
+                                            <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Small" Color="Color.Error" />
+                                        }
+                                    </MudStack>
+                                </MudPaper>
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="2">
+                            @for (int i = 0; i < 3; i++)
+                            {
+                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="50px" />
+                            }
+                        </MudStack>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- File Distribution -->
+        <MudItem xs="12" md="6">
+            <MudCard Class="pa-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">File Distribution</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (fileDistribution != null)
+                    {
+                        <MudStack Spacing="2">
+                            @foreach (var fileType in fileDistribution.ByType)
+                            {
+                                <div>
+                                    <div class="d-flex justify-space-between align-center mb-1">
+                                        <MudText Typo="Typo.body2">@fileType.FileType</MudText>
+                                        <MudText Typo="Typo.body2">@fileType.Count files (@fileType.SizeFormatted)</MudText>
+                                    </div>
+                                    <MudProgressLinear Color="Color.Primary" Value="@fileType.Percentage" Size="Size.Small" />
+                                </div>
+                            }
+                        </MudStack>
+                    }
+                    else
+                    {
+                        <MudStack Spacing="2">
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="40px" />
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="40px" />
+                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="40px" />
+                        </MudStack>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Activity Metrics -->
+        <MudItem xs="12" md="6">
+            <MudCard Class="pa-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Activity Metrics (30 Days)</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    @if (activityMetrics != null)
+                    {
+                        <MudGrid>
+                            <MudItem xs="4">
+                                <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudIcon Icon="@Icons.Material.Filled.Upload" Color="Color.Success" Size="Size.Large" />
+                                    <MudText Typo="Typo.h6">@activityMetrics.TotalUploads</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Uploads</MudText>
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudIcon Icon="@Icons.Material.Filled.Download" Color="Color.Info" Size="Size.Large" />
+                                    <MudText Typo="Typo.h6">@activityMetrics.TotalDownloads</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Downloads</MudText>
+                                </MudStack>
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudIcon Icon="@Icons.Material.Filled.Delete" Color="Color.Warning" Size="Size.Large" />
+                                    <MudText Typo="Typo.h6">@activityMetrics.TotalDeletes</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary">Deletes</MudText>
+                                </MudStack>
+                            </MudItem>
+                        </MudGrid>
+                    }
+                    else
+                    {
+                        <MudGrid>
+                            <MudItem xs="4">
+                                <MudSkeleton SkeletonType="SkeletonType.Circle" Width="50px" Height="50px" Class="mx-auto mb-2" />
+                                <MudSkeleton SkeletonType="SkeletonType.Text" />
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudSkeleton SkeletonType="SkeletonType.Circle" Width="50px" Height="50px" Class="mx-auto mb-2" />
+                                <MudSkeleton SkeletonType="SkeletonType.Text" />
+                            </MudItem>
+                            <MudItem xs="4">
+                                <MudSkeleton SkeletonType="SkeletonType.Circle" Width="50px" Height="50px" Class="mx-auto mb-2" />
+                                <MudSkeleton SkeletonType="SkeletonType.Text" />
+                            </MudItem>
+                        </MudGrid>
+                    }
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Management Actions -->
+        <MudItem xs="12">
+            <MudCard Class="pa-4">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">Management Actions</MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack Row="true" Spacing="2" Wrap="Wrap.Wrap">
+                        <MudButton Variant="Variant.Outlined" 
+                                  StartIcon="@Icons.Material.Filled.CleaningServices" 
+                                  Color="Color.Warning"
+                                  OnClick="CleanupOrphanedFiles"
+                                  Disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                <span class="ml-2">Cleaning...</span>
+                            }
+                            else
+                            {
+                                <span>Cleanup Orphaned Files</span>
+                            }
+                        </MudButton>
+
+                        <MudButton Variant="Variant.Outlined" 
+                                  StartIcon="@Icons.Material.Filled.Backup" 
+                                  Color="Color.Primary"
+                                  OnClick="BackupBucket"
+                                  Disabled="@isLoading">
+                            @if (isLoading)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                <span class="ml-2">Backing up...</span>
+                            }
+                            else
+                            {
+                                <span>Backup Bucket</span>
+                            }
+                        </MudButton>
+
+                        <MudButton Variant="Variant.Outlined" 
+                                  StartIcon="@Icons.Material.Filled.OpenInNew" 
+                                  Color="Color.Secondary"
+                                  OnClick="OpenMinIOConsole">
+                            Open MinIO Console
+                        </MudButton>
+
+                        <MudButton Variant="Variant.Outlined" 
+                                  StartIcon="@Icons.Material.Filled.Analytics" 
+                                  Color="Color.Info"
+                                  OnClick="ViewDetailedAnalytics">
+                            Detailed Analytics
+                        </MudButton>
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <!-- Last Updated -->
+        <MudItem xs="12">
+            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-center">
+                Last updated: @(dashboardData?.LastUpdated.ToString("yyyy-MM-dd HH:mm:ss") ?? "Loading...")
+            </MudText>
+        </MudItem>
+    </MudGrid>
+</MudContainer>
+
+@code {
+    private MinIODashboardDto? dashboardData;
+    private MinIOStorageAnalyticsDto? storageAnalytics;
+    private MinIOActivityMetricsDto? activityMetrics;
+    private MinIOFileDistributionDto? fileDistribution;
+    private bool isLoading = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && storageAnalytics != null)
+        {
+            await RenderStorageChart();
+        }
+    }
+
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<ApiResponse<MinIODashboardDto>>("api/admin/minioadmin/dashboard");
+            if (response?.Success == true && response.Data != null)
+            {
+                dashboardData = response.Data;
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add("Failed to load MinIO dashboard data", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading dashboard: {ex.Message}", Severity.Error);
+        }
+
+        // Load additional analytics data
+        await LoadStorageAnalytics();
+        await LoadActivityMetrics();
+        await LoadFileDistribution();
+    }
+
+    private async Task LoadStorageAnalytics()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<ApiResponse<MinIOStorageAnalyticsDto>>("api/admin/minioadmin/analytics/storage?days=30");
+            if (response?.Success == true && response.Data != null)
+            {
+                storageAnalytics = response.Data;
+                StateHasChanged();
+                await RenderStorageChart();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading storage analytics: {ex.Message}");
+        }
+    }
+
+    private async Task LoadActivityMetrics()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<ApiResponse<MinIOActivityMetricsDto>>("api/admin/minioadmin/analytics/activity?days=30");
+            if (response?.Success == true && response.Data != null)
+            {
+                activityMetrics = response.Data;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading activity metrics: {ex.Message}");
+        }
+    }
+
+    private async Task LoadFileDistribution()
+    {
+        try
+        {
+            var response = await Http.GetFromJsonAsync<ApiResponse<MinIOFileDistributionDto>>("api/admin/minioadmin/distribution");
+            if (response?.Success == true && response.Data != null)
+            {
+                fileDistribution = response.Data;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading file distribution: {ex.Message}");
+        }
+    }
+
+    private async Task RefreshDashboard()
+    {
+        await LoadDashboardData();
+        Snackbar.Add("Dashboard refreshed", Severity.Success);
+    }
+
+    private async Task RefreshStorageAnalytics()
+    {
+        await LoadStorageAnalytics();
+        Snackbar.Add("Storage analytics refreshed", Severity.Success);
+    }
+
+    private async Task CleanupOrphanedFiles()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var httpResponse = await Http.PostAsJsonAsync("api/admin/minioadmin/cleanup", new { });
+            var response = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<MinIOCleanupResultDto>>();
+            if (response?.Success == true && response.Data != null)
+            {
+                var result = response.Data;
+                var message = $"Cleanup completed: {result.FilesDeleted} files deleted, {result.SpaceReclaimedFormatted} reclaimed";
+                Snackbar.Add(message, Severity.Success);
+                await RefreshDashboard();
+            }
+            else
+            {
+                Snackbar.Add("Cleanup operation failed", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Cleanup error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task BackupBucket()
+    {
+        isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            var httpResponse = await Http.PostAsJsonAsync("api/admin/minioadmin/backup", new { });
+            var response = await httpResponse.Content.ReadFromJsonAsync<ApiResponse<MinIOBackupResultDto>>();
+            if (response?.Success == true && response.Data != null)
+            {
+                var result = response.Data;
+                var message = $"Backup completed: {result.FilesBackedUp} files backed up ({result.TotalSizeFormatted})";
+                Snackbar.Add(message, Severity.Success);
+            }
+            else
+            {
+                Snackbar.Add("Backup operation failed", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Backup error: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task OpenMinIOConsole()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://localhost:9001", "_blank");
+    }
+
+    private async Task ViewAllOperations()
+    {
+        // TODO: Navigate to detailed operations view
+        Snackbar.Add("Detailed operations view coming soon", Severity.Info);
+    }
+
+    private async Task ViewDetailedAnalytics()
+    {
+        // TODO: Navigate to detailed analytics view
+        Snackbar.Add("Detailed analytics view coming soon", Severity.Info);
+    }
+
+    private async Task RenderStorageChart()
+    {
+        if (storageAnalytics == null || !storageAnalytics.StorageGrowth.Any())
+            return;
+
+        try
+        {
+            var chartData = new
+            {
+                labels = storageAnalytics.StorageGrowth.Select(d => d.Date.ToString("MM/dd")).ToArray(),
+                datasets = new[]
+                {
+                    new
+                    {
+                        label = "Storage Usage",
+                        data = storageAnalytics.StorageGrowth.Select(d => d.Value / (1024.0 * 1024.0)).ToArray(), // Convert to MB
+                        borderColor = "rgb(54, 162, 235)",
+                        backgroundColor = "rgba(54, 162, 235, 0.2)",
+                        tension = 0.1
+                    }
+                }
+            };
+
+            var chartOptions = new
+            {
+                responsive = true,
+                plugins = new
+                {
+                    title = new
+                    {
+                        display = false
+                    },
+                    legend = new
+                    {
+                        display = false
+                    }
+                },
+                scales = new
+                {
+                    y = new
+                    {
+                        beginAtZero = true,
+                        title = new
+                        {
+                            display = true,
+                            text = "Storage (MB)"
+                        }
+                    },
+                    x = new
+                    {
+                        title = new
+                        {
+                            display = true,
+                            text = "Date"
+                        }
+                    }
+                }
+            };
+
+            await JSRuntime.InvokeVoidAsync("renderChart", "storageChart", "line", chartData, chartOptions);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error rendering storage chart: {ex.Message}");
+        }
+    }
+
+    private Color GetHealthColor()
+    {
+        return dashboardData?.HealthStatus?.Status switch
+        {
+            "Healthy" => Color.Success,
+            "Degraded" => Color.Warning,
+            "Unhealthy" => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetHealthIcon()
+    {
+        return dashboardData?.HealthStatus?.Status switch
+        {
+            "Healthy" => Icons.Material.Filled.CheckCircle,
+            "Degraded" => Icons.Material.Filled.Warning,
+            "Unhealthy" => Icons.Material.Filled.Error,
+            _ => Icons.Material.Filled.Help
+        };
+    }
+
+    private string GetOperationIcon(string operation)
+    {
+        return operation switch
+        {
+            "Upload" => Icons.Material.Filled.Upload,
+            "Download" => Icons.Material.Filled.Download,
+            "Delete" => Icons.Material.Filled.Delete,
+            _ => Icons.Material.Filled.InsertDriveFile
+        };
+    }
+
+    private Color GetOperationColor(string operation)
+    {
+        return operation switch
+        {
+            "Upload" => Color.Success,
+            "Download" => Color.Info,
+            "Delete" => Color.Warning,
+            _ => Color.Default
+        };
+    }
+
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes == 0) return "0 B";
+        
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        int order = 0;
+        double size = bytes;
+        
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        
+        return $"{size:0.##} {sizes[order]}";
+    }
+
+    // DTO classes for API responses
+    public class ApiResponse<T>
+    {
+        public bool Success { get; set; }
+        public string Message { get; set; } = "";
+        public T? Data { get; set; }
+        public List<string> Errors { get; set; } = new();
+    }
+
+    public class MinIODashboardDto
+    {
+        public MinIOServerStatsDto ServerStats { get; set; } = new();
+        public List<MinIOBucketStatsDto> BucketStats { get; set; } = new();
+        public MinIOHealthStatusDto HealthStatus { get; set; } = new();
+        public MinIODiskUsageDto DiskUsage { get; set; } = new();
+        public List<MinIOFileOperationDto> RecentOperations { get; set; } = new();
+        public DateTime LastUpdated { get; set; }
+    }
+
+    public class MinIOServerStatsDto
+    {
+        public string Version { get; set; } = "";
+        public DateTime Uptime { get; set; }
+        public long TotalStorage { get; set; }
+        public long UsedStorage { get; set; }
+        public long FreeStorage { get; set; }
+        public int TotalObjects { get; set; }
+        public int TotalBuckets { get; set; }
+        public bool IsOnline { get; set; }
+        public string Region { get; set; } = "";
+    }
+
+    public class MinIOBucketStatsDto
+    {
+        public string Name { get; set; } = "";
+        public DateTime CreationDate { get; set; }
+        public long Size { get; set; }
+        public int ObjectCount { get; set; }
+        public string SizeFormatted { get; set; } = "";
+        public List<string> RecentFiles { get; set; } = new();
+    }
+
+    public class MinIOHealthStatusDto
+    {
+        public bool IsHealthy { get; set; }
+        public bool IsWritable { get; set; }
+        public bool IsReadable { get; set; }
+        public int ResponseTimeMs { get; set; }
+        public DateTime LastChecked { get; set; }
+        public List<string> Issues { get; set; } = new();
+        public string Status { get; set; } = "";
+    }
+
+    public class MinIODiskUsageDto
+    {
+        public long TotalCapacity { get; set; }
+        public long UsedSpace { get; set; }
+        public long AvailableSpace { get; set; }
+        public double UsedPercentage { get; set; }
+        public string TotalCapacityFormatted { get; set; } = "";
+        public string UsedSpaceFormatted { get; set; } = "";
+        public string AvailableSpaceFormatted { get; set; } = "";
+    }
+
+    public class MinIOFileOperationDto
+    {
+        public DateTime Timestamp { get; set; }
+        public string Operation { get; set; } = "";
+        public string FileName { get; set; } = "";
+        public string FilePath { get; set; } = "";
+        public long FileSize { get; set; }
+        public string FileSizeFormatted { get; set; } = "";
+        public string ContentType { get; set; } = "";
+        public string UserAgent { get; set; } = "";
+        public string IpAddress { get; set; } = "";
+        public bool Success { get; set; }
+        public string ErrorMessage { get; set; } = "";
+    }
+
+    public class MinIOStorageAnalyticsDto
+    {
+        public TimeSpan Period { get; set; }
+        public List<StorageDataPointDto> StorageGrowth { get; set; } = new();
+        public List<StorageDataPointDto> ObjectGrowth { get; set; } = new();
+        public double GrowthRatePerDay { get; set; }
+        public long PredictedSizeNextMonth { get; set; }
+    }
+
+    public class StorageDataPointDto
+    {
+        public DateTime Date { get; set; }
+        public long Value { get; set; }
+        public string FormattedValue { get; set; } = "";
+    }
+
+    public class MinIOActivityMetricsDto
+    {
+        public TimeSpan Period { get; set; }
+        public int TotalUploads { get; set; }
+        public int TotalDownloads { get; set; }
+        public int TotalDeletes { get; set; }
+        public long TotalBytesUploaded { get; set; }
+        public long TotalBytesDownloaded { get; set; }
+    }
+
+    public class MinIOFileDistributionDto
+    {
+        public List<FileTypeDistributionDto> ByType { get; set; } = new();
+        public List<FileSizeDistributionDto> BySize { get; set; } = new();
+        public List<FileAgeDistributionDto> ByAge { get; set; } = new();
+        public double AverageFileSize { get; set; }
+        public string AverageFileSizeFormatted { get; set; } = "";
+        public int TotalFiles { get; set; }
+    }
+
+    public class FileTypeDistributionDto
+    {
+        public string FileType { get; set; } = "";
+        public string Extension { get; set; } = "";
+        public int Count { get; set; }
+        public long TotalSize { get; set; }
+        public double Percentage { get; set; }
+        public string SizeFormatted { get; set; } = "";
+    }
+
+    public class FileSizeDistributionDto
+    {
+        public string SizeRange { get; set; } = "";
+        public long MinSize { get; set; }
+        public long MaxSize { get; set; }
+        public int Count { get; set; }
+        public double Percentage { get; set; }
+    }
+
+    public class FileAgeDistributionDto
+    {
+        public string AgeRange { get; set; } = "";
+        public int Days { get; set; }
+        public int Count { get; set; }
+        public double Percentage { get; set; }
+    }
+
+    public class MinIOCleanupResultDto
+    {
+        public int OrphanedFilesFound { get; set; }
+        public int FilesDeleted { get; set; }
+        public long SpaceReclaimed { get; set; }
+        public string SpaceReclaimedFormatted { get; set; } = "";
+        public TimeSpan Duration { get; set; }
+        public List<string> DeletedFiles { get; set; } = new();
+        public List<string> Errors { get; set; } = new();
+        public bool Success { get; set; }
+    }
+
+    public class MinIOBackupResultDto
+    {
+        public string BucketName { get; set; } = "";
+        public string BackupPath { get; set; } = "";
+        public int FilesBackedUp { get; set; }
+        public long TotalSize { get; set; }
+        public string TotalSizeFormatted { get; set; } = "";
+        public TimeSpan Duration { get; set; }
+        public DateTime BackupDate { get; set; }
+        public bool Success { get; set; }
+        public List<string> Errors { get; set; } = new();
+    }
+}

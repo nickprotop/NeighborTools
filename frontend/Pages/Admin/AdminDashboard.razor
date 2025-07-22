@@ -1,5 +1,6 @@
 @page "/admin"
 @using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
@@ -78,6 +79,84 @@
                                 <MudText Typo="Typo.h4">$@overview?.Revenue?.TotalThisMonth.ToString("N2")</MudText>
                                 <MudText Typo="Typo.caption">$@overview?.Revenue?.CommissionThisMonth.ToString("N2") commission</MudText>
                             </div>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Storage Overview -->
+        <MudGrid Class="mb-6">
+            <MudItem xs="12" md="6">
+                <MudCard style="border-left: 4px solid var(--mud-palette-info);">
+                    <MudCardContent>
+                        <div class="d-flex align-center justify-space-between">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Info" Size="Size.Large" />
+                                <div class="ml-3">
+                                    <MudText Typo="Typo.h6">File Storage (MinIO)</MudText>
+                                    @if (minioHealthStatus != null)
+                                    {
+                                        <div class="d-flex align-center mt-2">
+                                            <MudIcon Icon="@GetMinIOHealthIcon()" Size="Size.Small" Color="@GetMinIOHealthColor()" />
+                                            <MudText Typo="Typo.body2" Color="@GetMinIOHealthColor()" Class="ml-1">
+                                                @minioHealthStatus.Status
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="ml-2">
+                                                (@minioHealthStatus.ResponseTimeMs ms)
+                                            </MudText>
+                                        </div>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                            @(minioServerStats?.TotalObjects ?? 0) files • @(FormatBytes(minioServerStats?.UsedStorage ?? 0)) used
+                                        </MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudSkeleton SkeletonType="SkeletonType.Text" Width="150px" />
+                                    }
+                                </div>
+                            </div>
+                            <MudButton Variant="Variant.Text" 
+                                      Color="Color.Info" 
+                                      Size="Size.Small"
+                                      Href="/admin/minio"
+                                      StartIcon="@Icons.Material.Filled.Analytics">
+                                Manage
+                            </MudButton>
+                        </div>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" md="6">
+                <MudCard>
+                    <MudCardContent>
+                        <div class="d-flex align-center justify-space-between">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.PieChart" Color="Color.Primary" Size="Size.Large" />
+                                <div class="ml-3">
+                                    <MudText Typo="Typo.h6">Quick Actions</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                        Manage system components
+                                    </MudText>
+                                </div>
+                            </div>
+                            <MudStack Spacing="1">
+                                <MudButton Variant="Variant.Text" 
+                                          Color="Color.Primary" 
+                                          Size="Size.Small"
+                                          Href="/admin/minio"
+                                          StartIcon="@Icons.Material.Filled.Storage">
+                                    MinIO Console
+                                </MudButton>
+                                <MudButton Variant="Variant.Text" 
+                                          Color="Color.Secondary" 
+                                          Size="Size.Small"
+                                          OnClick="OpenMinIOConsole"
+                                          StartIcon="@Icons.Material.Filled.OpenInNew">
+                                    MinIO Web UI
+                                </MudButton>
+                            </MudStack>
                         </div>
                     </MudCardContent>
                 </MudCard>
@@ -753,6 +832,7 @@
     [Inject] private HttpClient HttpClient { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
 
     private bool isLoading = true;
     private string? loadError = null;
@@ -774,6 +854,10 @@
     private int failedBackgroundJobs = 0;
     private int emailQueueErrors = 0;
     private string systemHealthStatus = "Healthy";
+    
+    // MinIO monitoring data
+    private MinIOHealthStatusDto? minioHealthStatus = null;
+    private MinIOServerStatsDto? minioServerStats = null;
     
     // Pending approvals data
     private List<Tool>? pendingTools = null;
@@ -826,6 +910,9 @@
             
             // Load messaging system data
             await LoadMessagingData();
+            
+            // Load MinIO monitoring data
+            await LoadMinIOData();
             
             // Load system health metrics (simulate for now - would be real endpoints)
             await LoadSystemHealthMetrics();
@@ -1000,6 +1087,31 @@
         public long TotalSize { get; set; }
     }
     
+    // MinIO DTOs for dashboard integration
+    public class MinIOHealthStatusDto
+    {
+        public bool IsHealthy { get; set; }
+        public bool IsWritable { get; set; }
+        public bool IsReadable { get; set; }
+        public int ResponseTimeMs { get; set; }
+        public DateTime LastChecked { get; set; }
+        public List<string> Issues { get; set; } = new();
+        public string Status { get; set; } = "";
+    }
+    
+    public class MinIOServerStatsDto
+    {
+        public string Version { get; set; } = "";
+        public DateTime Uptime { get; set; }
+        public long TotalStorage { get; set; }
+        public long UsedStorage { get; set; }
+        public long FreeStorage { get; set; }
+        public int TotalObjects { get; set; }
+        public int TotalBuckets { get; set; }
+        public bool IsOnline { get; set; }
+        public string Region { get; set; } = "";
+    }
+    
     private async Task LoadPendingApprovals()
     {
         try
@@ -1118,5 +1230,81 @@
         {
             Snackbar.Add($"Error rejecting bundle: {ex.Message}", Severity.Error);
         }
+    }
+    
+    private async Task LoadMinIOData()
+    {
+        try
+        {
+            // Load MinIO health status
+            var healthResponse = await HttpClient.GetAsync("api/admin/minioadmin/health");
+            if (healthResponse.IsSuccessStatusCode)
+            {
+                var healthResult = await healthResponse.Content.ReadFromJsonAsync<ApiResponse<MinIOHealthStatusDto>>();
+                if (healthResult?.Success == true && healthResult.Data != null)
+                {
+                    minioHealthStatus = healthResult.Data;
+                }
+            }
+
+            // Load MinIO server stats
+            var statsResponse = await HttpClient.GetAsync("api/admin/minioadmin/stats");
+            if (statsResponse.IsSuccessStatusCode)
+            {
+                var statsResult = await statsResponse.Content.ReadFromJsonAsync<ApiResponse<MinIOServerStatsDto>>();
+                if (statsResult?.Success == true && statsResult.Data != null)
+                {
+                    minioServerStats = statsResult.Data;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading MinIO data: {ex.Message}");
+        }
+    }
+    
+    private string GetMinIOHealthIcon()
+    {
+        return minioHealthStatus?.Status switch
+        {
+            "Healthy" => Icons.Material.Filled.CheckCircle,
+            "Degraded" => Icons.Material.Filled.Warning,
+            "Unhealthy" => Icons.Material.Filled.Error,
+            _ => Icons.Material.Filled.Help
+        };
+    }
+    
+    private Color GetMinIOHealthColor()
+    {
+        return minioHealthStatus?.Status switch
+        {
+            "Healthy" => Color.Success,
+            "Degraded" => Color.Warning,
+            "Unhealthy" => Color.Error,
+            _ => Color.Default
+        };
+    }
+    
+    private async Task OpenMinIOConsole()
+    {
+        await JSRuntime.InvokeVoidAsync("open", "http://localhost:9001", "_blank");
+    }
+    
+    private static string FormatBytes(long bytes)
+    {
+        if (bytes == 0) return "0 B";
+        
+        string[] sizes = { "B", "KB", "MB", "GB", "TB" };
+        int order = 0;
+        double size = bytes;
+        
+        while (size >= 1024 && order < sizes.Length - 1)
+        {
+            order++;
+            size /= 1024;
+        }
+        
+        return $"{size:0.##} {sizes[order]}";
     }
 }

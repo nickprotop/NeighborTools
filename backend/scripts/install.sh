@@ -71,6 +71,18 @@ MYSQL_ROOT_PASSWORD=$(read_password "MySQL root password" "RootPassword123!")
 MYSQL_USER_PASSWORD=$(read_password "MySQL toolsuser password" "ToolsPassword123!")
 
 echo ""
+echo "📁 MinIO File Storage Configuration"
+echo "=================================="
+echo "Configure MinIO object storage for file uploads and user content."
+echo "Press Enter to use default values (recommended for development)."
+echo ""
+
+# Get MinIO configuration
+MINIO_ENDPOINT=$(read_password "MinIO endpoint (e.g., localhost:9000)" "localhost:9000")
+MINIO_ROOT_USER=$(read_password "MinIO root username" "minioadmin")
+MINIO_ROOT_PASSWORD=$(read_password "MinIO root password" "MinIOPassword123!")
+
+echo ""
 echo "🌐 Blazor WASM App Configuration"
 echo "==============================="
 echo "Configure the Blazor WebAssembly app URL for development."
@@ -132,6 +144,10 @@ cat > "$ENV_FILE" << EOF
 # MySQL Configuration
 MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
 MYSQL_USER_PASSWORD=$MYSQL_USER_PASSWORD
+
+# MinIO Configuration
+MINIO_ROOT_USER=$MINIO_ROOT_USER
+MINIO_ROOT_PASSWORD=$MINIO_ROOT_PASSWORD
 
 # Note: This file is automatically read by docker-compose
 EOF
@@ -207,9 +223,11 @@ if command -v jq &> /dev/null; then
     # Use jq if available for proper JSON manipulation
     tmp=$(mktemp)
     jq --arg conn "$CONNECTION_STRING" --arg frontend "$FRONTEND_BASE_URL" \
-       '.ConnectionStrings.DefaultConnection = $conn | .Frontend.BaseUrl = $frontend | .Payment.FrontendBaseUrl = $frontend' \
+       --arg minioEndpoint "$MINIO_ENDPOINT" --arg minioKey "$MINIO_ROOT_USER" --arg minioSecret "$MINIO_ROOT_PASSWORD" \
+       '.ConnectionStrings.DefaultConnection = $conn | .Frontend.BaseUrl = $frontend | .Payment.FrontendBaseUrl = $frontend | 
+        .MinIO.Endpoint = $minioEndpoint | .MinIO.AccessKey = $minioKey | .MinIO.SecretKey = $minioSecret' \
        config.json > "$tmp" && mv "$tmp" config.json
-    echo "✅ Updated database connection string and Blazor WASM app URL in config.json (using jq)"
+    echo "✅ Updated database connection, Blazor WASM app URL, and MinIO configuration in config.json (using jq)"
 else
     # Fallback to sed for basic replacement
     sed -i "s|\"DefaultConnection\": \".*\"|\"DefaultConnection\": \"$CONNECTION_STRING\"|g" config.json
@@ -218,7 +236,11 @@ else
     if grep -q "\"FrontendBaseUrl\":" config.json; then
         sed -i "s|\"FrontendBaseUrl\": \".*\"|\"FrontendBaseUrl\": \"$FRONTEND_BASE_URL\"|g" config.json
     fi
-    echo "✅ Updated database connection string and Blazor WASM app URL in config.json (using sed)"
+    # Update MinIO configuration
+    sed -i "s|\"Endpoint\": \".*\"|\"Endpoint\": \"$MINIO_ENDPOINT\"|g" config.json
+    sed -i "s|\"AccessKey\": \".*\"|\"AccessKey\": \"$MINIO_ROOT_USER\"|g" config.json
+    sed -i "s|\"SecretKey\": \".*\"|\"SecretKey\": \"$MINIO_ROOT_PASSWORD\"|g" config.json
+    echo "✅ Updated database connection, Blazor WASM app URL, and MinIO configuration in config.json (using sed)"
 fi
 
 cd ../..
@@ -233,6 +255,10 @@ echo "============================================="
 echo "Database Configuration:"
 echo "  • MySQL Root Password: $(echo "$MYSQL_ROOT_PASSWORD" | sed 's/./*/g')"
 echo "  • MySQL User Password: $(echo "$MYSQL_USER_PASSWORD" | sed 's/./*/g')"
+echo ""
+echo "File Storage Configuration:"
+echo "  • MinIO Console: http://localhost:9001 (user: $MINIO_ROOT_USER)"
+echo "  • MinIO Password: $(echo "$MINIO_ROOT_PASSWORD" | sed 's/./*/g')"
 echo ""
 echo "Next steps:"
 echo "  • Run './start-all.sh' to start development environment"

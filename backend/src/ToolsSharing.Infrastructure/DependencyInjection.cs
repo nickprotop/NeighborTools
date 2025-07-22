@@ -3,6 +3,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Mapster;
 using MapsterMapper;
+using Minio;
 using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.Interfaces;
 using ToolsSharing.Infrastructure.Data;
@@ -80,8 +81,27 @@ public static class DependencyInjection
         // Dispute Management Service
         services.AddScoped<IDisputeService, DisputeService>();
         
-        // File Storage Service
-        services.AddScoped<IFileStorageService, LocalFileStorageService>();
+        // MinIO Configuration and Client
+        services.AddSingleton<IMinioClient>(provider =>
+        {
+            var config = provider.GetRequiredService<IConfiguration>();
+            var endpoint = config["MinIO:Endpoint"] ?? "localhost:9000";
+            var accessKey = config["MinIO:AccessKey"] ?? "minioadmin";
+            var secretKey = config["MinIO:SecretKey"] ?? "minioadmin";
+            var secure = config.GetValue<bool>("MinIO:Secure", false);
+            
+            return new MinioClient()
+                .WithEndpoint(endpoint)
+                .WithCredentials(accessKey, secretKey)
+                .WithSSL(secure)
+                .Build();
+        });
+        
+        // File Storage Service (now using MinIO)
+        services.AddScoped<IFileStorageService, MinIOFileStorageService>();
+        
+        // MinIO Admin Service
+        services.AddScoped<IMinIOAdminService, MinIOAdminService>();
         
         // Dispute Notification Service
         services.AddScoped<IDisputeNotificationService, DisputeNotificationService>();

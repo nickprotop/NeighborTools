@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Start only infrastructure services (MySQL, Redis)
+# Start only infrastructure services (MySQL, Redis, MinIO)
 # Use this when you want to run the API manually with dotnet run
 
 set -e  # Exit on any error
@@ -32,12 +32,12 @@ fi
 cd "$(dirname "$0")/../docker"
 
 # Start only infrastructure services
-echo "🔄 Starting MySQL and Redis..."
+echo "🔄 Starting MySQL, Redis, and MinIO..."
 docker-compose --profile infrastructure up -d
 
 # Wait for services to be ready
 echo "⏳ Waiting for services to be ready..."
-sleep 3
+sleep 5
 
 # Check MySQL
 if docker-compose exec -T mysql mysqladmin ping -h localhost --silent; then
@@ -55,6 +55,14 @@ else
     exit 1
 fi
 
+# Check MinIO (use curl to check health endpoint)
+if curl -s http://localhost:9000/minio/health/live > /dev/null 2>&1; then
+    echo "✅ MinIO is ready (API: localhost:9000, Console: localhost:9001)"
+else
+    echo "❌ MinIO is not ready. Check logs: docker-compose logs minio"
+    exit 1
+fi
+
 echo ""
 echo "🎉 Infrastructure is ready!"
 echo "========================================"
@@ -63,5 +71,6 @@ echo "  • Run API manually: cd src/ToolsSharing.API && dotnet run"
 echo "  • Or with hot reload: cd src/ToolsSharing.API && dotnet watch run"
 echo "  • API will be available at: http://localhost:5002"
 echo "  • Swagger UI: http://localhost:5002/swagger"
+echo "  • MinIO Console: http://localhost:9001"
 echo ""
 echo "To stop infrastructure: docker-compose down"

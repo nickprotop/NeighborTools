@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Stop infrastructure services (MySQL, Redis)
+# Stop infrastructure services (MySQL, Redis, MinIO)
 # Use when you want to stop development environment
 
 set -e  # Exit on any error
@@ -12,8 +12,8 @@ echo "========================================"
 cd "$(dirname "$0")/../docker"
 
 # Stop infrastructure services
-echo "🔄 Stopping MySQL and Redis..."
-docker-compose stop mysql redis
+echo "🔄 Stopping MySQL, Redis, and MinIO..."
+docker-compose stop mysql redis minio
 
 # Check what's still running
 running_services=$(docker-compose ps --services --filter "status=running" | wc -l)
@@ -29,5 +29,6 @@ echo ""
 echo "Infrastructure stopped:"
 echo "  • MySQL: localhost:3306 (stopped)"
 echo "  • Redis: localhost:6379 (stopped)"
+echo "  • MinIO: localhost:9000/9001 (stopped)"
 echo ""
 echo "To restart infrastructure: ./start-infrastructure.sh"

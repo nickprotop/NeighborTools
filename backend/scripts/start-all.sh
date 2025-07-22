@@ -32,7 +32,7 @@ fi
 cd "$(dirname "$0")/../docker"
 
 # Start infrastructure
-echo "📦 Starting infrastructure (MySQL, Redis)..."
+echo "📦 Starting infrastructure (MySQL, Redis, MinIO)..."
 docker-compose --profile infrastructure up -d
 
 # Wait for services to be ready
@@ -47,6 +47,12 @@ fi
 
 if ! docker-compose exec -T redis redis-cli ping | grep -q "PONG"; then
     echo "❌ Redis is not ready. Please check the logs with: docker-compose logs redis"
+    exit 1
+fi
+
+# Check MinIO (use curl to check health endpoint)
+if ! curl -s http://localhost:9000/minio/health/live > /dev/null 2>&1; then
+    echo "❌ MinIO is not ready. Please check the logs with: docker-compose logs minio"
     exit 1
 fi
 
@@ -96,6 +102,7 @@ case $mode in
         echo "✅ API started in Docker mode"
         echo "🌐 API URL: http://localhost:5002"
         echo "📖 Swagger: http://localhost:5002/swagger"
+        echo "📁 MinIO Console: http://localhost:9001"
         echo "📊 Logs: docker-compose logs -f api"
         ;;
     2)
@@ -103,6 +110,7 @@ case $mode in
         echo "💻 Starting API with dotnet run..."
         echo "🌐 API will be available at: http://localhost:5002"
         echo "📖 Swagger: http://localhost:5002/swagger"
+        echo "📁 MinIO Console: http://localhost:9001"
         echo ""
         cd src/ToolsSharing.API
         dotnet run
@@ -112,6 +120,7 @@ case $mode in
         echo "🔥 Starting API with hot reload (dotnet watch)..."
         echo "🌐 API will be available at: http://localhost:5000"
         echo "📖 Swagger: http://localhost:5002/swagger"
+        echo "📁 MinIO Console: http://localhost:9001"
         echo "🔄 Hot reload enabled - changes will auto-restart"
         echo ""
         cd src/ToolsSharing.API

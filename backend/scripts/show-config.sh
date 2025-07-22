@@ -40,6 +40,8 @@ if [ -f "$ENV_FILE" ]; then
     echo "   📝 .env file: $ENV_FILE"
     echo "   MYSQL_ROOT_PASSWORD: $(grep "MYSQL_ROOT_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2 | sed 's/./*/g')"
     echo "   MYSQL_USER_PASSWORD: $(grep "MYSQL_USER_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2 | sed 's/./*/g')"
+    echo "   MINIO_ROOT_USER: $(grep "MINIO_ROOT_USER=" "$ENV_FILE" | cut -d'=' -f2)"
+    echo "   MINIO_ROOT_PASSWORD: $(grep "MINIO_ROOT_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2 | sed 's/./*/g')"
 else
     echo "   ❌ No .env file found"
     echo "   💡 Run ./install.sh to create configuration"
@@ -58,4 +60,10 @@ if docker-compose ps --services --filter "status=running" | grep -q "redis"; the
     echo "   Redis: ✅ Running"
 else
     echo "   Redis: ❌ Not running"
+fi
+
+if docker-compose ps --services --filter "status=running" | grep -q "minio"; then
+    echo "   MinIO: ✅ Running (Console: http://localhost:9001)"
+else
+    echo "   MinIO: ❌ Not running"
 fi
