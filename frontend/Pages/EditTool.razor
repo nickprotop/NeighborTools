@@ -41,7 +41,21 @@
             </div>
 
             <!-- Approval Status Alert -->
-            @if (currentTool != null && !currentTool.IsApproved && !string.IsNullOrEmpty(currentTool.RejectionReason))
+            @if (currentTool != null && !currentTool.IsApproved && currentTool.HasPendingApproval)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4" Variant="Variant.Filled">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Class="me-3" />
+                        <div>
+                            <MudText Typo="Typo.h6" Class="mb-1">Pending Approval</MudText>
+                            <MudText Typo="Typo.body2">
+                                Your tool is currently being reviewed by our team. We'll notify you once it's approved.
+                            </MudText>
+                        </div>
+                    </div>
+                </MudAlert>
+            }
+            else if (currentTool != null && !currentTool.IsApproved && !currentTool.HasPendingApproval)
             {
                 <MudAlert Severity="Severity.Error" Class="mb-4" Variant="Variant.Filled">
                     <div class="d-flex align-center justify-space-between">
@@ -50,11 +64,20 @@
                                 <MudIcon Icon="@Icons.Material.Filled.Warning" Class="me-2" />
                                 Tool Rejected
                             </MudText>
-                            <MudText Typo="Typo.body2" Class="mb-3">
-                                <strong>Reason:</strong> @currentTool.RejectionReason
-                            </MudText>
+                            @if (!string.IsNullOrEmpty(currentTool.RejectionReason))
+                            {
+                                <MudText Typo="Typo.body2" Class="mb-3">
+                                    <strong>Reason:</strong> @currentTool.RejectionReason
+                                </MudText>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Class="mb-3">
+                                    This tool was rejected during review and needs to be updated before resubmission.
+                                </MudText>
+                            }
                             <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                Please address the issues above and request approval again.
+                                Please address the issues and request approval again.
                             </MudText>
                         </div>
                         <div>
@@ -66,20 +89,6 @@
                                        Size="Size.Small">
                                 Request Re-approval
                             </MudButton>
-                        </div>
-                    </div>
-                </MudAlert>
-            }
-            else if (currentTool != null && !currentTool.IsApproved && currentTool.HasPendingApproval)
-            {
-                <MudAlert Severity="Severity.Info" Class="mb-4" Variant="Variant.Filled">
-                    <div class="d-flex align-center">
-                        <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Class="me-3" />
-                        <div>
-                            <MudText Typo="Typo.h6" Class="mb-1">Pending Approval</MudText>
-                            <MudText Typo="Typo.body2">
-                                Your tool is currently being reviewed by our team. We'll notify you once it's approved.
-                            </MudText>
                         </div>
                     </div>
                 </MudAlert>

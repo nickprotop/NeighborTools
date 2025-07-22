@@ -73,23 +73,15 @@ else if (tool != null)
                                            Text="Pending Approval" 
                                            T="string" />
                                 }
-                                else if (!string.IsNullOrEmpty(tool.RejectionReason))
+                                else
                                 {
-                                    <MudTooltip Text="@($"Rejected: {tool.RejectionReason}")">
+                                    <MudTooltip Text="@(!string.IsNullOrEmpty(tool.RejectionReason) ? $"Rejected: {tool.RejectionReason}" : "This tool was rejected and needs to be reviewed")">
                                         <MudChip Color="Color.Error" 
                                                Size="Size.Medium" 
                                                Icon="@Icons.Material.Filled.Block" 
                                                Text="Rejected" 
                                                T="string" />
                                     </MudTooltip>
-                                }
-                                else
-                                {
-                                    <MudChip Color="Color.Default" 
-                                           Size="Size.Medium" 
-                                           Icon="@Icons.Material.Filled.Visibility" 
-                                           Text="Draft" 
-                                           T="string" />
                                 }
                             }
                         </MudStack>

@@ -175,23 +175,15 @@
                                         Pending Approval
                                     </MudChip>
                                 }
-                                else if (!string.IsNullOrEmpty(tool.RejectionReason))
+                                else
                                 {
-                                    <MudTooltip Text="@($"Rejected: {tool.RejectionReason}")">
+                                    <MudTooltip Text="@(!string.IsNullOrEmpty(tool.RejectionReason) ? $"Rejected: {tool.RejectionReason}" : "This tool was rejected and needs to be reviewed")">
                                         <MudChip T="string" Color="Color.Error" 
                                                Size="Size.Small" 
                                                Icon="@Icons.Material.Filled.Block">
                                             Rejected
                                         </MudChip>
                                     </MudTooltip>
-                                }
-                                else
-                                {
-                                    <MudChip T="string" Color="Color.Default" 
-                                           Size="Size.Small" 
-                                           Icon="@Icons.Material.Filled.Visibility">
-                                        Draft
-                                    </MudChip>
                                 }
                             </div>
                         }

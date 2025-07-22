@@ -77,23 +77,15 @@ else
                                            Text="Pending Approval" 
                                            T="string" />
                                 }
-                                else if (!string.IsNullOrEmpty(bundle.RejectionReason))
+                                else
                                 {
-                                    <MudTooltip Text="@($"Rejected: {bundle.RejectionReason}")">
+                                    <MudTooltip Text="@(!string.IsNullOrEmpty(bundle.RejectionReason) ? $"Rejected: {bundle.RejectionReason}" : "This bundle was rejected and needs to be reviewed")">
                                         <MudChip Color="Color.Error" 
                                                Size="Size.Medium" 
                                                Icon="@Icons.Material.Filled.Block" 
                                                Text="Rejected" 
                                                T="string" />
                                     </MudTooltip>
-                                }
-                                else
-                                {
-                                    <MudChip Color="Color.Default" 
-                                           Size="Size.Medium" 
-                                           Icon="@Icons.Material.Filled.Visibility" 
-                                           Text="Draft" 
-                                           T="string" />
                                 }
                             }
                         </MudStack>

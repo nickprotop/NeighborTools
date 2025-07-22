@@ -115,8 +115,24 @@ else
                     </MudAlert>
                 </MudItem>
 
-                <!-- Bundle Rejection Alert -->
-                @if (bundle != null && !bundle.IsApproved && !string.IsNullOrEmpty(bundle.RejectionReason))
+                <!-- Bundle Approval Status Alert -->
+                @if (bundle != null && !bundle.IsApproved && bundle.PendingApproval)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Info" Class="mb-4" Variant="Variant.Filled">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Class="me-3" />
+                                <div>
+                                    <MudText Typo="Typo.h6" Class="mb-1">Pending Approval</MudText>
+                                    <MudText Typo="Typo.body2">
+                                        Your bundle is currently being reviewed by our team. We'll notify you once it's approved.
+                                    </MudText>
+                                </div>
+                            </div>
+                        </MudAlert>
+                    </MudItem>
+                }
+                else if (bundle != null && !bundle.IsApproved && !bundle.PendingApproval)
                 {
                     <MudItem xs="12">
                         <MudAlert Severity="Severity.Error" Class="mb-4" Variant="Variant.Filled">
@@ -126,11 +142,20 @@ else
                                         <MudIcon Icon="@Icons.Material.Filled.Warning" Class="me-2" />
                                         Bundle Rejected
                                     </MudText>
-                                    <MudText Typo="Typo.body2" Class="mb-3">
-                                        <strong>Reason:</strong> @bundle.RejectionReason
-                                    </MudText>
+                                    @if (!string.IsNullOrEmpty(bundle.RejectionReason))
+                                    {
+                                        <MudText Typo="Typo.body2" Class="mb-3">
+                                            <strong>Reason:</strong> @bundle.RejectionReason
+                                        </MudText>
+                                    }
+                                    else
+                                    {
+                                        <MudText Typo="Typo.body2" Class="mb-3">
+                                            This bundle was rejected during review and needs to be updated before resubmission.
+                                        </MudText>
+                                    }
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        Please address the issues above and request approval again.
+                                        Please address the issues and request approval again.
                                     </MudText>
                                 </div>
                                 <div>
@@ -142,22 +167,6 @@ else
                                                Size="Size.Small">
                                         Request Re-approval
                                     </MudButton>
-                                </div>
-                            </div>
-                        </MudAlert>
-                    </MudItem>
-                }
-                else if (bundle != null && !bundle.IsApproved && bundle.PendingApproval)
-                {
-                    <MudItem xs="12">
-                        <MudAlert Severity="Severity.Info" Class="mb-4" Variant="Variant.Filled">
-                            <div class="d-flex align-center">
-                                <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Class="me-3" />
-                                <div>
-                                    <MudText Typo="Typo.h6" Class="mb-1">Pending Approval</MudText>
-                                    <MudText Typo="Typo.body2">
-                                        Your bundle is currently being reviewed by our team. We'll notify you once it's approved.
-                                    </MudText>
                                 </div>
                             </div>
                         </MudAlert>
