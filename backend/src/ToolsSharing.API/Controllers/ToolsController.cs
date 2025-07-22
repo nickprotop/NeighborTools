@@ -43,6 +43,34 @@ public class ToolsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("featured")]
+    public async Task<IActionResult> GetFeaturedTools([FromQuery] int count = 6)
+    {
+        var result = await _toolsService.GetFeaturedToolsAsync(count);
+        return Ok(result);
+    }
+    
+    [HttpGet("popular")]
+    public async Task<IActionResult> GetPopularTools([FromQuery] int count = 6)
+    {
+        var result = await _toolsService.GetPopularToolsAsync(count);
+        return Ok(result);
+    }
+    
+    [HttpGet("tags")]
+    public async Task<IActionResult> GetPopularTags([FromQuery] int count = 20)
+    {
+        var result = await _toolsService.GetPopularTagsAsync(count);
+        return Ok(result);
+    }
+    
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchTools([FromQuery] SearchToolsQuery query)
+    {
+        var result = await _toolsService.SearchToolsAsync(query);
+        return Ok(result);
+    }
+
     [HttpGet("{id}")]
     public async Task<IActionResult> GetTool(Guid id)
     {
@@ -94,27 +122,6 @@ public class ToolsController : ControllerBase
         if (!result.Success)
             return BadRequest(result);
             
-        return Ok(result);
-    }
-    
-    [HttpGet("featured")]
-    public async Task<IActionResult> GetFeaturedTools([FromQuery] int count = 6)
-    {
-        var result = await _toolsService.GetFeaturedToolsAsync(count);
-        return Ok(result);
-    }
-    
-    [HttpGet("tags")]
-    public async Task<IActionResult> GetPopularTags([FromQuery] int count = 20)
-    {
-        var result = await _toolsService.GetPopularTagsAsync(count);
-        return Ok(result);
-    }
-    
-    [HttpGet("search")]
-    public async Task<IActionResult> SearchTools([FromQuery] SearchToolsQuery query)
-    {
-        var result = await _toolsService.SearchToolsAsync(query);
         return Ok(result);
     }
 
