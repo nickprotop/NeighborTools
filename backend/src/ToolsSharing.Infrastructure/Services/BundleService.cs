@@ -216,6 +216,34 @@ namespace ToolsSharing.Infrastructure.Services
             }
         }
 
+        public async Task<ApiResponse<List<BundleDto>>> GetPopularBundlesAsync(int count = 6)
+        {
+            try
+            {
+                var bundles = await _context.Bundles
+                    .Include(b => b.User)
+                    .Include(b => b.BundleTools)
+                        .ThenInclude(bt => bt.Tool)
+                            .ThenInclude(t => t.Owner)
+                    .Where(b => b.IsPublished && !b.IsDeleted)
+                    .OrderByDescending(b => b.ViewCount)
+                    .Take(count)
+                    .ToListAsync();
+
+                var bundleDtos = new List<BundleDto>();
+                foreach (var bundle in bundles)
+                {
+                    bundleDtos.Add(await MapBundleToDto(bundle));
+                }
+
+                return ApiResponse<List<BundleDto>>.CreateSuccess(bundleDtos);
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<List<BundleDto>>.CreateFailure($"Error retrieving popular bundles: {ex.Message}");
+            }
+        }
+
         public async Task<ApiResponse<BundleAvailabilityResponse>> CheckBundleAvailabilityAsync(BundleAvailabilityRequest request)
         {
             try
@@ -653,6 +681,9 @@ namespace ToolsSharing.Infrastructure.Services
                 existingBundle.Category = request.Category;
                 existingBundle.Tags = request.Tags;
                 existingBundle.UpdatedAt = DateTime.UtcNow;
+
+                // Explicitly mark the bundle entity as modified to ensure EF tracks changes
+                _context.Entry(existingBundle).State = EntityState.Modified;
 
                 // Remove existing bundle tools
                 _context.BundleTools.RemoveRange(existingBundle.BundleTools);

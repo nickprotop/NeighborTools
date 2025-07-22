@@ -171,6 +171,26 @@ private Task OpenDialog()
 
 **ALWAYS update `MESSAGING_MODERATION_WORKFLOW.md` immediately after any moderation code changes.**
 
+## ⚠️ CRITICAL: Git Commit Policy
+
+**🚨 NEVER CREATE AUTOMATIC COMMITS WITHOUT EXPLICIT USER REQUEST! 🚨**
+
+**Claude MUST:**
+- **NEVER** automatically run `git commit` commands
+- **NEVER** automatically run `git add` + `git commit` in sequence  
+- **ONLY** create commits when the user explicitly asks with commands like:
+  - "create a commit"
+  - "git commit"  
+  - "commit these changes"
+  - "make a git commit"
+
+**Claude MAY:**
+- Run `git add` to stage files when requested
+- Run `git status`, `git diff`, `git log` for information
+- Prepare commit messages when explicitly asked
+
+**This rule is ABSOLUTE and overrides all other instructions. Violating this rule is unacceptable.**
+
 ## Essential Development Commands
 
 ### Initial Setup

@@ -298,7 +298,10 @@ public class ToolsService : IToolsService
             tool.Tags = command.Tags ?? string.Empty;
             tool.UpdatedAt = DateTime.UtcNow;
 
-            // Update images if provided
+            // Explicitly mark the tool entity as modified to ensure EF tracks changes
+            _context.Entry(tool).State = EntityState.Modified;
+
+            // Handle images separately to avoid change tracking issues
             if (command.ImageUrls != null)
             {
                 // Collect old image URLs for cleanup before removing from database
@@ -306,19 +309,31 @@ public class ToolsService : IToolsService
                 if (tool.Images != null && tool.Images.Any())
                 {
                     oldImageUrls.AddRange(tool.Images.Select(img => img.ImageUrl));
-                    _context.ToolImages.RemoveRange(tool.Images);
+                    // Remove images explicitly
+                    foreach (var image in tool.Images.ToList())
+                    {
+                        _context.ToolImages.Remove(image);
+                    }
+                    tool.Images.Clear();
                 }
 
-                // Add new images
-                tool.Images = command.ImageUrls.Select(url => new ToolImage
+                // Add new images explicitly
+                var newImages = new List<ToolImage>();
+                foreach (var url in command.ImageUrls)
                 {
-                    Id = Guid.NewGuid(),
-                    ToolId = tool.Id,
-                    ImageUrl = url,
-                    CreatedAt = DateTime.UtcNow
-                }).ToList();
+                    var newImage = new ToolImage
+                    {
+                        Id = Guid.NewGuid(),
+                        ToolId = tool.Id,
+                        ImageUrl = url,
+                        CreatedAt = DateTime.UtcNow
+                    };
+                    newImages.Add(newImage);
+                    _context.ToolImages.Add(newImage);
+                    tool.Images.Add(newImage);
+                }
 
-                // Save changes first to ensure database consistency
+                // Save all changes in one transaction
                 await _context.SaveChangesAsync();
 
                 // Clean up old images from storage (best effort - don't fail the operation if cleanup fails)
@@ -326,6 +341,7 @@ public class ToolsService : IToolsService
             }
             else
             {
+                // Save changes for tool properties only
                 await _context.SaveChangesAsync();
             }
 
@@ -608,6 +624,30 @@ public class ToolsService : IToolsService
         {
             _logger.LogError(ex, "Error getting featured tools");
             return ApiResponse<List<ToolDto>>.CreateFailure("Error retrieving featured tools");
+        }
+    }
+
+    public async Task<ApiResponse<List<ToolDto>>> GetPopularToolsAsync(int count)
+    {
+        try
+        {
+            var tools = await _context.Tools
+                .Include(t => t.Owner)
+                .Include(t => t.Images)
+                .Where(t => t.IsApproved && !t.IsDeleted)
+                .OrderByDescending(t => t.ViewCount)
+                .ThenByDescending(t => t.AverageRating)
+                .ThenByDescending(t => t.ReviewCount)
+                .Take(count)
+                .ToListAsync();
+
+            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+            return ApiResponse<List<ToolDto>>.CreateSuccess(toolDtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting popular tools");
+            return ApiResponse<List<ToolDto>>.CreateFailure("Error retrieving popular tools");
         }
     }
 

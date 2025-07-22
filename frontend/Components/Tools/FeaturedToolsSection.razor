@@ -5,6 +5,7 @@
 @inject IToolService ToolService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject IUrlService UrlService
 
 @if (IsLoading)
 {
@@ -39,7 +40,7 @@ else if (FeaturedTools.Any())
                         <MudCard Class="featured-tool-card cursor-pointer hover-elevation-4" 
                                 @onclick="() => NavigateToTool(tool.Id)">
                             <MudCardMedia 
-                                Image="@(tool.ImageUrls.FirstOrDefault() ?? "/images/tool-placeholder.jpg")" 
+                                Image="@(UrlService.GetFileUrl(tool.ImageUrls.FirstOrDefault()) ?? "/images/tool-placeholder.jpg")" 
                                 Height="200"
                                 Class="tool-image" />
                             
