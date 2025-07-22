@@ -9,6 +9,7 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
+@inject AuthenticationStateProvider AuthStateProvider
 
 <PageTitle>@(bundle?.Name ?? "Bundle") - NeighborTools</PageTitle>
 
@@ -159,17 +160,38 @@ else
                             </MudStack>
                         }
 
-                        <!-- Action Button -->
+                        <!-- Action Buttons -->
                         <AuthorizeView>
                             <Authorized>
-                                <MudButton Variant="Variant.Filled" 
-                                         Color="Color.Primary" 
-                                         Size="Size.Large"
-                                         StartIcon="@Icons.Material.Filled.ShoppingCart"
-                                         Disabled="!bundle.IsAvailable"
-                                         OnClick="OpenRentalDialog">
-                                    Rent Bundle
-                                </MudButton>
+                                @if (isOwner)
+                                {
+                                    <MudStack Row Spacing="2">
+                                        <MudButton Variant="Variant.Outlined" 
+                                                 Color="Color.Secondary" 
+                                                 StartIcon="@Icons.Material.Filled.Edit"
+                                                 OnClick="EditBundle">
+                                            Edit
+                                        </MudButton>
+                                        
+                                        <MudButton Variant="Variant.Outlined" 
+                                                 Color="Color.Error" 
+                                                 StartIcon="@Icons.Material.Filled.Delete"
+                                                 OnClick="DeleteBundle">
+                                            Delete
+                                        </MudButton>
+                                    </MudStack>
+                                }
+                                else
+                                {
+                                    <MudButton Variant="Variant.Filled" 
+                                             Color="Color.Primary" 
+                                             Size="Size.Large"
+                                             StartIcon="@Icons.Material.Filled.ShoppingCart"
+                                             Disabled="!bundle.IsAvailable"
+                                             OnClick="OpenRentalDialog">
+                                        Rent Bundle
+                                    </MudButton>
+                                }
                             </Authorized>
                             <NotAuthorized>
                                 <MudButton Variant="Variant.Filled" 
@@ -360,9 +382,15 @@ else
     private bool isLoading = true;
     private bool isCheckingAvailability = false;
     private BundleAvailabilityResponseModel? quickAvailability;
+    private bool isOwner = false;
+    private string? currentUserId;
 
     protected override async Task OnInitializedAsync()
     {
+        // Get current user
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        currentUserId = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+        
         await LoadBundle();
         if (bundle != null)
         {
@@ -390,6 +418,7 @@ else
             if (result.Success && result.Data != null)
             {
                 bundle = result.Data;
+                isOwner = bundle.UserId == currentUserId;
             }
             else
             {
@@ -527,5 +556,58 @@ else
             return "All tools available";
 
         return $"Unavailable tools:\n{string.Join("\n", unavailableTools)}";
+    }
+
+    private void EditBundle()
+    {
+        if (bundle != null)
+        {
+            Navigation.NavigateTo($"/bundles/{bundle.Id}/edit");
+        }
+    }
+
+    private async Task DeleteBundle()
+    {
+        if (bundle == null) return;
+
+        var parameters = new DialogParameters
+        {
+            { "Title", "Delete Bundle" },
+            { "Message", $"Are you sure you want to delete '{bundle.Name}'? This action cannot be undone." },
+            { "ConfirmText", "Delete" },
+            { "ConfirmColor", Color.Error }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = DialogService.Show<frontend.Components.ConfirmationDialog>("Delete Bundle", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is frontend.Models.ConfirmationDialogResult dialogResult && dialogResult.Confirmed)
+        {
+            try
+            {
+                var deleteResult = await BundleService.DeleteBundleAsync(bundle.Id);
+                
+                if (deleteResult.Success)
+                {
+                    Snackbar.Add($"Bundle '{bundle.Name}' deleted successfully", Severity.Success);
+                    Navigation.NavigateTo("/my-bundles");
+                }
+                else
+                {
+                    Snackbar.Add(deleteResult.Message ?? "Failed to delete bundle", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Failed to delete bundle: {ex.Message}", Severity.Error);
+            }
+        }
     }
 }

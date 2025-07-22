@@ -16,5 +16,6 @@ public record CreateToolCommand(
     string Location,
     string OwnerId,
     int? LeadTimeHours = null,
-    List<string>? ImageUrls = null
+    List<string>? ImageUrls = null,
+    string? Tags = null
 );

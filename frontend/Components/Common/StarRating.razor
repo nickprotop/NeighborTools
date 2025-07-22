@@ -1,0 +1,106 @@
+@using MudBlazor
+
+<div class="star-rating">
+    @if (Interactive)
+    {
+        @for (int i = 1; i <= MaxRating; i++)
+        {
+            var starIndex = i;
+            <MudIconButton 
+                Icon="@GetStarIcon(starIndex)"
+                Color="@(starIndex <= (HoverRating ?? Value) ? Color.Warning : Color.Default)"
+                Size="@Size"
+                @onclick="() => OnStarClick(starIndex)"
+                @onmouseover="() => OnStarHover(starIndex)"
+                @onmouseleave="() => OnStarLeave()" />
+        }
+    }
+    else
+    {
+        @for (int i = 1; i <= MaxRating; i++)
+        {
+            var starIndex = i;
+            <MudIcon 
+                Icon="@GetStarIcon(starIndex)"
+                Color="@(starIndex <= Value ? Color.Warning : Color.Default)"
+                Size="@Size" />
+        }
+    }
+    
+    @if (ShowRating && Value > 0)
+    {
+        <span class="rating-text ml-2">@Value.ToString("F1")</span>
+    }
+    
+    @if (ShowCount && ReviewCount > 0)
+    {
+        <span class="review-count ml-1 text-muted">(@ReviewCount @(ReviewCount == 1 ? "review" : "reviews"))</span>
+    }
+</div>
+
+@code {
+    [Parameter] public double Value { get; set; }
+    [Parameter] public EventCallback<double> ValueChanged { get; set; }
+    [Parameter] public int MaxRating { get; set; } = 5;
+    [Parameter] public bool Interactive { get; set; } = false;
+    [Parameter] public bool ShowRating { get; set; } = false;
+    [Parameter] public bool ShowCount { get; set; } = false;
+    [Parameter] public int ReviewCount { get; set; }
+    [Parameter] public Size Size { get; set; } = Size.Medium;
+
+    private double? HoverRating { get; set; }
+
+    private string GetStarIcon(int starIndex)
+    {
+        var currentValue = HoverRating ?? Value;
+        
+        if (starIndex <= Math.Floor(currentValue))
+            return Icons.Material.Filled.Star;
+        else if (starIndex <= currentValue)
+            return Icons.Material.Filled.StarHalf;
+        else
+            return Icons.Material.Outlined.Star;
+    }
+
+    private async Task OnStarClick(int rating)
+    {
+        if (!Interactive) return;
+        
+        Value = rating;
+        await ValueChanged.InvokeAsync(Value);
+        HoverRating = null;
+    }
+
+    private void OnStarHover(int rating)
+    {
+        if (!Interactive) return;
+        HoverRating = rating;
+    }
+
+    private void OnStarLeave()
+    {
+        if (!Interactive) return;
+        HoverRating = null;
+    }
+}
+
+<style>
+    .star-rating {
+        display: flex;
+        align-items: center;
+    }
+    
+    .star-rating .mud-icon-button {
+        padding: 2px;
+        min-width: auto;
+        min-height: auto;
+    }
+    
+    .rating-text {
+        font-weight: 500;
+    }
+    
+    .review-count {
+        font-size: 0.875rem;
+    }
+</style>

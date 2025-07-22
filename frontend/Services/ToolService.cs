@@ -16,6 +16,14 @@ public interface IToolService
     Task<ApiResponse<List<Tool>>> SearchToolsAsync(string query);
     Task<ApiResponse<ToolRentalPreferences>> GetToolRentalPreferencesAsync(string toolId);
     Task<ApiResponse<List<string>>> UploadImagesAsync(List<IBrowserFile> files);
+    
+    // New feature methods
+    Task<ApiResponse> IncrementViewCountAsync(string toolId);
+    Task<ApiResponse<PagedResult<ToolReview>>> GetToolReviewsAsync(string toolId, int page = 1, int pageSize = 10);
+    Task<ApiResponse<ToolReview>> CreateToolReviewAsync(string toolId, CreateToolReviewRequest request);
+    Task<ApiResponse<List<Tool>>> GetFeaturedToolsAsync(int count = 6);
+    Task<ApiResponse<List<TagDto>>> GetPopularTagsAsync(int count = 20);
+    Task<ApiResponse<PagedResult<Tool>>> SearchToolsAdvancedAsync(ToolSearchRequest request);
 }
 
 public class ToolService : IToolService
@@ -266,6 +274,177 @@ public class ToolService : IToolService
             { 
                 Success = false, 
                 Message = $"Failed to upload images: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse> IncrementViewCountAsync(string toolId)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync($"/api/tools/{toolId}/views", null);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse 
+            { 
+                Success = false, 
+                Message = $"Failed to increment view count: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<PagedResult<ToolReview>>> GetToolReviewsAsync(string toolId, int page = 1, int pageSize = 10)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/tools/{toolId}/reviews?page={page}&pageSize={pageSize}");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<PagedResult<ToolReview>>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<PagedResult<ToolReview>> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<PagedResult<ToolReview>> 
+            { 
+                Success = false, 
+                Message = $"Failed to retrieve tool reviews: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<ToolReview>> CreateToolReviewAsync(string toolId, CreateToolReviewRequest request)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync($"/api/tools/{toolId}/reviews", request);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<ToolReview>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<ToolReview> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ToolReview> 
+            { 
+                Success = false, 
+                Message = $"Failed to create tool review: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<List<Tool>>> GetFeaturedToolsAsync(int count = 6)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/tools/featured?count={count}");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<List<Tool>>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<List<Tool>> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<Tool>> 
+            { 
+                Success = false, 
+                Message = $"Failed to retrieve featured tools: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<List<TagDto>>> GetPopularTagsAsync(int count = 20)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/tools/tags?count={count}");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<List<TagDto>>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<List<TagDto>> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<TagDto>> 
+            { 
+                Success = false, 
+                Message = $"Failed to retrieve popular tags: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<PagedResult<Tool>>> SearchToolsAdvancedAsync(ToolSearchRequest request)
+    {
+        try
+        {
+            var queryParams = new List<string>();
+            
+            if (!string.IsNullOrEmpty(request.Query))
+                queryParams.Add($"query={Uri.EscapeDataString(request.Query)}");
+            if (!string.IsNullOrEmpty(request.Category))
+                queryParams.Add($"category={Uri.EscapeDataString(request.Category)}");
+            if (!string.IsNullOrEmpty(request.Tags))
+                queryParams.Add($"tags={Uri.EscapeDataString(request.Tags)}");
+            if (request.MinPrice.HasValue)
+                queryParams.Add($"minPrice={request.MinPrice}");
+            if (request.MaxPrice.HasValue)
+                queryParams.Add($"maxPrice={request.MaxPrice}");
+            if (!string.IsNullOrEmpty(request.Location))
+                queryParams.Add($"location={Uri.EscapeDataString(request.Location)}");
+            if (request.IsAvailable.HasValue)
+                queryParams.Add($"isAvailable={request.IsAvailable}");
+            if (request.IsFeatured.HasValue)
+                queryParams.Add($"isFeatured={request.IsFeatured}");
+            if (request.MinRating.HasValue)
+                queryParams.Add($"minRating={request.MinRating}");
+            if (!string.IsNullOrEmpty(request.SortBy))
+                queryParams.Add($"sortBy={Uri.EscapeDataString(request.SortBy)}");
+            
+            queryParams.Add($"page={request.Page}");
+            queryParams.Add($"pageSize={request.PageSize}");
+            
+            var queryString = string.Join("&", queryParams);
+            var response = await _httpClient.GetAsync($"/api/tools/search?{queryString}");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<PagedResult<Tool>>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<PagedResult<Tool>> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<PagedResult<Tool>> 
+            { 
+                Success = false, 
+                Message = $"Failed to search tools: {ex.Message}" 
             };
         }
     }

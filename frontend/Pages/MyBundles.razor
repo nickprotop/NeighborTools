@@ -206,58 +206,6 @@
                                         </MudStack>
                                     </MudCardContent>
 
-                                    <MudCardActions>
-                                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Style="width: 100%;">
-                                            <MudStack Row Spacing="1">
-                                                <MudButton Size="Size.Small" 
-                                                         Color="Color.Primary" 
-                                                         Variant="Variant.Text"
-                                                         StartIcon="@Icons.Material.Filled.Visibility"
-                                                         OnClick="@(() => Navigation.NavigateTo($"/bundles/{bundle.Id}"))">
-                                                    View
-                                                </MudButton>
-                                                <MudButton Size="Size.Small" 
-                                                         Color="Color.Secondary" 
-                                                         Variant="Variant.Text"
-                                                         StartIcon="@Icons.Material.Filled.Edit"
-                                                         OnClick="@(() => Navigation.NavigateTo($"/bundles/{bundle.Id}/edit"))">
-                                                    Edit
-                                                </MudButton>
-                                            </MudStack>
-                                            
-                                            <MudMenu Icon="@Icons.Material.Filled.MoreVert" Size="Size.Small">
-                                                <MudMenuItem OnClick="@(() => TogglePublishStatus(bundle))">
-                                                    @if (bundle.IsPublished)
-                                                    {
-                                                        <MudText>
-                                                            <MudIcon Icon="@Icons.Material.Filled.VisibilityOff" Size="Size.Small" Class="mr-2" />
-                                                            Unpublish
-                                                        </MudText>
-                                                    }
-                                                    else
-                                                    {
-                                                        <MudText>
-                                                            <MudIcon Icon="@Icons.Material.Filled.Publish" Size="Size.Small" Class="mr-2" />
-                                                            Publish
-                                                        </MudText>
-                                                    }
-                                                </MudMenuItem>
-                                                <MudMenuItem OnClick="@(() => DuplicateBundle(bundle))">
-                                                    <MudText>
-                                                        <MudIcon Icon="@Icons.Material.Filled.ContentCopy" Size="Size.Small" Class="mr-2" />
-                                                        Duplicate
-                                                    </MudText>
-                                                </MudMenuItem>
-                                                <MudDivider />
-                                                <MudMenuItem OnClick="@(() => DeleteBundle(bundle))" Style="color: var(--mud-palette-error);">
-                                                    <MudText Color="Color.Error">
-                                                        <MudIcon Icon="@Icons.Material.Filled.Delete" Size="Size.Small" Class="mr-2" />
-                                                        Delete
-                                                    </MudText>
-                                                </MudMenuItem>
-                                            </MudMenu>
-                                        </MudStack>
-                                    </MudCardActions>
                                 </MudCard>
                             </MudItem>
                         }

@@ -1,0 +1,212 @@
+@using frontend.Models
+@using frontend.Services
+@using frontend.Components.Common
+@using MudBlazor
+@inject IToolService ToolService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+
+@if (IsLoading)
+{
+    <MudCard Class="ma-4">
+        <MudCardContent>
+            <MudSkeleton Height="200px" />
+            <MudSkeleton Height="40px" Class="mt-2" />
+            <MudSkeleton Height="60px" Class="mt-2" />
+        </MudCardContent>
+    </MudCard>
+}
+else if (FeaturedTools.Any())
+{
+    <MudCard Class="ma-4">
+        <MudCardHeader>
+            <CardHeaderContent>
+                <MudText Typo="Typo.h5" Class="d-flex align-center">
+                    <MudIcon Icon="Icons.Material.Filled.Star" Color="Color.Warning" Class="mr-2" />
+                    Featured Tools
+                </MudText>
+                <MudText Typo="Typo.body2" Class="text-muted">
+                    Discover our top-rated and most popular tools
+                </MudText>
+            </CardHeaderContent>
+        </MudCardHeader>
+        
+        <MudCardContent>
+            <MudGrid>
+                @foreach (var tool in FeaturedTools)
+                {
+                    <MudItem xs="12" sm="6" md="4" lg="3">
+                        <MudCard Class="featured-tool-card cursor-pointer hover-elevation-4" 
+                                @onclick="() => NavigateToTool(tool.Id)">
+                            <MudCardMedia 
+                                Image="@(tool.ImageUrls.FirstOrDefault() ?? "/images/tool-placeholder.jpg")" 
+                                Height="200"
+                                Class="tool-image" />
+                            
+                            <MudCardContent Class="pa-3">
+                                <div class="d-flex align-center justify-space-between mb-2">
+                                    <MudChip T="string"
+                                            Icon="Icons.Material.Filled.Star" 
+                                            Color="Color.Warning" 
+                                            Size="Size.Small"
+                                            Label="true">
+                                        Featured
+                                    </MudChip>
+                                    <MudText Typo="Typo.body2" Class="text-success font-weight-bold">
+                                        $@tool.DailyRate.ToString("F0")/day
+                                    </MudText>
+                                </div>
+                                
+                                <MudText Typo="Typo.h6" Class="tool-name mb-1">
+                                    @tool.Name
+                                </MudText>
+                                
+                                <MudText Typo="Typo.body2" Class="text-muted mb-2 tool-description">
+                                    @tool.Description
+                                </MudText>
+                                
+                                <div class="d-flex align-center justify-space-between mb-2">
+                                    <StarRating Value="@(tool.Rating ?? 0)" 
+                                               ShowRating="true" 
+                                               ShowCount="true"
+                                               ReviewCount="@tool.ReviewCount"
+                                               Size="Size.Small" />
+                                </div>
+                                
+                                @if (tool.TagList.Any())
+                                {
+                                    <div class="tool-tags">
+                                        <TagChips Tags="@tool.TagList.Take(3).ToList()" 
+                                                 Size="Size.Small" 
+                                                 Color="Color.Secondary" 
+                                                 Variant="Variant.Outlined" />
+                                        @if (tool.TagList.Count > 3)
+                                        {
+                                            <MudChip T="string"
+                                                    Size="Size.Small" 
+                                                    Color="Color.Default" 
+                                                    Variant="Variant.Text">
+                                                +@(tool.TagList.Count - 3) more
+                                            </MudChip>
+                                        }
+                                    </div>
+                                }
+                                
+                                <div class="d-flex align-center justify-space-between mt-2">
+                                    <MudText Typo="Typo.caption" Class="text-muted">
+                                        <MudIcon Icon="Icons.Material.Filled.LocationOn" Size="Size.Small" />
+                                        @tool.Location
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Class="text-muted">
+                                        <MudIcon Icon="Icons.Material.Filled.Visibility" Size="Size.Small" />
+                                        @tool.ViewCount views
+                                    </MudText>
+                                </div>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+            
+            @if (ShowViewAllButton)
+            {
+                <div class="text-center mt-4">
+                    <MudButton StartIcon="Icons.Material.Filled.Search" 
+                              Color="Color.Primary" 
+                              Variant="Variant.Outlined"
+                              OnClick="NavigateToAllTools">
+                        View All Tools
+                    </MudButton>
+                </div>
+            }
+        </MudCardContent>
+    </MudCard>
+}
+
+@code {
+    [Parameter] public int Count { get; set; } = 6;
+    [Parameter] public bool ShowViewAllButton { get; set; } = true;
+
+    private List<Tool> FeaturedTools = new();
+    private bool IsLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadFeaturedTools();
+    }
+
+    private async Task LoadFeaturedTools()
+    {
+        IsLoading = true;
+        try
+        {
+            var response = await ToolService.GetFeaturedToolsAsync(Count);
+            if (response.Success && response.Data != null)
+            {
+                FeaturedTools = response.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading featured tools: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private void NavigateToTool(string toolId)
+    {
+        Navigation.NavigateTo($"/tools/{toolId}");
+    }
+
+    private void NavigateToAllTools()
+    {
+        Navigation.NavigateTo("/tools");
+    }
+}
+
+<style>
+    .featured-tool-card {
+        transition: all 0.2s ease-in-out;
+        height: 100%;
+    }
+    
+    .featured-tool-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .tool-image {
+        object-fit: cover;
+    }
+    
+    .tool-name {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 3em;
+    }
+    
+    .tool-description {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        min-height: 2.5em;
+    }
+    
+    .tool-tags {
+        margin-top: 8px;
+        min-height: 32px;
+    }
+    
+    .cursor-pointer {
+        cursor: pointer;
+    }
+    
+    .hover-elevation-4:hover {
+        box-shadow: 0px 5px 5px -3px rgba(0,0,0,0.2), 0px 8px 10px 1px rgba(0,0,0,0.14), 0px 3px 14px 2px rgba(0,0,0,0.12) !important;
+    }
+</style>

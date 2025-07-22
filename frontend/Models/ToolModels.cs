@@ -20,10 +20,17 @@ public class Tool
     public string OwnerName { get; set; } = string.Empty;
     public List<string> ImageUrls { get; set; } = new();
     
-    // Additional properties for frontend compatibility
-    public double? Rating { get; set; }
+    // New feature properties
+    public string Tags { get; set; } = string.Empty;
+    public int ViewCount { get; set; }
+    public decimal AverageRating { get; set; }
     public int ReviewCount { get; set; }
+    public bool IsFeatured { get; set; }
     public DateTime CreatedAt { get; set; }
+    
+    // Computed properties for convenience
+    public List<string> TagList => Tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToList();
+    public double? Rating => AverageRating > 0 ? (double)AverageRating : null;
 }
 
 public class ToolRequestBase
@@ -41,6 +48,7 @@ public class ToolRequestBase
     public string Location { get; set; } = string.Empty;
     public int? LeadTimeHours { get; set; }
     public List<string> ImageUrls { get; set; } = new();
+    public string? Tags { get; set; }
 }
 
 public class CreateToolRequest : ToolRequestBase
@@ -146,3 +154,48 @@ public class FavoriteStatusDto
     public bool IsFavorited { get; set; }
     public string? FavoriteId { get; set; }
 }
+
+// Tool Review models
+public class ToolReview
+{
+    public string Id { get; set; } = string.Empty;
+    public string ToolId { get; set; } = string.Empty;
+    public string ReviewerId { get; set; } = string.Empty;
+    public string ReviewerName { get; set; } = string.Empty;
+    public int Rating { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Comment { get; set; } = string.Empty;
+    public DateTime CreatedAt { get; set; }
+}
+
+public class CreateToolReviewRequest
+{
+    public int Rating { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string Comment { get; set; } = string.Empty;
+}
+
+// Tag models
+public class TagDto
+{
+    public string Name { get; set; } = string.Empty;
+    public int Count { get; set; }
+}
+
+// Search models
+public class ToolSearchRequest
+{
+    public string? Query { get; set; }
+    public string? Category { get; set; }
+    public string? Tags { get; set; }
+    public decimal? MinPrice { get; set; }
+    public decimal? MaxPrice { get; set; }
+    public string? Location { get; set; }
+    public bool? IsAvailable { get; set; }
+    public bool? IsFeatured { get; set; }
+    public decimal? MinRating { get; set; }
+    public string? SortBy { get; set; } = "featured";
+    public int Page { get; set; } = 1;
+    public int PageSize { get; set; } = 12;
+}
+

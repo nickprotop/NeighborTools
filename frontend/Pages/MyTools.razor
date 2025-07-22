@@ -187,21 +187,6 @@
                         }
                     </MudCardContent>
                     
-                    <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
-                        <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true">
-                            <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="() => EditTool(tool.Id ?? string.Empty)">
-                                Edit
-                            </MudButton>
-                            <MudButton StartIcon="@Icons.Material.Filled.Visibility" OnClick="() => ViewTool(tool.Id ?? string.Empty)">
-                                View
-                            </MudButton>
-                            <MudButton StartIcon="@Icons.Material.Filled.Delete" 
-                                       Color="Color.Error" 
-                                       OnClick="() => DeleteTool(tool.Id ?? string.Empty, tool.Name ?? string.Empty)">
-                                Delete
-                            </MudButton>
-                        </MudButtonGroup>
-                    </MudCardActions>
                 </MudCard>
             </MudItem>
             }
@@ -341,21 +326,6 @@
                                 </div>
                             </MudCardContent>
                             
-                            <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
-                                <MudButtonGroup Variant="Variant.Outlined" Color="Color.Primary" FullWidth="true">
-                                    <MudButton StartIcon="@Icons.Material.Filled.Edit" OnClick="() => EditBundle(bundle.Id)">
-                                        Edit
-                                    </MudButton>
-                                    <MudButton StartIcon="@Icons.Material.Filled.Visibility" OnClick="() => ViewBundle(bundle.Id)">
-                                        View
-                                    </MudButton>
-                                    <MudButton StartIcon="@Icons.Material.Filled.Delete" 
-                                               Color="Color.Error" 
-                                               OnClick="() => DeleteBundle(bundle.Id, bundle.Name)">
-                                        Delete
-                                    </MudButton>
-                                </MudButtonGroup>
-                            </MudCardActions>
                         </MudCard>
                     </MudItem>
                 }

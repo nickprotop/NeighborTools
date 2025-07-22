@@ -4,6 +4,8 @@
 @using frontend.Models
 @using frontend.Services
 @using frontend.Components
+@using frontend.Components.Common
+@using frontend.Components.Tools
 @using frontend.Components.Messages
 @using System.Web
 @inject IToolService ToolService
@@ -144,16 +146,47 @@ else if (tool != null)
                     </MudAlert>
                 }
 
-                <!-- Rating -->
-                @if (tool.Rating.HasValue)
+                <!-- Rating & Tags -->
+                @if (tool.Rating.HasValue || tool.TagList.Any())
                 {
                     <MudDivider Class="my-4" />
-                    <div class="d-flex align-center gap-2 mb-4">
-                        <MudText Typo="Typo.h6" Color="Color.Primary">Rating</MudText>
-                        <MudRating ReadOnly="true" SelectedValue="@((int)tool.Rating.Value)" MaxValue="5" Size="Size.Medium" />
-                        <MudText Typo="Typo.body1" Color="Color.Secondary">
-                            (@tool.ReviewCount reviews)
+                    
+                    @if (tool.Rating.HasValue)
+                    {
+                        <div class="d-flex align-center gap-2 mb-3">
+                            <MudText Typo="Typo.h6" Color="Color.Primary">Rating</MudText>
+                            <StarRating Value="@(tool.Rating.Value)" 
+                                       ShowRating="true" 
+                                       ShowCount="true"
+                                       ReviewCount="@tool.ReviewCount" />
+                        </div>
+                    }
+                    
+                    @if (tool.TagList.Any())
+                    {
+                        <div class="mb-3">
+                            <MudText Typo="Typo.h6" Color="Color.Primary" Class="mb-2">Tags</MudText>
+                            <TagChips Tags="@tool.TagList" 
+                                     Clickable="true" 
+                                     OnTagClicked="OnTagClicked" />
+                        </div>
+                    }
+                    
+                    <!-- View Count -->
+                    <div class="d-flex align-center gap-2">
+                        <MudIcon Icon="Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Secondary" />
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            @tool.ViewCount views
                         </MudText>
+                        @if (tool.IsFeatured)
+                        {
+                            <MudChip T="string" Icon="Icons.Material.Filled.Star" 
+                                    Color="Color.Warning" 
+                                    Size="Size.Small"
+                                    Label="true">
+                                Featured
+                            </MudChip>
+                        }
                     </div>
                 }
 
@@ -197,7 +230,23 @@ else if (tool != null)
             </MudButton>
             
             <div class="d-flex gap-3">
-                @if (!isOwner)
+                @if (isOwner)
+                {
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Secondary" 
+                               StartIcon="@Icons.Material.Filled.Edit"
+                               OnClick="EditTool">
+                        Edit
+                    </MudButton>
+                    
+                    <MudButton Variant="Variant.Outlined" 
+                               Color="Color.Error" 
+                               StartIcon="@Icons.Material.Filled.Delete"
+                               OnClick="DeleteTool">
+                        Delete
+                    </MudButton>
+                }
+                else
                 {
                     <FavoriteButton ToolId="@tool.Id" 
                                    OwnerUserId="@tool.OwnerId" 
@@ -213,17 +262,27 @@ else if (tool != null)
                     Share
                 </MudButton>
                 
-                <MudButton Variant="Variant.Filled" 
-                           Color="@(tool.IsAvailable ? Color.Primary : Color.Secondary)" 
-                           Size="Size.Large"
-                           StartIcon="@(tool.IsAvailable ? Icons.Material.Filled.ShoppingCart : Icons.Material.Filled.Block)"
-                           Disabled="@(!tool.IsAvailable)"
-                           OnClick="RequestRental">
-                    @(tool.IsAvailable ? "Request Rental" : "Unavailable")
-                </MudButton>
+                @if (!isOwner)
+                {
+                    <MudButton Variant="Variant.Filled" 
+                               Color="@(tool.IsAvailable ? Color.Primary : Color.Secondary)" 
+                               Size="Size.Large"
+                               StartIcon="@(tool.IsAvailable ? Icons.Material.Filled.ShoppingCart : Icons.Material.Filled.Block)"
+                               Disabled="@(!tool.IsAvailable)"
+                               OnClick="RequestRental">
+                        @(tool.IsAvailable ? "Request Rental" : "Unavailable")
+                    </MudButton>
+                }
             </div>
         </div>
     </MudPaper>
+    
+    <!-- Reviews Section -->
+    @if (tool != null)
+    {
+        <ToolReviewsSection Tool="@tool" 
+                           CanReview="@(!isOwner && canUserReview)" />
+    }
 }
 
 @code {
@@ -235,6 +294,7 @@ else if (tool != null)
     private List<BreadcrumbItem> _breadcrumbItems = new();
     private bool isOwner = false;
     private string? currentUserId;
+    private bool canUserReview = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -268,6 +328,22 @@ else if (tool != null)
             {
                 tool = result.Data;
                 isOwner = tool.OwnerId == currentUserId;
+                
+                // Increment view count (fire and forget)
+                _ = Task.Run(async () =>
+                {
+                    try
+                    {
+                        await ToolService.IncrementViewCountAsync(tool.Id);
+                    }
+                    catch
+                    {
+                        // Ignore view count errors
+                    }
+                });
+                
+                // Check if user can review (simplified logic - can be enhanced later)
+                canUserReview = !isOwner && !string.IsNullOrEmpty(currentUserId);
             }
             else
             {
@@ -365,5 +441,64 @@ else if (tool != null)
         {
             Snackbar.Add("Message sent successfully!", Severity.Success);
         }
+    }
+
+    private void EditTool()
+    {
+        if (tool != null)
+        {
+            Navigation.NavigateTo($"/tools/edit/{tool.Id}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
+        }
+    }
+
+    private async Task DeleteTool()
+    {
+        if (tool == null) return;
+
+        var parameters = new DialogParameters
+        {
+            { "Title", "Delete Tool" },
+            { "Message", $"Are you sure you want to delete '{tool.Name}'? This action cannot be undone." },
+            { "ConfirmText", "Delete" },
+            { "ConfirmColor", Color.Error }
+        };
+
+        var options = new DialogOptions
+        {
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = DialogService.Show<frontend.Components.ConfirmationDialog>("Delete Tool", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is frontend.Models.ConfirmationDialogResult dialogResult && dialogResult.Confirmed)
+        {
+            try
+            {
+                var deleteResult = await ToolService.DeleteToolAsync(tool.Id);
+                
+                if (deleteResult.Success)
+                {
+                    Snackbar.Add($"Tool '{tool.Name}' deleted successfully", Severity.Success);
+                    Navigation.NavigateTo("/my-tools");
+                }
+                else
+                {
+                    Snackbar.Add(deleteResult.Message ?? "Failed to delete tool", Severity.Error);
+                }
+            }
+            catch (Exception ex)
+            {
+                Snackbar.Add($"Failed to delete tool: {ex.Message}", Severity.Error);
+            }
+        }
+    }
+    
+    private void OnTagClicked(string tag)
+    {
+        // Navigate to tools page with tag filter
+        Navigation.NavigateTo($"/tools?tags={Uri.EscapeDataString(tag)}");
     }
 }

@@ -1,0 +1,268 @@
+@using frontend.Models
+@using frontend.Services
+@using frontend.Components.Common
+@using MudBlazor
+@inject IToolService ToolService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+
+<MudCard Class="mt-4">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="Icons.Material.Filled.RateReview" Class="mr-2" />
+                Reviews (@Tool.ReviewCount)
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            @if (CanReview)
+            {
+                <MudButton StartIcon="Icons.Material.Filled.Add" 
+                          Color="Color.Primary" 
+                          Variant="Variant.Outlined"
+                          OnClick="OpenCreateReviewDialog">
+                    Write Review
+                </MudButton>
+            }
+        </CardHeaderActions>
+    </MudCardHeader>
+    
+    <MudCardContent>
+        @if (IsLoading)
+        {
+            <MudProgressLinear Indeterminate="true" />
+        }
+        else if (Reviews.Any())
+        {
+            @foreach (var review in Reviews)
+            {
+                <MudDivider Class="my-3" />
+                <div class="review-item">
+                    <div class="d-flex justify-space-between align-center mb-2">
+                        <div class="d-flex align-center">
+                            <MudAvatar Size="Size.Small" Class="mr-2">
+                                @review.ReviewerName.First()
+                            </MudAvatar>
+                            <div>
+                                <MudText Typo="Typo.body1" Class="font-weight-bold">
+                                    @review.ReviewerName
+                                </MudText>
+                                <MudText Typo="Typo.caption" Class="text-muted">
+                                    @review.CreatedAt.ToString("MMM dd, yyyy")
+                                </MudText>
+                            </div>
+                        </div>
+                        <StarRating Value="@review.Rating" Size="Size.Small" />
+                    </div>
+                    
+                    @if (!string.IsNullOrEmpty(review.Title))
+                    {
+                        <MudText Typo="Typo.body1" Class="font-weight-medium mb-1">
+                            @review.Title
+                        </MudText>
+                    }
+                    
+                    <MudText Typo="Typo.body2">
+                        @review.Comment
+                    </MudText>
+                </div>
+            }
+            
+            @if (TotalPages > 1)
+            {
+                <div class="d-flex justify-center mt-4">
+                    <MudPagination 
+                        Count="TotalPages" 
+                        Selected="CurrentPage" 
+                        SelectedChanged="OnPageChanged" />
+                </div>
+            }
+        }
+        else if (!IsLoading)
+        {
+            <div class="text-center py-8">
+                <MudIcon Icon="Icons.Material.Outlined.RateReview" Size="Size.Large" Class="text-muted mb-2" />
+                <MudText Typo="Typo.body1" Class="text-muted">
+                    No reviews yet. Be the first to review this tool!
+                </MudText>
+            </div>
+        }
+    </MudCardContent>
+</MudCard>
+
+<!-- Create Review Dialog -->
+<MudDialog @bind-Visible="ShowCreateReviewDialog" Options="DialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Write a Review</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="ReviewForm" @bind-IsValid="IsReviewFormValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.body1" Class="mb-2">Rating</MudText>
+                    <StarRating Value="@((double)NewReview.Rating)" 
+                               ValueChanged="@((double value) => NewReview.Rating = (int)value)"
+                               Interactive="true" 
+                               Size="Size.Large" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="NewReview.Title"
+                                 Label="Review Title"
+                                 Variant="Variant.Outlined"
+                                 MaxLength="100"
+                                 Counter="100"
+                                 HelperText="Give your review a title (optional)" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="NewReview.Comment"
+                                 Label="Review Comment"
+                                 Variant="Variant.Outlined"
+                                 Lines="4"
+                                 MaxLength="1000"
+                                 Counter="1000"
+                                 Required="true"
+                                 RequiredError="Please write a comment"
+                                 HelperText="Share your experience with this tool" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCreateReviewDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled"
+                   OnClick="SubmitReview"
+                   Disabled="!IsReviewFormValid || IsSubmittingReview">
+            @if (IsSubmittingReview)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <span class="ml-2">Submitting...</span>
+            }
+            else
+            {
+                <text>Submit Review</text>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public Tool Tool { get; set; } = new();
+    [Parameter] public bool CanReview { get; set; } = false;
+
+    private List<ToolReview> Reviews = new();
+    private bool IsLoading = false;
+    private int CurrentPage = 1;
+    private int TotalPages = 1;
+    private const int PageSize = 10;
+
+    private bool ShowCreateReviewDialog = false;
+    private CreateToolReviewRequest NewReview = new();
+    private MudForm ReviewForm;
+    private bool IsReviewFormValid = false;
+    private bool IsSubmittingReview = false;
+
+    private DialogOptions DialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true,
+        CloseButton = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadReviews();
+    }
+
+    private async Task LoadReviews()
+    {
+        IsLoading = true;
+        try
+        {
+            var response = await ToolService.GetToolReviewsAsync(Tool.Id, CurrentPage, PageSize);
+            if (response.Success && response.Data != null)
+            {
+                Reviews = response.Data.Items;
+                TotalPages = response.Data.TotalPages;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading reviews: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsLoading = false;
+        }
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        CurrentPage = page;
+        await LoadReviews();
+        await JSRuntime.InvokeVoidAsync("scrollToElement", ".review-section");
+    }
+
+    private void OpenCreateReviewDialog()
+    {
+        NewReview = new CreateToolReviewRequest();
+        ShowCreateReviewDialog = true;
+    }
+
+    private void CloseCreateReviewDialog()
+    {
+        ShowCreateReviewDialog = false;
+        NewReview = new CreateToolReviewRequest();
+    }
+
+    private async Task SubmitReview()
+    {
+        if (!IsReviewFormValid || NewReview.Rating == 0)
+        {
+            Snackbar.Add("Please provide a rating and comment", Severity.Warning);
+            return;
+        }
+
+        IsSubmittingReview = true;
+        try
+        {
+            var response = await ToolService.CreateToolReviewAsync(Tool.Id, NewReview);
+            if (response.Success)
+            {
+                Snackbar.Add("Review submitted successfully!", Severity.Success);
+                CloseCreateReviewDialog();
+                
+                // Reload reviews and update tool info
+                CurrentPage = 1;
+                await LoadReviews();
+                
+                // Notify parent to refresh tool data
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add(response.Message, Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error submitting review: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsSubmittingReview = false;
+        }
+    }
+}
+
+<style>
+    .review-item {
+        padding: 16px 0;
+    }
+    
+    .review-item:first-of-type {
+        padding-top: 0;
+    }
+</style>

@@ -17,6 +17,13 @@ public class Tool : BaseEntity
     public int? LeadTimeHours { get; set; } // Nullable - falls back to owner's default if not set
     public string OwnerId { get; set; } = string.Empty;
     
+    // New feature fields
+    public string Tags { get; set; } = string.Empty; // Comma-separated tags
+    public int ViewCount { get; set; } = 0;
+    public decimal AverageRating { get; set; } = 0.00m;
+    public int ReviewCount { get; set; } = 0;
+    public bool IsFeatured { get; set; } = false;
+    
     // Approval/Moderation fields
     public bool IsApproved { get; set; } = false;
     public bool PendingApproval { get; set; } = true;

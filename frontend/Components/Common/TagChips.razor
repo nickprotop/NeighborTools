@@ -1,0 +1,58 @@
+@using MudBlazor
+
+<div class="tag-chips">
+    @if (Tags != null && Tags.Any())
+    {
+        @foreach (var tag in Tags)
+        {
+            <MudChip T="string"
+                Text="@tag" 
+                Size="@Size"
+                Color="@Color"
+                Variant="@Variant"
+                Class="@($"ma-1 {ChipClass}")"
+                OnClick="@(Clickable ? () => OnTagClick(tag) : null)"
+                Style="@(Clickable ? "cursor: pointer;" : "")" />
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public List<string> Tags { get; set; } = new();
+    [Parameter] public string TagString { get; set; } = string.Empty;
+    [Parameter] public Size Size { get; set; } = Size.Small;
+    [Parameter] public Color Color { get; set; } = Color.Primary;
+    [Parameter] public Variant Variant { get; set; } = Variant.Outlined;
+    [Parameter] public bool Clickable { get; set; } = false;
+    [Parameter] public EventCallback<string> OnTagClicked { get; set; }
+    [Parameter] public string ChipClass { get; set; } = string.Empty;
+
+    protected override void OnParametersSet()
+    {
+        // If TagString is provided but Tags is empty, parse the TagString
+        if (!string.IsNullOrEmpty(TagString) && !Tags.Any())
+        {
+            Tags = TagString
+                .Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(t => t.Trim())
+                .Where(t => !string.IsNullOrEmpty(t))
+                .ToList();
+        }
+    }
+
+    private async Task OnTagClick(string tag)
+    {
+        if (Clickable && OnTagClicked.HasDelegate)
+        {
+            await OnTagClicked.InvokeAsync(tag);
+        }
+    }
+}
+
+<style>
+    .tag-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 4px;
+    }
+</style>

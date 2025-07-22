@@ -47,5 +47,5 @@ public class RentalDto
     public DateTime CreatedAt { get; set; }  // Added to match frontend
     public DateTime UpdatedAt { get; set; }  // Added to match frontend
     public bool IsPaid { get; set; }
-    public ToolDto? Tool { get; set; }
+    public DTOs.Tools.ToolDto? Tool { get; set; }
 }

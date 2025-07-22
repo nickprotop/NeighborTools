@@ -52,6 +52,72 @@ public class ToolsController : ControllerBase
         if (!result.Success)
             return NotFound(result);
             
+        // Increment view count
+        _ = Task.Run(async () => 
+        {
+            try 
+            {
+                await _toolsService.IncrementViewCountAsync(id);
+            } 
+            catch 
+            {
+                // Log but don't fail the request
+            }
+        });
+            
+        return Ok(result);
+    }
+    
+    [HttpPost("{id}/views")]
+    public async Task<IActionResult> IncrementViewCount(Guid id)
+    {
+        var result = await _toolsService.IncrementViewCountAsync(id);
+        if (!result.Success)
+            return NotFound(result);
+            
+        return Ok(result);
+    }
+    
+    [HttpGet("{id}/reviews")]
+    public async Task<IActionResult> GetToolReviews(Guid id, [FromQuery] int page = 1, [FromQuery] int pageSize = 10)
+    {
+        var result = await _toolsService.GetToolReviewsAsync(id, page, pageSize);
+        return Ok(result);
+    }
+    
+    [HttpPost("{id}/reviews")]
+    [Authorize]
+    public async Task<IActionResult> CreateToolReview(Guid id, [FromBody] CreateToolReviewRequest request)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+            
+        var result = await _toolsService.CreateToolReviewAsync(id, userId, request);
+        if (!result.Success)
+            return BadRequest(result);
+            
+        return Ok(result);
+    }
+    
+    [HttpGet("featured")]
+    public async Task<IActionResult> GetFeaturedTools([FromQuery] int count = 6)
+    {
+        var result = await _toolsService.GetFeaturedToolsAsync(count);
+        return Ok(result);
+    }
+    
+    [HttpGet("tags")]
+    public async Task<IActionResult> GetPopularTags([FromQuery] int count = 20)
+    {
+        var result = await _toolsService.GetPopularTagsAsync(count);
+        return Ok(result);
+    }
+    
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchTools([FromQuery] SearchToolsQuery query)
+    {
+        var result = await _toolsService.SearchToolsAsync(query);
         return Ok(result);
     }
 
@@ -138,7 +204,8 @@ public class ToolsController : ControllerBase
             request.Location,
             userId,
             request.LeadTimeHours,
-            request.ImageUrls
+            request.ImageUrls,
+            request.Tags
         );
         
         var result = await _toolsService.CreateToolAsync(command);
@@ -173,7 +240,8 @@ public class ToolsController : ControllerBase
             request.IsAvailable,
             request.LeadTimeHours,
             userId,
-            request.ImageUrls ?? new List<string>()
+            request.ImageUrls ?? new List<string>(),
+            request.Tags
         );
             
         var result = await _toolsService.UpdateToolAsync(command);

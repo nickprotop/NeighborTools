@@ -5,6 +5,7 @@ using ToolsSharing.Core.Features.Rentals;
 using ToolsSharing.Core.DTOs.Messaging;
 using ToolsSharing.Core.DTOs.Dispute;
 using ToolsSharing.Core.DTOs.Bundle;
+using ToolsSharing.Core.DTOs.Tools;
 
 namespace ToolsSharing.Infrastructure.Mappings;
 

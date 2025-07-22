@@ -6,6 +6,7 @@ using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Features.Tools;
 using ToolsSharing.Core.Interfaces;
+using ToolsSharing.Core.DTOs.Tools;
 using ToolsSharing.Infrastructure.Data;
 
 namespace ToolsSharing.Infrastructure.Features.Tools;
@@ -221,6 +222,7 @@ public class ToolsService : IToolsService
                 IsAvailable = true,
                 LeadTimeHours = command.LeadTimeHours,
                 OwnerId = command.OwnerId,
+                Tags = command.Tags ?? string.Empty,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow,
                 IsDeleted = false,
@@ -293,6 +295,7 @@ public class ToolsService : IToolsService
             tool.Location = command.Location;
             tool.IsAvailable = command.IsAvailable;
             tool.LeadTimeHours = command.LeadTimeHours;
+            tool.Tags = command.Tags ?? string.Empty;
             tool.UpdatedAt = DateTime.UtcNow;
 
             // Update images if provided
@@ -456,5 +459,302 @@ public class ToolsService : IToolsService
         }
 
         return "";
+    }
+
+    public async Task<ApiResponse<bool>> IncrementViewCountAsync(Guid toolId)
+    {
+        try
+        {
+            var tool = await _context.Tools.FirstOrDefaultAsync(t => t.Id == toolId && !t.IsDeleted);
+            if (tool == null)
+                return ApiResponse<bool>.CreateFailure("Tool not found");
+
+            tool.ViewCount++;
+            await _context.SaveChangesAsync();
+
+            return ApiResponse<bool>.CreateSuccess(true, "View count incremented");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error incrementing view count for tool {ToolId}", toolId);
+            return ApiResponse<bool>.CreateFailure("Error incrementing view count");
+        }
+    }
+
+    public async Task<ApiResponse<PagedResult<ToolReviewDto>>> GetToolReviewsAsync(Guid toolId, int page, int pageSize)
+    {
+        try
+        {
+            var query = _context.Reviews
+                .Include(r => r.Reviewer)
+                .Where(r => r.ToolId == toolId && r.Type == ReviewType.ToolReview)
+                .OrderByDescending(r => r.CreatedAt);
+
+            var totalCount = await query.CountAsync();
+            var reviews = await query
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(r => new ToolReviewDto
+                {
+                    Id = r.Id,
+                    ToolId = r.ToolId.Value,
+                    ReviewerId = r.ReviewerId,
+                    ReviewerName = $"{r.Reviewer.FirstName} {r.Reviewer.LastName}".Trim(),
+                    Rating = r.Rating,
+                    Title = r.Title,
+                    Comment = r.Comment,
+                    CreatedAt = r.CreatedAt
+                })
+                .ToListAsync();
+
+            var result = new PagedResult<ToolReviewDto>
+            {
+                Items = reviews,
+                TotalCount = totalCount,
+                PageNumber = page,
+                PageSize = pageSize
+            };
+
+            return ApiResponse<PagedResult<ToolReviewDto>>.CreateSuccess(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting tool reviews for {ToolId}", toolId);
+            return ApiResponse<PagedResult<ToolReviewDto>>.CreateFailure("Error retrieving tool reviews");
+        }
+    }
+
+    public async Task<ApiResponse<ToolReviewDto>> CreateToolReviewAsync(Guid toolId, string userId, CreateToolReviewRequest request)
+    {
+        try
+        {
+            // Check if tool exists
+            var tool = await _context.Tools.FirstOrDefaultAsync(t => t.Id == toolId && !t.IsDeleted);
+            if (tool == null)
+                return ApiResponse<ToolReviewDto>.CreateFailure("Tool not found");
+
+            // Check if user has already reviewed this tool
+            var existingReview = await _context.Reviews
+                .FirstOrDefaultAsync(r => r.ToolId == toolId && r.ReviewerId == userId && r.Type == ReviewType.ToolReview);
+            if (existingReview != null)
+                return ApiResponse<ToolReviewDto>.CreateFailure("You have already reviewed this tool");
+
+            // Check if user has rented this tool (optional business rule)
+            var hasRented = await _context.Rentals
+                .AnyAsync(r => r.ToolId == toolId && r.RenterId == userId && r.Status == RentalStatus.Returned);
+
+            if (!hasRented)
+                return ApiResponse<ToolReviewDto>.CreateFailure("You can only review tools you have rented");
+
+            var review = new Review
+            {
+                Id = Guid.NewGuid(),
+                ToolId = toolId,
+                ReviewerId = userId,
+                RevieweeId = tool.OwnerId,
+                Rating = request.Rating,
+                Title = request.Title,
+                Comment = request.Comment,
+                Type = ReviewType.ToolReview,
+                CreatedAt = DateTime.UtcNow,
+                UpdatedAt = DateTime.UtcNow
+            };
+
+            _context.Reviews.Add(review);
+            await _context.SaveChangesAsync();
+
+            // Update tool statistics
+            await UpdateToolStatisticsAsync(toolId);
+
+            var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == userId);
+            var reviewDto = new ToolReviewDto
+            {
+                Id = review.Id,
+                ToolId = toolId,
+                ReviewerId = userId,
+                ReviewerName = user != null ? $"{user.FirstName} {user.LastName}".Trim() : "Unknown",
+                Rating = review.Rating,
+                Title = review.Title,
+                Comment = review.Comment,
+                CreatedAt = review.CreatedAt
+            };
+
+            return ApiResponse<ToolReviewDto>.CreateSuccess(reviewDto, "Review created successfully");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error creating tool review for {ToolId}", toolId);
+            return ApiResponse<ToolReviewDto>.CreateFailure("Error creating review");
+        }
+    }
+
+    public async Task<ApiResponse<List<ToolDto>>> GetFeaturedToolsAsync(int count)
+    {
+        try
+        {
+            var tools = await _context.Tools
+                .Include(t => t.Owner)
+                .Include(t => t.Images)
+                .Where(t => t.IsFeatured && t.IsApproved && !t.IsDeleted)
+                .OrderByDescending(t => t.AverageRating)
+                .ThenByDescending(t => t.ViewCount)
+                .Take(count)
+                .ToListAsync();
+
+            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+            return ApiResponse<List<ToolDto>>.CreateSuccess(toolDtos);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting featured tools");
+            return ApiResponse<List<ToolDto>>.CreateFailure("Error retrieving featured tools");
+        }
+    }
+
+    public async Task<ApiResponse<List<TagDto>>> GetPopularTagsAsync(int count)
+    {
+        try
+        {
+            var tags = await _context.Tools
+                .Where(t => t.IsApproved && !t.IsDeleted && !string.IsNullOrEmpty(t.Tags))
+                .Select(t => t.Tags)
+                .ToListAsync();
+
+            var tagCounts = new Dictionary<string, int>();
+            foreach (var tagString in tags)
+            {
+                var individualTags = tagString.Split(',', StringSplitOptions.RemoveEmptyEntries);
+                foreach (var tag in individualTags)
+                {
+                    var cleanTag = tag.Trim().ToLower();
+                    if (!string.IsNullOrEmpty(cleanTag))
+                    {
+                        tagCounts[cleanTag] = tagCounts.GetValueOrDefault(cleanTag, 0) + 1;
+                    }
+                }
+            }
+
+            var popularTags = tagCounts
+                .OrderByDescending(kvp => kvp.Value)
+                .Take(count)
+                .Select(kvp => new TagDto { Name = kvp.Key, Count = kvp.Value })
+                .ToList();
+
+            return ApiResponse<List<TagDto>>.CreateSuccess(popularTags);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting popular tags");
+            return ApiResponse<List<TagDto>>.CreateFailure("Error retrieving popular tags");
+        }
+    }
+
+    public async Task<ApiResponse<PagedResult<ToolDto>>> SearchToolsAsync(SearchToolsQuery query)
+    {
+        try
+        {
+            var toolsQuery = _context.Tools
+                .Include(t => t.Owner)
+                .Include(t => t.Images)
+                .Where(t => !t.IsDeleted && t.IsApproved);
+
+            // Apply filters
+            if (!string.IsNullOrEmpty(query.Query))
+            {
+                var searchTerm = query.Query.ToLower();
+                toolsQuery = toolsQuery.Where(t =>
+                    t.Name.ToLower().Contains(searchTerm) ||
+                    t.Description.ToLower().Contains(searchTerm) ||
+                    t.Brand.ToLower().Contains(searchTerm) ||
+                    t.Tags.ToLower().Contains(searchTerm));
+            }
+
+            if (!string.IsNullOrEmpty(query.Category))
+                toolsQuery = toolsQuery.Where(t => t.Category.ToLower() == query.Category.ToLower());
+
+            if (!string.IsNullOrEmpty(query.Tags))
+            {
+                var tagList = query.Tags.ToLower().Split(',').Select(t => t.Trim()).ToList();
+                toolsQuery = toolsQuery.Where(t => tagList.Any(tag => t.Tags.ToLower().Contains(tag)));
+            }
+
+            if (query.MinPrice.HasValue)
+                toolsQuery = toolsQuery.Where(t => t.DailyRate >= query.MinPrice.Value);
+
+            if (query.MaxPrice.HasValue)
+                toolsQuery = toolsQuery.Where(t => t.DailyRate <= query.MaxPrice.Value);
+
+            if (!string.IsNullOrEmpty(query.Location))
+                toolsQuery = toolsQuery.Where(t => t.Location.ToLower().Contains(query.Location.ToLower()));
+
+            if (query.IsAvailable.HasValue)
+                toolsQuery = toolsQuery.Where(t => t.IsAvailable == query.IsAvailable.Value);
+
+            if (query.IsFeatured.HasValue)
+                toolsQuery = toolsQuery.Where(t => t.IsFeatured == query.IsFeatured.Value);
+
+            if (query.MinRating.HasValue)
+                toolsQuery = toolsQuery.Where(t => t.AverageRating >= query.MinRating.Value);
+
+            // Apply sorting
+            toolsQuery = query.SortBy?.ToLower() switch
+            {
+                "price_low" => toolsQuery.OrderBy(t => t.DailyRate),
+                "price_high" => toolsQuery.OrderByDescending(t => t.DailyRate),
+                "rating" => toolsQuery.OrderByDescending(t => t.AverageRating).ThenByDescending(t => t.ReviewCount),
+                "newest" => toolsQuery.OrderByDescending(t => t.CreatedAt),
+                "popular" => toolsQuery.OrderByDescending(t => t.ViewCount).ThenByDescending(t => t.AverageRating),
+                _ => toolsQuery.OrderByDescending(t => t.IsFeatured).ThenByDescending(t => t.AverageRating)
+            };
+
+            var totalCount = await toolsQuery.CountAsync();
+            var tools = await toolsQuery
+                .Skip((query.Page - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .ToListAsync();
+
+            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+
+            var result = new PagedResult<ToolDto>
+            {
+                Items = toolDtos,
+                TotalCount = totalCount,
+                PageNumber = query.Page,
+                PageSize = query.PageSize
+            };
+
+            return ApiResponse<PagedResult<ToolDto>>.CreateSuccess(result);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error searching tools");
+            return ApiResponse<PagedResult<ToolDto>>.CreateFailure("Error searching tools");
+        }
+    }
+
+    private async Task UpdateToolStatisticsAsync(Guid toolId)
+    {
+        try
+        {
+            var tool = await _context.Tools.FirstOrDefaultAsync(t => t.Id == toolId);
+            if (tool != null)
+            {
+                var reviews = await _context.Reviews
+                    .Where(r => r.ToolId == toolId && r.Type == ReviewType.ToolReview)
+                    .ToListAsync();
+
+                if (reviews.Any())
+                {
+                    tool.AverageRating = (decimal)reviews.Average(r => r.Rating);
+                    tool.ReviewCount = reviews.Count;
+                }
+
+                await _context.SaveChangesAsync();
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating tool statistics for {ToolId}", toolId);
+        }
     }
 }
