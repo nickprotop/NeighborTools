@@ -1,10 +1,11 @@
-@using frontend.Models
-@using frontend.Services
+@using ToolsSharing.Frontend.Models
+@using ToolsSharing.Frontend.Services
 @using frontend.Components.Common
 @using MudBlazor
-@inject IToolService ToolService
+@inject BundleService BundleService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject IUrlService UrlService
 
 @if (IsLoading)
 {
@@ -16,36 +17,36 @@
         </MudCardContent>
     </MudCard>
 }
-else if (FeaturedTools.Any())
+else if (FeaturedBundles.Any())
 {
     <MudCard Class="ma-4">
         <MudCardHeader>
             <CardHeaderContent>
                 <MudText Typo="Typo.h5" Class="d-flex align-center">
-                    <MudIcon Icon="@(IsShowingFeatured ? Icons.Material.Filled.Star : Icons.Material.Filled.TrendingUp)" Color="@(IsShowingFeatured ? Color.Warning : Color.Primary)" Class="mr-2" />
-                    @(IsShowingFeatured ? "Featured Tools" : "Popular Tools")
+                    <MudIcon Icon="@(IsShowingFeatured ? Icons.Material.Filled.Inventory : Icons.Material.Filled.TrendingUp)" Color="@(IsShowingFeatured ? Color.Primary : Color.Success)" Class="mr-2" />
+                    @(IsShowingFeatured ? "Featured Tool Bundles" : "Popular Tool Bundles")
                 </MudText>
                 <MudText Typo="Typo.body2" Class="text-muted">
-                    @(IsShowingFeatured ? "Discover our top-rated and most popular tools" : "Discover the most viewed and highly rated tools")
+                    @(IsShowingFeatured ? "Discover our top-rated and most popular tool bundles" : "Discover the most viewed and highly rated bundles")
                 </MudText>
             </CardHeaderContent>
         </MudCardHeader>
         
         <MudCardContent>
             <MudGrid>
-                @foreach (var tool in FeaturedTools)
+                @foreach (var bundle in FeaturedBundles)
                 {
                     <MudItem xs="12" sm="6" md="4" lg="3">
-                        <MudCard Class="featured-tool-card cursor-pointer hover-elevation-4" 
-                                @onclick="() => NavigateToTool(tool.Id)">
+                        <MudCard Class="featured-bundle-card cursor-pointer hover-elevation-4" 
+                                @onclick="() => NavigateToBundle(bundle.Id)">
                             <MudCardMedia 
-                                Image="@(tool.ImageUrls.FirstOrDefault() ?? "/images/tool-placeholder.jpg")" 
+                                Image="@UrlService.GetFileUrl(bundle.ImageUrl)" 
                                 Height="200"
-                                Class="tool-image" />
+                                Class="bundle-image" />
                             
                             <MudCardContent Class="pa-3">
                                 <div class="d-flex align-center justify-space-between mb-2">
-                                    @if (tool.IsFeatured)
+                                    @if (bundle.IsFeatured)
                                     {
                                         <MudChip T="string"
                                                 Icon="Icons.Material.Filled.Star" 
@@ -59,7 +60,7 @@ else if (FeaturedTools.Any())
                                     {
                                         <MudChip T="string"
                                                 Icon="Icons.Material.Filled.TrendingUp" 
-                                                Color="Color.Primary" 
+                                                Color="Color.Success" 
                                                 Size="Size.Small"
                                                 Label="true">
                                             Popular
@@ -70,55 +71,48 @@ else if (FeaturedTools.Any())
                                         <div></div>
                                     }
                                     <MudText Typo="Typo.body2" Class="text-success font-weight-bold">
-                                        $@tool.DailyRate.ToString("F0")/day
+                                        $@bundle.DiscountedCost.ToString("F0")
                                     </MudText>
                                 </div>
                                 
-                                <MudText Typo="Typo.h6" Class="tool-name mb-1">
-                                    @tool.Name
+                                <MudText Typo="Typo.h6" Class="bundle-name mb-1">
+                                    @bundle.Name
                                 </MudText>
                                 
-                                <MudText Typo="Typo.body2" Class="text-muted mb-2 tool-description">
-                                    @tool.Description
+                                <MudText Typo="Typo.body2" Class="text-muted mb-2 bundle-description">
+                                    @bundle.Description
                                 </MudText>
                                 
                                 <div class="d-flex align-center justify-space-between mb-2">
-                                    <StarRating Value="@(tool.Rating ?? 0)" 
+                                    <StarRating Value="@bundle.AverageRating" 
                                                ShowRating="true" 
                                                ShowCount="true"
-                                               ReviewCount="@tool.ReviewCount"
+                                               ReviewCount="@bundle.ReviewCount"
                                                Size="Size.Small" />
                                 </div>
                                 
-                                @if (tool.TagList.Any())
-                                {
-                                    <div class="tool-tags">
-                                        <TagChips Tags="@tool.TagList.Take(3).ToList()" 
-                                                 Size="Size.Small" 
-                                                 Color="Color.Secondary" 
-                                                 Variant="Variant.Outlined" />
-                                        @if (tool.TagList.Count > 3)
-                                        {
-                                            <MudChip T="string"
-                                                    Size="Size.Small" 
-                                                    Color="Color.Default" 
-                                                    Variant="Variant.Text">
-                                                +@(tool.TagList.Count - 3) more
-                                            </MudChip>
-                                        }
-                                    </div>
-                                }
-                                
-                                <div class="d-flex align-center justify-space-between mt-2">
+                                <div class="d-flex align-center justify-space-between">
                                     <MudText Typo="Typo.caption" Class="text-muted">
-                                        <MudIcon Icon="Icons.Material.Filled.LocationOn" Size="Size.Small" />
-                                        @tool.Location
+                                        <MudIcon Icon="Icons.Material.Filled.Build" Size="Size.Small" />
+                                        @bundle.Tools.Count tools
                                     </MudText>
                                     <MudText Typo="Typo.caption" Class="text-muted">
                                         <MudIcon Icon="Icons.Material.Filled.Visibility" Size="Size.Small" />
-                                        @tool.ViewCount views
+                                        @bundle.ViewCount views
                                     </MudText>
                                 </div>
+                                
+                                @if (!string.IsNullOrEmpty(bundle.Category))
+                                {
+                                    <div class="mt-2">
+                                        <MudChip T="string"
+                                                Size="Size.Small" 
+                                                Color="Color.Secondary" 
+                                                Variant="Variant.Outlined">
+                                            @bundle.Category
+                                        </MudChip>
+                                    </div>
+                                }
                             </MudCardContent>
                         </MudCard>
                     </MudItem>
@@ -131,8 +125,8 @@ else if (FeaturedTools.Any())
                     <MudButton StartIcon="Icons.Material.Filled.Search" 
                               Color="Color.Primary" 
                               Variant="Variant.Outlined"
-                              OnClick="NavigateToAllTools">
-                        View All Tools
+                              OnClick="NavigateToAllBundles">
+                        View All Bundles
                     </MudButton>
                 </div>
             }
@@ -144,40 +138,40 @@ else if (FeaturedTools.Any())
     [Parameter] public int Count { get; set; } = 6;
     [Parameter] public bool ShowViewAllButton { get; set; } = true;
 
-    private List<Tool> FeaturedTools = new();
+    private List<BundleModel> FeaturedBundles = new();
     private bool IsLoading = true;
     private bool IsShowingFeatured = true;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadFeaturedTools();
+        await LoadFeaturedBundles();
     }
 
-    private async Task LoadFeaturedTools()
+    private async Task LoadFeaturedBundles()
     {
         IsLoading = true;
         try
         {
-            var response = await ToolService.GetFeaturedToolsAsync(Count);
+            var response = await BundleService.GetFeaturedBundlesAsync(Count);
             if (response.Success && response.Data != null && response.Data.Any())
             {
-                FeaturedTools = response.Data;
+                FeaturedBundles = response.Data;
                 IsShowingFeatured = true;
             }
             else
             {
-                // Fallback to popular tools if no featured tools available
-                var popularResponse = await ToolService.GetPopularToolsAsync(Count);
+                // Fallback to popular bundles if no featured bundles available
+                var popularResponse = await BundleService.GetPopularBundlesAsync(Count);
                 if (popularResponse.Success && popularResponse.Data != null)
                 {
-                    FeaturedTools = popularResponse.Data;
+                    FeaturedBundles = popularResponse.Data;
                     IsShowingFeatured = false;
                 }
             }
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading featured tools: {ex.Message}", Severity.Error);
+            Snackbar.Add($"Error loading featured bundles: {ex.Message}", Severity.Error);
         }
         finally
         {
@@ -185,32 +179,32 @@ else if (FeaturedTools.Any())
         }
     }
 
-    private void NavigateToTool(string toolId)
+    private void NavigateToBundle(Guid bundleId)
     {
-        Navigation.NavigateTo($"/tools/{toolId}");
+        Navigation.NavigateTo($"/bundles/{bundleId}");
     }
 
-    private void NavigateToAllTools()
+    private void NavigateToAllBundles()
     {
-        Navigation.NavigateTo("/tools");
+        Navigation.NavigateTo("/bundles");
     }
 }
 
 <style>
-    .featured-tool-card {
+    .featured-bundle-card {
         transition: all 0.2s ease-in-out;
         height: 100%;
     }
     
-    .featured-tool-card:hover {
+    .featured-bundle-card:hover {
         transform: translateY(-2px);
     }
     
-    .tool-image {
+    .bundle-image {
         object-fit: cover;
     }
     
-    .tool-name {
+    .bundle-name {
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -218,17 +212,12 @@ else if (FeaturedTools.Any())
         min-height: 3em;
     }
     
-    .tool-description {
+    .bundle-description {
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
         min-height: 2.5em;
-    }
-    
-    .tool-tags {
-        margin-top: 8px;
-        min-height: 32px;
     }
     
     .cursor-pointer {
