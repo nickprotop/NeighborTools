@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Net.Http.Json;
 using ToolsSharing.Frontend.Models;
 using frontend.Models;
 using Microsoft.AspNetCore.Components.Forms;
@@ -463,6 +464,25 @@ namespace ToolsSharing.Frontend.Services
             catch (Exception ex)
             {
                 return ApiResponse<string>.CreateFailure($"Failed to upload image: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Request approval for a rejected bundle
+        /// </summary>
+        public async Task<ApiResponse> RequestApprovalAsync(Guid bundleId, ToolsSharing.Frontend.Models.RequestApprovalRequest request)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync($"api/bundles/{bundleId}/request-approval", request, _jsonOptions);
+                var content = await response.Content.ReadAsStringAsync();
+                
+                var result = JsonSerializer.Deserialize<ApiResponse>(content, _jsonOptions);
+                return result ?? new ApiResponse { Success = false, Message = "Invalid response" };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse { Success = false, Message = $"Failed to request approval: {ex.Message}" };
             }
         }
     }

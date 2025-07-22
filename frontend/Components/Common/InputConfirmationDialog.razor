@@ -1,0 +1,53 @@
+@using MudBlazor
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Comment" Class="mr-3" Color="Color.Primary" />
+            @Title
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudText Typo="Typo.body1" Class="mb-4">@Message</MudText>
+        @if (ShowInput)
+        {
+            <MudTextField @bind-Value="inputText"
+                          Label="@InputLabel"
+                          Variant="Variant.Outlined"
+                          Lines="3"
+                          MaxLength="MaxLength"
+                          Counter="MaxLength"
+                          FullWidth="true"
+                          Class="mt-4" />
+        }
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" StartIcon="@Icons.Material.Filled.Cancel">
+            @(CancelText ?? "Cancel")
+        </MudButton>
+        <MudButton Color="@(ConfirmColor ?? Color.Primary)" 
+                   Variant="Variant.Filled" 
+                   OnClick="Submit" 
+                   StartIcon="@Icons.Material.Filled.Send">
+            @(ConfirmText ?? "Confirm")
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; }
+
+    [Parameter] public string Title { get; set; } = "Input Required";
+    [Parameter] public string Message { get; set; } = "Please provide your input:";
+    [Parameter] public string InputLabel { get; set; } = "Input";
+    [Parameter] public string? ConfirmText { get; set; }
+    [Parameter] public string? CancelText { get; set; }
+    [Parameter] public Color? ConfirmColor { get; set; }
+    [Parameter] public bool ShowInput { get; set; } = true;
+    [Parameter] public int MaxLength { get; set; } = 500;
+
+    private string inputText = string.Empty;
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(inputText));
+    private void Cancel() => MudDialog.Cancel();
+}

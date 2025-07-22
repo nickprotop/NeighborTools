@@ -149,7 +149,7 @@
                         @foreach (var bundle in bundles.Items)
                         {
                             <MudItem xs="12" sm="6" lg="4">
-                                <MudCard Class="h-100">
+                                <MudCard Class="h-100" Style="cursor: pointer;" @onclick="@(() => NavigateToBundleDetails(bundle.Id))">
                                     <MudCardMedia Image="@GetImageUrl(bundle)" Height="200" />
                                     
                                     <MudCardContent>
@@ -168,6 +168,22 @@
                                                     }
                                                 </MudStack>
                                             </MudStack>
+
+                                            <!-- Tool Approval Status Warning -->
+                                            @{
+                                                var approvalStatus = GetBundleApprovalStatus(bundle.Id);
+                                            }
+                                            @if (approvalStatus != null && approvalStatus.HasUnapprovedTools)
+                                            {
+                                                <MudAlert Severity="Severity.Warning" Dense="true" Class="mt-2">
+                                                    <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" />
+                                                        <MudText Typo="Typo.caption">
+                                                            @approvalStatus.UnapprovedTools.Count tool@(approvalStatus.UnapprovedTools.Count != 1 ? "s" : "") need@(approvalStatus.UnapprovedTools.Count == 1 ? "s" : "") approval
+                                                        </MudText>
+                                                    </MudStack>
+                                                </MudAlert>
+                                            }
 
                                             <!-- Category and Tools Count -->
                                             <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
@@ -279,6 +295,7 @@
 @code {
     private PagedResult<BundleModel>? bundles;
     private bool isLoading = true;
+    private Dictionary<Guid, BundleApprovalStatusDto> bundleApprovalStatuses = new();
     
     // Filter parameters
     private string searchTerm = "";
@@ -318,6 +335,9 @@
                 bundles = result.Data;
                 // Apply client-side filtering for now (server-side filtering would be better)
                 ApplyFilters();
+                
+                // Load approval status for each bundle
+                await LoadBundleApprovalStatuses();
             }
             else
             {
@@ -382,6 +402,38 @@
     {
         currentPage = page;
         await LoadBundles();
+    }
+
+    private async Task LoadBundleApprovalStatuses()
+    {
+        if (bundles?.Items == null) return;
+
+        // Load approval status for each bundle in parallel
+        var tasks = bundles.Items.Select(async bundle =>
+        {
+            try
+            {
+                var result = await BundleService.GetBundleApprovalStatusAsync(bundle.Id);
+                if (result.Success && result.Data != null)
+                {
+                    bundleApprovalStatuses[bundle.Id] = result.Data;
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to load approval status for bundle {bundle.Id}: {ex.Message}");
+                // Silently fail - don't disrupt the main page load
+            }
+        });
+
+        await Task.WhenAll(tasks);
+        StateHasChanged();
+    }
+
+    private BundleApprovalStatusDto? GetBundleApprovalStatus(Guid bundleId)
+    {
+        bundleApprovalStatuses.TryGetValue(bundleId, out var status);
+        return status;
     }
 
     private void ClearFilters()
@@ -456,6 +508,11 @@
         return !string.IsNullOrEmpty(bundle.ImageUrl) 
             ? UrlService.GetFileUrl(bundle.ImageUrl)
             : "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5CdW5kbGU8L3RleHQ+PC9zdmc+";
+    }
+
+    private void NavigateToBundleDetails(Guid bundleId)
+    {
+        Navigation.NavigateTo($"/bundles/{bundleId}");
     }
 
     private string GetTruncatedDescription(string description)

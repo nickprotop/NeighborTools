@@ -24,6 +24,7 @@ public interface IToolService
     Task<ApiResponse<List<Tool>>> GetFeaturedToolsAsync(int count = 6);
     Task<ApiResponse<List<TagDto>>> GetPopularTagsAsync(int count = 20);
     Task<ApiResponse<PagedResult<Tool>>> SearchToolsAdvancedAsync(ToolSearchRequest request);
+    Task<ApiResponse> RequestApprovalAsync(string toolId, RequestApprovalRequest request);
 }
 
 public class ToolService : IToolService
@@ -445,6 +446,30 @@ public class ToolService : IToolService
             { 
                 Success = false, 
                 Message = $"Failed to search tools: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse> RequestApprovalAsync(string toolId, RequestApprovalRequest request)
+    {
+        try
+        {
+            var response = await _httpClient.PostAsJsonAsync($"/api/tools/{toolId}/request-approval", request);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse 
+            { 
+                Success = false, 
+                Message = $"Failed to request approval: {ex.Message}" 
             };
         }
     }

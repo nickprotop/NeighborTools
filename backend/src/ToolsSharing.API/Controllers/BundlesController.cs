@@ -449,6 +449,23 @@ namespace ToolsSharing.API.Controllers
         }
 
         /// <summary>
+        /// Request approval for a rejected bundle (requires authentication and ownership)
+        /// </summary>
+        [HttpPost("{id:guid}/request-approval")]
+        [Authorize]
+        public async Task<IActionResult> RequestBundleApproval(Guid id, [FromBody] RequestApprovalRequest request)
+        {
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized();
+            }
+
+            var result = await _bundleService.RequestApprovalAsync(id, userId, request);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
         /// Upload a single image for bundle (requires authentication)
         /// </summary>
         [HttpPost("upload-image")]

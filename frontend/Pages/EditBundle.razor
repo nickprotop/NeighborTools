@@ -115,6 +115,55 @@ else
                     </MudAlert>
                 </MudItem>
 
+                <!-- Bundle Rejection Alert -->
+                @if (bundle != null && !bundle.IsApproved && !string.IsNullOrEmpty(bundle.RejectionReason))
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Error" Class="mb-4" Variant="Variant.Filled">
+                            <div class="d-flex align-center justify-space-between">
+                                <div>
+                                    <MudText Typo="Typo.h6" Class="mb-2">
+                                        <MudIcon Icon="@Icons.Material.Filled.Warning" Class="me-2" />
+                                        Bundle Rejected
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-3">
+                                        <strong>Reason:</strong> @bundle.RejectionReason
+                                    </MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        Please address the issues above and request approval again.
+                                    </MudText>
+                                </div>
+                                <div>
+                                    <MudButton Variant="Variant.Outlined" 
+                                               Color="Color.Warning" 
+                                               StartIcon="@Icons.Material.Filled.Refresh"
+                                               OnClick="ShowRequestApprovalDialog"
+                                               Disabled="isSubmitting"
+                                               Size="Size.Small">
+                                        Request Re-approval
+                                    </MudButton>
+                                </div>
+                            </div>
+                        </MudAlert>
+                    </MudItem>
+                }
+                else if (bundle != null && !bundle.IsApproved && bundle.PendingApproval)
+                {
+                    <MudItem xs="12">
+                        <MudAlert Severity="Severity.Info" Class="mb-4" Variant="Variant.Filled">
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Class="me-3" />
+                                <div>
+                                    <MudText Typo="Typo.h6" Class="mb-1">Pending Approval</MudText>
+                                    <MudText Typo="Typo.body2">
+                                        Your bundle is currently being reviewed by our team. We'll notify you once it's approved.
+                                    </MudText>
+                                </div>
+                            </div>
+                        </MudAlert>
+                    </MudItem>
+                }
+
                 <!-- Bundle Approval Status Warning -->
                 @if (approvalStatus != null && approvalStatus.HasUnapprovedTools)
                 {
@@ -1536,6 +1585,74 @@ else
         {
             // No changes, navigate directly
             Navigation.NavigateTo($"/tools/{toolId}");
+        }
+    }
+
+    private async Task ShowRequestApprovalDialog()
+    {
+        if (bundle == null) return;
+
+        var parameters = new DialogParameters
+        {
+            { "Title", "Request Bundle Approval" },
+            { "Message", "Would you like to provide any additional information with your approval request?" },
+            { "InputLabel", "Additional Message (Optional)" },
+            { "ConfirmText", "Request Approval" },
+            { "CancelText", "Cancel" },
+            { "ConfirmColor", Color.Primary },
+            { "ShowInput", true },
+            { "MaxLength", 500 }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = DialogService.Show<InputConfirmationDialog>("Request Approval", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string message)
+        {
+            await RequestApproval(message);
+        }
+    }
+
+    private async Task RequestApproval(string message)
+    {
+        if (bundle == null) return;
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var request = new ToolsSharing.Frontend.Models.RequestApprovalRequest { Message = message };
+            var result = await BundleService.RequestApprovalAsync(bundle.Id, request);
+
+            if (result.Success)
+            {
+                Snackbar.Add("Approval request submitted successfully! We'll review your bundle and notify you soon.", Severity.Success);
+                
+                // Update the bundle status to pending
+                bundle.PendingApproval = true;
+                bundle.RejectionReason = null;
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to request approval: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error requesting approval: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
         }
     }
 }

@@ -1587,6 +1587,45 @@ namespace ToolsSharing.Infrastructure.Services
             }
         }
 
+        public async Task<ApiResponse<bool>> RequestApprovalAsync(Guid bundleId, string userId, RequestApprovalRequest request)
+        {
+            try
+            {
+                var bundle = await _context.Bundles
+                    .FirstOrDefaultAsync(b => b.Id == bundleId && b.UserId == userId);
+
+                if (bundle == null)
+                {
+                    return ApiResponse<bool>.CreateFailure("Bundle not found or you don't have permission to request approval.");
+                }
+
+                if (bundle.IsApproved)
+                {
+                    return ApiResponse<bool>.CreateFailure("Bundle is already approved.");
+                }
+
+                if (bundle.PendingApproval && string.IsNullOrEmpty(bundle.RejectionReason))
+                {
+                    return ApiResponse<bool>.CreateFailure("Bundle is already pending approval.");
+                }
+
+                // Reset approval status
+                bundle.PendingApproval = true;
+                bundle.RejectionReason = null;
+                bundle.UpdatedAt = DateTime.UtcNow;
+
+                await _context.SaveChangesAsync();
+
+                _logger.LogInformation("Bundle {BundleId} approval requested by user {UserId}", bundleId, userId);
+                return ApiResponse<bool>.CreateSuccess(true, "Approval requested successfully. Your bundle will be reviewed by our team.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error requesting approval for bundle {BundleId} by user {UserId}", bundleId, userId);
+                return ApiResponse<bool>.CreateFailure("An error occurred while requesting approval.");
+            }
+        }
+
         /// <summary>
         /// Extracts the storage path from a file URL for deletion
         /// </summary>

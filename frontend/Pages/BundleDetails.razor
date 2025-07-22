@@ -10,8 +10,22 @@
 @inject ISnackbar Snackbar
 @inject IDialogService DialogService
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IUrlService UrlService
 
 <PageTitle>@(bundle?.Name ?? "Bundle") - NeighborTools</PageTitle>
+
+<style>
+    .tool-link {
+        font-weight: 500 !important;
+        text-decoration: none !important;
+        transition: all 0.2s ease !important;
+    }
+    
+    .tool-link:hover {
+        text-decoration: underline !important;
+        color: var(--mud-palette-primary-darken) !important;
+    }
+</style>
 
 @if (isLoading)
 {
@@ -50,6 +64,37 @@ else
                             @if (bundle.IsFeatured)
                             {
                                 <MudChip Color="Color.Warning" Size="Size.Medium" Icon="@Icons.Material.Filled.Star" Text="Featured" T="string" />
+                            }
+                            
+                            <!-- Bundle Approval Status - Show for owner if not approved -->
+                            @if (isOwner && !bundle.IsApproved)
+                            {
+                                @if (bundle.PendingApproval)
+                                {
+                                    <MudChip Color="Color.Warning" 
+                                           Size="Size.Medium" 
+                                           Icon="@Icons.Material.Filled.HourglassEmpty" 
+                                           Text="Pending Approval" 
+                                           T="string" />
+                                }
+                                else if (!string.IsNullOrEmpty(bundle.RejectionReason))
+                                {
+                                    <MudTooltip Text="@($"Rejected: {bundle.RejectionReason}")">
+                                        <MudChip Color="Color.Error" 
+                                               Size="Size.Medium" 
+                                               Icon="@Icons.Material.Filled.Block" 
+                                               Text="Rejected" 
+                                               T="string" />
+                                    </MudTooltip>
+                                }
+                                else
+                                {
+                                    <MudChip Color="Color.Default" 
+                                           Size="Size.Medium" 
+                                           Icon="@Icons.Material.Filled.Visibility" 
+                                           Text="Draft" 
+                                           T="string" />
+                                }
                             }
                         </MudStack>
                         
@@ -207,6 +252,20 @@ else
                 </MudStack>
             </MudItem>
 
+            <!-- Bundle Image -->
+            @if (!string.IsNullOrEmpty(bundle.ImageUrl))
+            {
+                <MudItem xs="12">
+                    <MudCard Class="mb-4">
+                        <MudCardContent Class="pa-0">
+                            <div class="d-flex align-center justify-center mud-width-full" 
+                                 style="height: 300px; background-image: url('@UrlService.GetFileUrl(bundle.ImageUrl)'); background-size: cover; background-position: center; border-radius: 8px;">
+                            </div>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+
             <!-- Main Content -->
             <MudItem xs="12" md="8">
                 <!-- Description -->
@@ -262,8 +321,38 @@ else
                                                     {
                                                         <MudChip Size="Size.Small" Color="Color.Info" Text="Optional" T="string" />
                                                     }
+                                                    
+                                                    @* Tool Approval Status - Show for owners *@
+                                                    @if (isOwner)
+                                                    {
+                                                        var toolApprovalInfo = GetToolApprovalInfo(tool.ToolId);
+                                                        if (toolApprovalInfo != null)
+                                                        {
+                                                            @if (toolApprovalInfo.IsPending)
+                                                            {
+                                                                <MudTooltip Text="This tool is pending approval">
+                                                                    <MudChip Size="Size.Small" 
+                                                                           Color="Color.Warning" 
+                                                                           Icon="@Icons.Material.Filled.HourglassEmpty" 
+                                                                           Text="Pending" 
+                                                                           T="string" />
+                                                                </MudTooltip>
+                                                            }
+                                                            else if (!string.IsNullOrEmpty(toolApprovalInfo.RejectionReason))
+                                                            {
+                                                                <MudTooltip Text="@($"Rejected: {toolApprovalInfo.RejectionReason}")">
+                                                                    <MudChip Size="Size.Small" 
+                                                                           Color="Color.Error" 
+                                                                           Icon="@Icons.Material.Filled.Block" 
+                                                                           Text="Rejected" 
+                                                                           T="string" />
+                                                                </MudTooltip>
+                                                            }
+                                                        }
+                                                    }
+                                                    
                                                     <div>
-                                                        <MudLink Href="@($"/tools/{tool.ToolId}")" Typo="Typo.subtitle1" Color="Color.Primary">
+                                                        <MudLink Href="@($"/tools/{tool.ToolId}")" Typo="Typo.subtitle1" Color="Color.Primary" Underline="Underline.Hover" Class="tool-link">
                                                             @tool.ToolName
                                                         </MudLink>
                                                         <MudText Typo="Typo.body2" Color="Color.Secondary">@tool.ToolDescription</MudText>
@@ -386,6 +475,7 @@ else
     private BundleAvailabilityResponseModel? quickAvailability;
     private bool isOwner = false;
     private string? currentUserId;
+    private BundleApprovalStatusDto? bundleApprovalStatus;
 
     protected override async Task OnInitializedAsync()
     {
@@ -397,6 +487,10 @@ else
         if (bundle != null)
         {
             await CheckQuickAvailability();
+            if (isOwner)
+            {
+                await LoadBundleApprovalStatus();
+            }
         }
     }
 
@@ -566,6 +660,30 @@ else
         {
             Navigation.NavigateTo($"/bundles/{bundle.Id}/edit");
         }
+    }
+
+    private async Task LoadBundleApprovalStatus()
+    {
+        if (bundle == null) return;
+
+        try
+        {
+            var result = await BundleService.GetBundleApprovalStatusAsync(bundle.Id);
+            if (result.Success && result.Data != null)
+            {
+                bundleApprovalStatus = result.Data;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load bundle approval status: {ex.Message}");
+            // Silently fail - don't disrupt the main page load
+        }
+    }
+
+    private UnapprovedToolInfo? GetToolApprovalInfo(Guid toolId)
+    {
+        return bundleApprovalStatus?.UnapprovedTools.FirstOrDefault(t => t.ToolId == toolId);
     }
 
     private async Task DeleteBundle()

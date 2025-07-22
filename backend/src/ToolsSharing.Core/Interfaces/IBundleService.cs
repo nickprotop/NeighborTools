@@ -45,5 +45,6 @@ namespace ToolsSharing.Core.Interfaces
         
         // Bundle approval status
         Task<ApiResponse<BundleApprovalStatusDto>> GetBundleApprovalStatusAsync(Guid bundleId, string userId);
+        Task<ApiResponse<bool>> RequestApprovalAsync(Guid bundleId, string userId, RequestApprovalRequest request);
     }
 }

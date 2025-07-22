@@ -163,6 +163,39 @@
                             }
                         </div>
                         
+                        <!-- Approval Status - Show if not approved -->
+                        @if (!tool.IsApproved)
+                        {
+                            <div class="mb-3">
+                                @if (tool.HasPendingApproval)
+                                {
+                                    <MudChip T="string" Color="Color.Warning" 
+                                           Size="Size.Small" 
+                                           Icon="@Icons.Material.Filled.HourglassEmpty">
+                                        Pending Approval
+                                    </MudChip>
+                                }
+                                else if (!string.IsNullOrEmpty(tool.RejectionReason))
+                                {
+                                    <MudTooltip Text="@($"Rejected: {tool.RejectionReason}")">
+                                        <MudChip T="string" Color="Color.Error" 
+                                               Size="Size.Small" 
+                                               Icon="@Icons.Material.Filled.Block">
+                                            Rejected
+                                        </MudChip>
+                                    </MudTooltip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Color="Color.Default" 
+                                           Size="Size.Small" 
+                                           Icon="@Icons.Material.Filled.Visibility">
+                                        Draft
+                                    </MudChip>
+                                }
+                            </div>
+                        }
+                        
                         <div class="d-flex justify-space-between align-center mb-2">
                             <MudText Typo="Typo.h6" Color="Color.Primary">
                                 $@tool.DailyRate.ToString("F2")
@@ -302,6 +335,39 @@
                                         </MudChip>
                                     }
                                 </div>
+                                
+                                <!-- Bundle Approval Status - Show if not approved -->
+                                @if (!bundle.IsApproved)
+                                {
+                                    <div class="mb-3">
+                                        @if (bundle.PendingApproval)
+                                        {
+                                            <MudChip T="string" Color="Color.Warning" 
+                                                   Size="Size.Small" 
+                                                   Icon="@Icons.Material.Filled.HourglassEmpty">
+                                                Pending Approval
+                                            </MudChip>
+                                        }
+                                        else if (!string.IsNullOrEmpty(bundle.RejectionReason))
+                                        {
+                                            <MudTooltip Text="@($"Rejected: {bundle.RejectionReason}")">
+                                                <MudChip T="string" Color="Color.Error" 
+                                                       Size="Size.Small" 
+                                                       Icon="@Icons.Material.Filled.Block">
+                                                    Rejected
+                                                </MudChip>
+                                            </MudTooltip>
+                                        }
+                                        else
+                                        {
+                                            <MudChip T="string" Color="Color.Default" 
+                                                   Size="Size.Small" 
+                                                   Icon="@Icons.Material.Filled.Visibility">
+                                                Draft
+                                            </MudChip>
+                                        }
+                                    </div>
+                                }
                                 
                                 <div class="d-flex justify-space-between align-center mb-2">
                                     <MudText Typo="Typo.h6" Color="Color.Primary">

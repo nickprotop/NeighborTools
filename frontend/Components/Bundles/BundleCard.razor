@@ -81,32 +81,49 @@
                 </MudStack>
             </MudStack>
 
-            <!-- Availability Indicator -->
-            <MudStack Row Justify="Justify.Center" Class="mt-2">
-                @if (Bundle.IsAvailable)
+            <!-- Status Indicators -->
+            <MudStack Spacing="2" Class="mt-2">
+                <!-- Tool Approval Warning for Owners -->
+                @if (ShowApprovalWarning && UnapprovedToolCount > 0)
                 {
-                    <MudChip Color="Color.Success" 
-                           Size="Size.Small" 
-                           Icon="@Icons.Material.Filled.CheckCircle" 
-                           Text="Available Now" 
-                           T="string" />
+                    <MudStack Row Justify="Justify.Center">
+                        <MudTooltip Text="@($"{UnapprovedToolCount} tool{(UnapprovedToolCount != 1 ? "s" : "")} in this bundle need approval")">
+                            <MudChip Color="Color.Warning" 
+                                   Size="Size.Small" 
+                                   Icon="@Icons.Material.Filled.Warning" 
+                                   Text="@($"{UnapprovedToolCount} Tool{(UnapprovedToolCount != 1 ? "s" : "")} Need Approval")" 
+                                   T="string" />
+                        </MudTooltip>
+                    </MudStack>
                 }
-                else if (Bundle.AvailableFromDate.HasValue)
-                {
-                    <MudChip Color="Color.Warning" 
-                           Size="Size.Small" 
-                           Icon="@Icons.Material.Filled.Schedule" 
-                           Text="@($"Available {Bundle.AvailableFromDate.Value:MMM dd}")" 
-                           T="string" />
-                }
-                else
-                {
-                    <MudChip Color="Color.Error" 
-                           Size="Size.Small" 
-                           Icon="@Icons.Material.Filled.Block" 
-                           Text="Currently Unavailable" 
-                           T="string" />
-                }
+                
+                <!-- Availability Indicator -->
+                <MudStack Row Justify="Justify.Center">
+                    @if (Bundle.IsAvailable)
+                    {
+                        <MudChip Color="Color.Success" 
+                               Size="Size.Small" 
+                               Icon="@Icons.Material.Filled.CheckCircle" 
+                               Text="Available Now" 
+                               T="string" />
+                    }
+                    else if (Bundle.AvailableFromDate.HasValue)
+                    {
+                        <MudChip Color="Color.Warning" 
+                               Size="Size.Small" 
+                               Icon="@Icons.Material.Filled.Schedule" 
+                               Text="@($"Available {Bundle.AvailableFromDate.Value:MMM dd}")" 
+                               T="string" />
+                    }
+                    else
+                    {
+                        <MudChip Color="Color.Error" 
+                               Size="Size.Small" 
+                               Icon="@Icons.Material.Filled.Block" 
+                               Text="Currently Unavailable" 
+                               T="string" />
+                    }
+                </MudStack>
             </MudStack>
         </MudStack>
     </MudCardContent>
@@ -151,6 +168,8 @@
 @code {
     [Parameter] public BundleModel Bundle { get; set; } = new();
     [Parameter] public EventCallback OnClick { get; set; }
+    [Parameter] public bool ShowApprovalWarning { get; set; } = false;
+    [Parameter] public int UnapprovedToolCount { get; set; } = 0;
 
     private string GetImageUrl()
     {

@@ -7,6 +7,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject INavigationHelperService NavigationHelper
+@inject IDialogService DialogService
 @attribute [Authorize]
 
 <PageTitle>Edit Tool - NeighborTools</PageTitle>
@@ -38,6 +39,51 @@
                     Update your tool details to keep your listing current and attractive!
                 </MudText>
             </div>
+
+            <!-- Approval Status Alert -->
+            @if (currentTool != null && !currentTool.IsApproved && !string.IsNullOrEmpty(currentTool.RejectionReason))
+            {
+                <MudAlert Severity="Severity.Error" Class="mb-4" Variant="Variant.Filled">
+                    <div class="d-flex align-center justify-space-between">
+                        <div>
+                            <MudText Typo="Typo.h6" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Warning" Class="me-2" />
+                                Tool Rejected
+                            </MudText>
+                            <MudText Typo="Typo.body2" Class="mb-3">
+                                <strong>Reason:</strong> @currentTool.RejectionReason
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Please address the issues above and request approval again.
+                            </MudText>
+                        </div>
+                        <div>
+                            <MudButton Variant="Variant.Outlined" 
+                                       Color="Color.Warning" 
+                                       StartIcon="@Icons.Material.Filled.Refresh"
+                                       OnClick="ShowRequestApprovalDialog"
+                                       Disabled="isSubmitting"
+                                       Size="Size.Small">
+                                Request Re-approval
+                            </MudButton>
+                        </div>
+                    </div>
+                </MudAlert>
+            }
+            else if (currentTool != null && !currentTool.IsApproved && currentTool.HasPendingApproval)
+            {
+                <MudAlert Severity="Severity.Info" Class="mb-4" Variant="Variant.Filled">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.HourglassEmpty" Class="me-3" />
+                        <div>
+                            <MudText Typo="Typo.h6" Class="mb-1">Pending Approval</MudText>
+                            <MudText Typo="Typo.body2">
+                                Your tool is currently being reviewed by our team. We'll notify you once it's approved.
+                            </MudText>
+                        </div>
+                    </div>
+                </MudAlert>
+            }
 
             <EditForm Model="updateToolRequest" OnValidSubmit="HandleUpdateTool">
                 <DataAnnotationsValidator />
@@ -414,6 +460,7 @@
     [Parameter] public string Id { get; set; } = string.Empty;
     
     private UpdateToolRequest updateToolRequest = new();
+    private Tool? currentTool = null;
     private string errorMessage = string.Empty;
     private string submitErrorMessage = string.Empty;
     private bool isLoading = true;
@@ -450,6 +497,7 @@
             if (result.Success && result.Data != null)
             {
                 var tool = result.Data;
+                currentTool = tool;
                 
                 // Map tool data to update request
                 updateToolRequest = new UpdateToolRequest
@@ -637,6 +685,74 @@
                 pendingFiles.RemoveAt(previewIndex);
                 StateHasChanged();
             }
+        }
+    }
+
+    private async Task ShowRequestApprovalDialog()
+    {
+        if (currentTool == null) return;
+
+        var parameters = new DialogParameters
+        {
+            { "Title", "Request Tool Approval" },
+            { "Message", "Would you like to provide any additional information with your approval request?" },
+            { "InputLabel", "Additional Message (Optional)" },
+            { "ConfirmText", "Request Approval" },
+            { "CancelText", "Cancel" },
+            { "ConfirmColor", Color.Primary },
+            { "ShowInput", true },
+            { "MaxLength", 500 }
+        };
+
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true, 
+            MaxWidth = MaxWidth.Small,
+            FullWidth = true
+        };
+
+        var dialog = DialogService.Show<InputConfirmationDialog>("Request Approval", parameters, options);
+        var result = await dialog.Result;
+
+        if (!result.Canceled && result.Data is string message)
+        {
+            await RequestApproval(message);
+        }
+    }
+
+    private async Task RequestApproval(string message)
+    {
+        if (currentTool == null) return;
+
+        isSubmitting = true;
+        StateHasChanged();
+
+        try
+        {
+            var request = new RequestApprovalRequest { Message = message };
+            var result = await ToolService.RequestApprovalAsync(currentTool.Id, request);
+
+            if (result.Success)
+            {
+                Snackbar.Add("Approval request submitted successfully! We'll review your tool and notify you soon.", Severity.Success);
+                
+                // Update the tool status to pending
+                currentTool.HasPendingApproval = true;
+                currentTool.RejectionReason = null;
+                StateHasChanged();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to request approval: {result.Message}", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error requesting approval: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isSubmitting = false;
         }
     }
 }

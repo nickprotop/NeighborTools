@@ -30,8 +30,11 @@ public static class DependencyInjection
         services.AddDbContext<ApplicationDbContext>(options =>
             options.UseMySql(
                 configuration.GetConnectionString("DefaultConnection"),
-                ServerVersion.AutoDetect(configuration.GetConnectionString("DefaultConnection")),
-                b => b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName)));
+                ServerVersion.Parse("8.0.0-mysql"), // Fixed version instead of AutoDetect to prevent connection issues
+                b => {
+                    b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
+                    b.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null); // Add retry logic for transient failures
+                }));
 
         // Note: Identity is configured in the API project since it requires ASP.NET Core
 

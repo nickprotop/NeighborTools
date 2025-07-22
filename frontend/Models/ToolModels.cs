@@ -28,6 +28,11 @@ public class Tool
     public bool IsFeatured { get; set; }
     public DateTime CreatedAt { get; set; }
     
+    // Approval/Moderation properties
+    public bool IsApproved { get; set; }
+    public bool HasPendingApproval { get; set; }
+    public string? RejectionReason { get; set; }
+    
     // Computed properties for convenience
     public List<string> TagList => Tags.Split(',', StringSplitOptions.RemoveEmptyEntries).Select(t => t.Trim()).ToList();
     public double? Rating => AverageRating > 0 ? (double)AverageRating : null;
@@ -180,6 +185,12 @@ public class TagDto
 {
     public string Name { get; set; } = string.Empty;
     public int Count { get; set; }
+}
+
+// Request approval models
+public class RequestApprovalRequest
+{
+    public string? Message { get; set; }
 }
 
 // Search models

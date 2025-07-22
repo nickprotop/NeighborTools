@@ -52,18 +52,15 @@ public class ToolsController : ControllerBase
         if (!result.Success)
             return NotFound(result);
             
-        // Increment view count
-        _ = Task.Run(async () => 
+        // Increment view count asynchronously but properly sequenced to avoid race conditions
+        try 
         {
-            try 
-            {
-                await _toolsService.IncrementViewCountAsync(id);
-            } 
-            catch 
-            {
-                // Log but don't fail the request
-            }
-        });
+            await _toolsService.IncrementViewCountAsync(id);
+        } 
+        catch 
+        {
+            // Log but don't fail the request
+        }
             
         return Ok(result);
     }
@@ -344,5 +341,21 @@ public class ToolsController : ControllerBase
                 Errors = new List<string> { ex.Message }
             });
         }
+    }
+
+    [HttpPost("{id}/request-approval")]
+    [Authorize]
+    public async Task<IActionResult> RequestApproval(Guid id, [FromBody] RequestApprovalRequest request)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+            
+        var result = await _toolsService.RequestApprovalAsync(id, userId, request);
+        
+        if (!result.Success)
+            return BadRequest(result);
+            
+        return Ok(result);
     }
 }

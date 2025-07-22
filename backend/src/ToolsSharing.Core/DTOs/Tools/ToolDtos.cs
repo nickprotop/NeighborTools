@@ -130,6 +130,7 @@ public class ToolDto
     public bool IsDeleted { get; set; }
     
     // Additional properties for listing/searching
+    public bool IsApproved { get; set; }
     public bool HasPendingApproval { get; set; }
     public string? RejectionReason { get; set; }
     
@@ -189,4 +190,10 @@ public class TagDto
 {
     public string Name { get; set; } = string.Empty;
     public int Count { get; set; }
+}
+
+public class RequestApprovalRequest
+{
+    [MaxLength(500)]
+    public string? Message { get; set; }
 }

@@ -29,11 +29,25 @@ public static class MappingConfig
             .Map(dest => dest.Condition, src => src.Condition ?? "")
             .Map(dest => dest.Location, src => src.Location ?? "")
             .Map(dest => dest.IsAvailable, src => src.IsAvailable)
+            .Map(dest => dest.LeadTimeHours, src => src.LeadTimeHours)
             .Map(dest => dest.OwnerId, src => src.OwnerId ?? "")
             .Map(dest => dest.OwnerName, src => 
                 src.Owner != null ? $"{src.Owner.FirstName ?? ""} {src.Owner.LastName ?? ""}".Trim() : "Unknown Owner")
             .Map(dest => dest.ImageUrls, src => 
-                src.Images != null ? src.Images.Select(img => img.ImageUrl ?? "").ToList() : new List<string>());
+                src.Images != null ? src.Images.Select(img => img.ImageUrl ?? "").ToList() : new List<string>())
+            .Map(dest => dest.CreatedAt, src => src.CreatedAt)
+            .Map(dest => dest.UpdatedAt, src => src.UpdatedAt)
+            .Map(dest => dest.IsDeleted, src => src.IsDeleted)
+            // Approval/Moderation properties
+            .Map(dest => dest.IsApproved, src => src.IsApproved)
+            .Map(dest => dest.HasPendingApproval, src => src.PendingApproval)
+            .Map(dest => dest.RejectionReason, src => src.RejectionReason ?? "")
+            // New feature properties
+            .Map(dest => dest.Tags, src => src.Tags ?? "")
+            .Map(dest => dest.ViewCount, src => src.ViewCount)
+            .Map(dest => dest.AverageRating, src => src.AverageRating)
+            .Map(dest => dest.ReviewCount, src => src.ReviewCount)
+            .Map(dest => dest.IsFeatured, src => src.IsFeatured);
 
         TypeAdapterConfig<ToolDto, Tool>
             .NewConfig()

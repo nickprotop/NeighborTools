@@ -45,6 +45,11 @@ namespace ToolsSharing.Frontend.Models
         public double AverageRating { get; set; }
         public int ReviewCount { get; set; }
         
+        // Approval/Moderation properties
+        public bool IsApproved { get; set; }
+        public bool PendingApproval { get; set; }
+        public string? RejectionReason { get; set; }
+        
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }
@@ -216,5 +221,11 @@ namespace ToolsSharing.Frontend.Models
         public string ToolName { get; set; } = "";
         public bool IsPending { get; set; }
         public string? RejectionReason { get; set; }
+    }
+
+    // Request approval models
+    public class RequestApprovalRequest
+    {
+        public string? Message { get; set; }
     }
 }

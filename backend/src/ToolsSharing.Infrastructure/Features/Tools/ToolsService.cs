@@ -732,6 +732,45 @@ public class ToolsService : IToolsService
         }
     }
 
+    public async Task<ApiResponse<bool>> RequestApprovalAsync(Guid toolId, string userId, RequestApprovalRequest request)
+    {
+        try
+        {
+            var tool = await _context.Tools
+                .FirstOrDefaultAsync(t => t.Id == toolId && t.OwnerId == userId && !t.IsDeleted);
+
+            if (tool == null)
+            {
+                return ApiResponse<bool>.CreateFailure("Tool not found or you don't have permission to request approval.");
+            }
+
+            if (tool.IsApproved)
+            {
+                return ApiResponse<bool>.CreateFailure("Tool is already approved.");
+            }
+
+            if (tool.PendingApproval && string.IsNullOrEmpty(tool.RejectionReason))
+            {
+                return ApiResponse<bool>.CreateFailure("Tool is already pending approval.");
+            }
+
+            // Reset approval status
+            tool.PendingApproval = true;
+            tool.RejectionReason = null;
+            tool.UpdatedAt = DateTime.UtcNow;
+
+            await _context.SaveChangesAsync();
+
+            _logger.LogInformation("Tool {ToolId} approval requested by user {UserId}", toolId, userId);
+            return ApiResponse<bool>.CreateSuccess(true, "Approval requested successfully. Your tool will be reviewed by our team.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting approval for tool {ToolId} by user {UserId}", toolId, userId);
+            return ApiResponse<bool>.CreateFailure("An error occurred while requesting approval.");
+        }
+    }
+
     private async Task UpdateToolStatisticsAsync(Guid toolId)
     {
         try
