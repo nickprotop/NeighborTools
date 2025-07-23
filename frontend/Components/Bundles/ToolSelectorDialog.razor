@@ -1,0 +1,152 @@
+@using frontend.Models
+@using frontend.Services
+@inject IToolService ToolService
+
+<MudDialog>
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
+            Select Tools for Bundle
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div style="min-height: 400px; max-height: 600px; overflow-y: auto;">
+            <MudTextField @bind-Value="toolSearchTerm"
+                        Label="Search your tools"
+                        Immediate="true"
+                        Adornment="Adornment.Start"
+                        AdornmentIcon="@Icons.Material.Filled.Search"
+                        HelperText="Only your own tools are shown for bundle creation"
+                        Class="mb-4" />
+            
+            @if (isLoadingTools)
+            {
+                <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
+            }
+            else
+            {
+                @foreach (var tool in filteredTools)
+                {
+                    var isSelected = SelectedToolIds.Contains(Guid.Parse(tool.Id));
+                    <MudPaper Class="pa-3 mb-2" Elevation="@(isSelected ? 2 : 0)" 
+                            Style="@(isSelected ? "border: 2px solid var(--mud-palette-primary);" : "border: 1px solid var(--mud-palette-lines-default);")">
+                        <MudGrid AlignItems="Center">
+                            <MudItem xs="1">
+                                <MudCheckBox Value="@isSelected"
+                                           ValueChanged="@((bool value) => ToggleToolSelection(tool, value))"
+                                           Color="Color.Primary" />
+                            </MudItem>
+                            <MudItem xs="11">
+                                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle1">@tool.Name</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@tool.Description</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            Owner: @tool.OwnerName
+                                        </MudText>
+                                    </div>
+                                    <MudChip Color="Color.Primary" Text="@($"${tool.DailyRate:F2}/day")" T="string" />
+                                </MudStack>
+                            </MudItem>
+                        </MudGrid>
+                    </MudPaper>
+                }
+                
+                @if (!filteredTools.Any())
+                {
+                    <MudAlert Severity="Severity.Info" Class="mt-4">
+                        @if (!availableTools.Any())
+                        {
+                            <MudText>You don't have any tools yet. <a href="/tools/create">Create your first tool</a> to start building bundles.</MudText>
+                        }
+                        else
+                        {
+                            <MudText>No tools match your search. Try different keywords.</MudText>
+                        }
+                    </MudAlert>
+                }
+            }
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel" StartIcon="@Icons.Material.Filled.Close">Cancel</MudButton>
+        <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="Submit" StartIcon="@Icons.Material.Filled.Check">
+            Done (@SelectedToolIds.Count selected)
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = null!;
+    [Parameter] public List<Guid> SelectedToolIds { get; set; } = new();
+
+    private List<Tool> availableTools = new();
+    private string toolSearchTerm = "";
+    private bool isLoadingTools = false;
+
+    private List<Tool> filteredTools => string.IsNullOrWhiteSpace(toolSearchTerm)
+        ? availableTools
+        : availableTools.Where(t => 
+            t.Name.Contains(toolSearchTerm, StringComparison.OrdinalIgnoreCase) ||
+            t.Description.Contains(toolSearchTerm, StringComparison.OrdinalIgnoreCase) ||
+            t.OwnerName.Contains(toolSearchTerm, StringComparison.OrdinalIgnoreCase)
+        ).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAvailableTools();
+    }
+
+    private async Task LoadAvailableTools()
+    {
+        isLoadingTools = true;
+        StateHasChanged();
+
+        try
+        {
+            var result = await ToolService.GetMyToolsAsync();
+            if (result.Success && result.Data != null)
+            {
+                availableTools = result.Data;
+            }
+            else
+            {
+                availableTools = new();
+            }
+        }
+        catch (Exception ex)
+        {
+            availableTools = new();
+        }
+
+        isLoadingTools = false;
+        StateHasChanged();
+    }
+
+    private void ToggleToolSelection(Tool tool, bool isSelected)
+    {
+        if (!Guid.TryParse(tool.Id, out var toolGuid))
+        {
+            return;
+        }
+
+        if (isSelected)
+        {
+            if (!SelectedToolIds.Contains(toolGuid))
+            {
+                SelectedToolIds.Add(toolGuid);
+            }
+        }
+        else
+        {
+            if (SelectedToolIds.Contains(toolGuid))
+            {
+                SelectedToolIds.Remove(toolGuid);
+            }
+        }
+        StateHasChanged();
+    }
+
+    private void Submit() => MudDialog.Close(DialogResult.Ok(SelectedToolIds));
+    private void Cancel() => MudDialog.Cancel();
+}

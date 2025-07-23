@@ -417,7 +417,7 @@ else
                                     </MudStack>
                                     <MudButton Color="Color.Primary" 
                                               StartIcon="@Icons.Material.Filled.Add"
-                                              OnClick="@(() => showToolSelector = true)"
+                                              OnClick="ShowToolSelector"
                                               Size="Size.Small">
                                         Add Tools
                                     </MudButton>
@@ -872,88 +872,6 @@ else
         </MudForm>
     </MudContainer>
 
-    <!-- Tool Selector Dialog -->
-    <MudDialog @bind-IsVisible="showToolSelector" Options="toolSelectorDialogOptions">
-        <TitleContent>
-            <MudText Typo="Typo.h6">
-                <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
-                Select Tools for Bundle
-            </MudText>
-        </TitleContent>
-        <DialogContent>
-            <div style="min-height: 400px; max-height: 600px; overflow-y: auto;">
-                <MudTextField @bind-Value="toolSearchTerm"
-                            Label="Search tools"
-                            Immediate="true"
-                            Adornment="Adornment.Start"
-                            AdornmentIcon="@Icons.Material.Filled.Search"
-                            HelperText="Search through available tools"
-                            Class="mb-4" />
-                
-                @if (isLoadingTools)
-                {
-                    <MudProgressLinear Color="Color.Primary" Indeterminate="true" />
-                }
-                else
-                {
-                    @foreach (var tool in filteredTools)
-                    {
-                        var isSelected = editBundle.Tools.Any(bt => Guid.TryParse(tool.Id, out var toolGuid) && bt.ToolId == toolGuid);
-                        <MudPaper Class="pa-3 mb-2" Elevation="@(isSelected ? 2 : 0)" 
-                                Style="@(isSelected ? "border: 2px solid var(--mud-palette-primary);" : "border: 1px solid var(--mud-palette-lines-default);")">
-                            <MudGrid AlignItems="Center">
-                                <MudItem xs="1">
-                                    <MudCheckBox Value="@isSelected"
-                                               ValueChanged="@((bool value) => ToggleToolSelection(tool, value))"
-                                               Color="Color.Primary" />
-                                </MudItem>
-                                <MudItem xs="11">
-                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                        <div>
-                                            <MudButton Variant="Variant.Text" 
-                                                     Color="Color.Primary" 
-                                                     StartIcon="@Icons.Material.Filled.Launch"
-                                                     Size="Size.Small"
-                                                     Class="pa-0 ma-0 text-start"
-                                                     Style="text-transform: none; justify-content: flex-start;"
-                                                     OnClick="@(() => NavigateToTool(tool.Id))">
-                                                <MudText Typo="Typo.subtitle1" Style="text-decoration: underline;">@tool.Name</MudText>
-                                            </MudButton>
-                                            <MudText Typo="Typo.body2" Color="Color.Secondary">@tool.Description</MudText>
-                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                Owner: @tool.OwnerName
-                                            </MudText>
-                                        </div>
-                                        <MudChip Color="Color.Primary" Text="@($"${tool.DailyRate:F2}/day")" T="string" />
-                                    </MudStack>
-                                </MudItem>
-                            </MudGrid>
-                        </MudPaper>
-                    }
-                    
-                    @if (!filteredTools.Any())
-                    {
-                        <MudAlert Severity="Severity.Info" Class="mt-4">
-                            @if (!availableTools.Any())
-                            {
-                                <MudText>No tools available. Check your connection or try again later.</MudText>
-                            }
-                            else
-                            {
-                                <MudText>No tools match your search. Try different keywords.</MudText>
-                            }
-                        </MudAlert>
-                    }
-                }
-            </div>
-        </DialogContent>
-        <DialogActions>
-            <MudButton OnClick="@(() => showToolSelector = false)" StartIcon="@Icons.Material.Filled.Close">Cancel</MudButton>
-            <MudButton Color="Color.Primary" Variant="Variant.Filled" OnClick="@(() => showToolSelector = false)" StartIcon="@Icons.Material.Filled.Check">
-                Done (@editBundle.Tools.Count selected)
-            </MudButton>
-        </DialogActions>
-    </MudDialog>
 
     <!-- Bundle Preview Dialog -->
     <MudDialog @bind-IsVisible="showPreviewDialog" Options="previewDialogOptions">
@@ -1003,9 +921,7 @@ else
     private BundleApprovalStatusDto? approvalStatus = null;
     
     // Tool selection
-    private bool showToolSelector = false;
     private List<Tool> availableTools = new();
-    private string toolSearchTerm = "";
     
     // Preview
     private bool showPreviewDialog = false;
@@ -1025,12 +941,6 @@ else
         { "Construction", new() { "building", "framing", "concrete", "drywall", "roofing", "foundation" } }
     };
     
-    private DialogOptions toolSelectorDialogOptions = new() 
-    { 
-        CloseOnEscapeKey = true, 
-        MaxWidth = MaxWidth.Large,
-        FullWidth = true
-    };
     
     private DialogOptions previewDialogOptions = new() 
     { 
@@ -1039,13 +949,6 @@ else
         FullWidth = true
     };
 
-    private List<Tool> filteredTools => string.IsNullOrWhiteSpace(toolSearchTerm)
-        ? availableTools
-        : availableTools.Where(t => 
-            t.Name.Contains(toolSearchTerm, StringComparison.OrdinalIgnoreCase) ||
-            t.Description.Contains(toolSearchTerm, StringComparison.OrdinalIgnoreCase) ||
-            t.OwnerName.Contains(toolSearchTerm, StringComparison.OrdinalIgnoreCase)
-        ).ToList();
 
     private bool hasChanges => !AreModelsEqual(editBundle, originalBundle);
 
@@ -1149,14 +1052,30 @@ else
         isLoadingTools = true;
         StateHasChanged();
 
-        var result = await ToolService.GetMyToolsAsync();
-        if (result.Success && result.Data != null)
+        try
         {
-            availableTools = result.Data;
+            var result = await ToolService.GetMyToolsAsync();
+            if (result.Success && result.Data != null)
+            {
+                availableTools = result.Data;
+                
+                if (availableTools.Count == 0)
+                {
+                    Snackbar.Add("You don't have any tools yet. Create some tools first to add them to bundles.", Severity.Info);
+                }
+            }
+            else
+            {
+                var errorMessage = !string.IsNullOrEmpty(result.Message) 
+                    ? $"Failed to load your tools: {result.Message}" 
+                    : "Failed to load your tools. Please check your connection and try again.";
+                Snackbar.Add(errorMessage, Severity.Error);
+                availableTools = new();
+            }
         }
-        else
+        catch (Exception ex)
         {
-            Snackbar.Add("Failed to load available tools", Severity.Error);
+            Snackbar.Add($"Error loading tools: {ex.Message}", Severity.Error);
             availableTools = new();
         }
 
@@ -1216,18 +1135,38 @@ else
         }
     }
 
-    private void ToggleToolSelection(Tool tool, bool isSelected)
-    {
-        if (!Guid.TryParse(tool.Id, out var toolGuid))
-            return;
 
-        if (isSelected)
+    private async Task ShowToolSelector()
+    {
+        var selectedToolIds = editBundle.Tools.Select(t => t.ToolId).ToList();
+        var parameters = new DialogParameters { { "SelectedToolIds", selectedToolIds } };
+        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Large, FullWidth = true };
+        var dialog = DialogService.Show<Components.Bundles.ToolSelectorDialog>("Select Tools", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled && result.Data is List<Guid> newSelectedToolIds)
         {
-            if (!editBundle.Tools.Any(bt => bt.ToolId == toolGuid))
+            UpdateBundleTools(newSelectedToolIds);
+        }
+    }
+
+    private void UpdateBundleTools(List<Guid> selectedToolIds)
+    {
+        // Remove tools that are no longer selected
+        var toolsToRemove = editBundle.Tools.Where(bt => !selectedToolIds.Contains(bt.ToolId)).ToList();
+        foreach (var tool in toolsToRemove)
+        {
+            editBundle.Tools.Remove(tool);
+        }
+        
+        // Add new tools that were selected
+        foreach (var toolId in selectedToolIds)
+        {
+            if (!editBundle.Tools.Any(bt => bt.ToolId == toolId))
             {
                 editBundle.Tools.Add(new CreateBundleToolModel
                 {
-                    ToolId = toolGuid,
+                    ToolId = toolId,
                     OrderInBundle = editBundle.Tools.Count + 1,
                     QuantityNeeded = 1,
                     IsOptional = false,
@@ -1235,15 +1174,10 @@ else
                 });
             }
         }
-        else
-        {
-            var existingTool = editBundle.Tools.FirstOrDefault(bt => bt.ToolId == toolGuid);
-            if (existingTool != null)
-            {
-                editBundle.Tools.Remove(existingTool);
-                ReorderTools();
-            }
-        }
+        
+        // Reorder tools to maintain sequential order
+        ReorderTools();
+        
         StateHasChanged();
     }
 

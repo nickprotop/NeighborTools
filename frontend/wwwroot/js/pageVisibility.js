@@ -44,11 +44,22 @@ function handlePageFocus() {
 
 // Call all registered page visible handlers
 function callPageVisibleHandlers() {
-    pageVisibilityCallbacks.forEach(callback => {
+    // Create a copy of the array to avoid issues during iteration
+    const callbacks = [...pageVisibilityCallbacks];
+    
+    callbacks.forEach((callback, index) => {
         try {
-            callback.invokeMethodAsync('OnPageVisible');
+            // Check if the callback is still valid before calling
+            if (callback && typeof callback.invokeMethodAsync === 'function') {
+                callback.invokeMethodAsync('OnPageVisible');
+            }
         } catch (error) {
-            console.warn('Error calling OnPageVisible:', error);
+            console.warn('Error calling OnPageVisible, removing callback:', error);
+            // Remove the problematic callback from the original array
+            const originalIndex = pageVisibilityCallbacks.indexOf(callback);
+            if (originalIndex > -1) {
+                pageVisibilityCallbacks.splice(originalIndex, 1);
+            }
         }
     });
 }

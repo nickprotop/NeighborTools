@@ -5,6 +5,15 @@ All notable changes to the NeighborTools project will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
+- **Bundle Tool Selection Dialog Fix** (2025-01-23)
+  - **Fixed EditBundle Tool Selection**: Converted EditBundle.razor from problematic inline MudDialog to proper DialogService pattern
+  - **MudBlazor 8.x Compatibility**: Resolved "Add Tools" button not opening dialog in bundle edit page
+  - **Reusable ToolSelectorDialog**: Both CreateBundle and EditBundle now use shared Components.Bundles.ToolSelectorDialog component
+  - **Eliminated DotNetObjectReference Issues**: Removed inline @bind-IsVisible pattern that caused JavaScript disposal errors
+  - **Improved Code Architecture**: Consistent dialog management across bundle creation and editing workflows
+  - **Enhanced Error Handling**: Better tool selection and management with cleaner UpdateBundleTools method
+  - **Removed Debug Logging**: Cleaned up console logging from ToolSelectorDialog and EditBundle components
+
 - **Comprehensive Tool Features System** (2025-01-22)
   - **Tool Ratings & Reviews**: Complete review system with star ratings, detailed feedback, and user interaction
   - **Tag-Based Categorization**: Comma-separated tag system with clickable navigation and search integration

@@ -570,13 +570,16 @@
             // Dispose the visibility change listener
             if (dotNetHelper != null)
             {
-                JSRuntime.InvokeVoidAsync("disposeVisibilityListener", dotNetHelper);
+                // Only remove from JavaScript array, don't dispose in JS
+                JSRuntime.InvokeVoidAsync("removeVisibilityChangeListener", dotNetHelper);
+                // Dispose the .NET reference here
                 dotNetHelper.Dispose();
+                dotNetHelper = null;
             }
         }
         catch
         {
-            // Ignore disposal errors
+            // Ignore disposal errors - this is critical during navigation
         }
     }
 }
