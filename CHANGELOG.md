@@ -4,6 +4,15 @@ All notable changes to the NeighborTools project will be documented in this file
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+### Fixed
+- **Bundle Approval Status Display Bug** (2025-01-23)
+  - **Resolved Data Inconsistency**: Fixed bundle approval status showing incorrectly as "rejected" when actually approved
+  - **API Data Synchronization**: Ensured backend API serves current database approval status after restarts
+  - **Frontend Display Accuracy**: Bundle approval indicators now correctly reflect actual approval state from database
+  - **Investigation Complete**: Confirmed proper mapping of IsApproved, PendingApproval, and RejectionReason fields from entity to DTO
+  - **Eliminated User Confusion**: "Request Re-approval" button no longer appears for already approved bundles
+  - **Database Verification**: Confirmed "Complete Woodworking Project Kit" and other bundles show correct approval status
+
 ### Added
 - **Bundle Tool Selection Dialog Fix** (2025-01-23)
   - **Fixed EditBundle Tool Selection**: Converted EditBundle.razor from problematic inline MudDialog to proper DialogService pattern
