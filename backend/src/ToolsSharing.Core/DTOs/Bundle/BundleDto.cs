@@ -45,6 +45,11 @@ namespace ToolsSharing.Core.DTOs.Bundle
         public double AverageRating { get; set; }
         public int ReviewCount { get; set; }
         
+        // Approval/Moderation fields
+        public bool IsApproved { get; set; }
+        public bool PendingApproval { get; set; }
+        public string? RejectionReason { get; set; }
+        
         public DateTime CreatedAt { get; set; }
         public DateTime UpdatedAt { get; set; }
     }

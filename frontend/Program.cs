@@ -85,6 +85,7 @@ builder.Services.AddScoped<AdminMutualClosureService>();
 builder.Services.AddScoped<BundleService>();
 builder.Services.AddScoped<BundleReviewService>();
 builder.Services.AddScoped<IUrlService, UrlService>();
+builder.Services.AddScoped<IThemeService, ThemeService>();
 
 var app = builder.Build();
 

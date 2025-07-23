@@ -18,6 +18,7 @@ public interface IToolsService
     Task<ApiResponse<PagedResult<ToolReviewDto>>> GetToolReviewsAsync(Guid toolId, int page, int pageSize);
     Task<ApiResponse<ToolReviewDto>> CreateToolReviewAsync(Guid toolId, string userId, CreateToolReviewRequest request);
     Task<ApiResponse<List<DTOs.Tools.ToolDto>>> GetFeaturedToolsAsync(int count);
+    Task<ApiResponse<List<DTOs.Tools.ToolDto>>> GetPopularToolsAsync(int count);
     Task<ApiResponse<List<TagDto>>> GetPopularTagsAsync(int count);
     Task<ApiResponse<PagedResult<DTOs.Tools.ToolDto>>> SearchToolsAsync(SearchToolsQuery query);
     Task<ApiResponse<bool>> RequestApprovalAsync(Guid toolId, string userId, DTOs.Tools.RequestApprovalRequest request);

@@ -16,8 +16,9 @@ namespace ToolsSharing.Core.Interfaces
         Task<ApiResponse<PagedResult<BundleDto>>> GetBundlesAsync(int page = 1, int pageSize = 20, string? category = null, string? searchTerm = null, bool featuredOnly = false);
         Task<ApiResponse<PagedResult<BundleDto>>> GetUserBundlesAsync(string userId, int page = 1, int pageSize = 20);
         
-        // Featured bundles
+        // Featured and popular bundles
         Task<ApiResponse<List<BundleDto>>> GetFeaturedBundlesAsync(int count = 6);
+        Task<ApiResponse<List<BundleDto>>> GetPopularBundlesAsync(int count = 6);
         Task<ApiResponse<bool>> SetFeaturedStatusAsync(Guid bundleId, bool isFeatured, string adminUserId);
         
         // Bundle availability and pricing

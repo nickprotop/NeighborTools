@@ -110,6 +110,28 @@ namespace ToolsSharing.Frontend.Services
             }
         }
 
+        public async Task<ApiResponse<List<BundleModel>>> GetPopularBundlesAsync(int count = 6)
+        {
+            try
+            {
+                var response = await _httpClient.GetAsync($"api/bundles/popular?count={count}");
+                var json = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse<List<BundleModel>>>(json, _jsonOptions);
+                    return result ?? ApiResponse<List<BundleModel>>.CreateFailure("Failed to deserialize response");
+                }
+
+                var errorResult = JsonSerializer.Deserialize<ApiResponse<List<BundleModel>>>(json, _jsonOptions);
+                return errorResult ?? ApiResponse<List<BundleModel>>.CreateFailure("Request failed");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<List<BundleModel>>.CreateFailure($"Network error: {ex.Message}");
+            }
+        }
+
         public async Task<ApiResponse<Dictionary<string, int>>> GetBundleCategoriesAsync()
         {
             try

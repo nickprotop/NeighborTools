@@ -69,6 +69,16 @@ namespace ToolsSharing.API.Controllers
         }
 
         /// <summary>
+        /// Get popular bundles
+        /// </summary>
+        [HttpGet("popular")]
+        public async Task<IActionResult> GetPopularBundles([FromQuery] int count = 6)
+        {
+            var result = await _bundleService.GetPopularBundlesAsync(count);
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
         /// Get bundle categories with counts
         /// </summary>
         [HttpGet("categories")]

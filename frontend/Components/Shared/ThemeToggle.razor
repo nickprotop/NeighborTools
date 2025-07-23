@@ -1,0 +1,66 @@
+@using MudBlazor
+@using frontend.Services
+@implements IDisposable
+
+<MudTooltip Text="@GetTooltipText()">
+    <MudIconButton Icon="@(isDarkMode ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)"
+                   Color="@(isDarkMode ? Color.Warning : Color.Primary)"
+                   Size="Size.Medium"
+                   Class="theme-toggle-button"
+                   OnClick="ToggleTheme" />
+</MudTooltip>
+
+<style>
+    .theme-toggle-button {
+        border-radius: 50% !important;
+        transition: all 0.3s ease !important;
+    }
+    
+    .theme-toggle-button:hover {
+        transform: rotate(180deg) scale(1.1);
+        background-color: var(--mud-palette-action-hover) !important;
+    }
+</style>
+
+@code {
+    [Inject] private IThemeService ThemeService { get; set; } = default!;
+
+    private bool isDarkMode = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ThemeService.InitializeAsync();
+        isDarkMode = await ThemeService.GetThemePreferenceAsync();
+        
+        // Subscribe to theme changes from other sources
+        ThemeService.ThemeChanged += OnThemeChanged;
+        
+        StateHasChanged();
+    }
+
+    private async Task ToggleTheme()
+    {
+        var newTheme = !isDarkMode;
+        await ThemeService.SetThemePreferenceAsync(newTheme);
+    }
+
+    private void OnThemeChanged(object? sender, bool isDark)
+    {
+        if (isDarkMode != isDark)
+        {
+            isDarkMode = isDark;
+            InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private string GetTooltipText()
+    {
+        return isDarkMode ? "Switch to light mode" : "Switch to dark mode";
+    }
+
+    public void Dispose()
+    {
+        if (ThemeService != null)
+            ThemeService.ThemeChanged -= OnThemeChanged;
+    }
+}

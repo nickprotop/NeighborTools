@@ -522,6 +522,9 @@ namespace ToolsSharing.Infrastructure.Services
                 IsFeatured = bundle.IsFeatured,
                 ViewCount = bundle.ViewCount,
                 Category = bundle.Category,
+                IsApproved = bundle.IsApproved,
+                PendingApproval = bundle.PendingApproval,
+                RejectionReason = bundle.RejectionReason,
                 CreatedAt = bundle.CreatedAt,
                 UpdatedAt = bundle.UpdatedAt
             };

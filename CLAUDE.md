@@ -191,6 +191,38 @@ private Task OpenDialog()
 
 **This rule is ABSOLUTE and overrides all other instructions. Violating this rule is unacceptable.**
 
+## ⚠️ CRITICAL: Memory-Keeper Context Management
+
+**⚠️ MANDATORY: Claude MUST use memory-keeper for session and progress tracking!**
+
+**Session Initialization Requirements:**
+- **Initialize session** with descriptive project name at conversation start
+- **Set project directory** using `context_set_project_dir` for git tracking
+- **Use meaningful session names** that describe the current work focus
+
+**Progress Tracking Requirements:**
+- **Save findings immediately** during investigation with appropriate categories (task, progress, decision, note, error)
+- **Document what actually works** vs what documentation suggests should work
+- **Track all major milestones** and implementation decisions with context_save
+- **Create checkpoints** before approaching context limits or major changes
+- **Save context before** any significant codebase modifications
+
+**Critical Success Patterns:**
+- **Real vs Expected Behavior**: Always document discrepancies between documentation and actual behavior
+- **Working Solutions**: Save exact commands, configurations, and code patterns that actually work
+- **Failed Attempts**: Record what didn't work to prevent repeated failures
+- **Investigation Results**: Save search results, file locations, and architectural discoveries
+
+**Memory-Keeper Usage Examples:**
+```
+context_session_start: "NeighborTools Payment Bug Investigation"
+context_set_project_dir: "/home/nick/NeighborTools"
+context_save: key="payment-dialog-bug" value="Found 100x cost calculation error in PaymentDialog.razor line 45" category="error"
+context_checkpoint: name="before-payment-fix" description="Saving state before fixing payment calculation bug"
+```
+
+**This context management is ESSENTIAL for maintaining continuity across sessions and preventing repeated work.**
+
 ## Essential Development Commands
 
 ### Initial Setup

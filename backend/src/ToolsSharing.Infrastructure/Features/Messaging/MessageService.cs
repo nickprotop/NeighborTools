@@ -666,13 +666,10 @@ public class MessageService : IMessageService
     {
         try
         {
+            // First, get the conversation
             var conversation = await _context.Conversations
                 .Include(c => c.Participant1)
                 .Include(c => c.Participant2)
-                .Include(c => c.Messages.Where(m => !m.IsBlocked).OrderByDescending(m => m.CreatedAt).Take(query.PageSize))
-                    .ThenInclude(m => m.Sender)
-                .Include(c => c.Messages.Where(m => !m.IsBlocked).OrderByDescending(m => m.CreatedAt).Take(query.PageSize))
-                    .ThenInclude(m => m.Attachments)
                 .FirstOrDefaultAsync(c => c.Id == query.ConversationId && 
                     (c.Participant1Id == query.UserId || c.Participant2Id == query.UserId));
 
@@ -681,7 +678,19 @@ public class MessageService : IMessageService
                 return ApiResponse<ConversationDetailsDto>.CreateFailure("Conversation not found or access denied");
             }
 
+            // Then, get the messages separately to avoid complex LINQ translation issues
+            var messages = await _context.Messages
+                .Include(m => m.Sender)
+                .Include(m => m.Attachments.Where(a => !a.IsDeleted))
+                .Where(m => m.ConversationId == query.ConversationId && !m.IsDeleted && !m.IsBlocked)
+                .OrderByDescending(m => m.CreatedAt)
+                .Take(query.PageSize)
+                .ToListAsync();
+
+            // Map to DTO and manually set the messages
             var conversationDto = _mapper.Map<ConversationDetailsDto>(conversation);
+            conversationDto.Messages = _mapper.Map<List<MessageDto>>(messages);
+
             return ApiResponse<ConversationDetailsDto>.CreateSuccess(conversationDto, "Conversation retrieved successfully");
         }
         catch (Exception ex)

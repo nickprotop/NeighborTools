@@ -22,6 +22,7 @@ public interface IToolService
     Task<ApiResponse<PagedResult<ToolReview>>> GetToolReviewsAsync(string toolId, int page = 1, int pageSize = 10);
     Task<ApiResponse<ToolReview>> CreateToolReviewAsync(string toolId, CreateToolReviewRequest request);
     Task<ApiResponse<List<Tool>>> GetFeaturedToolsAsync(int count = 6);
+    Task<ApiResponse<List<Tool>>> GetPopularToolsAsync(int count = 6);
     Task<ApiResponse<List<TagDto>>> GetPopularTagsAsync(int count = 20);
     Task<ApiResponse<PagedResult<Tool>>> SearchToolsAdvancedAsync(ToolSearchRequest request);
     Task<ApiResponse> RequestApprovalAsync(string toolId, RequestApprovalRequest request);
@@ -371,6 +372,30 @@ public class ToolService : IToolService
             { 
                 Success = false, 
                 Message = $"Failed to retrieve featured tools: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<List<Tool>>> GetPopularToolsAsync(int count = 6)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/tools/popular?count={count}");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<List<Tool>>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<List<Tool>> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<List<Tool>> 
+            { 
+                Success = false, 
+                Message = $"Failed to retrieve popular tools: {ex.Message}" 
             };
         }
     }

@@ -5,6 +5,52 @@ All notable changes to the NeighborTools project will be documented in this file
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
+- **Complete MudBlazor Theme System Implementation** (2025-01-23)
+  - **Fixed Theme Toggle Functionality**: Resolved non-functional theme toggle component by implementing missing ToggleTheme() method
+  - **Fixed Dark Mode Background Issue**: Updated MainLayout.razor CSS to use theme-aware variables instead of hardcoded light colors
+  - **Fixed Dark Mode Button Text Visibility**: Implemented dynamic CSS variable updates to ensure proper button text colors in both light and dark modes
+  - **Dynamic CSS Variable Updates**: Added UpdateCssVariablesAsync() method to automatically update CSS custom properties when theme changes
+  - **Proper Theme Architecture**: Implemented unified MudTheme with both PaletteLight and PaletteDark, controlled by IsDarkMode parameter on MudThemeProvider
+  - **Enhanced Theme Colors**: Updated theme palette to use modern design system colors matching app.css color scheme
+  - **Fixed Header/Footer Theming**: Updated top-header and app-footer to use var(--mud-palette-surface) and var(--mud-palette-divider) for proper dark mode support
+  - **Comprehensive Color Mapping**: Updated --mud-text-primary, --mud-text-secondary, and action colors to ensure all UI elements are visible in both themes
+  - **Cleaned Debug Code**: Removed all console logging statements from theme system for production readiness
+  - **Theme Persistence**: Maintained localStorage persistence with system preference detection fallback
+  - **Component Integration**: Proper ThemeToggle component with tooltip and smooth icon animations
+  - **Cross-Component Updates**: Theme changes now properly update across all components via event-driven architecture
+
+### Fixed
+- **Entity Framework LINQ Query Translation Error** (2025-01-23)
+  - **Fixed Complex Query Translation Issue**: Resolved critical error in MessageService.GetConversationByIdAsync where complex nested Include operations couldn't be translated to SQL
+  - **Split Query Architecture**: Divided problematic single query into two separate database queries to avoid Entity Framework translation limitations
+  - **Improved Message Loading**: First query retrieves conversation details, second query loads messages separately for better database compatibility
+  - **Enhanced Error Handling**: Eliminated "The LINQ expression... could not be translated" errors that prevented conversation loading
+  - **DTO Mapping Fix**: Corrected MessageDto type usage in ConversationDetailsDto to ensure proper data structure
+  - **Better Performance**: Simplified queries reduce database complexity and improve conversation loading reliability
+  - **User Experience Restoration**: Users can now successfully view message conversations without encountering translation errors
+
+- **Navigation System Complete Refactoring** (2025-01-23)
+  - **Complete Architecture Overhaul**: Replaced complex multi-component navigation system with clean two-component design (AppNavigation.razor + NavItem.razor)
+  - **Fixed Desktop Sidebar Width**: Corrected oversized desktop sidebar to appropriate 280px (expanded) / 72px (collapsed) dimensions
+  - **Fixed Desktop Collapse Functionality**: Restored working sidebar toggle with localStorage persistence and proper CSS transitions
+  - **Fixed Hamburger Menu Visibility**: Resolved hamburger menu not appearing in mobile view through CSS media query implementation
+  - **CSS-Driven Responsive Design**: Replaced unreliable JavaScript detection with robust CSS media queries (@media breakpoints at 1200px)
+  - **Enhanced State Management**: Simplified navigation state to two boolean values with mobile-first fallback defaults
+  - **Improved Error Resilience**: Navigation now defaults to mobile mode if screen detection fails, ensuring hamburger menu always appears when needed
+  - **Unified Component Architecture**: Single AppNavigation.razor handles all screen sizes with conditional rendering patterns
+  - **Reusable NavItem Component**: Created flexible NavItem.razor with badge support, tooltips, and responsive behavior
+  - **Better MudBlazor 8.x Integration**: Proper EventCallback patterns and consistent component composition
+  - **Performance Optimization**: Reduced JavaScript overhead by moving responsive behavior to CSS-only implementation
+
+- **Navigation Restructure & Message Enhancement** (2025-01-23)
+  - **Moved Profile Menu Items**: Relocated "My Tools" and "My Rentals" from main navigation to user profile dropdown menu
+  - **Conditional Messages Display**: Messages now appear in top navigation only when there are unread messages with red badge count
+  - **Profile Menu Messages**: Messages always available in profile dropdown with red chip indicator when unread messages exist
+  - **Enhanced Mobile Navigation**: Updated mobile drawer navigation to match desktop structure with proper message count display
+  - **Improved Navigation Focus**: Main navigation now shows only essential items (Browse Tools, Messages if unread, Disputes if active)
+  - **Consistent UX Patterns**: Both desktop and mobile navigation follow same conditional display logic for optimal user experience
+  - **MudBlazor 8.x Compliance**: Fixed MudChip type inference errors by adding explicit T="string" parameter
+
 - **Bundle Approval Status Display Bug** (2025-01-23)
   - **Resolved Data Inconsistency**: Fixed bundle approval status showing incorrectly as "rejected" when actually approved
   - **API Data Synchronization**: Ensured backend API serves current database approval status after restarts
