@@ -121,10 +121,12 @@ public class FavoriteDto
 {
     public string Id { get; set; } = string.Empty;
     public string UserId { get; set; } = string.Empty;
-    public string ToolId { get; set; } = string.Empty;
+    public string? ToolId { get; set; }
+    public string? BundleId { get; set; }
+    public string FavoriteType { get; set; } = string.Empty; // "Tool" or "Bundle"
     public DateTime CreatedAt { get; set; }
     
-    // Tool information
+    // Tool information (for tool favorites)
     public string ToolName { get; set; } = string.Empty;
     public string ToolDescription { get; set; } = string.Empty;
     public string ToolCategory { get; set; } = string.Empty;
@@ -134,7 +136,16 @@ public class FavoriteDto
     public List<string> ToolImageUrls { get; set; } = new();
     public bool IsToolAvailable { get; set; }
     
-    // Owner information
+    // Bundle information (for bundle favorites)
+    public string BundleName { get; set; } = string.Empty;
+    public string BundleDescription { get; set; } = string.Empty;
+    public string BundleCategory { get; set; } = string.Empty;
+    public decimal BundleDiscountedCost { get; set; }
+    public string BundleImageUrl { get; set; } = string.Empty;
+    public bool IsBundleAvailable { get; set; }
+    public int BundleToolCount { get; set; }
+    
+    // Owner information (common for both)
     public string OwnerName { get; set; } = string.Empty;
     public string OwnerEmail { get; set; } = string.Empty;
 }
@@ -142,6 +153,11 @@ public class FavoriteDto
 public class AddToFavoritesRequest
 {
     public string ToolId { get; set; } = string.Empty;
+}
+
+public class AddBundleToFavoritesRequest
+{
+    public string BundleId { get; set; } = string.Empty;
 }
 
 public class RemoveFromFavoritesRequest
@@ -167,6 +183,7 @@ public class ToolReview
     public string ToolId { get; set; } = string.Empty;
     public string ReviewerId { get; set; } = string.Empty;
     public string ReviewerName { get; set; } = string.Empty;
+    public string ReviewerAvatar { get; set; } = string.Empty;
     public int Rating { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Comment { get; set; } = string.Empty;
@@ -178,6 +195,18 @@ public class CreateToolReviewRequest
     public int Rating { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Comment { get; set; } = string.Empty;
+}
+
+public class ToolReviewSummaryDto
+{
+    public double AverageRating { get; set; }
+    public int TotalReviews { get; set; }
+    public int FiveStarCount { get; set; }
+    public int FourStarCount { get; set; }
+    public int ThreeStarCount { get; set; }
+    public int TwoStarCount { get; set; }
+    public int OneStarCount { get; set; }
+    public List<ToolReview> LatestReviews { get; set; } = new();
 }
 
 // Tag models

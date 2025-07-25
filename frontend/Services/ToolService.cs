@@ -21,6 +21,7 @@ public interface IToolService
     Task<ApiResponse> IncrementViewCountAsync(string toolId);
     Task<ApiResponse<PagedResult<ToolReview>>> GetToolReviewsAsync(string toolId, int page = 1, int pageSize = 10);
     Task<ApiResponse<ToolReview>> CreateToolReviewAsync(string toolId, CreateToolReviewRequest request);
+    Task<ApiResponse<ToolReviewSummaryDto>> GetToolReviewSummaryAsync(string toolId);
     Task<ApiResponse<List<Tool>>> GetFeaturedToolsAsync(int count = 6);
     Task<ApiResponse<List<Tool>>> GetPopularToolsAsync(int count = 6);
     Task<ApiResponse<List<TagDto>>> GetPopularTagsAsync(int count = 20);
@@ -348,6 +349,30 @@ public class ToolService : IToolService
             { 
                 Success = false, 
                 Message = $"Failed to create tool review: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<ToolReviewSummaryDto>> GetToolReviewSummaryAsync(string toolId)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/tools/{toolId}/reviews/summary");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<ToolReviewSummaryDto>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<ToolReviewSummaryDto> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<ToolReviewSummaryDto> 
+            { 
+                Success = false, 
+                Message = $"Failed to retrieve tool review summary: {ex.Message}" 
             };
         }
     }

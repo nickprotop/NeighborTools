@@ -133,9 +133,11 @@ else if (filteredTools != null && filteredTools.Any())
                     }
                     else
                     {
-                        <div class="d-flex align-center justify-center" style="height: 200px; background: var(--mud-palette-surface-variant); border-radius: 12px 12px 0 0;">
-                            <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem;" />
-                        </div>
+                        <ThemeAwarePlaceholder Height="200px" 
+                                              BorderRadius="12px 12px 0 0"
+                                              Icon="@Icons.Material.Filled.Build" 
+                                              IconSize="Size.Large"
+                                              IconFontSize="3rem" />
                     }
                     
                     <MudCardContent>
@@ -188,21 +190,19 @@ else if (filteredTools != null && filteredTools.Any())
                     </MudCardContent>
                     
                     <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
-                        <MudButton Variant="Variant.Filled" 
-                                   Color="@(tool.IsAvailable ? Color.Primary : Color.Secondary)" 
-                                   FullWidth="true"
-                                   OnClick="() => ViewTool(tool.Id)"
+                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+                            <MudButton Variant="Variant.Filled" 
+                                       Color="@(tool.IsAvailable ? Color.Primary : Color.Secondary)" 
+                                       OnClick="() => ViewTool(tool.Id)"
                                    Disabled="@(!tool.IsAvailable)"
                                    StartIcon="@(tool.IsAvailable ? Icons.Material.Filled.Visibility : Icons.Material.Filled.Block)">
                             @(tool.IsAvailable ? "View Details" : "Unavailable")
                         </MudButton>
                         
-                        @if (tool.IsAvailable)
-                        {
                             <FavoriteButton ToolId="@tool.Id" 
                                            OwnerUserId="@tool.OwnerId" 
                                            Size="Size.Small" />
-                        }
+                        </MudStack>
                     </MudCardActions>
                 </MudCard>
             </MudItem>
