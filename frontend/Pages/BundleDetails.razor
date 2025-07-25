@@ -12,6 +12,7 @@
 @inject IDialogService DialogService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IUrlService UrlService
+@inject IBreadcrumbService BreadcrumbService
 
 <PageTitle>@(bundle?.Name ?? "Bundle") - NeighborTools</PageTitle>
 
@@ -55,6 +56,8 @@ else if (bundle == null)
 else
 {
     <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+        <!-- Breadcrumb -->
+        <BreadcrumbNavigation Items="@breadcrumbItems" />
         <MudGrid>
             <!-- Header Section -->
             <MudItem xs="12">
@@ -471,6 +474,7 @@ else
     private string? currentUserId;
     private BundleApprovalStatusDto? bundleApprovalStatus;
     private bool bundleImageLoadError = false;
+    private List<frontend.Models.BreadcrumbItem> breadcrumbItems = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -481,6 +485,7 @@ else
         await LoadBundle();
         if (bundle != null)
         {
+            SetupBreadcrumbs();
             await CheckQuickAvailability();
             if (isOwner)
             {
@@ -494,6 +499,10 @@ else
         if (bundle?.Id != BundleId)
         {
             await LoadBundle();
+            if (bundle != null)
+            {
+                SetupBreadcrumbs();
+            }
         }
     }
 
@@ -736,5 +745,16 @@ else
     {
         bundleImageLoadError = false;
         StateHasChanged();
+    }
+
+    private void SetupBreadcrumbs()
+    {
+        if (bundle != null)
+        {
+            breadcrumbItems = BreadcrumbService.GenerateBundlesBreadcrumb(
+                bundleName: bundle.Name,
+                category: bundle.Category,
+                page: BreadcrumbPage.Details);
+        }
     }
 }

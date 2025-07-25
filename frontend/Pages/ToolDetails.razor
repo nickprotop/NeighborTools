@@ -16,6 +16,7 @@
 @inject MessageService MessageService
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IUrlService UrlService
+@inject IBreadcrumbService BreadcrumbService
 @attribute [Authorize]
 
 <PageTitle>@(tool?.Name ?? "Tool Details") - NeighborTools</PageTitle>
@@ -48,7 +49,7 @@ else if (tool != null)
 {
     <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
         <!-- Breadcrumb -->
-        <MudBreadcrumbs Items="_breadcrumbItems" Class="mb-4" />
+        <BreadcrumbNavigation Items="@breadcrumbItems" />
         
         <MudGrid>
             <!-- Header Section -->
@@ -410,7 +411,7 @@ else if (tool != null)
     private Tool? tool;
     private bool isLoading = true;
     private string errorMessage = string.Empty;
-    private List<BreadcrumbItem> _breadcrumbItems = new();
+    private List<frontend.Models.BreadcrumbItem> breadcrumbItems = new();
     private bool isOwner = false;
     private string? currentUserId;
 
@@ -476,12 +477,13 @@ else if (tool != null)
 
     private void SetupBreadcrumbs()
     {
-        _breadcrumbItems = new List<BreadcrumbItem>
+        if (tool != null)
         {
-            new BreadcrumbItem("Home", href: "/"),
-            new BreadcrumbItem("Tools", href: "/tools"),
-            new BreadcrumbItem(tool?.Name ?? "Tool Details", href: null, disabled: true)
-        };
+            breadcrumbItems = BreadcrumbService.GenerateToolsBreadcrumb(
+                toolName: tool.Name,
+                category: tool.Category,
+                page: BreadcrumbPage.Details);
+        }
     }
 
     private string GetOwnerInitials(string ownerName)

@@ -4,331 +4,231 @@
 @using frontend.Models
 @using frontend.Services
 @using frontend.Components
-@using ToolsSharing.Frontend.Models
-@using ToolsSharing.Frontend.Services
-@using frontend.Components.Bundles
+@using frontend.Components.Common
 @inject IToolService ToolService
-@inject BundleService BundleService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IUrlService UrlService
+@inject IBreadcrumbService BreadcrumbService
 @attribute [AllowAnonymous]
+@implements IDisposable
 
-<PageTitle>Browse Tools & Bundles - NeighborTools</PageTitle>
+<PageTitle>Browse Tools - NeighborTools</PageTitle>
 
-<!-- Header Section -->
-<div class="d-flex flex-column flex-sm-row justify-space-between align-center mb-6 gap-4">
-    <div>
-        <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
-            <MudIcon Icon="@Icons.Material.Filled.Search" Class="mr-2" />
-            Browse Tools & Bundles
-        </MudText>
-        <MudText Typo="Typo.body1" Color="Color.Secondary">
-            Find the perfect tools and bundles for your project
-        </MudText>
-    </div>
-    
-    <div class="d-flex align-center gap-2">
-        <MudTextField Value="@(activeTab == 0 ? searchQuery : bundleSearchTerm)"
-                      ValueChanged="@((string value) => UpdateSearchValue(value))"
-                      @onkeypress="HandleKeyPress"
-                      Placeholder="@(activeTab == 0 ? "Search tools..." : "Search bundles...")"
-                      Variant="Variant.Outlined"
-                      Adornment="Adornment.End"
-                      AdornmentIcon="@Icons.Material.Filled.Search"
-                      OnAdornmentClick="HandleSearchClick"
-                      Style="min-width: 300px;" />
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Breadcrumb -->
+    <BreadcrumbNavigation Items="@breadcrumbItems" />
+    <!-- Header Section -->
+    <div class="d-flex flex-column flex-sm-row justify-space-between align-center mb-6 gap-4">
+        <div>
+            <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
+                <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
+                Browse Tools
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Find the perfect tools for your project
+            </MudText>
+        </div>
         
-        <AuthorizeView>
-            <Authorized>
-                <MudButton Variant="Variant.Filled" 
-                           Color="Color.Primary" 
-                           StartIcon="@Icons.Material.Filled.Add"
-                           Href="@(activeTab == 0 ? "/tools/create" : "/bundles/create")">
-                    @(activeTab == 0 ? "Add Tool" : "Create Bundle")
-                </MudButton>
-            </Authorized>
-        </AuthorizeView>
-    </div>
-</div>
-
-<!-- Tabs for Tools and Bundles -->
-<MudTabs Elevation="4" Rounded="true" PanelClass="pa-6" @bind-ActivePanelIndex="activeTab">
-    <MudTabPanel Text="Individual Tools" Icon="@Icons.Material.Filled.Build">
-
-<!-- Filters Section -->
-<MudExpansionPanels Elevation="2" Class="mb-4">
-    <MudExpansionPanel Text="Filters" Icon="@Icons.Material.Filled.FilterList">
-        <MudGrid>
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="string" @bind-Value="selectedCategory" Label="Category" Variant="Variant.Outlined" Clearable="true" AdornmentIcon="@Icons.Material.Filled.Category" Adornment="Adornment.Start" @bind-Value:after="ApplyFilters">
-                    <MudSelectItem T="string" Value="@string.Empty">All Categories</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Power Tools")">Power Tools</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Hand Tools")">Hand Tools</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Garden Tools")">Garden Tools</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Automotive")">Automotive</MudSelectItem>
-                    <MudSelectItem T="string" Value="@("Construction")">Construction</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudSelect T="bool?" @bind-Value="availableOnly" Label="Availability" Variant="Variant.Outlined" Clearable="true" AdornmentIcon="@Icons.Material.Filled.CheckCircle" Adornment="Adornment.Start" @bind-Value:after="ApplyFilters">
-                    <MudSelectItem T="bool?" Value="@((bool?)null)">All Tools</MudSelectItem>
-                    <MudSelectItem T="bool?" Value="@((bool?)true)">Available Only</MudSelectItem>
-                    <MudSelectItem T="bool?" Value="@((bool?)false)">Unavailable</MudSelectItem>
-                </MudSelect>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3">
-                <MudSlider @bind-Value="maxDailyRate" Min="0" Max="200" Step="5" Color="Color.Primary" @bind-Value:after="ApplyFilters">
-                    Max Daily Rate: $@maxDailyRate
-                </MudSlider>
-            </MudItem>
-            <MudItem xs="12" sm="6" md="3" Class="d-flex align-center">
-                <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="ClearFilters" StartIcon="@Icons.Material.Filled.Clear">
-                    Clear Filters
-                </MudButton>
-            </MudItem>
-        </MudGrid>
-    </MudExpansionPanel>
-</MudExpansionPanels>
-
-@if (isLoading)
-{
-    <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
-        <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
-        <MudText Typo="Typo.h6" Class="mt-4">Loading tools...</MudText>
-    </MudPaper>
-}
-else if (!string.IsNullOrEmpty(errorMessage))
-{
-    <MudAlert Severity="Severity.Error" ShowCloseIcon="true" CloseIconClicked="(() => errorMessage = string.Empty)">
-        @errorMessage
-    </MudAlert>
-}
-else if (filteredTools != null && filteredTools.Any())
-{
-    <div class="d-flex justify-space-between align-center mb-4">
-        <MudText Typo="Typo.body1" Color="Color.Secondary">
-            Showing @(filteredTools?.Count ?? 0) tools
-        </MudText>
-        
-        <div class="d-flex justify-end">
-            <MudSelect T="string" @bind-Value="sortBy" Label="Sort by" Variant="Variant.Outlined" Dense="true" Style="width: fit-content;" AdornmentIcon="@Icons.Material.Filled.Sort" Adornment="Adornment.Start" @bind-Value:after="StateHasChanged">
-                <MudSelectItem T="string" Value="@("name")">Name</MudSelectItem>
-                <MudSelectItem T="string" Value="@("price-low")">Price: Low to High</MudSelectItem>
-                <MudSelectItem T="string" Value="@("price-high")">Price: High to Low</MudSelectItem>
-                <MudSelectItem T="string" Value="@("rating")">Rating</MudSelectItem>
-                <MudSelectItem T="string" Value="@("newest")">Newest First</MudSelectItem>
-            </MudSelect>
+        <div class="d-flex align-center gap-2">
+            <MudTextField @bind-Value="searchQuery"
+                          @onkeypress="HandleKeyPress"
+                          Placeholder="Search tools..."
+                          Variant="Variant.Outlined"
+                          Adornment="Adornment.End"
+                          AdornmentIcon="@Icons.Material.Filled.Search"
+                          OnAdornmentClick="SearchTools"
+                          Style="min-width: 300px;" />
+            
+            <AuthorizeView>
+                <Authorized>
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               StartIcon="@Icons.Material.Filled.Add"
+                               Href="/tools/create">
+                        Add Tool
+                    </MudButton>
+                </Authorized>
+            </AuthorizeView>
         </div>
     </div>
-    
-    <MudGrid>
-        @foreach (var tool in GetSortedTools())
-        {
-            <MudItem xs="12" sm="6" md="4" lg="3">
-                <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s; cursor: pointer;" Class="hover-card" @onclick="() => ViewTool(tool.Id)">
-                    @if (tool.ImageUrls.Any())
-                    {
-                        <MudCardMedia Image="@UrlService.GetFileUrl(tool.ImageUrls.First())" Height="200" Style="border-radius: 12px 12px 0 0;" />
-                    }
-                    else
-                    {
-                        <ThemeAwarePlaceholder Height="200px" 
-                                              BorderRadius="12px 12px 0 0"
-                                              Icon="@Icons.Material.Filled.Build" 
-                                              IconSize="Size.Large"
-                                              IconFontSize="3rem" />
-                    }
-                    
-                    <MudCardContent>
-                        <MudText Typo="Typo.h6" GutterBottom="true">@tool.Name</MudText>
-                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3" Style="height: 3em; overflow: hidden;">
-                            @(tool.Description.Length > 80 ? tool.Description.Substring(0, 80) + "..." : tool.Description)
-                        </MudText>
-                        
-                        <div class="d-flex justify-space-between align-center mb-3">
-                            <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.Category">
-                                @tool.Category
-                            </MudChip>
-                            <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Error)" 
-                                     Size="Size.Small" 
-                                     Icon="@(tool.IsAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)">
-                                @(tool.IsAvailable ? "Available" : "Unavailable")
-                            </MudChip>
-                        </div>
-                        
-                        <div class="d-flex justify-space-between align-center mb-2">
-                            <MudText Typo="Typo.h6" Color="Color.Primary">
-                                $@tool.DailyRate.ToString("F2")
-                            </MudText>
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                per day
-                            </MudText>
-                        </div>
-                        
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-                            Condition: @tool.Condition
-                        </MudText>
-                        
-                        @if (tool.Rating.HasValue)
+
+    <!-- Filters Section -->
+    <MudPaper Class="pa-4 mb-4" Elevation="1">
+        <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+            <!-- Category Filter -->
+            <MudSelect @bind-Value="selectedCategory" 
+                     Label="Category" 
+                     Variant="Variant.Outlined"
+                     AnchorOrigin="Origin.BottomCenter"
+                     @bind-Value:after="ApplyFilters">
+                <MudSelectItem Value="@(string.Empty)">All Categories</MudSelectItem>
+                <MudSelectItem Value="@("Power Tools")">Power Tools</MudSelectItem>
+                <MudSelectItem Value="@("Hand Tools")">Hand Tools</MudSelectItem>
+                <MudSelectItem Value="@("Garden Tools")">Garden Tools</MudSelectItem>
+                <MudSelectItem Value="@("Automotive")">Automotive</MudSelectItem>
+                <MudSelectItem Value="@("Construction")">Construction</MudSelectItem>
+                <MudSelectItem Value="@("Home Improvement")">Home Improvement</MudSelectItem>
+                <MudSelectItem Value="@("Cleaning")">Cleaning</MudSelectItem>
+                <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+            </MudSelect>
+
+            <!-- Availability Filter -->
+            <MudSelect @bind-Value="availableOnly" 
+                     Label="Availability" 
+                     Variant="Variant.Outlined"
+                     AnchorOrigin="Origin.BottomCenter"
+                     @bind-Value:after="ApplyFilters">
+                <MudSelectItem T="bool?" Value="@((bool?)null)">All Tools</MudSelectItem>
+                <MudSelectItem T="bool?" Value="@((bool?)true)">Available Only</MudSelectItem>
+                <MudSelectItem T="bool?" Value="@((bool?)false)">Unavailable</MudSelectItem>
+            </MudSelect>
+
+            <!-- Price Range -->
+            <div style="min-width: 200px;">
+                <MudText Typo="Typo.body2" Class="mb-2">Max Daily Rate: $@maxDailyRate</MudText>
+                <MudSlider @bind-Value="maxDailyRate" 
+                         Min="0" 
+                         Max="200" 
+                         Step="5" 
+                         Color="Color.Primary" 
+                         @bind-Value:after="ApplyFilters" />
+            </div>
+        </MudStack>
+    </MudPaper>
+
+    @if (isLoading)
+    {
+        <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Class="mt-4">Loading tools...</MudText>
+        </MudPaper>
+    }
+    else if (!string.IsNullOrEmpty(errorMessage))
+    {
+        <MudAlert Severity="Severity.Error" ShowCloseIcon="true" CloseIconClicked="(() => errorMessage = string.Empty)">
+            @errorMessage
+        </MudAlert>
+    }
+    else if (filteredTools != null && filteredTools.Any())
+    {
+        <div class="d-flex justify-space-between align-center mb-4">
+            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                Showing @(filteredTools?.Count ?? 0) tools
+            </MudText>
+            
+            <div class="d-flex justify-end">
+                <MudSelect T="string" @bind-Value="sortBy" Label="Sort by" Variant="Variant.Outlined" Dense="true" Style="width: fit-content;" AdornmentIcon="@Icons.Material.Filled.Sort" Adornment="Adornment.Start" @bind-Value:after="StateHasChanged">
+                    <MudSelectItem T="string" Value="@("name")">Name</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("price-low")">Price: Low to High</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("price-high")">Price: High to Low</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("rating")">Rating</MudSelectItem>
+                    <MudSelectItem T="string" Value="@("newest")">Newest First</MudSelectItem>
+                </MudSelect>
+            </div>
+        </div>
+        
+        <MudGrid>
+            @foreach (var tool in GetSortedTools())
+            {
+                <MudItem xs="12" sm="6" md="4" lg="3">
+                    <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s; cursor: pointer;" Class="hover-card" @onclick="() => ViewTool(tool.Id)">
+                        @if (tool.ImageUrls.Any())
                         {
-                            <div class="d-flex align-center gap-2 mb-3">
-                                <MudRating ReadOnly="true" SelectedValue="@((int)tool.Rating.Value)" MaxValue="5" Size="Size.Small" />
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    (@tool.ReviewCount)
-                                </MudText>
-                            </div>
+                            <MudCardMedia Image="@UrlService.GetFileUrl(tool.ImageUrls.First())" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                        }
+                        else
+                        {
+                            <ThemeAwarePlaceholder Height="200px" 
+                                                  BorderRadius="12px 12px 0 0"
+                                                  Icon="@Icons.Material.Filled.Build" 
+                                                  IconSize="Size.Large"
+                                                  IconFontSize="3rem" />
                         }
                         
-                        <div class="mt-2">
-                            <UserLink UserId="@tool.OwnerId" 
-                                      DisplayName="@tool.OwnerName" 
-                                      ShowAvatar="true" 
-                                      AvatarSize="Size.Small"
-                                      AdditionalClass="text-secondary" />
-                        </div>
-                    </MudCardContent>
-                    
-                    <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
-                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
-                            <MudButton Variant="Variant.Filled" 
-                                       Color="@(tool.IsAvailable ? Color.Primary : Color.Secondary)" 
-                                       OnClick="() => ViewTool(tool.Id)"
-                                   Disabled="@(!tool.IsAvailable)"
-                                   StartIcon="@(tool.IsAvailable ? Icons.Material.Filled.Visibility : Icons.Material.Filled.Block)">
-                            @(tool.IsAvailable ? "View Details" : "Unavailable")
-                        </MudButton>
+                        <MudCardContent>
+                            <MudText Typo="Typo.h6" GutterBottom="true">@tool.Name</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3" Style="height: 3em; overflow: hidden;">
+                                @(tool.Description.Length > 80 ? tool.Description.Substring(0, 80) + "..." : tool.Description)
+                            </MudText>
+                            
+                            <div class="d-flex justify-space-between align-center mb-3">
+                                <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.Category">
+                                    @tool.Category
+                                </MudChip>
+                                <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Error)" 
+                                         Size="Size.Small" 
+                                         Icon="@(tool.IsAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)">
+                                    @(tool.IsAvailable ? "Available" : "Unavailable")
+                                </MudChip>
+                            </div>
+                            
+                            <div class="d-flex justify-space-between align-center mb-2">
+                                <MudText Typo="Typo.h6" Color="Color.Primary">
+                                    $@tool.DailyRate.ToString("F2")
+                                </MudText>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    per day
+                                </MudText>
+                            </div>
+                            
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                                Condition: @tool.Condition
+                            </MudText>
+                            
+                            @if (tool.Rating.HasValue)
+                            {
+                                <div class="d-flex align-center gap-2 mb-3">
+                                    <MudRating ReadOnly="true" SelectedValue="@((int)tool.Rating.Value)" MaxValue="5" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        (@tool.ReviewCount)
+                                    </MudText>
+                                </div>
+                            }
+                            
+                            <div class="mt-2">
+                                <UserLink UserId="@tool.OwnerId" 
+                                          DisplayName="@tool.OwnerName" 
+                                          ShowAvatar="true" 
+                                          AvatarSize="Size.Small"
+                                          AdditionalClass="text-secondary" />
+                            </div>
+                        </MudCardContent>
                         
-                            <FavoriteButton ToolId="@tool.Id" 
-                                           OwnerUserId="@tool.OwnerId" 
-                                           Size="Size.Small" />
-                        </MudStack>
-                    </MudCardActions>
-                </MudCard>
-            </MudItem>
-        }
-    </MudGrid>
-}
-else
-{
-    <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
-        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
-        <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No tools found</MudText>
-        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-            Try adjusting your search or filters, or be the first to share a tool!
-        </MudText>
-        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="@Icons.Material.Filled.Add">
-            Add Your Tool
-        </MudButton>
-    </MudPaper>
-}
-    </MudTabPanel>
-
-    <MudTabPanel Text="Tool Bundles" Icon="@Icons.Material.Filled.Inventory">
-        <!-- Bundle Filters Section -->
-        <MudPaper Class="pa-4 mb-4" Elevation="1">
-            <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-                <!-- Category Filter -->
-                <MudSelect @bind-Value="selectedBundleCategory" 
-                         Label="Category" 
-                         Variant="Variant.Outlined"
-                         AnchorOrigin="Origin.BottomCenter"
-                         @bind-Value:after="LoadBundles">
-                    <MudSelectItem Value="@("")">All Categories</MudSelectItem>
-                    @foreach (var category in availableBundleCategories)
-                    {
-                        <MudSelectItem Value="@category.Key">@category.Key (@category.Value)</MudSelectItem>
-                    }
-                </MudSelect>
-
-                <!-- Featured Filter -->
-                <MudSwitch @bind-Value="featuredOnly" Label="Featured Only" Color="Color.Primary" @bind-Value:after="LoadBundles" />
-
-                <!-- Clear Filters -->
-                <MudButton Variant="Variant.Text" 
-                         Color="Color.Secondary" 
-                         OnClick="ClearBundleFilters"
-                         StartIcon="@Icons.Material.Filled.Clear">
-                    Clear Filters
-                </MudButton>
-            </MudStack>
-        </MudPaper>
-
-        @if (isBundlesLoading)
-        {
-            <MudGrid>
-                @for (int i = 0; i < 6; i++)
-                {
-                    <MudItem xs="12" sm="6" md="4">
-                        <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
-                    </MudItem>
-                }
-            </MudGrid>
-        }
-        else if (bundles?.Items?.Any() == true)
-        {
-            <!-- Results Header -->
-            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-                <MudText Typo="Typo.body1" Color="Color.Secondary">
-                    Showing @bundles.Items.Count of @bundles.TotalCount bundle@(bundles.TotalCount != 1 ? "s" : "")
-                </MudText>
-                
-                <!-- Sort Options -->
-                <MudSelect @bind-Value="bundleSortBy" 
-                         Label="Sort by" 
-                         Variant="Variant.Outlined"
-                         Dense="true"
-                         Style="width: fit-content;"
-                         @bind-Value:after="LoadBundles">
-                    <MudSelectItem Value="@("featured")">Featured First</MudSelectItem>
-                    <MudSelectItem Value="@("newest")">Newest First</MudSelectItem>
-                    <MudSelectItem Value="@("popular")">Most Popular</MudSelectItem>
-                    <MudSelectItem Value="@("price-low")">Price: Low to High</MudSelectItem>
-                    <MudSelectItem Value="@("price-high")">Price: High to Low</MudSelectItem>
-                </MudSelect>
-            </MudStack>
-
-            <!-- Bundle Cards -->
-            <MudGrid>
-                @foreach (var bundle in bundles.Items)
-                {
-                    <MudItem xs="12" sm="6" md="4">
-                        <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
-                    </MudItem>
-                }
-            </MudGrid>
-
-            <!-- Pagination -->
-            @if (bundles.TotalPages > 1)
-            {
-                <MudStack AlignItems="AlignItems.Center" Class="mt-6">
-                    <MudPagination Count="bundles.TotalPages" 
-                                 Selected="currentBundlePage" 
-                                 SelectedChanged="OnBundlePageChanged"
-                                 Color="Color.Primary" 
-                                 Size="Size.Large" />
-                </MudStack>
+                        <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
+                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="@(tool.IsAvailable ? Color.Primary : Color.Secondary)" 
+                                           OnClick="() => ViewTool(tool.Id)"
+                                       Disabled="@(!tool.IsAvailable)"
+                                       StartIcon="@(tool.IsAvailable ? Icons.Material.Filled.Visibility : Icons.Material.Filled.Block)">
+                                @(tool.IsAvailable ? "View Details" : "Unavailable")
+                            </MudButton>
+                            
+                                <FavoriteButton ToolId="@tool.Id" 
+                                               OwnerUserId="@tool.OwnerId" 
+                                               Size="Size.Small" />
+                            </MudStack>
+                        </MudCardActions>
+                    </MudCard>
+                </MudItem>
             }
-        }
-        else
-        {
-            <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
-                <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
-                <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No bundles found</MudText>
-                <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                    Try adjusting your search criteria or explore different categories.
-                </MudText>
-                <AuthorizeView>
-                    <Authorized>
-                        <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/bundles/create" StartIcon="@Icons.Material.Filled.Add">
-                            Create Bundle
-                        </MudButton>
-                    </Authorized>
-                </AuthorizeView>
-            </MudPaper>
-        }
-    </MudTabPanel>
-</MudTabs>
+        </MudGrid>
+    }
+    else
+    {
+        <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
+            <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">No tools found</MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                Try adjusting your search or filters, or be the first to share a tool!
+            </MudText>
+            <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="@Icons.Material.Filled.Add">
+                Add Your Tool
+            </MudButton>
+        </MudPaper>
+    }
+</MudContainer>
 
 <style>
     .hover-card:hover {
@@ -343,6 +243,7 @@ else
     private string searchQuery = string.Empty;
     private string errorMessage = string.Empty;
     private bool isLoading = true;
+    private List<frontend.Models.BreadcrumbItem> breadcrumbItems = new();
     
     // Tools filter properties
     private string selectedCategory = string.Empty;
@@ -350,26 +251,45 @@ else
     private double maxDailyRate = 200;
     private string sortBy = "name";
 
-    // Bundles variables
-    private PagedResult<BundleModel>? bundles;
-    private string bundleSearchTerm = string.Empty;
-    private bool isBundlesLoading = true;
-    private string selectedBundleCategory = string.Empty;
-    private bool featuredOnly = false;
-    private string bundleSortBy = "featured";
-    private int currentBundlePage = 1;
-    private Dictionary<string, int> availableBundleCategories = new();
-
-    // Tab management
-    private int activeTab = 0;
-
     protected override async Task OnInitializedAsync()
     {
-        await Task.WhenAll(
-            LoadTools(),
-            LoadBundles(),
-            LoadBundleCategories()
-        );
+        SetupBreadcrumbs();
+        await ParseQueryParameters();
+        await LoadTools();
+        
+        // Listen for navigation changes to handle same-route navigation
+        Navigation.LocationChanged += OnLocationChanged;
+    }
+
+    private async Task ParseQueryParameters()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        
+        // Handle search parameter
+        var search = query["search"];
+        if (!string.IsNullOrEmpty(search))
+        {
+            searchQuery = search;
+        }
+        else
+        {
+            searchQuery = string.Empty;
+        }
+        
+        // Handle category parameter  
+        var category = query["category"];
+        if (!string.IsNullOrEmpty(category))
+        {
+            selectedCategory = category;
+        }
+        else
+        {
+            selectedCategory = string.Empty;
+        }
+        
+        // Update breadcrumbs when parameters change
+        SetupBreadcrumbs();
     }
 
     private async Task LoadTools()
@@ -379,7 +299,16 @@ else
 
         try
         {
-            var result = await ToolService.GetToolsAsync();
+            ApiResponse<List<Tool>> result;
+            
+            if (!string.IsNullOrWhiteSpace(searchQuery))
+            {
+                result = await ToolService.SearchToolsAsync(searchQuery);
+            }
+            else
+            {
+                result = await ToolService.GetToolsAsync();
+            }
             
             if (result.Success)
             {
@@ -403,37 +332,7 @@ else
 
     private async Task SearchTools()
     {
-        if (string.IsNullOrWhiteSpace(searchQuery))
-        {
-            await LoadTools();
-            return;
-        }
-
-        isLoading = true;
-        errorMessage = string.Empty;
-
-        try
-        {
-            var result = await ToolService.SearchToolsAsync(searchQuery);
-            
-            if (result.Success)
-            {
-                tools = result.Data;
-                ApplyFilters();
-            }
-            else
-            {
-                errorMessage = result.Message ?? "Search failed.";
-            }
-        }
-        catch (Exception ex)
-        {
-            errorMessage = $"An error occurred: {ex.Message}";
-        }
-        finally
-        {
-            isLoading = false;
-        }
+        await LoadTools();
     }
 
     private void ApplyFilters()
@@ -449,6 +348,9 @@ else
             (availableOnly == null || t.IsAvailable == availableOnly) &&
             t.DailyRate <= (decimal)maxDailyRate
         ).ToList();
+        
+        // Update breadcrumbs when filters change
+        SetupBreadcrumbs();
     }
 
     private List<Tool> GetSortedTools()
@@ -471,138 +373,43 @@ else
         availableOnly = null;
         maxDailyRate = 200;
         ApplyFilters();
+        
+        // Update URL to remove category parameter
+        var uri = new Uri(Navigation.Uri);
+        var baseUrl = $"{uri.Scheme}://{uri.Authority}{uri.AbsolutePath}";
+        Navigation.NavigateTo(baseUrl);
     }
 
     private async Task HandleKeyPress(KeyboardEventArgs e)
     {
         if (e.Key == "Enter")
         {
-            if (activeTab == 0)
-            {
-                await SearchTools();
-            }
-            else
-            {
-                await SearchBundles();
-            }
+            await SearchTools();
         }
     }
 
     private void ViewTool(string toolId)
     {
-        Navigation.NavigateTo($"/tools/{toolId}?returnUrl={Uri.EscapeDataString(Navigation.Uri)}");
+        Navigation.NavigateTo($"/tools/{toolId}");
     }
 
-    private string GetOwnerInitials(string ownerName)
+    private void SetupBreadcrumbs()
     {
-        if (string.IsNullOrWhiteSpace(ownerName))
-            return "??";
-            
-        var parts = ownerName.Trim().Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 0)
-            return "??";
-        if (parts.Length == 1)
-            return parts[0].Length > 0 ? parts[0].Substring(0, 1).ToUpper() : "?";
-        
-        return $"{parts[0].Substring(0, 1)}{parts[^1].Substring(0, 1)}".ToUpper();
+        breadcrumbItems = BreadcrumbService.GenerateToolsBreadcrumb(
+            category: selectedCategory,
+            page: BreadcrumbPage.Browser);
     }
 
-    // Bundle methods
-    private async Task LoadBundles()
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
     {
-        isBundlesLoading = true;
-        try
-        {
-            var result = await BundleService.GetBundlesAsync(
-                page: currentBundlePage,
-                pageSize: 12,
-                category: selectedBundleCategory,
-                searchTerm: bundleSearchTerm,
-                featuredOnly: featuredOnly
-            );
-            
-            if (result.Success)
-            {
-                bundles = result.Data;
-            }
-            else
-            {
-                Snackbar.Add($"Error loading bundles: {result.Message}", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading bundles: {ex.Message}", Severity.Error);
-        }
-        finally
-        {
-            isBundlesLoading = false;
-        }
+        // Handle navigation changes to the same route with different query parameters
+        await ParseQueryParameters();
+        await LoadTools();
+        await InvokeAsync(StateHasChanged);
     }
 
-    private async Task LoadBundleCategories()
+    public void Dispose()
     {
-        try
-        {
-            var result = await BundleService.GetBundleCategoriesAsync();
-            if (result.Success)
-            {
-                availableBundleCategories = result.Data ?? new Dictionary<string, int>();
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error loading bundle categories: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task SearchBundles()
-    {
-        currentBundlePage = 1;
-        await LoadBundles();
-    }
-
-    private async Task OnBundlePageChanged(int page)
-    {
-        currentBundlePage = page;
-        await LoadBundles();
-    }
-
-    private async Task ClearBundleFilters()
-    {
-        selectedBundleCategory = string.Empty;
-        featuredOnly = false;
-        bundleSearchTerm = string.Empty;
-        currentBundlePage = 1;
-        await LoadBundles();
-    }
-
-    private void ViewBundle(Guid bundleId)
-    {
-        Navigation.NavigateTo($"/bundles/{bundleId}");
-    }
-
-    private async Task HandleSearchClick()
-    {
-        if (activeTab == 0)
-        {
-            await SearchTools();
-        }
-        else
-        {
-            await SearchBundles();
-        }
-    }
-
-    private void UpdateSearchValue(string value)
-    {
-        if (activeTab == 0)
-        {
-            searchQuery = value;
-        }
-        else
-        {
-            bundleSearchTerm = value;
-        }
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

@@ -86,6 +86,7 @@ builder.Services.AddScoped<BundleService>();
 builder.Services.AddScoped<BundleReviewService>();
 builder.Services.AddScoped<IUrlService, UrlService>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
+builder.Services.AddScoped<IBreadcrumbService, BreadcrumbService>();
 
 var app = builder.Build();
 

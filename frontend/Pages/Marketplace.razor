@@ -1,0 +1,604 @@
+@page "/marketplace"
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@using ToolsSharing.Frontend.Models
+@using ToolsSharing.Frontend.Services
+@using frontend.Components
+@using frontend.Components.Bundles
+@inject IToolService ToolService
+@inject BundleService BundleService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IUrlService UrlService
+@attribute [AllowAnonymous]
+
+<PageTitle>Marketplace - NeighborTools</PageTitle>
+
+<style>
+    .marketplace-hero {
+        background: linear-gradient(135deg, var(--mud-palette-primary-lighten) 0%, var(--mud-palette-primary) 100%);
+        color: white;
+        padding: 4rem 0;
+        margin-bottom: 2rem;
+    }
+    
+    .marketplace-card {
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        height: 100%;
+    }
+    
+    .marketplace-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
+    }
+    
+    .category-card {
+        transition: all 0.3s ease;
+        cursor: pointer;
+        height: 100%;
+    }
+    
+    .category-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+    
+    .featured-carousel {
+        margin-bottom: 3rem;
+    }
+    
+    .stats-section {
+        background: var(--mud-palette-surface-variant);
+        border-radius: 12px;
+        padding: 2rem;
+        margin: 3rem 0;
+    }
+</style>
+
+<!-- Hero Section -->
+<div class="marketplace-hero">
+    <MudContainer MaxWidth="MaxWidth.Large">
+        <MudStack AlignItems="AlignItems.Center" Spacing="4">
+            <MudIcon Icon="@Icons.Material.Filled.Store" Size="Size.Large" Style="font-size: 4rem;" />
+            <MudText Typo="Typo.h3" Align="Align.Center" Style="font-weight: 600;">
+                Find the perfect tools and bundles for your project
+            </MudText>
+            <MudText Typo="Typo.h6" Align="Align.Center" Style="opacity: 0.9; max-width: 600px;">
+                Discover thousands of quality tools and curated bundles from your neighbors
+            </MudText>
+            
+            <!-- Hero Search Bar -->
+            <MudPaper Class="pa-2" Style="max-width: 600px; width: 100%; border-radius: 50px;">
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                    <MudTextField @bind-Value="heroSearchTerm"
+                                  Placeholder="Search tools and bundles for your next project..."
+                                  Variant="Variant.Text"
+                                  @onkeypress="HandleHeroKeyPress"
+                                  Style="flex: 1;"
+                                  DisableUnderLine="true" />
+                    <MudButton Variant="Variant.Filled" 
+                             Color="Color.Primary" 
+                             Size="Size.Large"
+                             OnClick="HandleHeroSearch"
+                             StartIcon="@Icons.Material.Filled.Search"
+                             Style="border-radius: 50px; min-width: 120px;">
+                        Search
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudStack>
+    </MudContainer>
+</div>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+    <!-- Quick Access Cards -->
+    <MudStack Spacing="4" Class="mb-6">
+        <MudText Typo="Typo.h4" Color="Color.Primary" Align="Align.Center" Class="mb-4">
+            What are you looking for?
+        </MudText>
+        
+        <MudGrid Justify="Justify.Center">
+            <MudItem xs="12" sm="6" md="5">
+                <MudCard Class="marketplace-card" Elevation="6" Style="border-radius: 16px;">
+                    <MudCardContent Class="pa-6 text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
+                        <MudText Typo="Typo.h5" Class="mb-3" Color="Color.Primary">Individual Tools</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                            Browse @toolsCount+ quality tools from power tools to hand tools
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
+                            Popular: Power Tools, Hand Tools, Garden Tools, Automotive
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" 
+                                 Color="Color.Primary" 
+                                 Size="Size.Large"
+                                 FullWidth="true"
+                                 OnClick="@(() => Navigation.NavigateTo("/tools"))"
+                                 StartIcon="@Icons.Material.Filled.ArrowForward">
+                            Browse All Tools
+                        </MudButton>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+            
+            <MudItem xs="12" sm="6" md="5">
+                <MudCard Class="marketplace-card" Elevation="6" Style="border-radius: 16px;">
+                    <MudCardContent Class="pa-6 text-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" Class="mb-4" Style="font-size: 4rem;" />
+                        <MudText Typo="Typo.h5" Class="mb-3" Color="Color.Secondary">Tool Bundles</MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                            Discover @bundlesCount+ curated tool collections for complete projects
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
+                            Popular: Construction, Garden, Workshop, Home Improvement
+                        </MudText>
+                        <MudButton Variant="Variant.Filled" 
+                                 Color="Color.Secondary" 
+                                 Size="Size.Large"
+                                 FullWidth="true"
+                                 OnClick="@(() => Navigation.NavigateTo("/bundles"))"
+                                 StartIcon="@Icons.Material.Filled.ArrowForward">
+                            Browse All Bundles
+                        </MudButton>
+                    </MudCardContent>
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </MudStack>
+
+    <!-- Featured Tools Section -->
+    @if (featuredTools?.Any() == true)
+    {
+        <div class="featured-carousel">
+            <MudStack Spacing="3" Class="mb-4">
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.h5" Color="Color.Primary">
+                        <MudIcon Icon="@Icons.Material.Filled.Star" Class="mr-2" />
+                        Featured Tools
+                    </MudText>
+                    <MudButton Variant="Variant.Text" 
+                             Color="Color.Primary" 
+                             OnClick="@(() => Navigation.NavigateTo("/tools"))"
+                             EndIcon="@Icons.Material.Filled.ArrowForward">
+                        View All Tools
+                    </MudButton>
+                </MudStack>
+                
+                <MudGrid>
+                    @foreach (var tool in featuredTools.Take(4))
+                    {
+                        <MudItem xs="12" sm="6" md="3">
+                            <MudCard Class="marketplace-card" Elevation="4" Style="border-radius: 12px; cursor: pointer;" @onclick="() => ViewTool(tool.Id)">
+                                @if (tool.ImageUrls.Any())
+                                {
+                                    <MudCardMedia Image="@UrlService.GetFileUrl(tool.ImageUrls.First())" Height="180" />
+                                }
+                                else
+                                {
+                                    <ThemeAwarePlaceholder Height="180px" 
+                                                          Icon="@Icons.Material.Filled.Build" 
+                                                          IconSize="Size.Large"
+                                                          IconFontSize="3rem" />
+                                }
+                                
+                                <MudCardContent Class="pa-3">
+                                    <MudText Typo="Typo.subtitle1" Class="mb-2" Style="font-weight: 600;">@tool.Name</MudText>
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2" Style="height: 2.5em; overflow: hidden;">
+                                        @(tool.Description.Length > 60 ? tool.Description.Substring(0, 60) + "..." : tool.Description)
+                                    </MudText>
+                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudChip Size="Size.Small" Color="Color.Primary" Text="@tool.Category" T="string" />
+                                        <MudText Typo="Typo.subtitle2" Color="Color.Primary" Style="font-weight: 600;">
+                                            $@tool.DailyRate.ToString("F2")/day
+                                        </MudText>
+                                    </MudStack>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudStack>
+        </div>
+    }
+
+    <!-- Featured Bundles Section -->
+    @if (featuredBundles?.Any() == true)
+    {
+        <div class="featured-carousel">
+            <MudStack Spacing="3" Class="mb-4">
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.h5" Color="Color.Secondary">
+                        <MudIcon Icon="@Icons.Material.Filled.Star" Class="mr-2" />
+                        Featured Bundles
+                    </MudText>
+                    <MudButton Variant="Variant.Text" 
+                             Color="Color.Secondary" 
+                             OnClick="@(() => Navigation.NavigateTo("/bundles"))"
+                             EndIcon="@Icons.Material.Filled.ArrowForward">
+                        View All Bundles
+                    </MudButton>
+                </MudStack>
+                
+                <MudGrid>
+                    @foreach (var bundle in featuredBundles.Take(3))
+                    {
+                        <MudItem xs="12" sm="6" md="4">
+                            <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
+                        </MudItem>
+                    }
+                </MudGrid>
+            </MudStack>
+        </div>
+    }
+
+    <!-- Statistics Section -->
+    <div class="stats-section">
+        <MudStack Row Justify="Justify.SpaceAround" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="4">
+            <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" />
+                <MudText Typo="Typo.h4" Color="Color.Primary" Style="font-weight: 700;">@toolsCount+</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">Tools Available</MudText>
+            </MudStack>
+            
+            <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" />
+                <MudText Typo="Typo.h4" Color="Color.Secondary" Style="font-weight: 700;">@bundlesCount+</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">Tool Bundles</MudText>
+            </MudStack>
+            
+            <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.People" Size="Size.Large" Color="Color.Info" />
+                <MudText Typo="Typo.h4" Color="Color.Info" Style="font-weight: 700;">@usersCount+</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">Active Users</MudText>
+            </MudStack>
+            
+            <MudStack AlignItems="AlignItems.Center" Spacing="1">
+                <MudIcon Icon="@Icons.Material.Filled.Handshake" Size="Size.Large" Color="Color.Success" />
+                <MudText Typo="Typo.h4" Color="Color.Success" Style="font-weight: 700;">@rentalsCount+</MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary">Successful Rentals</MudText>
+            </MudStack>
+        </MudStack>
+    </div>
+
+    <!-- Popular Categories Section -->
+    <MudStack Spacing="4" Class="mb-6">
+        <MudText Typo="Typo.h5" Color="Color.Primary" Align="Align.Center">
+            Popular Categories
+        </MudText>
+        
+        <!-- Tool Categories -->
+        <div>
+            <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">
+                <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
+                Tool Categories
+            </MudText>
+            <MudGrid>
+                @foreach (var category in popularToolCategories)
+                {
+                    <MudItem xs="6" sm="4" md="3">
+                        <MudCard Class="category-card" Elevation="2" @onclick="() => NavigateToToolCategory(category)">
+                            <MudCardContent Class="pa-4 text-center">
+                                <MudIcon Icon="@GetCategoryIcon(category)" Size="Size.Medium" Color="Color.Primary" Class="mb-2" />
+                                <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">@category</MudText>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        </div>
+        
+        <!-- Bundle Categories -->
+        @if (popularBundleCategories.Any())
+        {
+            <div>
+                <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Secondary">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory" Class="mr-2" />
+                    Bundle Categories
+                </MudText>
+                <MudGrid>
+                    @foreach (var category in popularBundleCategories.Take(8))
+                    {
+                        <MudItem xs="6" sm="4" md="3">
+                            <MudCard Class="category-card" Elevation="2" @onclick="() => NavigateToBundleCategory(category.Key)">
+                                <MudCardContent Class="pa-4 text-center">
+                                    <MudIcon Icon="@GetCategoryIcon(category.Key)" Size="Size.Medium" Color="Color.Secondary" Class="mb-2" />
+                                    <MudText Typo="Typo.subtitle2" Style="font-weight: 600;">@category.Key</MudText>
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@category.Value bundles</MudText>
+                                </MudCardContent>
+                            </MudCard>
+                        </MudItem>
+                    }
+                </MudGrid>
+            </div>
+        }
+    </MudStack>
+
+    <!-- Recent Activity Section -->
+    @if (recentTools?.Any() == true || recentBundles?.Any() == true)
+    {
+        <MudStack Spacing="4" Class="mb-6">
+            <MudText Typo="Typo.h5" Color="Color.Primary" Align="Align.Center">
+                Recently Added
+            </MudText>
+            
+            <MudGrid>
+                @if (recentTools?.Any() == true)
+                {
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Primary">Latest Tools</MudText>
+                        <MudList T="string">
+                            @foreach (var tool in recentTools.Take(5))
+                            {
+                                <MudListItem T="string" @onclick="() => ViewTool(tool.Id)" Style="cursor: pointer;">
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
+                                        @if (tool.ImageUrls.Any())
+                                        {
+                                            <MudAvatar Size="Size.Medium">
+                                                <MudImage Src="@UrlService.GetFileUrl(tool.ImageUrls.First())" Alt="@tool.Name" />
+                                            </MudAvatar>
+                                        }
+                                        else
+                                        {
+                                            <MudAvatar Size="Size.Medium" Color="Color.Primary">
+                                                <MudIcon Icon="@Icons.Material.Filled.Build" />
+                                            </MudAvatar>
+                                        }
+                                        <div style="flex: 1;">
+                                            <MudText Typo="Typo.subtitle2">@tool.Name</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@tool.Category • $@tool.DailyRate/day</MudText>
+                                        </div>
+                                        <MudChip Size="Size.Small" Color="Color.Success" Text="New" T="string" />
+                                    </MudStack>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudItem>
+                }
+                
+                @if (recentBundles?.Any() == true)
+                {
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.h6" Class="mb-3" Color="Color.Secondary">Latest Bundles</MudText>
+                        <MudList T="string">
+                            @foreach (var bundle in recentBundles.Take(5))
+                            {
+                                <MudListItem T="string" @onclick="() => ViewBundle(bundle.Id)" Style="cursor: pointer;">
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="3">
+                                        @if (!string.IsNullOrEmpty(bundle.ImageUrl))
+                                        {
+                                            <MudAvatar Size="Size.Medium">
+                                                <MudImage Src="@UrlService.GetFileUrl(bundle.ImageUrl)" Alt="@bundle.Name" />
+                                            </MudAvatar>
+                                        }
+                                        else
+                                        {
+                                            <MudAvatar Size="Size.Medium" Color="Color.Secondary">
+                                                <MudIcon Icon="@Icons.Material.Filled.Inventory" />
+                                            </MudAvatar>
+                                        }
+                                        <div style="flex: 1;">
+                                            <MudText Typo="Typo.subtitle2">@bundle.Name</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@bundle.Category • @bundle.Tools.Count tools</MudText>
+                                        </div>
+                                        <MudChip Size="Size.Small" Color="Color.Success" Text="New" T="string" />
+                                    </MudStack>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudItem>
+                }
+            </MudGrid>
+        </MudStack>
+    }
+</MudContainer>
+
+@code {
+    private List<Tool>? featuredTools;
+    private List<BundleModel>? featuredBundles;
+    private List<Tool>? recentTools;
+    private List<BundleModel>? recentBundles;
+    private Dictionary<string, int> popularBundleCategories = new();
+    
+    // Statistics
+    private int toolsCount = 0;
+    private int bundlesCount = 0;
+    private int usersCount = 0;
+    private int rentalsCount = 0;
+    
+    // Search
+    private string heroSearchTerm = string.Empty;
+    
+    // Categories
+    private readonly string[] popularToolCategories = { "Power Tools", "Hand Tools", "Garden Tools", "Automotive", "Construction", "Home Improvement", "Cleaning", "Other" };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await Task.WhenAll(
+            LoadFeaturedTools(),
+            LoadFeaturedBundles(),
+            LoadRecentActivity(),
+            LoadBundleCategories(),
+            LoadStatistics()
+        );
+    }
+
+    private async Task LoadFeaturedTools()
+    {
+        try
+        {
+            var result = await ToolService.GetFeaturedToolsAsync();
+            if (result.Success && result.Data != null)
+            {
+                featuredTools = result.Data.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load featured tools: {ex.Message}");
+            // Silently fail - don't disrupt the marketplace loading
+        }
+    }
+
+    private async Task LoadFeaturedBundles()
+    {
+        try
+        {
+            var result = await BundleService.GetBundlesAsync(page: 1, pageSize: 6, featuredOnly: true);
+            if (result.Success && result.Data?.Items != null)
+            {
+                featuredBundles = result.Data.Items.ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load featured bundles: {ex.Message}");
+            // Silently fail - don't disrupt the marketplace loading
+        }
+    }
+
+    private async Task LoadRecentActivity()
+    {
+        try
+        {
+            // Load recent tools (newest first)
+            var toolsResult = await ToolService.GetToolsAsync();
+            if (toolsResult.Success && toolsResult.Data != null)
+            {
+                recentTools = toolsResult.Data
+                    .OrderByDescending(t => t.CreatedAt)
+                    .Take(5)
+                    .ToList();
+            }
+
+            // Load recent bundles (newest first)
+            var bundlesResult = await BundleService.GetBundlesAsync(page: 1, pageSize: 10);
+            if (bundlesResult.Success && bundlesResult.Data?.Items != null)
+            {
+                // Sort by newest (CreatedAt) and take 5
+                recentBundles = bundlesResult.Data.Items
+                    .OrderByDescending(b => b.CreatedAt)
+                    .Take(5)
+                    .ToList();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load recent activity: {ex.Message}");
+            // Silently fail - don't disrupt the marketplace loading
+        }
+    }
+
+    private async Task LoadBundleCategories()
+    {
+        try
+        {
+            var result = await BundleService.GetBundleCategoriesAsync();
+            if (result.Success && result.Data != null)
+            {
+                popularBundleCategories = result.Data
+                    .OrderByDescending(c => c.Value)
+                    .Take(8)
+                    .ToDictionary(c => c.Key, c => c.Value);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load bundle categories: {ex.Message}");
+            // Silently fail - don't disrupt the marketplace loading
+        }
+    }
+
+    private async Task LoadStatistics()
+    {
+        try
+        {
+            // Load tools count
+            var toolsResult = await ToolService.GetToolsAsync();
+            if (toolsResult.Success && toolsResult.Data != null)
+            {
+                toolsCount = toolsResult.Data.Count;
+            }
+
+            // Load bundles count
+            var bundlesResult = await BundleService.GetBundlesAsync(page: 1, pageSize: 1);
+            if (bundlesResult.Success && bundlesResult.Data != null)
+            {
+                bundlesCount = bundlesResult.Data.TotalCount;
+            }
+
+            // Placeholder statistics - these would come from proper APIs in production
+            usersCount = Math.Max(50, toolsCount * 2); // Estimate based on tools
+            rentalsCount = Math.Max(100, toolsCount * 3); // Estimate based on tools
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load statistics: {ex.Message}");
+            // Use default values if loading fails
+            toolsCount = 50;
+            bundlesCount = 20;
+            usersCount = 100;
+            rentalsCount = 200;
+        }
+    }
+
+    private async Task HandleHeroKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await HandleHeroSearch();
+        }
+    }
+
+    private async Task HandleHeroSearch()
+    {
+        if (!string.IsNullOrWhiteSpace(heroSearchTerm))
+        {
+            // For now, redirect to tools page with search term
+            // In the future, we could implement a unified search
+            Navigation.NavigateTo($"/tools?search={Uri.EscapeDataString(heroSearchTerm)}");
+        }
+        else
+        {
+            Navigation.NavigateTo("/tools");
+        }
+        await Task.CompletedTask;
+    }
+
+    private void ViewTool(string toolId)
+    {
+        Navigation.NavigateTo($"/tools/{toolId}");
+    }
+
+    private void ViewBundle(Guid bundleId)
+    {
+        Navigation.NavigateTo($"/bundles/{bundleId}");
+    }
+
+    private void NavigateToToolCategory(string category)
+    {
+        Navigation.NavigateTo($"/tools?category={Uri.EscapeDataString(category)}");
+    }
+
+    private void NavigateToBundleCategory(string category)
+    {
+        Navigation.NavigateTo($"/bundles?category={Uri.EscapeDataString(category)}");
+    }
+
+    private string GetCategoryIcon(string category)
+    {
+        return category.ToLower() switch
+        {
+            "power tools" => Icons.Material.Filled.ElectricBolt,
+            "hand tools" => Icons.Material.Filled.Handyman,
+            "garden tools" or "garden" => Icons.Material.Filled.Grass,
+            "automotive" => Icons.Material.Filled.DirectionsCar,
+            "construction" => Icons.Material.Filled.Construction,
+            "home improvement" => Icons.Material.Filled.Home,
+            "cleaning" => Icons.Material.Filled.CleaningServices,
+            "workshop" => Icons.Material.Filled.Build,
+            _ => Icons.Material.Filled.Category
+        };
+    }
+}

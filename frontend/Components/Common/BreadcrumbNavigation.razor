@@ -1,0 +1,56 @@
+@using MudBlazor
+@using frontend.Models
+
+@if (Items?.Any() == true)
+{
+    <MudBreadcrumbs Items="@MudBreadcrumbItems" 
+                    Separator="@Separator"
+                    Class="@Class" 
+                    Style="@Style" />
+}
+
+@code {
+    /// <summary>
+    /// List of breadcrumb items to display
+    /// </summary>
+    [Parameter] public List<frontend.Models.BreadcrumbItem>? Items { get; set; }
+
+    /// <summary>
+    /// CSS class to apply to the breadcrumb container
+    /// </summary>
+    [Parameter] public string? Class { get; set; } = "mb-4";
+
+    /// <summary>
+    /// Inline styles to apply
+    /// </summary>
+    [Parameter] public string? Style { get; set; }
+
+    /// <summary>
+    /// Separator character/text between breadcrumb items
+    /// </summary>
+    [Parameter] public string Separator { get; set; } = "/";
+
+    /// <summary>
+    /// Event callback when a breadcrumb item is clicked
+    /// </summary>
+    [Parameter] public EventCallback<frontend.Models.BreadcrumbItem> OnItemClick { get; set; }
+
+    /// <summary>
+    /// Convert our BreadcrumbItem list to MudBlazor BreadcrumbItem list
+    /// </summary>
+    private List<MudBlazor.BreadcrumbItem> MudBreadcrumbItems
+    {
+        get
+        {
+            if (Items == null || !Items.Any())
+                return new List<MudBlazor.BreadcrumbItem>();
+
+            return Items.Select(item => new MudBlazor.BreadcrumbItem(
+                text: item.Text,
+                href: item.Href,
+                disabled: item.Disabled,
+                icon: item.Icon
+            )).ToList();
+        }
+    }
+}

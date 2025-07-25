@@ -3,13 +3,20 @@
 @using ToolsSharing.Frontend.Services
 @using frontend.Models
 @using frontend.Components.Bundles
+@using System.Web
+@using frontend.Services
+@using frontend.Components.Common
 @inject BundleService BundleService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
+@inject IBreadcrumbService BreadcrumbService
+@implements IDisposable
 
 <PageTitle>Tool Bundles - NeighborTools</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Breadcrumb -->
+    <BreadcrumbNavigation Items="@breadcrumbItems" />
     <MudPaper Class="pa-6" Elevation="0">
         <MudGrid>
             <!-- Header Section -->
@@ -21,16 +28,28 @@
                             Discover curated tool collections for your projects
                         </MudText>
                     </div>
-                    <AuthorizeView>
-                        <Authorized>
-                            <MudButton Variant="Variant.Filled" 
-                                     Color="Color.Primary" 
-                                     StartIcon="@Icons.Material.Filled.Add"
-                                     Href="/bundles/create">
-                                Create Bundle
-                            </MudButton>
-                        </Authorized>
-                    </AuthorizeView>
+                    
+                    <div class="d-flex align-center gap-2">
+                        <MudTextField @bind-Value="searchTerm" 
+                                    @onkeypress="HandleKeyPress"
+                                    Placeholder="Search bundles..." 
+                                    Variant="Variant.Outlined" 
+                                    Adornment="Adornment.End"
+                                    AdornmentIcon="@Icons.Material.Filled.Search"
+                                    OnAdornmentClick="SearchBundles"
+                                    Style="min-width: 300px;" />
+                        
+                        <AuthorizeView>
+                            <Authorized>
+                                <MudButton Variant="Variant.Filled" 
+                                         Color="Color.Primary" 
+                                         StartIcon="@Icons.Material.Filled.Add"
+                                         Href="/bundles/create">
+                                    Create Bundle
+                                </MudButton>
+                            </Authorized>
+                        </AuthorizeView>
+                    </div>
                 </MudStack>
             </MudItem>
 
@@ -38,21 +57,12 @@
             <MudItem xs="12">
                 <MudPaper Class="pa-4" Elevation="1">
                     <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-                        <!-- Search -->
-                        <MudTextField @bind-Value="searchTerm" 
-                                    Label="Search bundles" 
-                                    Variant="Variant.Outlined" 
-                                    AdornmentIcon="@Icons.Material.Filled.Search"
-                                    Adornment="Adornment.Start"
-                                    Immediate="true"
-                                    DebounceInterval="500"
-                                    OnDebounceIntervalElapsed="LoadBundles" />
-
                         <!-- Category Filter -->
                         <MudSelect @bind-Value="selectedCategory" 
                                  Label="Category" 
                                  Variant="Variant.Outlined"
-                                 AnchorOrigin="Origin.BottomCenter">
+                                 AnchorOrigin="Origin.BottomCenter"
+                                 @bind-Value:after="LoadBundles">
                             <MudSelectItem Value="@("")">All Categories</MudSelectItem>
                             @foreach (var category in availableCategories)
                             {
@@ -61,15 +71,7 @@
                         </MudSelect>
 
                         <!-- Featured Filter -->
-                        <MudSwitch @bind-Value="featuredOnly" Label="Featured Only" Color="Color.Primary" />
-
-                        <!-- Apply Filters -->
-                        <MudButton Variant="Variant.Filled" 
-                                 Color="Color.Secondary" 
-                                 OnClick="LoadBundles"
-                                 StartIcon="@Icons.Material.Filled.FilterList">
-                            Apply Filters
-                        </MudButton>
+                        <MudSwitch @bind-Value="featuredOnly" Label="Featured Only" Color="Color.Primary" @bind-Value:after="LoadBundles" />
                     </MudStack>
                 </MudPaper>
             </MudItem>
@@ -158,6 +160,7 @@
     private PagedResult<BundleModel>? bundles;
     private Dictionary<string, int> availableCategories = new();
     private bool isLoading = true;
+    private List<frontend.Models.BreadcrumbItem> breadcrumbItems = new();
     
     // Filter parameters
     private string searchTerm = "";
@@ -174,8 +177,13 @@
 
     protected override async Task OnInitializedAsync()
     {
+        SetupBreadcrumbs();
+        await ParseQueryParameters();
         await LoadCategories();
         await LoadBundles();
+        
+        // Listen for navigation changes to handle same-route navigation
+        Navigation.LocationChanged += OnLocationChanged;
     }
 
     private async Task LoadCategories()
@@ -210,6 +218,9 @@
             bundles = new PagedResult<BundleModel> { Items = new List<BundleModel>() };
         }
 
+        // Update breadcrumbs when filters change
+        SetupBreadcrumbs();
+
         isLoading = false;
         StateHasChanged();
     }
@@ -220,17 +231,88 @@
         await LoadBundles();
     }
 
+    private async Task ParseQueryParameters()
+    {
+        var uri = new Uri(Navigation.Uri);
+        var query = System.Web.HttpUtility.ParseQueryString(uri.Query);
+        
+        // Handle search parameter
+        var search = query["search"];
+        if (!string.IsNullOrEmpty(search))
+        {
+            searchTerm = search;
+        }
+        else
+        {
+            searchTerm = string.Empty;
+        }
+        
+        // Handle category parameter  
+        var category = query["category"];
+        if (!string.IsNullOrEmpty(category))
+        {
+            selectedCategory = category;
+        }
+        else
+        {
+            selectedCategory = string.Empty;
+        }
+        
+        // Update breadcrumbs when parameters change
+        SetupBreadcrumbs();
+    }
+
     private void ClearFilters()
     {
         searchTerm = "";
         selectedCategory = "";
         featuredOnly = false;
         currentPage = 1;
+        
+        // Update URL to remove parameters
+        var uri = new Uri(Navigation.Uri);
+        var baseUrl = $"{uri.Scheme}://{uri.Authority}{uri.AbsolutePath}";
+        Navigation.NavigateTo(baseUrl);
+        
         _ = LoadBundles();
     }
 
     private void ViewBundle(Guid bundleId)
     {
         Navigation.NavigateTo($"/bundles/{bundleId}");
+    }
+
+    private void SetupBreadcrumbs()
+    {
+        breadcrumbItems = BreadcrumbService.GenerateBundlesBreadcrumb(
+            category: selectedCategory,
+            page: BreadcrumbPage.Browser);
+    }
+
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        // Handle navigation changes to the same route with different query parameters
+        await ParseQueryParameters();
+        await LoadCategories();
+        await LoadBundles();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task HandleKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await SearchBundles();
+        }
+    }
+
+    private async Task SearchBundles()
+    {
+        await LoadBundles();
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
     }
 }

@@ -9,11 +9,15 @@
 @inject INavigationHelperService NavigationHelper
 @inject IDialogService DialogService
 @inject IUrlService UrlService
+@inject IBreadcrumbService BreadcrumbService
 @attribute [Authorize]
 
 <PageTitle>Edit Tool - NeighborTools</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <!-- Breadcrumb -->
+    <BreadcrumbNavigation Items="@breadcrumbItems" />
+    
     <MudPaper Elevation="8" Class="pa-8" Style="border-radius: 16px;">
         @if (isLoading)
         {
@@ -481,6 +485,7 @@
     private List<IBrowserFile> pendingFiles = new();
     private List<string> previewUrls = new();
     private List<string> existingImageUrls = new(); // Track existing images separately
+    private List<frontend.Models.BreadcrumbItem> breadcrumbItems = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -530,6 +535,9 @@
                 
                 // Initialize existing images for display
                 existingImageUrls = tool.ImageUrls?.ToList() ?? new List<string>();
+                
+                // Setup breadcrumbs
+                SetupBreadcrumbs();
             }
             else
             {
@@ -763,6 +771,18 @@
         finally
         {
             isSubmitting = false;
+        }
+    }
+
+    private void SetupBreadcrumbs()
+    {
+        if (currentTool != null)
+        {
+            breadcrumbItems = BreadcrumbService.GenerateToolsBreadcrumb(
+                toolName: currentTool.Name,
+                category: currentTool.Category,
+                page: BreadcrumbPage.Edit,
+                toolId: Id);
         }
     }
 }

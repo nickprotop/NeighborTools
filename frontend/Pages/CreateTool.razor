@@ -7,11 +7,14 @@
 @inject UserService UserService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
+@inject IBreadcrumbService BreadcrumbService
 @attribute [Authorize]
 
 <PageTitle>Add Tool - NeighborTools</PageTitle>
 
 <MudContainer MaxWidth="MaxWidth.Large" Class="mt-4">
+    <!-- Breadcrumb -->
+    <BreadcrumbNavigation Items="@breadcrumbItems" />
     <MudPaper Elevation="8" Class="pa-8" Style="border-radius: 16px;">
         @if (isInitializing)
         {
@@ -371,9 +374,11 @@
     // For delayed upload pattern
     private List<IBrowserFile> pendingFiles = new();
     private List<string> previewUrls = new();
+    private List<frontend.Models.BreadcrumbItem> breadcrumbItems = new();
 
     protected override async Task OnInitializedAsync()
     {
+        SetupBreadcrumbs();
         await LoadUserLocation();
         isInitializing = false;
         StateHasChanged();
@@ -526,5 +531,11 @@
             pendingFiles.RemoveAt(index);
             StateHasChanged();
         }
+    }
+
+    private void SetupBreadcrumbs()
+    {
+        breadcrumbItems = BreadcrumbService.GenerateToolsBreadcrumb(
+            page: BreadcrumbPage.Create);
     }
 }
