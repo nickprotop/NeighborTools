@@ -394,7 +394,7 @@ else if (tool != null)
                     <div class="mt-4">
                         <ToolReviewsComponent ToolId="@tool.Id" 
                                              ToolName="@tool.Name" 
-                                             CanReview="!isOwner && canUserReview" 
+                                             CanReview="!isOwner" 
                                              IsAuthenticated="!string.IsNullOrEmpty(currentUserId)" />
                     </div>
                 }
@@ -413,7 +413,6 @@ else if (tool != null)
     private List<BreadcrumbItem> _breadcrumbItems = new();
     private bool isOwner = false;
     private string? currentUserId;
-    private bool canUserReview = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -458,8 +457,7 @@ else if (tool != null)
                     // Ignore view count errors
                 }
                 
-                // Check if user can review (simplified logic - can be enhanced later)
-                canUserReview = !isOwner && !string.IsNullOrEmpty(currentUserId);
+                // Owner check is sufficient - detailed review eligibility is handled by ToolReviewsComponent
             }
             else
             {

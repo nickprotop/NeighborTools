@@ -102,7 +102,7 @@
                 </div>
             }
             
-            @if (CanReview && IsAuthenticated)
+            @if (canUserReview && IsAuthenticated)
             {
                 <div class="text-center mt-3">
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
@@ -116,7 +116,7 @@
             {
                 <div class="text-center mt-3">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        You can only review tools you have rented and returned
+                        @(!string.IsNullOrEmpty(reviewDisabledReason) ? reviewDisabledReason : "You can only review tools you have rented and returned")
                     </MudText>
                 </div>
             }
@@ -134,7 +134,7 @@
             <div class="text-center py-4">
                 <MudIcon Icon="@Icons.Material.Filled.RateReview" Size="Size.Large" Color="Color.Surface" />
                 <MudText Typo="Typo.body1" Class="mt-2">No reviews yet</MudText>
-                @if (CanReview && IsAuthenticated)
+                @if (canUserReview && IsAuthenticated)
                 {
                     <MudText Typo="Typo.body2" Color="Color.Secondary">
                         <MudLink OnClick="OpenReviewDialog" Color="Color.Primary" Underline="Underline.Always">
@@ -146,7 +146,7 @@
                 {
                     <MudText Typo="Typo.body2" Color="Color.Secondary">Be the first to review this tool!</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                        You can only review tools you have rented and returned
+                        @(!string.IsNullOrEmpty(reviewDisabledReason) ? reviewDisabledReason : "You can only review tools you have rented and returned")
                     </MudText>
                 }
                 else
@@ -253,6 +253,8 @@
     private bool loading = true;
     private bool loadingMoreReviews = false;
     private bool hasMoreReviews = false;
+    private bool canUserReview = false;
+    private string reviewDisabledReason = "";
     private int currentPage = 1;
     private const int PageSize = 5;
     
@@ -315,6 +317,17 @@
 
             // Load first page of reviews
             await LoadReviewsPage(1);
+
+            // Check if user can review (if authenticated)
+            if (IsAuthenticated)
+            {
+                var canReviewResult = await ToolService.CanUserReviewToolAsync(ToolId);
+                canUserReview = canReviewResult.Success && canReviewResult.Data;
+                if (!canUserReview && !string.IsNullOrEmpty(canReviewResult.Message))
+                {
+                    reviewDisabledReason = canReviewResult.Message;
+                }
+            }
         }
         catch (Exception ex)
         {

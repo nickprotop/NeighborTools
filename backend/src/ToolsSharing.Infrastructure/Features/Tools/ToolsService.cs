@@ -561,7 +561,7 @@ public class ToolsService : IToolsService
                 .AnyAsync(r => r.ToolId == toolId && r.RenterId == userId && r.Status == RentalStatus.Returned);
 
             if (!hasRented)
-                return ApiResponse<ToolReviewDto>.CreateFailure("You can only review tools you have rented");
+                return ApiResponse<ToolReviewDto>.CreateFailure("You can only review tools you have rented and returned");
 
             var review = new Review
             {
@@ -877,6 +877,49 @@ public class ToolsService : IToolsService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error updating tool statistics for {ToolId}", toolId);
+        }
+    }
+
+    public async Task<ApiResponse<bool>> CanUserReviewToolAsync(Guid toolId, string userId)
+    {
+        try
+        {
+            // Check if tool exists
+            var tool = await _context.Tools.FirstOrDefaultAsync(t => t.Id == toolId && !t.IsDeleted);
+            if (tool == null)
+            {
+                return ApiResponse<bool>.CreateFailure("Tool not found");
+            }
+
+            // Users cannot review their own tools
+            if (tool.OwnerId == userId)
+            {
+                return ApiResponse<bool>.CreateFailure("You cannot review your own tool");
+            }
+
+            // Check if user has already reviewed this tool
+            var existingReview = await _context.Reviews
+                .FirstOrDefaultAsync(r => r.ToolId == toolId && r.ReviewerId == userId && r.Type == ReviewType.ToolReview);
+            if (existingReview != null)
+            {
+                return ApiResponse<bool>.CreateFailure("You have already reviewed this tool");
+            }
+
+            // Check if user has rented and returned this tool
+            var hasRented = await _context.Rentals
+                .AnyAsync(r => r.ToolId == toolId && r.RenterId == userId && r.Status == RentalStatus.Returned);
+
+            if (!hasRented)
+            {
+                return ApiResponse<bool>.CreateFailure("You can only review tools you have rented and returned");
+            }
+
+            return ApiResponse<bool>.CreateSuccess(true, "User can review this tool");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking if user can review tool {ToolId} for user {UserId}", toolId, userId);
+            return ApiResponse<bool>.CreateFailure("Error checking review eligibility");
         }
     }
 }

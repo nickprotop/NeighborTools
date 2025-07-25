@@ -90,16 +90,20 @@ public class BundleReviewService
         try
         {
             var response = await _httpClient.GetAsync($"api/bundles/{bundleId}/can-review");
+            var content = await response.Content.ReadAsStringAsync();
             
-            if (response.IsSuccessStatusCode)
+            // Always try to deserialize the response, even for non-success status codes
+            // The backend returns structured ApiResponse even for 400 errors
+            try
             {
-                var content = await response.Content.ReadAsStringAsync();
                 var result = JsonSerializer.Deserialize<ApiResponse<bool>>(content, _jsonOptions);
                 return result ?? ApiResponse<bool>.CreateFailure("Failed to deserialize response");
             }
-            
-            var errorContent = await response.Content.ReadAsStringAsync();
-            return ApiResponse<bool>.CreateFailure($"HTTP {response.StatusCode}: {errorContent}");
+            catch (JsonException)
+            {
+                // If JSON parsing fails, return the raw content as the error message
+                return ApiResponse<bool>.CreateFailure($"HTTP {response.StatusCode}: {content}");
+            }
         }
         catch (Exception ex)
         {

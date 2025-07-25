@@ -140,7 +140,7 @@
             {
                 <div class="text-center mt-3">
                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                        You can only review bundles you have rented and completed
+                        @(!string.IsNullOrEmpty(reviewDisabledReason) ? reviewDisabledReason : "You can only review bundles you have rented and completed")
                     </MudText>
                 </div>
             }
@@ -170,7 +170,7 @@
                 {
                     <MudText Typo="Typo.body2" Color="Color.Secondary">Be the first to review this bundle!</MudText>
                     <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                        You can only review bundles you have rented and completed
+                        @(!string.IsNullOrEmpty(reviewDisabledReason) ? reviewDisabledReason : "You can only review bundles you have rented and completed")
                     </MudText>
                 }
                 else
@@ -261,6 +261,7 @@
     private bool hasMoreReviews = false;
     private bool canReview = false;
     private bool isAuthenticated = false;
+    private string reviewDisabledReason = "";
     private int currentPage = 1;
     private const int PageSize = 5;
     
@@ -315,6 +316,10 @@
         {
             var canReviewResult = await BundleReviewService.CanUserReviewBundleAsync(BundleId);
             canReview = canReviewResult.Success && canReviewResult.Data;
+            if (!canReview && !string.IsNullOrEmpty(canReviewResult.Message))
+            {
+                reviewDisabledReason = canReviewResult.Message;
+            }
         }
 
         loading = false;

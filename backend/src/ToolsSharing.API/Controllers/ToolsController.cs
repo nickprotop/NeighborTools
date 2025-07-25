@@ -131,6 +131,18 @@ public class ToolsController : ControllerBase
             
         return Ok(result);
     }
+    
+    [HttpGet("{id}/reviews/can-review")]
+    [Authorize]
+    public async Task<IActionResult> CanUserReviewTool(Guid id)
+    {
+        var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+        if (string.IsNullOrEmpty(userId))
+            return Unauthorized();
+            
+        var result = await _toolsService.CanUserReviewToolAsync(id, userId);
+        return Ok(result);
+    }
 
     /// <summary>
     /// Get public rental preferences for a tool owner

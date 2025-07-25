@@ -22,6 +22,7 @@ public interface IToolService
     Task<ApiResponse<PagedResult<ToolReview>>> GetToolReviewsAsync(string toolId, int page = 1, int pageSize = 10);
     Task<ApiResponse<ToolReview>> CreateToolReviewAsync(string toolId, CreateToolReviewRequest request);
     Task<ApiResponse<ToolReviewSummaryDto>> GetToolReviewSummaryAsync(string toolId);
+    Task<ApiResponse<bool>> CanUserReviewToolAsync(string toolId);
     Task<ApiResponse<List<Tool>>> GetFeaturedToolsAsync(int count = 6);
     Task<ApiResponse<List<Tool>>> GetPopularToolsAsync(int count = 6);
     Task<ApiResponse<List<TagDto>>> GetPopularTagsAsync(int count = 20);
@@ -496,6 +497,44 @@ public class ToolService : IToolService
             { 
                 Success = false, 
                 Message = $"Failed to search tools: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<bool>> CanUserReviewToolAsync(string toolId)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"/api/tools/{toolId}/reviews/can-review");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            // Always try to deserialize the response, even for non-success status codes
+            // The backend returns structured ApiResponse even for 400 errors
+            try
+            {
+                var result = JsonSerializer.Deserialize<ApiResponse<bool>>(content, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+
+                return result ?? new ApiResponse<bool> { Success = false, Message = "Invalid response" };
+            }
+            catch (JsonException)
+            {
+                // If JSON parsing fails, return the raw content as the error message
+                return new ApiResponse<bool> 
+                { 
+                    Success = false, 
+                    Message = $"HTTP {response.StatusCode}: {content}" 
+                };
+            }
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<bool> 
+            { 
+                Success = false, 
+                Message = $"Failed to check review eligibility: {ex.Message}" 
             };
         }
     }
