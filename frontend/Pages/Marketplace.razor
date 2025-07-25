@@ -49,12 +49,6 @@
         margin-bottom: 3rem;
     }
     
-    .stats-section {
-        background: var(--mud-palette-surface-variant);
-        border-radius: 12px;
-        padding: 2rem;
-        margin: 3rem 0;
-    }
 </style>
 
 <!-- Hero Section -->
@@ -92,14 +86,15 @@
     </MudContainer>
 </div>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge">
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
     <!-- Quick Access Cards -->
-    <MudStack Spacing="4" Class="mb-6">
-        <MudText Typo="Typo.h4" Color="Color.Primary" Align="Align.Center" Class="mb-4">
-            What are you looking for?
-        </MudText>
-        
-        <MudGrid Justify="Justify.Center">
+    <MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
+        <MudStack Spacing="4">
+            <MudText Typo="Typo.h4" Color="Color.Primary" Align="Align.Center" Class="mb-4">
+                What are you looking for?
+            </MudText>
+            
+            <MudGrid Justify="Justify.Center">
             <MudItem xs="12" sm="6" md="5">
                 <MudCard Class="marketplace-card" Elevation="6" Style="border-radius: 16px;">
                     <MudCardContent Class="pa-6 text-center">
@@ -145,13 +140,14 @@
                     </MudCardContent>
                 </MudCard>
             </MudItem>
-        </MudGrid>
-    </MudStack>
+            </MudGrid>
+        </MudStack>
+    </MudPaper>
 
     <!-- Featured Tools Section -->
     @if (featuredTools?.Any() == true)
     {
-        <div class="featured-carousel">
+        <MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
             <MudStack Spacing="3" Class="mb-4">
                 <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                     <MudText Typo="Typo.h5" Color="Color.Primary">
@@ -200,13 +196,13 @@
                     }
                 </MudGrid>
             </MudStack>
-        </div>
+        </MudPaper>
     }
 
     <!-- Featured Bundles Section -->
     @if (featuredBundles?.Any() == true)
     {
-        <div class="featured-carousel">
+        <MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
             <MudStack Spacing="3" Class="mb-4">
                 <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                     <MudText Typo="Typo.h5" Color="Color.Secondary">
@@ -230,11 +226,11 @@
                     }
                 </MudGrid>
             </MudStack>
-        </div>
+        </MudPaper>
     }
 
     <!-- Statistics Section -->
-    <div class="stats-section">
+    <MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
         <MudStack Row Justify="Justify.SpaceAround" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="4">
             <MudStack AlignItems="AlignItems.Center" Spacing="1">
                 <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" />
@@ -260,13 +256,14 @@
                 <MudText Typo="Typo.body1" Color="Color.Secondary">Successful Rentals</MudText>
             </MudStack>
         </MudStack>
-    </div>
+    </MudPaper>
 
     <!-- Popular Categories Section -->
-    <MudStack Spacing="4" Class="mb-6">
-        <MudText Typo="Typo.h5" Color="Color.Primary" Align="Align.Center">
-            Popular Categories
-        </MudText>
+    <MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
+        <MudStack Spacing="4">
+            <MudText Typo="Typo.h5" Color="Color.Primary" Align="Align.Center">
+                Popular Categories
+            </MudText>
         
         <!-- Tool Categories -->
         <div>
@@ -313,15 +310,17 @@
                 </MudGrid>
             </div>
         }
-    </MudStack>
+        </MudStack>
+    </MudPaper>
 
     <!-- Recent Activity Section -->
     @if (recentTools?.Any() == true || recentBundles?.Any() == true)
     {
-        <MudStack Spacing="4" Class="mb-6">
-            <MudText Typo="Typo.h5" Color="Color.Primary" Align="Align.Center">
-                Recently Added
-            </MudText>
+        <MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
+            <MudStack Spacing="4">
+                <MudText Typo="Typo.h5" Color="Color.Primary" Align="Align.Center">
+                    Recently Added
+                </MudText>
             
             <MudGrid>
                 @if (recentTools?.Any() == true)
@@ -389,8 +388,9 @@
                         </MudList>
                     </MudItem>
                 }
-            </MudGrid>
-        </MudStack>
+                </MudGrid>
+            </MudStack>
+        </MudPaper>
     }
 </MudContainer>
 

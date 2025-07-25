@@ -18,43 +18,48 @@
 <MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
     <!-- Breadcrumb -->
     <BreadcrumbNavigation Items="@breadcrumbItems" />
-    <!-- Header Section -->
-    <div class="d-flex flex-column flex-sm-row justify-space-between align-center mb-6 gap-4">
-        <div>
-            <MudText Typo="Typo.h4" Color="Color.Primary" GutterBottom="true">
-                <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
-                Browse Tools
-            </MudText>
-            <MudText Typo="Typo.body1" Color="Color.Secondary">
-                Find the perfect tools for your project
-            </MudText>
-        </div>
-        
-        <div class="d-flex align-center gap-2">
-            <MudTextField @bind-Value="searchQuery"
-                          @onkeypress="HandleKeyPress"
-                          Placeholder="Search tools..."
-                          Variant="Variant.Outlined"
-                          Adornment="Adornment.End"
-                          AdornmentIcon="@Icons.Material.Filled.Search"
-                          OnAdornmentClick="SearchTools"
-                          Style="min-width: 300px;" />
-            
-            <AuthorizeView>
-                <Authorized>
-                    <MudButton Variant="Variant.Filled" 
-                               Color="Color.Primary" 
-                               StartIcon="@Icons.Material.Filled.Add"
-                               Href="/tools/create">
-                        Add Tool
-                    </MudButton>
-                </Authorized>
-            </AuthorizeView>
-        </div>
-    </div>
+    <MudPaper Class="pa-6" Elevation="0">
+        <MudGrid>
+            <!-- Header Section -->
+            <MudItem xs="12">
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <div>
+                        <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-2">
+                            <MudIcon Icon="@Icons.Material.Filled.Build" Class="mr-2" />
+                            Browse Tools
+                        </MudText>
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">
+                            Find the perfect tools for your project
+                        </MudText>
+                    </div>
+                    
+                    <div class="d-flex align-center gap-2">
+                        <MudTextField @bind-Value="searchQuery"
+                                      @onkeypress="HandleKeyPress"
+                                      Placeholder="Search tools..."
+                                      Variant="Variant.Outlined"
+                                      Adornment="Adornment.End"
+                                      AdornmentIcon="@Icons.Material.Filled.Search"
+                                      OnAdornmentClick="SearchTools"
+                                      Style="min-width: 300px;" />
+                        
+                        <AuthorizeView>
+                            <Authorized>
+                                <MudButton Variant="Variant.Filled" 
+                                           Color="Color.Primary" 
+                                           StartIcon="@Icons.Material.Filled.Add"
+                                           Href="/tools/create">
+                                    Add Tool
+                                </MudButton>
+                            </Authorized>
+                        </AuthorizeView>
+                    </div>
+                </MudStack>
+            </MudItem>
 
-    <!-- Filters Section -->
-    <MudPaper Class="pa-4 mb-4" Elevation="1">
+            <!-- Filters Section -->
+            <MudItem xs="12">
+                <MudPaper Class="pa-4" Elevation="1">
         <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
             <!-- Category Filter -->
             <MudSelect @bind-Value="selectedCategory" 
@@ -94,10 +99,13 @@
                          Color="Color.Primary" 
                          @bind-Value:after="ApplyFilters" />
             </div>
-        </MudStack>
-    </MudPaper>
+                </MudStack>
+                </MudPaper>
+            </MudItem>
 
-    @if (isLoading)
+            <!-- Results Section -->
+            <MudItem xs="12">
+                @if (isLoading)
     {
         <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
             <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
@@ -226,8 +234,11 @@
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="@Icons.Material.Filled.Add">
                 Add Your Tool
             </MudButton>
-        </MudPaper>
-    }
+                </MudPaper>
+            }
+            </MudItem>
+        </MudGrid>
+    </MudPaper>
 </MudContainer>
 
 <style>
