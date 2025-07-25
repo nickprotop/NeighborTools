@@ -1,0 +1,428 @@
+@using frontend.Models
+@using frontend.Services
+@inject IToolService ToolService
+@inject ISnackbar Snackbar
+
+<MudCard Class="mb-4">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">Reviews & Ratings</MudText>
+        </CardHeaderContent>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (reviewSummary != null)
+        {
+            <div class="mb-4">
+                <div class="d-flex align-center">
+                    <MudText Typo="Typo.h4" Class="mr-2">@reviewSummary.AverageRating.ToString("F1")</MudText>
+                    <MudRating ReadOnly="true" SelectedValue="@((int)Math.Round(reviewSummary.AverageRating))" MaxValue="5" />
+                    <MudText Typo="Typo.body2" Class="ml-2">(@reviewSummary.TotalReviews reviews)</MudText>
+                </div>
+
+                <!-- Rating Distribution -->
+                @if (reviewSummary.TotalReviews > 0)
+                {
+                    <div class="mt-4">
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Rating Distribution</MudText>
+                        @for (int i = 5; i >= 1; i--)
+                        {
+                            var starCount = i switch
+                            {
+                                5 => reviewSummary.FiveStarCount,
+                                4 => reviewSummary.FourStarCount,
+                                3 => reviewSummary.ThreeStarCount,
+                                2 => reviewSummary.TwoStarCount,
+                                _ => reviewSummary.OneStarCount
+                            };
+                            var percentage = (double)starCount / reviewSummary.TotalReviews * 100;
+                            
+                            <div class="d-flex align-center mb-1">
+                                <MudText Typo="Typo.body2" Class="mr-2">@i star</MudText>
+                                <MudProgressLinear Color="Color.Primary" 
+                                                  Size="Size.Medium" 
+                                                  Value="percentage" 
+                                                  Class="flex-grow-1 mx-2" />
+                                <MudText Typo="Typo.body2">@starCount</MudText>
+                            </div>
+                        }
+                    </div>
+                }
+            </div>
+        }
+
+        <!-- Reviews List -->
+        @if (reviews?.Any() == true)
+        {
+            <MudDivider Class="my-4" />
+            <MudText Typo="Typo.h6" Class="mb-3">Reviews</MudText>
+            
+            @foreach (var review in reviews)
+            {
+                <MudCard Outlined="true" Class="mb-3">
+                    <MudCardContent>
+                        <div class="d-flex align-center mb-2">
+                            <MudAvatar Size="Size.Small" 
+                                      Image="@(string.IsNullOrEmpty(review.ReviewerAvatar) ? null : review.ReviewerAvatar)">
+                                @if (string.IsNullOrEmpty(review.ReviewerAvatar))
+                                {
+                                    @review.ReviewerName.Substring(0, 1).ToUpper()
+                                }
+                            </MudAvatar>
+                            <div class="ml-3">
+                                <MudText Typo="Typo.subtitle1">@review.ReviewerName</MudText>
+                                <div class="d-flex align-center">
+                                    <MudRating ReadOnly="true" SelectedValue="@review.Rating" MaxValue="5" Size="Size.Small" />
+                                    <MudText Typo="Typo.caption" Class="ml-2">@review.CreatedAt.ToString("MMM dd, yyyy")</MudText>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        @if (!string.IsNullOrEmpty(review.Title))
+                        {
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">@review.Title</MudText>
+                        }
+                        
+                        <MudText Typo="Typo.body2">@review.Comment</MudText>
+                    </MudCardContent>
+                </MudCard>
+            }
+
+            @if (hasMoreReviews)
+            {
+                <div class="text-center mt-3">
+                    <MudButton Variant="Variant.Outlined" 
+                              OnClick="LoadMoreReviews" 
+                              Disabled="@loadingMoreReviews">
+                        @if (loadingMoreReviews)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        }
+                        Load More Reviews
+                    </MudButton>
+                </div>
+            }
+            
+            @if (CanReview && IsAuthenticated)
+            {
+                <div class="text-center mt-3">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        <MudLink OnClick="OpenReviewDialog" Color="Color.Primary" Underline="Underline.Always">
+                            Add your review
+                        </MudLink>
+                    </MudText>
+                </div>
+            }
+            else if (IsAuthenticated)
+            {
+                <div class="text-center mt-3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        You can only review tools you have rented and returned
+                    </MudText>
+                </div>
+            }
+            else
+            {
+                <div class="text-center mt-3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Sign in to write a review
+                    </MudText>
+                </div>
+            }
+        }
+        else if (reviewSummary?.TotalReviews == 0)
+        {
+            <div class="text-center py-4">
+                <MudIcon Icon="@Icons.Material.Filled.RateReview" Size="Size.Large" Color="Color.Surface" />
+                <MudText Typo="Typo.body1" Class="mt-2">No reviews yet</MudText>
+                @if (CanReview && IsAuthenticated)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        <MudLink OnClick="OpenReviewDialog" Color="Color.Primary" Underline="Underline.Always">
+                            Be the first to review this tool!
+                        </MudLink>
+                    </MudText>
+                }
+                else if (IsAuthenticated)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Be the first to review this tool!</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                        You can only review tools you have rented and returned
+                    </MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Be the first to review this tool!</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                        Sign in to write a review
+                    </MudText>
+                }
+            </div>
+        }
+
+        @if (loading)
+        {
+            <div class="text-center py-4">
+                <MudProgressCircular />
+                <MudText Typo="Typo.body2" Class="mt-2">Loading reviews...</MudText>
+            </div>
+        }
+        else if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="text-center py-4">
+                <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Large" Color="Color.Error" />
+                <MudText Typo="Typo.body1" Color="Color.Error" Class="mt-2">@errorMessage</MudText>
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Primary" 
+                          StartIcon="@Icons.Material.Filled.Refresh"
+                          OnClick="() => LoadData()"
+                          Class="mt-2">
+                    Retry
+                </MudButton>
+            </div>
+        }
+    </MudCardContent>
+</MudCard>
+
+<!-- Create Review Dialog -->
+<MudDialog @bind-Visible="ShowCreateReviewDialog" Options="DialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Write a Review</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="ReviewForm" @bind-IsValid="IsReviewFormValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.body1" Class="mb-2">Rating</MudText>
+                    <MudRating @bind-SelectedValue="NewReview.Rating" MaxValue="5" Size="Size.Large" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="NewReview.Title"
+                                 Label="Review Title"
+                                 Variant="Variant.Outlined"
+                                 MaxLength="100"
+                                 Counter="100"
+                                 HelperText="Give your review a title (required)" 
+                                 Required="true" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="NewReview.Comment"
+                                 Label="Review Comment"
+                                 Variant="Variant.Outlined"
+                                 Lines="4"
+                                 MaxLength="1000"
+                                 Counter="1000"
+                                 Required="true"
+                                 RequiredError="Please write a comment"
+                                 HelperText="Share your experience with this tool" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCreateReviewDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled"
+                   OnClick="SubmitReview"
+                   Disabled="!IsReviewFormValid || IsSubmittingReview">
+            @if (IsSubmittingReview)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <span class="ml-2">Submitting...</span>
+            }
+            else
+            {
+                <text>Submit Review</text>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [Parameter] public string ToolId { get; set; } = string.Empty;
+    [Parameter] public string ToolName { get; set; } = string.Empty;
+    [Parameter] public bool CanReview { get; set; }
+    [Parameter] public bool IsAuthenticated { get; set; }
+    
+    private string previousToolId = string.Empty;
+    private string? errorMessage;
+    
+    private ToolReviewSummaryDto? reviewSummary;
+    private List<ToolReview> reviews = new();
+    private bool loading = true;
+    private bool loadingMoreReviews = false;
+    private bool hasMoreReviews = false;
+    private int currentPage = 1;
+    private const int PageSize = 5;
+    
+    // Dialog-related variables
+    private bool ShowCreateReviewDialog = false;
+    private CreateToolReviewRequest NewReview = new();
+    private MudForm ReviewForm;
+    private bool IsReviewFormValid = false;
+    private bool IsSubmittingReview = false;
+    
+    private DialogOptions DialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true,
+        CloseButton = true
+    };
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadData();
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Only reload if ToolId actually changed to prevent infinite loops
+        if (!string.IsNullOrEmpty(ToolId) && ToolId != previousToolId)
+        {
+            previousToolId = ToolId;
+            await LoadData();
+        }
+    }
+
+    private async Task LoadData()
+    {
+        if (string.IsNullOrEmpty(ToolId))
+        {
+            errorMessage = "Tool ID is required";
+            return;
+        }
+
+        loading = true;
+        errorMessage = null;
+        currentPage = 1;
+        reviews.Clear();
+        reviewSummary = null;
+
+        try
+        {
+            // Load review summary
+            var summaryResult = await ToolService.GetToolReviewSummaryAsync(ToolId);
+            if (summaryResult.Success)
+            {
+                reviewSummary = summaryResult.Data;
+            }
+            else
+            {
+                errorMessage = summaryResult.Message ?? "Failed to load review summary";
+                Snackbar.Add(errorMessage, Severity.Warning);
+            }
+
+            // Load first page of reviews
+            await LoadReviewsPage(1);
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Error loading reviews: {ex.Message}";
+            Snackbar.Add(errorMessage, Severity.Error);
+        }
+        finally
+        {
+            loading = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task LoadReviewsPage(int page)
+    {
+        try
+        {
+            var reviewsResult = await ToolService.GetToolReviewsAsync(ToolId, page, PageSize);
+            if (reviewsResult.Success && reviewsResult.Data?.Items != null)
+            {
+                if (page == 1)
+                {
+                    reviews = reviewsResult.Data.Items.ToList();
+                }
+                else
+                {
+                    reviews.AddRange(reviewsResult.Data.Items);
+                }
+                
+                hasMoreReviews = reviewsResult.Data.Page < reviewsResult.Data.TotalPages;
+                currentPage = reviewsResult.Data.Page;
+            }
+            else
+            {
+                var message = reviewsResult.Message ?? "Failed to load reviews";
+                if (page == 1) // Only show error for first page, not pagination
+                {
+                    errorMessage = message;
+                    Snackbar.Add(message, Severity.Warning);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            var message = $"Error loading reviews page {page}: {ex.Message}";
+            if (page == 1)
+            {
+                errorMessage = message;
+            }
+            Snackbar.Add(message, Severity.Error);
+        }
+    }
+
+    private async Task LoadMoreReviews()
+    {
+        if (loadingMoreReviews || !hasMoreReviews) return;
+        
+        loadingMoreReviews = true;
+        await LoadReviewsPage(currentPage + 1);
+        loadingMoreReviews = false;
+        StateHasChanged();
+    }
+
+    private void OpenReviewDialog()
+    {
+        NewReview = new CreateToolReviewRequest();
+        ShowCreateReviewDialog = true;
+    }
+    
+    private void CloseCreateReviewDialog()
+    {
+        ShowCreateReviewDialog = false;
+        NewReview = new CreateToolReviewRequest();
+        IsReviewFormValid = false;
+    }
+    
+    private async Task SubmitReview()
+    {
+        if (!IsReviewFormValid || NewReview.Rating == 0)
+        {
+            Snackbar.Add("Please provide a rating, title, and comment", Severity.Warning);
+            return;
+        }
+
+        IsSubmittingReview = true;
+        try
+        {
+            var response = await ToolService.CreateToolReviewAsync(ToolId, NewReview);
+            if (response.Success)
+            {
+                Snackbar.Add("Review submitted successfully!", Severity.Success);
+                CloseCreateReviewDialog();
+                
+                // Reload reviews and summary
+                await LoadData();
+            }
+            else
+            {
+                Snackbar.Add(response.Message ?? "Failed to submit review", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error submitting review: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsSubmittingReview = false;
+        }
+    }
+}

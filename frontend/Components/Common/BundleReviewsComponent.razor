@@ -1,11 +1,8 @@
 @using ToolsSharing.Frontend.Models
 @using ToolsSharing.Frontend.Services
-@using frontend.Models
-@namespace frontend.Components
 @inject BundleReviewService BundleReviewService
-@inject IAuthService AuthService
 @inject ISnackbar Snackbar
-@inject IDialogService DialogService
+@inject IAuthService AuthService
 
 <MudCard Class="mb-4">
     <MudCardHeader>
@@ -122,10 +119,37 @@
                               Disabled="@loadingMoreReviews">
                         @if (loadingMoreReviews)
                         {
-                            <MudProgressCircular Size="Size.Small" Class="mr-2" />
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
                         }
                         Load More Reviews
                     </MudButton>
+                </div>
+            }
+            
+            @if (canReview && isAuthenticated)
+            {
+                <div class="text-center mt-3">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        <MudLink OnClick="OpenReviewDialog" Color="Color.Primary" Underline="Underline.Always">
+                            Add your review
+                        </MudLink>
+                    </MudText>
+                </div>
+            }
+            else if (isAuthenticated)
+            {
+                <div class="text-center mt-3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        You can only review bundles you have rented and completed
+                    </MudText>
+                </div>
+            }
+            else
+            {
+                <div class="text-center mt-3">
+                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                        Sign in to write a review
+                    </MudText>
                 </div>
             }
         }
@@ -134,7 +158,28 @@
             <div class="text-center py-4">
                 <MudIcon Icon="@Icons.Material.Filled.RateReview" Size="Size.Large" Color="Color.Surface" />
                 <MudText Typo="Typo.body1" Class="mt-2">No reviews yet</MudText>
-                <MudText Typo="Typo.body2" Color="Color.Secondary">Be the first to review this bundle!</MudText>
+                @if (canReview && isAuthenticated)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        <MudLink OnClick="OpenReviewDialog" Color="Color.Primary" Underline="Underline.Always">
+                            Be the first to review this bundle!
+                        </MudLink>
+                    </MudText>
+                }
+                else if (isAuthenticated)
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Be the first to review this bundle!</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                        You can only review bundles you have rented and completed
+                    </MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Be the first to review this bundle!</MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                        Sign in to write a review
+                    </MudText>
+                }
             </div>
         }
 
@@ -147,9 +192,67 @@
     </MudCardContent>
 </MudCard>
 
+<!-- Create Review Dialog -->
+<MudDialog @bind-Visible="ShowCreateReviewDialog" Options="DialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">Write a Review</MudText>
+    </TitleContent>
+    <DialogContent>
+        <MudForm @ref="ReviewForm" @bind-IsValid="IsReviewFormValid">
+            <MudGrid>
+                <MudItem xs="12">
+                    <MudText Typo="Typo.body1" Class="mb-2">Rating</MudText>
+                    <MudRating @bind-SelectedValue="NewReview.Rating" MaxValue="5" Size="Size.Large" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="NewReview.Title"
+                                 Label="Review Title"
+                                 Variant="Variant.Outlined"
+                                 MaxLength="100"
+                                 Counter="100"
+                                 HelperText="Give your review a title (required)" 
+                                 Required="true" />
+                </MudItem>
+                
+                <MudItem xs="12">
+                    <MudTextField @bind-Value="NewReview.Comment"
+                                 Label="Review Comment"
+                                 Variant="Variant.Outlined"
+                                 Lines="4"
+                                 MaxLength="1000"
+                                 Counter="1000"
+                                 Required="true"
+                                 RequiredError="Please write a comment"
+                                 HelperText="Share your experience with this bundle" />
+                </MudItem>
+            </MudGrid>
+        </MudForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="CloseCreateReviewDialog">Cancel</MudButton>
+        <MudButton Color="Color.Primary" 
+                   Variant="Variant.Filled"
+                   OnClick="SubmitReview"
+                   Disabled="!IsReviewFormValid || IsSubmittingReview">
+            @if (IsSubmittingReview)
+            {
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <span class="ml-2">Submitting...</span>
+            }
+            else
+            {
+                <text>Submit Review</text>
+            }
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
 @code {
     [Parameter] public Guid BundleId { get; set; }
     [Parameter] public string BundleName { get; set; } = "";
+    [Parameter] public bool CanReview { get; set; }
+    [Parameter] public bool IsAuthenticated { get; set; }
     
     private BundleReviewSummaryDto? reviewSummary;
     private List<BundleReviewDto> reviews = new();
@@ -160,6 +263,20 @@
     private bool isAuthenticated = false;
     private int currentPage = 1;
     private const int PageSize = 5;
+    
+    // Dialog-related variables
+    private bool ShowCreateReviewDialog = false;
+    private CreateBundleReviewRequest NewReview = new();
+    private MudForm ReviewForm;
+    private bool IsReviewFormValid = false;
+    private bool IsSubmittingReview = false;
+    
+    private DialogOptions DialogOptions = new()
+    {
+        MaxWidth = MaxWidth.Medium,
+        FullWidth = true,
+        CloseButton = true
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -233,22 +350,54 @@
         StateHasChanged();
     }
 
-    private async Task OpenReviewDialog()
+    private void OpenReviewDialog()
     {
-        var parameters = new DialogParameters<BundleReviewDialog>
+        NewReview = new CreateBundleReviewRequest
         {
-            { x => x.BundleId, BundleId },
-            { x => x.BundleName, BundleName }
+            BundleId = BundleId
         };
-        
-        var options = new DialogOptions { CloseOnEscapeKey = true, MaxWidth = MaxWidth.Medium };
-        var dialog = DialogService.Show<BundleReviewDialog>("Write Review", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled)
+        ShowCreateReviewDialog = true;
+    }
+    
+    private void CloseCreateReviewDialog()
+    {
+        ShowCreateReviewDialog = false;
+        NewReview = new CreateBundleReviewRequest();
+        IsReviewFormValid = false;
+    }
+    
+    private async Task SubmitReview()
+    {
+        if (!IsReviewFormValid || NewReview.Rating == 0)
         {
-            // Refresh reviews after submission
-            await LoadData();
+            Snackbar.Add("Please provide a rating, title, and comment", Severity.Warning);
+            return;
+        }
+
+        IsSubmittingReview = true;
+        try
+        {
+            var response = await BundleReviewService.CreateBundleReviewAsync(BundleId, NewReview);
+            if (response.Success)
+            {
+                Snackbar.Add("Review submitted successfully!", Severity.Success);
+                CloseCreateReviewDialog();
+                
+                // Reload reviews and summary
+                await LoadData();
+            }
+            else
+            {
+                Snackbar.Add(response.Message ?? "Failed to submit review", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error submitting review: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            IsSubmittingReview = false;
         }
     }
 }

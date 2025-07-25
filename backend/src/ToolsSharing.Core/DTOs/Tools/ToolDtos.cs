@@ -164,6 +164,7 @@ public class ToolReviewDto
     public Guid ToolId { get; set; }
     public string ReviewerId { get; set; } = string.Empty;
     public string ReviewerName { get; set; } = string.Empty;
+    public string ReviewerAvatar { get; set; } = string.Empty;
     public int Rating { get; set; }
     public string Title { get; set; } = string.Empty;
     public string Comment { get; set; } = string.Empty;
@@ -196,4 +197,16 @@ public class RequestApprovalRequest
 {
     [MaxLength(500)]
     public string? Message { get; set; }
+}
+
+public class ToolReviewSummaryDto
+{
+    public double AverageRating { get; set; }
+    public int TotalReviews { get; set; }
+    public int FiveStarCount { get; set; }
+    public int FourStarCount { get; set; }
+    public int ThreeStarCount { get; set; }
+    public int TwoStarCount { get; set; }
+    public int OneStarCount { get; set; }
+    public List<ToolReviewDto> LatestReviews { get; set; } = new();
 }

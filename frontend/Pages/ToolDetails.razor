@@ -230,10 +230,11 @@ else if (tool != null)
                 else
                 {
                     <MudCard Class="mb-4">
-                        <MudCardContent>
-                            <div class="d-flex align-center justify-center" style="height: 300px; background: var(--mud-palette-surface-variant);">
-                                <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 4rem;" />
-                            </div>
+                        <MudCardContent Class="pa-0">
+                            <ThemeAwarePlaceholder Height="300px" 
+                                                  Icon="@Icons.Material.Filled.Build" 
+                                                  IconSize="Size.Large"
+                                                  IconFontSize="4rem" />
                         </MudCardContent>
                     </MudCard>
                 }
@@ -302,40 +303,6 @@ else if (tool != null)
 
             <!-- Sidebar -->
             <MudItem xs="12" md="4">
-                <!-- Tool Info -->
-                <MudCard Class="mb-4">
-                    <MudCardHeader>
-                        <CardHeaderContent>
-                            <MudText Typo="Typo.h6">Tool Info</MudText>
-                        </CardHeaderContent>
-                    </MudCardHeader>
-                    <MudCardContent>
-                        <MudStack Spacing="3">
-                            @if (tool.Rating.HasValue)
-                            {
-                                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                    <MudText Typo="Typo.body2">Rating:</MudText>
-                                    <div class="d-flex align-center">
-                                        <StarRating Value="@tool.Rating.Value" Size="Size.Small" ShowRating="true" />
-                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="ml-2">(@tool.ReviewCount)</MudText>
-                                    </div>
-                                </MudStack>
-                            }
-                            <MudStack Row Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.body2">Times Rented:</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Primary">-</MudText>
-                            </MudStack>
-                            <MudStack Row Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.body2">Views:</MudText>
-                                <MudText Typo="Typo.body2" Color="Color.Primary">@tool.ViewCount</MudText>
-                            </MudStack>
-                            <MudStack Row Justify="Justify.SpaceBetween">
-                                <MudText Typo="Typo.body2">Listed:</MudText>
-                                <MudText Typo="Typo.body2">@tool.CreatedAt.ToString("MMM dd, yyyy")</MudText>
-                            </MudStack>
-                        </MudStack>
-                    </MudCardContent>
-                </MudCard>
 
                 <!-- Tags -->
                 @if (tool.TagList.Any())
@@ -365,16 +332,10 @@ else if (tool != null)
                     </MudCardHeader>
                     <MudCardContent>
                         <MudStack Spacing="2">
-                            <div class="d-flex align-center gap-3">
-                                <UserLink UserId="@tool.OwnerId" 
-                                          DisplayName="@tool.OwnerName" 
-                                          ShowAvatar="true" 
-                                          AvatarSize="Size.Medium" />
-                                <div>
-                                    <MudText Typo="Typo.body1">@tool.OwnerName</MudText>
-                                    <MudText Typo="Typo.caption" Color="Color.Secondary">Tool Owner</MudText>
-                                </div>
-                            </div>
+                            <UserLink UserId="@tool.OwnerId" 
+                                      DisplayName="@tool.OwnerName" 
+                                      ShowAvatar="true" 
+                                      AvatarSize="Size.Medium" />
                             @if (!isOwner)
                             {
                                 <MudButton Variant="Variant.Outlined" 
@@ -390,61 +351,58 @@ else if (tool != null)
                 </MudCard>
 
                 <!-- Actions -->
-                @if (!isOwner)
-                {
-                    <MudCard Class="mb-4">
-                        <MudCardHeader>
-                            <CardHeaderContent>
-                                <MudText Typo="Typo.h6">Actions</MudText>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent>
-                            <MudStack Spacing="2">
-                                <FavoriteButton ToolId="@tool.Id" 
-                                               OwnerUserId="@tool.OwnerId" 
-                                               Size="Size.Medium" />
-                            </MudStack>
-                        </MudCardContent>
-                    </MudCard>
-                }
-
-                <!-- Share -->
                 <MudCard>
                     <MudCardHeader>
                         <CardHeaderContent>
-                            <MudText Typo="Typo.h6">Share Tool</MudText>
+                            <MudText Typo="Typo.h6">Actions</MudText>
                         </CardHeaderContent>
                     </MudCardHeader>
                     <MudCardContent>
-                        <MudStack Row Spacing="2">
-                            <MudIconButton Icon="@Icons.Custom.Brands.Facebook" 
-                                         Color="Color.Primary" 
-                                         Size="Size.Medium"
-                                         OnClick="@(() => ShareTool("facebook"))" />
-                            <MudIconButton Icon="@Icons.Custom.Brands.Twitter" 
-                                         Color="Color.Info" 
-                                         Size="Size.Medium"
-                                         OnClick="@(() => ShareTool("twitter"))" />
-                            <MudIconButton Icon="@Icons.Material.Filled.Share" 
-                                         Color="Color.Secondary" 
-                                         Size="Size.Medium"
-                                         OnClick="@(() => CopyLink())" />
+                        <MudStack Row Spacing="2" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            @if (!isOwner)
+                            {
+                                <FavoriteButton ToolId="@tool.Id" 
+                                               OwnerUserId="@tool.OwnerId" 
+                                               Size="Size.Medium" />
+                            }
+                            else
+                            {
+                                <div></div>
+                            }
+                            
+                            <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                                <MudIconButton Icon="@Icons.Custom.Brands.Facebook" 
+                                             Color="Color.Primary" 
+                                             Size="Size.Medium"
+                                             OnClick="@(() => ShareTool("facebook"))" />
+                                <MudIconButton Icon="@Icons.Custom.Brands.Twitter" 
+                                             Color="Color.Info" 
+                                             Size="Size.Medium"
+                                             OnClick="@(() => ShareTool("twitter"))" />
+                                <MudIconButton Icon="@Icons.Material.Filled.Share" 
+                                             Color="Color.Secondary" 
+                                             Size="Size.Medium"
+                                             OnClick="@(() => CopyLink())" />
+                            </MudStack>
                         </MudStack>
                     </MudCardContent>
                 </MudCard>
-            </MudItem>
 
-            <!-- Reviews Section -->
-            @if (tool != null)
-            {
-                <MudItem xs="12">
-                    <ToolReviewsSection Tool="@tool" 
-                                       CanReview="@(!isOwner && canUserReview)" />
-                </MudItem>
-            }
+                <!-- Reviews -->
+                @if (tool != null)
+                {
+                    <div class="mt-4">
+                        <ToolReviewsComponent ToolId="@tool.Id" 
+                                             ToolName="@tool.Name" 
+                                             CanReview="!isOwner && canUserReview" 
+                                             IsAuthenticated="!string.IsNullOrEmpty(currentUserId)" />
+                    </div>
+                }
+            </MudItem>
         </MudGrid>
     </MudContainer>
 }
+
 
 @code {
     [Parameter] public string Id { get; set; } = string.Empty;
@@ -683,4 +641,5 @@ else if (tool != null)
         // Navigate to tools page with tag filter
         Navigation.NavigateTo($"/tools?tags={Uri.EscapeDataString(tag)}");
     }
+    
 }

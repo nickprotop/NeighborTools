@@ -110,6 +110,13 @@ public class ToolsController : ControllerBase
         return Ok(result);
     }
     
+    [HttpGet("{id}/reviews/summary")]
+    public async Task<IActionResult> GetToolReviewSummary(Guid id)
+    {
+        var result = await _toolsService.GetToolReviewSummaryAsync(id);
+        return Ok(result);
+    }
+    
     [HttpPost("{id}/reviews")]
     [Authorize]
     public async Task<IActionResult> CreateToolReview(Guid id, [FromBody] CreateToolReviewRequest request)

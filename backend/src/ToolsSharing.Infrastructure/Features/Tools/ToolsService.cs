@@ -516,6 +516,7 @@ public class ToolsService : IToolsService
                     ToolId = r.ToolId.Value,
                     ReviewerId = r.ReviewerId,
                     ReviewerName = $"{r.Reviewer.FirstName} {r.Reviewer.LastName}".Trim(),
+                    ReviewerAvatar = r.Reviewer.ProfilePictureUrl ?? "",
                     Rating = r.Rating,
                     Title = r.Title,
                     Comment = r.Comment,
@@ -601,6 +602,48 @@ public class ToolsService : IToolsService
         {
             _logger.LogError(ex, "Error creating tool review for {ToolId}", toolId);
             return ApiResponse<ToolReviewDto>.CreateFailure("Error creating review");
+        }
+    }
+
+    public async Task<ApiResponse<ToolReviewSummaryDto>> GetToolReviewSummaryAsync(Guid toolId)
+    {
+        try
+        {
+            var reviews = await _context.Reviews
+                .Where(r => r.ToolId == toolId && r.Type == ReviewType.ToolReview)
+                .Include(r => r.Reviewer)
+                .OrderByDescending(r => r.CreatedAt)
+                .ToListAsync();
+
+            var summary = new ToolReviewSummaryDto
+            {
+                TotalReviews = reviews.Count,
+                AverageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0,
+                FiveStarCount = reviews.Count(r => r.Rating == 5),
+                FourStarCount = reviews.Count(r => r.Rating == 4),
+                ThreeStarCount = reviews.Count(r => r.Rating == 3),
+                TwoStarCount = reviews.Count(r => r.Rating == 2),
+                OneStarCount = reviews.Count(r => r.Rating == 1),
+                LatestReviews = reviews.Take(3).Select(r => new ToolReviewDto
+                {
+                    Id = r.Id,
+                    ToolId = r.ToolId!.Value,
+                    ReviewerId = r.ReviewerId,
+                    ReviewerName = r.Reviewer.FirstName + " " + r.Reviewer.LastName,
+                    ReviewerAvatar = r.Reviewer.ProfilePictureUrl ?? "",
+                    Rating = r.Rating,
+                    Title = r.Title,
+                    Comment = r.Comment,
+                    CreatedAt = r.CreatedAt
+                }).ToList()
+            };
+
+            return ApiResponse<ToolReviewSummaryDto>.CreateSuccess(summary);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting tool review summary for {ToolId}", toolId);
+            return ApiResponse<ToolReviewSummaryDto>.CreateFailure("Error retrieving review summary");
         }
     }
 
