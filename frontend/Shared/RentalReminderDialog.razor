@@ -1,0 +1,161 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@using frontend.Pages
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@ReminderInfo.Icon" Color="@ReminderInfo.Color" Class="mr-2" />
+            <MudText Typo="Typo.h6">@Title</MudText>
+        </div>
+    </TitleContent>
+    
+    <DialogContent>
+        <div class="pa-2">
+            <MudAlert Severity="@GetSeverity()" Dense="true" Class="mb-4">
+                <div>
+                    <MudText Typo="Typo.subtitle2" Class="mb-1">
+                        @ReminderInfo.Title
+                    </MudText>
+                    <MudText Typo="Typo.body2">
+                        @ReminderInfo.Message
+                    </MudText>
+                </div>
+            </MudAlert>
+
+            <MudText Typo="Typo.h6" Class="mb-3">
+                <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Color="Color.Primary" Class="mr-2" />
+                Helpful Suggestions
+            </MudText>
+
+            <MudList T="string" Dense="true" Class="mb-4">
+                @foreach (var suggestion in ReminderInfo.Suggestions)
+                {
+                    <MudListItem T="string" Class="pa-2">
+                        <ItemContent>
+                            <div class="d-flex align-start">
+                                <MudIcon Icon="@Icons.Material.Filled.CheckCircleOutline" Size="Size.Small" Color="Color.Success" Class="mr-2 mt-1" />
+                                <MudText Typo="Typo.body2">@suggestion</MudText>
+                            </div>
+                        </ItemContent>
+                    </MudListItem>
+                }
+            </MudList>
+
+            <MudPaper Elevation="1" Class="pa-3" Style="border-radius: 8px; border-left: 4px solid var(--mud-palette-primary);">
+                <MudText Typo="Typo.subtitle2" Class="mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                    About @OwnerName
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Tool owners are independent users who set their own response times. Response delays can happen due to work schedules, 
+                    travel, or other commitments. Most owners aim to respond within 24-48 hours.
+                </MudText>
+            </MudPaper>
+        </div>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton Variant="Variant.Text" 
+                   Color="Color.Secondary" 
+                   OnClick="Close"
+                   StartIcon="@Icons.Material.Filled.Close">
+            Close
+        </MudButton>
+        
+        @if (ReminderInfo.SecondaryAction == "Browse Similar Tools")
+        {
+            <MudButton Variant="Variant.Text" 
+                       Color="Color.Primary" 
+                       OnClick="BrowseSimilarTools"
+                       StartIcon="@Icons.Material.Filled.Search">
+                @ReminderInfo.SecondaryAction
+            </MudButton>
+        }
+        else if (ReminderInfo.SecondaryAction == "Send Message")
+        {
+            <MudButton Variant="Variant.Text" 
+                       Color="Color.Primary" 
+                       OnClick="MessageOwner"
+                       StartIcon="@Icons.Material.Filled.Message">
+                @ReminderInfo.SecondaryAction
+            </MudButton>
+        }
+        
+        @if (ReminderInfo.PrimaryAction == "Message Owner")
+        {
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       OnClick="MessageOwner"
+                       StartIcon="@Icons.Material.Filled.Message">
+                @ReminderInfo.PrimaryAction
+            </MudButton>
+        }
+        else
+        {
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       OnClick="Close"
+                       StartIcon="@Icons.Material.Filled.CheckCircle">
+                @ReminderInfo.PrimaryAction
+            </MudButton>
+        }
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public ReminderInfo ReminderInfo { get; set; } = new();
+    [Parameter] public string OwnerName { get; set; } = "";
+    [Parameter] public string ToolName { get; set; } = "";
+    [Parameter] public string OwnerId { get; set; } = "";
+    [Parameter] public string RentalId { get; set; } = "";
+
+    private Severity GetSeverity()
+    {
+        return ReminderInfo.Color switch
+        {
+            Color.Warning => Severity.Warning,
+            Color.Error => Severity.Error,
+            Color.Success => Severity.Success,
+            _ => Severity.Info
+        };
+    }
+
+    private void MessageOwner()
+    {
+        try
+        {
+            MudDialog.Close();
+            Navigation.NavigateTo($"/messages?user={OwnerId}&subject=Regarding {ToolName} rental request");
+            Snackbar.Add("Opening message composer...", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error opening message: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void BrowseSimilarTools()
+    {
+        try
+        {
+            MudDialog.Close();
+            Navigation.NavigateTo($"/tools?search={Uri.EscapeDataString(ToolName)}");
+            Snackbar.Add("Searching for similar tools...", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error browsing tools: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

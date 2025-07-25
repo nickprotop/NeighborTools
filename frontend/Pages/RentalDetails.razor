@@ -236,30 +236,35 @@
                                         <MudIcon Icon="@Icons.Material.Filled.Schedule" Class="mr-2" />
                                         <div>
                                             <MudText Typo="Typo.subtitle2">Awaiting Owner Approval</MudText>
-                                            <MudText Typo="Typo.body2">Your rental request has been sent to the owner. You'll be notified when they respond.</MudText>
+                                            <MudText Typo="Typo.body2">Your rental request has been sent to @(rental.Tool?.OwnerName ?? "the owner"). You'll be notified when they respond.</MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                                                <strong>Optional:</strong> Pay now to demonstrate serious interest. This shows the owner you're committed and may increase your chances of approval.
+                                                <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Small" /> 
+                                                <strong>No payment required until approved.</strong> Average response time: 4-6 hours.
                                             </MudText>
                                         </div>
                                     </div>
                                 </MudAlert>
                                 
-                                <MudButton Variant="Variant.Text" 
-                                           Color="Color.Primary" 
-                                           StartIcon="@Icons.Material.Filled.VerifiedUser"
-                                           OnClick="InitiatePayment"
-                                           Disabled="isProcessingPayment"
-                                           Class="mb-3">
-                                    @if (isProcessingPayment)
+                                <div class="d-flex gap-2">
+                                    <MudButton Variant="Variant.Text" 
+                                               Color="Color.Primary" 
+                                               StartIcon="@Icons.Material.Filled.Refresh"
+                                               OnClick="LoadRentalDetails"
+                                               Disabled="isProcessingPayment">
+                                        Refresh Status
+                                    </MudButton>
+                                    
+                                    @if (!string.IsNullOrEmpty(rental.Tool?.OwnerId))
                                     {
-                                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                        <span>Processing...</span>
+                                        <MudButton Variant="Variant.Text" 
+                                                   Color="Color.Secondary" 
+                                                   StartIcon="@Icons.Material.Filled.Message"
+                                                   OnClick="@(() => ContactOwner(rental.Tool.OwnerId, rental.Tool.OwnerName, rental.Tool.Name))"
+                                                   Disabled="isProcessingPayment">
+                                            Message Owner
+                                        </MudButton>
                                     }
-                                    else
-                                    {
-                                        <span>Pay Now to Show Commitment</span>
-                                    }
-                                </MudButton>
+                                </div>
                             }
                             else if (rental.Status == "Approved" && (transaction == null || transaction.Status == "Pending" || transaction.Status == "PaymentProcessing"))
                             {
@@ -287,7 +292,7 @@
                                     }
                                     else
                                     {
-                                        <span>Pay Now@(calculatedRentalCost.HasValue ? $" - ${calculatedRentalCost.Value:F2}" : "")</span>
+                                        <span>Complete Payment & Confirm Rental@(calculatedRentalCost.HasValue ? $" - ${calculatedRentalCost.Value:F2}" : "")</span>
                                     }
                                 </MudButton>
                                 
@@ -728,6 +733,33 @@
     {
         // TODO: Implement rental status update
         Snackbar.Add($"Status update to {newStatus} - Coming soon!", Severity.Info);
+    }
+    
+    private async Task ContactOwner(string ownerId, string ownerName, string toolName)
+    {
+        var parameters = new DialogParameters 
+        { 
+            { "RecipientId", ownerId },
+            { "RecipientName", ownerName },
+            { "ToolId", rental?.ToolId ?? "" },
+            { "ToolName", toolName },
+            { "PrefilledMessage", $"Hi {ownerName}, I have a question about my rental request for '{toolName}'." }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        
+        var dialog = DialogService.Show<NewMessageDialog>("Message Owner", parameters, options);
+        var result = await dialog.Result;
+        
+        if (!result.Canceled)
+        {
+            Snackbar.Add("Message sent successfully!", Severity.Success);
+        }
     }
 
     private async Task ConfirmPickup()

@@ -49,29 +49,44 @@
                         NeighborTools makes it easy to share and access tools in your community.
                     </MudText>
 
-                    <MudText Typo="Typo.h6" Class="mb-3">How It Works</MudText>
+                    <MudText Typo="Typo.h6" Class="mb-3">How It Works - Complete Flow</MudText>
                     <MudTimeline>
                         <MudTimelineItem Color="Color.Primary" Icon="@Icons.Material.Filled.Search">
-                            <MudText Typo="Typo.subtitle2" Class="mb-1">1. Browse & Search</MudText>
-                            <MudText Typo="Typo.body2">Find the tools you need using our search and filter features</MudText>
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">1. Browse & Request</MudText>
+                            <MudText Typo="Typo.body2">Find tools, select dates, and submit rental request with project details</MudText>
                         </MudTimelineItem>
-                        <MudTimelineItem Color="Color.Primary" Icon="@Icons.Material.Filled.CalendarToday">
-                            <MudText Typo="Typo.subtitle2" Class="mb-1">2. Request & Book</MudText>
-                            <MudText Typo="Typo.body2">Send a rental request with your desired dates and message</MudText>
+                        <MudTimelineItem Color="Color.Warning" Icon="@Icons.Material.Filled.HourglassEmpty">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">2. Await Approval</MudText>
+                            <MudText Typo="Typo.body2">Owner reviews your request and approves/rejects within 24 hours</MudText>
                         </MudTimelineItem>
-                        <MudTimelineItem Color="Color.Primary" Icon="@Icons.Material.Filled.Payment">
-                            <MudText Typo="Typo.subtitle2" Class="mb-1">3. Pay Securely</MudText>
-                            <MudText Typo="Typo.body2">Complete payment through our secure PayPal integration</MudText>
+                        <MudTimelineItem Color="Color.Success" Icon="@Icons.Material.Filled.Payment">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">3. Pay After Approval</MudText>
+                            <MudText Typo="Typo.body2">Complete secure PayPal payment only after owner approval</MudText>
                         </MudTimelineItem>
                         <MudTimelineItem Color="Color.Primary" Icon="@Icons.Material.Filled.LocalShipping">
-                            <MudText Typo="Typo.subtitle2" Class="mb-1">4. Pickup & Use</MudText>
-                            <MudText Typo="Typo.body2">Coordinate pickup with the owner and use the tool safely</MudText>
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">4. Owner Dispatches</MudText>
+                            <MudText Typo="Typo.body2">Owner marks tool as dispatched and coordinates pickup details</MudText>
                         </MudTimelineItem>
-                        <MudTimelineItem Color="Color.Primary" Icon="@Icons.Material.Filled.AssignmentReturn">
-                            <MudText Typo="Typo.subtitle2" Class="mb-1">5. Return & Review</MudText>
-                            <MudText Typo="Typo.body2">Return the tool on time and leave a review for the community</MudText>
+                        <MudTimelineItem Color="Color.Info" Icon="@Icons.Material.Filled.Build">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">5. Use & Monitor</MudText>
+                            <MudText Typo="Typo.body2">Use tool safely for your project while system monitors return deadline</MudText>
+                        </MudTimelineItem>
+                        <MudTimelineItem Color="Color.Success" Icon="@Icons.Material.Filled.AssignmentReturn">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">6. Return & Complete</MudText>
+                            <MudText Typo="Typo.body2">Return tool, owner confirms condition, deposit refunded, leave reviews</MudText>
                         </MudTimelineItem>
                     </MudTimeline>
+                    
+                    <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.AutoAwesome" Class="mt-4">
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">✨ What Makes Our Flow Special</MudText>
+                        <ul>
+                            <li><strong>No Pre-Payment Confusion:</strong> Pay only after owner approval, never upfront</li>
+                            <li><strong>Smart Progress Tracking:</strong> Clear progress bars and status messages throughout</li>
+                            <li><strong>Intelligent Actions:</strong> Context-aware buttons for what you can do at each step</li>
+                            <li><strong>Owner Dispatch Control:</strong> Owners actively manage pickup and return process</li>
+                            <li><strong>Automatic Overdue Detection:</strong> System monitors deadlines and protects both parties</li>
+                        </ul>
+                    </MudAlert>
                 </MudPaper>
             </div>
 
@@ -111,22 +126,122 @@
                             <TitleContent>
                                 <div class="d-flex align-center">
                                     <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Class="mr-3" />
-                                    <MudText>Making Rental Requests</MudText>
+                                    <MudText>Complete Rental Flow - Step by Step</MudText>
                                 </div>
                             </TitleContent>
                             <ChildContent>
-                                <MudText Typo="Typo.body1" Class="mb-3">
-                                    <strong>Rental Dates:</strong> Select your pickup and return dates carefully, considering the tool owner's lead time requirements
-                                </MudText>
-                                <MudText Typo="Typo.body1" Class="mb-3">
-                                    <strong>Personal Message:</strong> Include details about your project and demonstrate responsibility
-                                </MudText>
-                                <MudText Typo="Typo.body1" Class="mb-3">
-                                    <strong>Auto-Approval:</strong> Some owners enable automatic approval for faster booking
-                                </MudText>
-                                <MudText Typo="Typo.body1">
-                                    <strong>Response Time:</strong> Most owners respond within 24 hours. You'll receive notifications via email
-                                </MudText>
+                                <MudText Typo="Typo.h6" Class="mb-3">🔄 Your Rental Journey</MudText>
+                                
+                                <!-- Step 1: Pending -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="Step 1" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>Pending - Waiting for Approval</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>What happens:</strong> Your rental request is sent to the tool owner for review
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Smart Status:</strong> "Waiting for owner approval" with urgency indicators
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Actions Available:</strong> ✅ Cancel (free), 📝 View Details, 💬 Message Owner
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Timeline:</strong> Most owners respond within 24 hours
+                                    </MudText>
+                                </div>
+
+                                <!-- Step 2: Approved -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="Step 2" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>Approved - Payment Required</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>What happens:</strong> Owner approves your request, payment is now required to proceed
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Smart Status:</strong> "Approved! Payment required to proceed" with progress indicators
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Actions Available:</strong> 💳 Pay Now (secure PayPal), ❌ Cancel (with warning)
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Payment Details:</strong> Rental fee + security deposit + 5% platform fee via PayPal
+                                    </MudText>
+                                </div>
+
+                                <!-- Step 3: PickedUp -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Text="Step 3" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>PickedUp - Tool in Your Possession</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>What happens:</strong> Owner marks tool as dispatched, you have the tool for your project
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Smart Status:</strong> "Tool in your possession - enjoy your project!" with return countdown
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Actions Available:</strong> 📝 View Details, 📞 Contact Owner, 🔄 Request Extension
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Important:</strong> Return on time to avoid late fees and maintain good standing
+                                    </MudText>
+                                </div>
+
+                                <!-- Step 4: Returned -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Step 4" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>Returned - Awaiting Confirmation</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>What happens:</strong> You return the tool, waiting for owner to confirm receipt and condition
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Smart Status:</strong> "Tool returned - waiting for owner confirmation"
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Actions Available:</strong> 📝 View Details, 💬 Message Owner about return
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Security Deposit:</strong> Will be refunded within 48 hours after confirmation
+                                    </MudText>
+                                </div>
+
+                                <!-- Step 5: Completed -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="Step 5" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>Completed - Rental Finished</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>What happens:</strong> Owner confirms return, security deposit refunded, rental complete
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Smart Status:</strong> "Rental completed successfully!" with success indicators
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Actions Available:</strong> ⭐ Leave Review, 📄 Download Receipt, 🔄 Rent Again
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Community:</strong> Reviews help other users and build trust in the platform
+                                    </MudText>
+                                </div>
+
+                                <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Lightbulb" Class="mt-3">
+                                    <MudText Typo="Typo.subtitle2" Class="mb-1">🎯 Smart Features You'll Love</MudText>
+                                    <ul>
+                                        <li><strong>Progress Indicators:</strong> Clean progress bars show exactly where you are in the process</li>
+                                        <li><strong>Smart Status Messages:</strong> Time-aware updates like "Due in 2 days" or "Payment required"</li>
+                                        <li><strong>Action-Oriented Interface:</strong> Clear buttons for what you can do at each step</li>
+                                        <li><strong>Intelligent Cancellation:</strong> Different options based on rental status and payment</li>
+                                        <li><strong>Flow Explanation:</strong> Automatic popup after booking explains the entire process</li>
+                                    </ul>
+                                </MudAlert>
                             </ChildContent>
                         </MudExpansionPanel>
 
@@ -255,22 +370,163 @@
                             <TitleContent>
                                 <div class="d-flex align-center">
                                     <MudIcon Icon="@Icons.Material.Filled.Assignment" Class="mr-3" />
-                                    <MudText>Managing Rental Requests</MudText>
+                                    <MudText>Complete Owner Workflow - Your Journey</MudText>
                                 </div>
                             </TitleContent>
                             <ChildContent>
-                                <MudText Typo="Typo.body1" Class="mb-3">
-                                    <strong>Request Review:</strong> Evaluate renter profiles, project details, and rental history
-                                </MudText>
-                                <MudText Typo="Typo.body1" Class="mb-3">
-                                    <strong>Quick Responses:</strong> Respond to requests promptly to maintain high service ratings
-                                </MudText>
-                                <MudText Typo="Typo.body1" Class="mb-3">
-                                    <strong>Clear Communication:</strong> Provide pickup instructions and any special requirements
-                                </MudText>
-                                <MudText Typo="Typo.body1">
-                                    <strong>Rejection Guidelines:</strong> If declining, provide helpful alternative suggestions when possible
-                                </MudText>
+                                <MudText Typo="Typo.h6" Class="mb-3">🏠 Your Tool Owner Experience</MudText>
+                                
+                                <!-- Step 1: Notification -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Step 1" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>New Request Notification</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>What happens:</strong> Receive instant notification when someone wants to rent your tool
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Where to find it:</strong> "Tool Rentals" tab in My Rentals page, email notification
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>What to review:</strong> Renter profile, project details, rental dates, messaging history
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Response time:</strong> Responding within 24 hours improves your owner rating
+                                    </MudText>
+                                </div>
+
+                                <!-- Step 2: Decision Phase -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Warning" Text="Step 2" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>Approve or Reject Decision</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Smart Status:</strong> "New rental request awaiting your decision" with renter details
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Actions Available:</strong> ✅ Approve Request, ❌ Reject with Reason, 💬 Message Renter
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Approval considerations:</strong> Renter rating, profile completeness, project details, dates
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Rejection best practice:</strong> Provide helpful feedback or suggest alternative dates
+                                    </MudText>
+                                </div>
+
+                                <!-- Step 3: Payment Received -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="Step 3" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>Payment Received & Ready for Dispatch</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>What happens:</strong> Renter completes payment, you're ready to coordinate pickup
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Smart Status:</strong> "Payment received - ready for pickup" with pickup coordination
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Key Action:</strong> 🚀 <strong>Mark Dispatched</strong> - Confirm tool pickup with optional notes
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Communication:</strong> Coordinate pickup time, location, and any special instructions
+                                    </MudText>
+                                </div>
+
+                                <!-- Step 4: Tool Out -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Primary" Text="Step 4" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>Tool Picked Up - Monitoring Return</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>What happens:</strong> Tool is with renter, you monitor return deadline and condition
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Smart Status:</strong> "Tool picked up - monitoring return" with countdown to due date
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Actions Available:</strong> ✅ Mark Returned, 💬 Check In with Renter, 📅 View Return Date
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Overdue handling:</strong> System automatically detects late returns for action
+                                    </MudText>
+                                </div>
+
+                                <!-- Step 5: Return & Completion -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Info" Text="Step 5" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>Tool Returned - Condition Assessment</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>What happens:</strong> Renter returns tool, you inspect condition and confirm return
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Actions Available:</strong> ✅ Confirm Return, 📝 Add Condition Notes, 🚨 Report Damage
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Return Dialog:</strong> Comprehensive form for condition assessment and damage documentation
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Deposit handling:</strong> Security deposit released automatically unless damage reported
+                                    </MudText>
+                                </div>
+
+                                <!-- Step 6: Completed -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Success" Text="Step 6" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>Rental Completed - Payment Processed</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>What happens:</strong> Rental marked complete, your earnings processed for payout
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Smart Status:</strong> "Rental completed - payment processed" with earning details
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Actions Available:</strong> ⭐ Leave Review for Renter, 💰 View Payout Details, 📄 Download Receipt
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Earnings:</strong> Rental fee minus 5% platform fee, automatic PayPal payout within 48 hours
+                                    </MudText>
+                                </div>
+
+                                <!-- Overdue Management -->
+                                <div class="mb-4">
+                                    <div class="d-flex align-center mb-2">
+                                        <MudChip T="string" Size="Size.Small" Color="Color.Error" Text="Overdue" Class="mr-2" />
+                                        <MudText Typo="Typo.subtitle1"><strong>Overdue Tool Management</strong></MudText>
+                                    </div>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Automatic Detection:</strong> System marks rentals overdue when return date passes
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Smart Status:</strong> "OVERDUE - Tool not returned on time" with escalation options
+                                    </MudText>
+                                    <MudText Typo="Typo.body2" Class="mb-2">
+                                        <strong>Actions Available:</strong> 📞 Contact Renter, 🚨 Start Dispute, ✅ Mark Returned (if late return)
+                                    </MudText>
+                                    <MudText Typo="Typo.body2">
+                                        <strong>Escalation:</strong> Dispute system helps resolve overdue situations with evidence support
+                                    </MudText>
+                                </div>
+
+                                <MudAlert Severity="Severity.Success" Icon="@Icons.Material.Filled.TrendingUp" Class="mt-3">
+                                    <MudText Typo="Typo.subtitle2" Class="mb-1">🎯 Enhanced Owner Experience</MudText>
+                                    <ul>
+                                        <li><strong>Status-Specific Actions:</strong> Different buttons and options based on current rental state</li>
+                                        <li><strong>Smart Dispatch System:</strong> Easy "Mark Dispatched" functionality with pickup confirmation</li>
+                                        <li><strong>Return Management:</strong> Comprehensive return dialogs with condition assessment</li>
+                                        <li><strong>Overdue Protection:</strong> Automatic overdue detection with dispute escalation options</li>
+                                        <li><strong>Earnings Transparency:</strong> Clear payout details and automatic payment processing</li>
+                                        <li><strong>Communication Integration:</strong> Direct messaging from rental management interface</li>
+                                    </ul>
+                                </MudAlert>
                             </ChildContent>
                         </MudExpansionPanel>
 

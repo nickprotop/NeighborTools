@@ -547,10 +547,25 @@ public class RentalsService : IRentalsService
                 return ApiResponse<bool>.CreateFailure("Only the renter can cancel their own rental");
             }
 
-            // Check if rental is in pending status (only pending rentals can be cancelled by renter)
-            if (rental.Status != RentalStatus.Pending)
+            // Check if rental can be cancelled (pending or approved without payment)
+            if (rental.Status != RentalStatus.Pending && rental.Status != RentalStatus.Approved)
             {
-                return ApiResponse<bool>.CreateFailure("Only pending rentals can be cancelled");
+                return ApiResponse<bool>.CreateFailure("Only pending or approved rentals can be cancelled");
+            }
+
+            // For approved rentals, check if payment has been completed
+            if (rental.Status == RentalStatus.Approved)
+            {
+                var isPaid = await _context.Transactions
+                    .AnyAsync(t => t.RentalId == rental.Id && 
+                              (t.Status == TransactionStatus.PaymentCompleted || 
+                               t.Status == TransactionStatus.PayoutPending || 
+                               t.Status == TransactionStatus.PayoutCompleted));
+
+                if (isPaid)
+                {
+                    return ApiResponse<bool>.CreateFailure("Cannot cancel rental after payment has been completed. Please contact support for assistance.");
+                }
             }
 
             rental.Status = RentalStatus.Cancelled;

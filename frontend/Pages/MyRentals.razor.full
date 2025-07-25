@@ -14,7 +14,6 @@
 @inject NavigationManager Navigation
 @inject IDialogService DialogService
 @inject IUrlService UrlService
-@inject HttpClient Http
 @attribute [Authorize]
 
 <PageTitle>My Rentals - NeighborTools</PageTitle>
@@ -68,21 +67,21 @@
                     <MudChip T="string" 
                              Color="@(selectedRenterQuickFilter == "pending" ? Color.Primary : Color.Default)" 
                              Size="Size.Small" 
-                             OnClick="SetPendingFilter"
+                             OnClick="() => SetQuickFilter("pending")"
                              Class="cursor-pointer">
                         Pending (@GetPendingCount())
                     </MudChip>
                     <MudChip T="string" 
                              Color="@(selectedRenterQuickFilter == "approved" ? Color.Primary : Color.Default)" 
                              Size="Size.Small" 
-                             OnClick="SetApprovedFilter"
+                             OnClick="() => SetQuickFilter("approved")"
                              Class="cursor-pointer">
                         Approved (@GetApprovedCount())
                     </MudChip>
                     <MudChip T="string" 
                              Color="@(selectedRenterQuickFilter == "active" ? Color.Primary : Color.Default)" 
                              Size="Size.Small" 
-                             OnClick="SetActiveFilter"
+                             OnClick="() => SetQuickFilter("active")"
                              Class="cursor-pointer">
                         Active (@GetActiveCount())
                     </MudChip>
@@ -186,102 +185,88 @@
                                     </div>
                                 </div>
                                 
-                                <!-- Unified Status Panel -->
+                                <!-- Rental Progress Timeline -->
+                                <div class="mb-3">
+                                    <MudTimeline TimelineOrientation="TimelineOrientation.Horizontal" TimelineAlign="TimelineAlign.Center" Class="pa-2">
+                                        <!-- Step 1: Request Sent -->
+                                        <MudTimelineItem Size="Size.Small" Color="Color.Success">
+                                            <div class="text-center">
+                                                <MudIcon Icon="@Icons.Material.Filled.Send" Size="Size.Small" />
+                                                <MudText Typo="Typo.caption" Class="mt-1">Sent</MudText>
+                                            </div>
+                                        </MudTimelineItem>
+                                        
+                                        <!-- Step 2: Owner Response -->
+                                        <MudTimelineItem Size="Size.Small" Color="@GetTimelineColor(rental, "approval")">
+                                            <div class="text-center">
+                                                <MudIcon Icon="@GetTimelineIcon(rental, "approval")" Size="Size.Small" />
+                                                <MudText Typo="Typo.caption" Class="mt-1">@GetTimelineText(rental, "approval")</MudText>
+                                            </div>
+                                        </MudTimelineItem>
+                                        
+                                        <!-- Step 3: Payment (if approved) -->
+                                        @if (rental.Status != "Rejected" && rental.Status != "Cancelled")
+                                        {
+                                            <MudTimelineItem Size="Size.Small" Color="@GetTimelineColor(rental, "payment")">
+                                                <div class="text-center">
+                                                    <MudIcon Icon="@GetTimelineIcon(rental, "payment")" Size="Size.Small" />
+                                                    <MudText Typo="Typo.caption" Class="mt-1">@GetTimelineText(rental, "payment")</MudText>
+                                                </div>
+                                            </MudTimelineItem>
+                                        }
+                                        
+                                        <!-- Step 4: Rental Active (if paid) -->
+                                        @if (rental.Status == "PickedUp" || rental.Status == "Returned")
+                                        {
+                                            <MudTimelineItem Size="Size.Small" Color="@GetTimelineColor(rental, "active")">
+                                                <div class="text-center">
+                                                    <MudIcon Icon="@GetTimelineIcon(rental, "active")" Size="Size.Small" />
+                                                    <MudText Typo="Typo.caption" Class="mt-1">@GetTimelineText(rental, "active")</MudText>
+                                                </div>
+                                            </MudTimelineItem>
+                                        }
+                                    </MudTimeline>
+                                </div>
+                                
+                                <!-- Smart Status Messaging with Time Context -->
                                 @{
                                     var statusInfo = GetSmartStatusInfo(rental);
                                 }
-                                @if (rental.Status != "Rejected" && rental.Status != "Cancelled")
-                                {
-                                    <MudPaper Elevation="2" Class="mb-4" Style="border-radius: 8px; overflow: hidden;">
-                                        <div style="border-left: 4px solid @GetProgressBarColor(rental); background: var(--mud-palette-surface);">
-                                            <!-- Progress Header -->
-                                            <div class="d-flex align-center justify-space-between pa-3 pb-2">
-                                                <div class="d-flex align-center gap-3">
-                                                    @{
-                                                        var progressText = GetProgressText(rental);
-                                                    }
-                                                    <MudIcon Icon="@GetProgressIcon(rental)" Size="Size.Small" Color="@GetProgressIconColor(rental)" />
-                                                    <div>
-                                                        <MudText Typo="Typo.subtitle2">@progressText.Title</MudText>
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@progressText.Subtitle</MudText>
-                                                    </div>
-                                                </div>
-                                                <div class="d-flex align-center gap-2">
-                                                    @if (rental.Status == "Approved" && !rental.IsPaid)
-                                                    {
-                                                        <MudButton Variant="Variant.Filled" 
-                                                                  Color="Color.Primary" 
-                                                                  Size="Size.Small" 
-                                                                  OnClick="() => InitiatePayment(rental.Id)"
-                                                                  StartIcon="@Icons.Material.Filled.Payment">
-                                                            Pay Now
-                                                        </MudButton>
-                                                    }
-                                                    else if (ShouldShowReminder(rental))
-                                                    {
-                                                        <MudIconButton Icon="@Icons.Material.Filled.Help" 
-                                                                      Color="Color.Default" 
-                                                                      Size="Size.Small"
-                                                                      OnClick="() => ShowReminderDialog(rental)" />
-                                                    }
-                                                </div>
-                                            </div>
-                                            
-                                            <!-- Status Details -->
-                                            <div class="px-3 pb-3">
-                                                <MudAlert Severity="@statusInfo.Severity" Dense="true" Class="mb-0" Style="border-radius: 6px;">
-                                                    <div class="d-flex align-center justify-space-between">
-                                                        <div>
-                                                            <MudText Typo="Typo.caption">
-                                                                <strong>@statusInfo.Title:</strong> @statusInfo.Message
-                                                            </MudText>
-                                                            @if (!string.IsNullOrEmpty(statusInfo.SubMessage))
-                                                            {
-                                                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                                                                    @statusInfo.SubMessage
-                                                                </MudText>
-                                                            }
-                                                        </div>
-                                                        @if (statusInfo.ShowUrgency)
-                                                        {
-                                                            <MudChip T="string" Color="@statusInfo.UrgencyColor" Size="Size.Small" Class="ml-2">
-                                                                <MudIcon Icon="@statusInfo.UrgencyIcon" Size="Size.Small" Class="mr-1" />
-                                                                @statusInfo.UrgencyText
-                                                            </MudChip>
-                                                        }
-                                                    </div>
-                                                </MudAlert>
-                                                
-                                                <!-- Additional contextual information -->
-                                                @if (statusInfo.ShowAdditionalInfo)
+                                <MudAlert Severity="@statusInfo.Severity" Dense="true" Class="mb-2">
+                                    <div class="d-flex align-center justify-space-between">
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@statusInfo.Icon" Size="Size.Small" Class="mr-2" /> 
+                                            <div>
+                                                <MudText Typo="Typo.caption">
+                                                    <strong>@statusInfo.Title:</strong> @statusInfo.Message
+                                                </MudText>
+                                                @if (!string.IsNullOrEmpty(statusInfo.SubMessage))
                                                 {
-                                                    <div class="mt-2 pa-2" Style="border-radius: 4px; background: var(--mud-palette-background);">
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
-                                                            @statusInfo.AdditionalInfo
-                                                        </MudText>
-                                                    </div>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
+                                                        @statusInfo.SubMessage
+                                                    </MudText>
                                                 }
                                             </div>
                                         </div>
-                                    </MudPaper>
-                                }
-                                else
+                                        @if (statusInfo.ShowUrgency)
+                                        {
+                                            <MudChip T="string" Color="@statusInfo.UrgencyColor" Size="Size.Small" Class="ml-2">
+                                                <MudIcon Icon="@statusInfo.UrgencyIcon" Size="Size.Small" Class="mr-1" />
+                                                @statusInfo.UrgencyText
+                                            </MudChip>
+                                        }
+                                    </div>
+                                </MudAlert>
+                                
+                                <!-- Additional contextual information -->
+                                @if (statusInfo.ShowAdditionalInfo)
                                 {
-                                    <!-- Status for rejected/cancelled rentals -->
-                                    <MudAlert Severity="@statusInfo.Severity" Dense="true" Class="mb-3">
-                                        <div>
-                                            <MudText Typo="Typo.caption">
-                                                <strong>@statusInfo.Title:</strong> @statusInfo.Message
-                                            </MudText>
-                                            @if (!string.IsNullOrEmpty(statusInfo.SubMessage))
-                                            {
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mt-1">
-                                                    @statusInfo.SubMessage
-                                                </MudText>
-                                            }
-                                        </div>
-                                    </MudAlert>
+                                    <MudPaper Elevation="1" Class="pa-2 mb-2" Style="border-radius: 6px; background: var(--mud-palette-background-grey);">
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" Class="mr-1" />
+                                            @statusInfo.AdditionalInfo
+                                        </MudText>
+                                    </MudPaper>
                                 }
                                 
                                 <MudText Typo="Typo.body2" Class="mb-2">
@@ -317,50 +302,38 @@
                             </MudCardContent>
                             
                             <MudCardActions Class="pa-4">
-                                <div class="d-flex flex-wrap gap-2 justify-start">
-                                    <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ViewRentalDetails(rental.Id)" StartIcon="@Icons.Material.Filled.Visibility" Size="Size.Small">
-                                        View Details
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ViewRentalDetails(rental.Id)" StartIcon="@Icons.Material.Filled.Visibility">
+                                    View Details
+                                </MudButton>
+                                @if (rental.Status == "Approved" && !rental.IsPaid)
+                                {
+                                    <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="() => InitiatePayment(rental.Id)" StartIcon="@Icons.Material.Filled.Payment">
+                                        Complete Payment
+                                    </MudButton>
+                                }
+                                else if (rental.Status == "Pending")
+                                {
+                                    <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="() => RefreshRentalStatus(rental.Id)" StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Small">
+                                        Refresh Status
                                     </MudButton>
                                     
-                                    @if (rental.Status == "Approved" && !rental.IsPaid)
+                                    @if (ShouldShowReminder(rental))
                                     {
-                                        <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="() => InitiatePayment(rental.Id)" StartIcon="@Icons.Material.Filled.Payment" Size="Size.Small">
-                                            Complete Payment
-                                        </MudButton>
-                                        
-                                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => ShowCancelWithPaymentWarning(rental)" StartIcon="@Icons.Material.Filled.Cancel" Size="Size.Small">
-                                            Cancel
+                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ShowReminderDialog(rental)" StartIcon="@Icons.Material.Filled.Lightbulb" Size="Size.Small">
+                                            Get Help
                                         </MudButton>
                                     }
-                                    else if (rental.Status == "Pending")
-                                    {
-                                        <MudButton Variant="Variant.Text" Color="Color.Secondary" OnClick="() => RefreshRentalStatus(rental.Id)" StartIcon="@Icons.Material.Filled.Refresh" Size="Size.Small">
-                                            Refresh
-                                        </MudButton>
-                                        
-                                        @if (ShouldShowReminder(rental))
-                                        {
-                                            <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ShowReminderDialog(rental)" StartIcon="@Icons.Material.Filled.Lightbulb" Size="Size.Small">
-                                                Help
-                                            </MudButton>
-                                        }
-                                        
-                                        <MudButton Variant="Variant.Outlined" Color="Color.Error" OnClick="() => CancelRental(rental.Id)" StartIcon="@Icons.Material.Filled.Cancel" Size="Size.Small">
-                                            Cancel
-                                        </MudButton>
-                                    }
-                                    else if (rental.Status == "Approved" && rental.IsPaid)
-                                    {
-                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ContactOwner(rental.OwnerId, rental.ToolName)" StartIcon="@Icons.Material.Filled.Message" Size="Size.Small">
-                                            Message Owner
-                                        </MudButton>
-                                        
-                                        <!-- Paid rentals can be cancelled with more consequences -->
-                                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => ShowCancelPaidRentalDialog(rental)" StartIcon="@Icons.Material.Filled.Cancel" Size="Size.Small">
-                                            Cancel
-                                        </MudButton>
-                                    }
-                                </div>
+                                    
+                                    <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => CancelRental(rental.Id)" StartIcon="@Icons.Material.Filled.Cancel" Size="Size.Small">
+                                        Cancel Request
+                                    </MudButton>
+                                }
+                                else if (rental.Status == "Approved" && rental.IsPaid)
+                                {
+                                    <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ContactOwner(rental.OwnerId, rental.ToolName)" StartIcon="@Icons.Material.Filled.Message" Size="Size.Small">
+                                        Message Owner
+                                    </MudButton>
+                                }
                             </MudCardActions>
                         </MudCard>
                     </MudItem>
@@ -464,7 +437,7 @@
                                 {
                                     <MudAlert Severity="Severity.Info" Dense="true" Class="mb-2">
                                         <MudText Typo="Typo.caption">
-                                            Waiting for renter payment
+                                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Small" /> Waiting for renter payment
                                         </MudText>
                                     </MudAlert>
                                 }
@@ -472,7 +445,7 @@
                                 {
                                     <MudAlert Severity="Severity.Success" Dense="true" Class="mb-2">
                                         <MudText Typo="Typo.caption">
-                                            Payment received
+                                            <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" /> Payment received
                                         </MudText>
                                     </MudAlert>
                                 }
@@ -502,79 +475,18 @@
                             </MudCardContent>
                             
                             <MudCardActions Class="pa-4">
-                                <div class="d-flex flex-wrap gap-2 justify-start">
-                                    <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ViewRentalDetails(rental.Id)" StartIcon="@Icons.Material.Filled.Visibility" Size="Size.Small">
-                                        View Details
+                                <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ViewRentalDetails(rental.Id)" StartIcon="@Icons.Material.Filled.Visibility">
+                                    View Details
+                                </MudButton>
+                                @if (rental.Status == "Pending")
+                                {
+                                    <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="() => ApproveRental(rental.Id)" StartIcon="@Icons.Material.Filled.CheckCircle">
+                                        Approve
                                     </MudButton>
-                                    
-                                    @if (rental.Status == "Pending")
-                                    {
-                                        <MudButton Variant="Variant.Filled" Color="Color.Success" Size="Size.Small" OnClick="() => ApproveRental(rental.Id)" StartIcon="@Icons.Material.Filled.CheckCircle">
-                                            Approve
-                                        </MudButton>
-                                        <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="() => RejectRental(rental.Id)" StartIcon="@Icons.Material.Filled.Cancel">
-                                            Reject
-                                        </MudButton>
-                                    }
-                                    else if (rental.Status == "Approved" && !rental.IsPaid)
-                                    {
-                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ContactRenter(rental.RenterId, rental.ToolName)" StartIcon="@Icons.Material.Filled.Message" Size="Size.Small">
-                                            Message Renter
-                                        </MudButton>
-                                        
-                                        <MudButton Variant="Variant.Text" Color="Color.Warning" OnClick="() => ShowPaymentReminderDialog(rental)" StartIcon="@Icons.Material.Filled.Payment" Size="Size.Small">
-                                            Payment Status
-                                        </MudButton>
-                                    }
-                                    else if (rental.Status == "Approved" && rental.IsPaid)
-                                    {
-                                        <!-- Main dispatch action -->
-                                        <MudButton Variant="Variant.Filled" Color="Color.Success" OnClick="() => ShowDispatchDialog(rental)" StartIcon="@Icons.Material.Filled.LocalShipping" Size="Size.Small">
-                                            Mark Dispatched
-                                        </MudButton>
-                                        
-                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ContactRenter(rental.RenterId, rental.ToolName)" StartIcon="@Icons.Material.Filled.Message" Size="Size.Small">
-                                            Message Renter
-                                        </MudButton>
-                                    }
-                                    else if (rental.Status == "PickedUp")
-                                    {
-                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ContactRenter(rental.RenterId, rental.ToolName)" StartIcon="@Icons.Material.Filled.Message" Size="Size.Small">
-                                            Message Renter
-                                        </MudButton>
-                                        
-                                        <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="() => ShowMarkReturnedDialog(rental)" StartIcon="@Icons.Material.Filled.AssignmentTurnedIn" Size="Size.Small">
-                                            Mark Returned
-                                        </MudButton>
-                                        
-                                        @if (rental.EndDate < DateTime.Now)
-                                        {
-                                            <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => ShowOverdueDialog(rental)" StartIcon="@Icons.Material.Filled.Warning" Size="Size.Small">
-                                                Overdue
-                                            </MudButton>
-                                        }
-                                    }
-                                    else if (rental.Status == "Overdue")
-                                    {
-                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ContactRenter(rental.RenterId, rental.ToolName)" StartIcon="@Icons.Material.Filled.Message" Size="Size.Small">
-                                            Contact Renter
-                                        </MudButton>
-                                        
-                                        <MudButton Variant="Variant.Outlined" Color="Color.Success" OnClick="() => ShowMarkReturnedDialog(rental)" StartIcon="@Icons.Material.Filled.AssignmentTurnedIn" Size="Size.Small">
-                                            Mark Returned
-                                        </MudButton>
-                                        
-                                        <MudButton Variant="Variant.Text" Color="Color.Error" OnClick="() => ShowDisputeDialog(rental)" StartIcon="@Icons.Material.Filled.Gavel" Size="Size.Small">
-                                            Report Issue
-                                        </MudButton>
-                                    }
-                                    else if (rental.Status == "Returned")
-                                    {
-                                        <MudButton Variant="Variant.Text" Color="Color.Primary" OnClick="() => ContactRenter(rental.RenterId, rental.ToolName)" StartIcon="@Icons.Material.Filled.Message" Size="Size.Small">
-                                            Message Renter
-                                        </MudButton>
-                                    }
-                                </div>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Error" Size="Size.Small" OnClick="() => RejectRental(rental.Id)" StartIcon="@Icons.Material.Filled.Cancel">
+                                        Reject
+                                    </MudButton>
+                                }
                             </MudCardActions>
                         </MudCard>
                     </MudItem>
@@ -1393,20 +1305,6 @@
                 Icon = Icons.Material.Filled.Close,
                 Severity = Severity.Normal
             },
-            "Overdue" => new SmartStatusInfo
-            {
-                Title = "Overdue",
-                Message = "This rental is past its return date.",
-                SubMessage = $"Was due: {rental.EndDate:MMM dd, yyyy}",
-                Icon = Icons.Material.Filled.Warning,
-                Severity = Severity.Error,
-                ShowUrgency = true,
-                UrgencyText = "Overdue",
-                UrgencyColor = Color.Error,
-                UrgencyIcon = Icons.Material.Filled.Warning,
-                ShowAdditionalInfo = true,
-                AdditionalInfo = "Please return the tool immediately and contact the owner to resolve any late fees."
-            },
             _ => new SmartStatusInfo
             {
                 Title = "Unknown Status",
@@ -1684,10 +1582,6 @@
         selectedRenterStatus = string.Empty; // Clear status filter when using quick filter
         StateHasChanged();
     }
-    
-    private void SetPendingFilter() => SetQuickFilter("pending");
-    private void SetApprovedFilter() => SetQuickFilter("approved");
-    private void SetActiveFilter() => SetQuickFilter("active");
 
     private bool HasActiveFilters()
     {
@@ -1704,355 +1598,5 @@
         StateHasChanged();
     }
 
-    // Helper methods for the new progress indicator design
-    private string GetProgressBarColor(Rental rental)
-    {
-        return rental.Status switch
-        {
-            "Pending" => "var(--mud-palette-warning)",
-            "Approved" when !rental.IsPaid => "var(--mud-palette-error)",
-            "Approved" when rental.IsPaid => "var(--mud-palette-success)",
-            "PickedUp" => "var(--mud-palette-primary)",
-            "Returned" => "var(--mud-palette-success)",
-            "Overdue" => "var(--mud-palette-error)",
-            "Rejected" => "var(--mud-palette-error)",
-            "Cancelled" => "var(--mud-palette-text-secondary)",
-            _ => "var(--mud-palette-text-disabled)"
-        };
-    }
-
-    private (string Title, string Subtitle) GetProgressText(Rental rental)
-    {
-        var hoursSinceCreated = (DateTime.Now - rental.CreatedAt).TotalHours;
-        var isOverdue = rental.EndDate < DateTime.Now;
-        var isDueSoon = rental.EndDate < DateTime.Now.AddDays(1);
-
-        return rental.Status switch
-        {
-            "Pending" => hoursSinceCreated > 72 
-                ? ("Pending Review", "Waiting 3+ days for owner response")
-                : hoursSinceCreated > 48 
-                    ? ("Pending Review", "Waiting 2+ days for owner response")
-                    : ("Pending Review", "Owner will respond soon"),
-                    
-            "Approved" when !rental.IsPaid => ("Payment Required", "Complete payment to confirm rental"),
-            
-            "Approved" when rental.IsPaid => ("Confirmed & Paid", "Waiting for pickup coordination"),
-            
-            "PickedUp" when isOverdue => ("Overdue Return", $"Was due {GetTimeAgoText(rental.EndDate)}"),
-            
-            "PickedUp" when isDueSoon => ("Active Rental", $"Due {rental.EndDate:MMM dd}"),
-            
-            "PickedUp" => ("Active Rental", $"Return by {rental.EndDate:MMM dd}"),
-            
-            "Returned" => ("Completed", "Tool returned successfully"),
-            
-            "Rejected" => ("Request Declined", "Owner was unable to approve"),
-            
-            "Cancelled" => ("Cancelled", "Request was cancelled"),
-            
-            "Overdue" => ("Overdue", $"Past due since {rental.EndDate:MMM dd}"),
-            
-            _ => ("Unknown Status", "Status information unavailable")
-        };
-    }
-
-    private string GetProgressIcon(Rental rental)
-    {
-        return rental.Status switch
-        {
-            "Pending" => Icons.Material.Filled.Schedule,
-            "Approved" when !rental.IsPaid => Icons.Material.Filled.Payment,
-            "Approved" when rental.IsPaid => Icons.Material.Filled.CheckCircle,
-            "PickedUp" => Icons.Material.Filled.Build,
-            "Returned" => Icons.Material.Filled.AssignmentTurnedIn,
-            "Rejected" => Icons.Material.Filled.Cancel,
-            "Cancelled" => Icons.Material.Filled.Close,
-            "Overdue" => Icons.Material.Filled.Warning,
-            _ => Icons.Material.Filled.Help
-        };
-    }
-
-    private Color GetProgressIconColor(Rental rental)
-    {
-        var isOverdue = rental.EndDate < DateTime.Now;
-        var hoursSinceCreated = (DateTime.Now - rental.CreatedAt).TotalHours;
-        var paymentUrgencyHours = GetPaymentUrgencyHours(rental);
-
-        return rental.Status switch
-        {
-            "Pending" when hoursSinceCreated > 72 => Color.Warning,
-            "Pending" => Color.Info,
-            "Approved" when !rental.IsPaid && hoursSinceCreated > paymentUrgencyHours => Color.Error,
-            "Approved" when !rental.IsPaid => Color.Warning,
-            "Approved" when rental.IsPaid => Color.Success,
-            "PickedUp" when isOverdue => Color.Error,
-            "PickedUp" => Color.Primary,
-            "Returned" => Color.Success,
-            "Rejected" => Color.Error,
-            "Cancelled" => Color.Secondary,
-            "Overdue" => Color.Error,
-            _ => Color.Default
-        };
-    }
-
-    // Enhanced cancellation methods with better UX
-    private async Task ShowCancelWithPaymentWarning(Rental rental)
-    {
-        var parameters = new DialogParameters
-        {
-            { "Title", "Cancel Approved Rental?" },
-            { "Message", $"This rental for \"{rental.ToolName}\" has been approved but payment is still required. You can cancel now without any charges." },
-            { "ShowReasonInput", true },
-            { "ReasonLabel", "Cancellation reason (optional)" },
-            { "ConfirmText", "Cancel Rental" },
-            { "ConfirmColor", Color.Error },
-            { "AdditionalInfo", "✓ No charges will apply since payment hasn't been completed" }
-        };
-
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-
-        var dialog = DialogService.Show<ConfirmationDialog>("Cancel Rental", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled && result.Data is ConfirmationDialogResult dialogResult && dialogResult.Confirmed)
-        {
-            await CancelRentalInternal(rental.Id, dialogResult.Reason);
-        }
-    }
-
-    private async Task ShowCancelPaidRentalDialog(Rental rental)
-    {
-        var parameters = new DialogParameters
-        {
-            { "Title", "Cancel Paid Rental?" },
-            { "Message", $"This rental for \"{rental.ToolName}\" has been paid for. Cancelling may result in cancellation fees." },
-            { "ShowReasonInput", true },
-            { "ReasonLabel", "Cancellation reason (required for paid rentals)" },
-            { "RequireReason", true },
-            { "ConfirmText", "Cancel Rental" },
-            { "ConfirmColor", Color.Error },
-            { "AdditionalInfo", "⚠️ Cancellation policies may apply since payment has been completed" }
-        };
-
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-
-        var dialog = DialogService.Show<ConfirmationDialog>("Cancel Rental", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled && result.Data is ConfirmationDialogResult dialogResult && dialogResult.Confirmed)
-        {
-            await CancelRentalInternal(rental.Id, dialogResult.Reason);
-        }
-    }
-
-    // Unified internal cancellation method
-    private async Task CancelRentalInternal(string rentalId, string? reason)
-    {
-        try
-        {
-            var apiResult = await RentalService.CancelRentalAsync(rentalId, reason);
-            
-            if (apiResult.Success)
-            {
-                Snackbar.Add("Rental cancelled successfully", Severity.Success);
-                await LoadRenterRentals(); // Refresh the list
-            }
-            else
-            {
-                Snackbar.Add($"Error cancelling rental: {apiResult.Message}", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error cancelling rental: {ex.Message}", Severity.Error);
-        }
-    }
-
-    // Owner-specific rental management methods
-    private async Task ShowDispatchDialog(Rental rental)
-    {
-        var parameters = new DialogParameters
-        {
-            { "Title", "Mark as Dispatched" },
-            { "Message", $"Mark \"{rental.ToolName}\" as dispatched to {rental.RenterName}?" },
-            { "ShowReasonInput", true },
-            { "ReasonLabel", "Dispatch notes (e.g., tracking info, pickup instructions)" },
-            { "ConfirmText", "Mark Dispatched" },
-            { "ConfirmColor", Color.Success },
-            { "AdditionalInfo", "✓ This will notify the renter that the tool is ready for pickup or has been shipped" }
-        };
-
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true
-        };
-
-        var dialog = DialogService.Show<ConfirmationDialog>("Dispatch Tool", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled && result.Data is ConfirmationDialogResult dialogResult && dialogResult.Confirmed)
-        {
-            await MarkRentalPickedUp(rental.Id, dialogResult.Reason);
-        }
-    }
-
-    private async Task MarkRentalPickedUp(string rentalId, string? notes)
-    {
-        try
-        {
-            // Call the backend API to mark as picked up
-            var response = await Http.PatchAsJsonAsync($"api/rentals/{rentalId}/pickup", notes ?? "");
-            
-            if (response.IsSuccessStatusCode)
-            {
-                Snackbar.Add("Tool marked as dispatched successfully!", Severity.Success);
-                await LoadOwnerRentals(); // Refresh the list
-            }
-            else
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                Snackbar.Add($"Error marking as dispatched: {errorContent}", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error marking as dispatched: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task ShowMarkReturnedDialog(Rental rental)
-    {
-        var parameters = new DialogParameters
-        {
-            { "Title", "Mark as Returned" },
-            { "Message", $"Mark \"{rental.ToolName}\" as returned by {rental.RenterName}?" },
-            { "ShowReasonInput", true },
-            { "ReasonLabel", "Return condition notes (optional)" },
-            { "ConfirmText", "Mark Returned" },
-            { "ConfirmColor", Color.Success },
-            { "AdditionalInfo", "✓ This will complete the rental and start the dispute window" }
-        };
-
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Medium,
-            FullWidth = true
-        };
-
-        var dialog = DialogService.Show<ConfirmationDialog>("Mark Tool Returned", parameters, options);
-        var result = await dialog.Result;
-
-        if (!result.Canceled && result.Data is ConfirmationDialogResult dialogResult && dialogResult.Confirmed)
-        {
-            await MarkRentalReturned(rental.Id, dialogResult.Reason);
-        }
-    }
-
-    private async Task MarkRentalReturned(string rentalId, string? notes)
-    {
-        try
-        {
-            var response = await Http.PatchAsJsonAsync($"api/rentals/{rentalId}/return", new { Notes = notes ?? "", ConditionNotes = notes ?? "" });
-            
-            if (response.IsSuccessStatusCode)
-            {
-                Snackbar.Add("Tool marked as returned successfully!", Severity.Success);
-                await LoadOwnerRentals(); // Refresh the list
-            }
-            else
-            {
-                var errorContent = await response.Content.ReadAsStringAsync();
-                Snackbar.Add($"Error marking as returned: {errorContent}", Severity.Error);
-            }
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error marking as returned: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task ShowPaymentReminderDialog(Rental rental)
-    {
-        var daysSinceApproval = rental.ApprovedAt.HasValue ? (DateTime.Now - rental.ApprovedAt.Value).Days : 0;
-        
-        var parameters = new DialogParameters
-        {
-            { "Title", "Payment Status" },
-            { "Message", $"Payment for \"{rental.ToolName}\" is still pending from {rental.RenterName}." },
-            { "AdditionalInfo", $"Approved {daysSinceApproval} days ago. You can message the renter to follow up on payment." }
-        };
-
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-
-        var dialog = DialogService.Show<ConfirmationDialog>("Payment Status", parameters, options);
-        await dialog.Result;
-    }
-
-    private async Task ShowOverdueDialog(Rental rental)
-    {
-        var daysOverdue = (DateTime.Now - rental.EndDate).Days;
-        
-        var parameters = new DialogParameters
-        {
-            { "Title", "Tool Overdue" },
-            { "Message", $"\"{rental.ToolName}\" is {daysOverdue} day(s) overdue from {rental.RenterName}." },
-            { "AdditionalInfo", "You can contact the renter or report an issue if needed." }
-        };
-
-        var options = new DialogOptions 
-        { 
-            CloseOnEscapeKey = true,
-            MaxWidth = MaxWidth.Small,
-            FullWidth = true
-        };
-
-        var dialog = DialogService.Show<ConfirmationDialog>("Overdue Tool", parameters, options);
-        await dialog.Result;
-    }
-
-    private async Task ShowDisputeDialog(Rental rental)
-    {
-        try
-        {
-            // Navigate to dispute creation
-            Navigation.NavigateTo($"/disputes/create?rentalId={rental.Id}");
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error opening dispute: {ex.Message}", Severity.Error);
-        }
-    }
-
-    private async Task ContactRenter(string renterId, string toolName)
-    {
-        try
-        {
-            Navigation.NavigateTo($"/messages?user={renterId}&subject=Regarding {toolName} rental");
-            Snackbar.Add("Opening message composer...", Severity.Info);
-        }
-        catch (Exception ex)
-        {
-            Snackbar.Add($"Error opening message: {ex.Message}", Severity.Error);
-        }
-    }
 
 }

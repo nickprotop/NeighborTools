@@ -10,6 +10,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject IUrlService UrlService
+@inject IDialogService DialogService
 
 <MudDialog>
     <DialogContent>
@@ -482,19 +483,13 @@
             var result = await RentalService.CreateRentalAsync(request);
 
             if (result.Success && result.Data != null)
-            {
-                // Show success message based on approval status
-                if (autoApprovalEnabled)
-                {
-                    Snackbar.Add("Rental request approved automatically! You can now proceed with payment.", Severity.Success);
-                }
-                else
-                {
-                    Snackbar.Add("Rental request sent successfully! You'll be notified when the owner responds.", Severity.Success);
-                }
-                
-                // Close dialog with success result
+            { 
+                // Close dialog with success result first
                 MudDialog.Close(DialogResult.Ok(result.Data));
+                
+                // Then show flow explanation dialog after a brief delay to allow cleanup
+                await Task.Delay(100);
+                await ShowFlowExplanationDialog();
             }
             else
             {
@@ -514,6 +509,26 @@
     private void Cancel()
     {
         MudDialog.Cancel();
+    }
+    
+    private async Task ShowFlowExplanationDialog()
+    {
+        var parameters = new DialogParameters 
+        { 
+            { "OwnerName", Tool?.OwnerName ?? "the owner" },
+            { "AutoApproval", autoApprovalEnabled },
+            { "LeadTimeHours", ownerLeadTimeHours }
+        };
+        
+        var options = new DialogOptions 
+        { 
+            CloseOnEscapeKey = true,
+            MaxWidth = MaxWidth.Medium,
+            FullWidth = true
+        };
+        
+        await DialogService.ShowAsync<RentalFlowExplanationDialog>(
+            "What Happens Next?", parameters, options);
     }
 
 }

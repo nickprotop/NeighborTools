@@ -1,0 +1,693 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@using frontend.Components
+@using frontend.Components.Shared
+@using frontend.Shared
+@using frontend.Models
+@using frontend.Services
+@using ToolsSharing.Frontend.Configuration
+@inherits LayoutComponentBase
+@implements IDisposable
+
+<MudThemeProvider IsDarkMode="@isDarkMode" Theme="@currentTheme" />
+<MudSnackbarProvider />
+
+<div class="main-layout @(sidebarCollapsed ? "sidebar-collapsed" : "sidebar-expanded")">
+    <!-- Navigation Sidebar -->
+    <NavigationSidebar @ref="sidebarRef"
+                      @bind-IsOpen="sidebarOpen"
+                      UnreadMessageCount="unreadMessageCount"
+                      HasOpenDisputes="hasOpenDisputes" 
+                      IsAdmin="isAdmin"
+                      OnSidebarStateChanged="OnSidebarStateChanged" />
+
+    <!-- Top Header for User Info -->
+    <header class="top-header">
+        <div class="header-content">
+            <!-- Hamburger Menu Toggle -->
+            <MudIconButton Icon="@Icons.Material.Filled.Menu" 
+                           OnClick="ToggleSidebar"
+                           Class="@($"hamburger-menu-btn {GetHamburgerVisibility()}")"
+                           Color="Color.Primary" />
+
+            <!-- Center spacer -->
+            <div class="header-spacer"></div>
+
+            <!-- Right User Section -->
+            <div class="header-user-section">
+                <!-- Theme Toggle -->
+                <ThemeToggle />
+                
+                <AuthorizeView>
+                    <Authorized>
+                        <!-- User Info Display -->
+                        <div class="user-info">
+                            <MudIcon Icon="@Icons.Material.Filled.AccountCircle" 
+                                     Color="Color.Primary" 
+                                     Class="user-avatar" />
+                            <MudText Typo="Typo.body1" Class="user-name d-none d-sm-block">
+                                @GetUserDisplayName(context)
+                            </MudText>
+                            @if (unreadMessageCount > 0)
+                            {
+                                <MudTooltip Text="@($"{unreadMessageCount} unread messages")">
+                                    <MudBadge Content="@unreadMessageCount" 
+                                              Color="Color.Error" 
+                                              Overlap="true" 
+                                              Visible="true">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Message"
+                                                       Href="/messages"
+                                                       Color="Color.Primary"
+                                                       Size="Size.Small" />
+                                    </MudBadge>
+                                </MudTooltip>
+                            }
+                        </div>
+                    </Authorized>
+                    <NotAuthorized>
+                        <!-- Brand for unauthenticated users -->
+                        <div class="header-brand">
+                            <MudButton Variant="Variant.Text" 
+                                       Href="/" 
+                                       StartIcon="@Icons.Material.Filled.Handyman"
+                                       Class="brand-btn">
+                                <MudText Typo="Typo.h6" Class="brand-text d-none d-sm-block">NeighborTools</MudText>
+                            </MudButton>
+                        </div>
+
+                        <!-- Auth buttons -->
+                        <div class="auth-buttons">
+                            <MudButton Variant="Variant.Text" 
+                                       Href="/login" 
+                                       Class="login-btn d-none d-sm-flex"
+                                       StartIcon="@Icons.Material.Filled.Login">
+                                Log in
+                            </MudButton>
+                            <MudButton Variant="Variant.Filled" 
+                                       Href="/register" 
+                                       Class="signup-btn"
+                                       StartIcon="@Icons.Material.Filled.PersonAdd"
+                                       Color="Color.Primary">
+                                Sign up
+                            </MudButton>
+                        </div>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+    </header>
+
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <!-- Payment Setup Notification for Tool Owners -->
+        <AuthorizeView>
+            <Authorized>
+                <PaymentSetupNotification />
+            </Authorized>
+        </AuthorizeView>
+        
+        <div class="content-wrapper">
+            @Body
+        </div>
+    </main>
+
+    <!-- GDPR Cookie Consent Banner -->
+    <CookieConsentBanner UserId="@currentUserId" />
+    
+    <!-- Terms Compliance Check -->
+    <TermsComplianceCheck OnTermsAccepted="OnTermsAcceptedHandler" />
+    
+    <!-- Session Timeout Management -->
+    <AuthorizeView>
+        <Authorized>
+            <SessionTimeoutComponent />
+        </Authorized>
+    </AuthorizeView>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+            <div class="footer-content">
+                <div class="footer-section">
+                    <MudText Typo="Typo.h6" Class="mb-2">NeighborTools</MudText>
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Share tools, build community
+                    </MudText>
+                    <MudLink Href="@AppSettings.Site.HomePageUrl" 
+                             Target="_blank" 
+                             Class="footer-link mt-2"
+                             Style="font-size: 14px;">
+                        Visit our website
+                    </MudLink>
+                </div>
+                <div class="footer-section">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Quick Links</MudText>
+                    <MudLink Href="/tools" Class="footer-link">Browse Tools</MudLink>
+                    <MudLink Href="/tools/create" Class="footer-link">Share Tool</MudLink>
+                </div>
+                <div class="footer-section">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Support</MudText>
+                    <MudLink Href="/help" Class="footer-link">Help Center</MudLink>
+                    <MudLink Href="/contact" Class="footer-link">Contact</MudLink>
+                </div>
+                <div class="footer-section">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Privacy</MudText>
+                    <MudLink Href="/privacy-policy" Class="footer-link">Privacy Policy</MudLink>
+                    <MudLink Href="/privacy-dashboard" Class="footer-link">Privacy Dashboard</MudLink>
+                    <MudLink Href="/terms-of-service" Class="footer-link">Terms of Service</MudLink>
+                </div>
+            </div>
+            <MudDivider Class="my-4" />
+            <div class="footer-bottom">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    © 2024 NeighborTools. All rights reserved.
+                </MudText>
+            </div>
+        </MudContainer>
+    </footer>
+</div>
+
+<style>
+    .main-layout {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+    }
+
+    /* Top Header Styles */
+    .top-header {
+        background: var(--mud-palette-surface);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--mud-palette-divider);
+        position: sticky;
+        top: 0;
+        z-index: 1050;
+        box-shadow: var(--mud-shadow-sm);
+        height: 64px;
+        flex-shrink: 0;
+    }
+
+    .header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        height: 100%;
+        max-width: 100%;
+        margin: 0 auto;
+    }
+
+    .header-spacer {
+        flex: 1;
+    }
+
+    /* Hamburger Menu Toggle */
+    .hamburger-menu-btn {
+        padding: 8px;
+        border-radius: var(--mud-radius-md);
+        color: var(--mud-palette-primary) !important;
+        transition: all 0.2s ease;
+    }
+
+    .hamburger-menu-btn:hover {
+        background-color: var(--mud-palette-action-hover) !important;
+        transform: scale(1.05);
+    }
+
+    /* Header Brand (for unauthenticated users) */
+    .header-brand {
+        display: flex;
+        align-items: center;
+    }
+
+    .brand-btn {
+        color: var(--mud-palette-primary) !important;
+        padding: 8px;
+        border-radius: var(--mud-radius-md);
+        transition: all 0.2s ease;
+    }
+
+    .brand-btn:hover {
+        background: var(--mud-palette-action-hover) !important;
+    }
+
+    .brand-text {
+        font-weight: 600;
+        margin-left: 8px;
+    }
+
+    /* Header User Section */
+    .header-user-section {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+    }
+
+    .user-info {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 8px;
+        border-radius: var(--mud-radius-md);
+        background: rgba(var(--mud-palette-primary-rgb), 0.1);
+    }
+
+    .user-avatar {
+        font-size: 1.5rem;
+    }
+
+    .user-name {
+        font-weight: 500;
+        color: var(--mud-palette-primary);
+    }
+
+    /* Auth Buttons */
+    .auth-buttons {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+
+    .login-btn {
+        color: var(--mud-text-primary) !important;
+        padding: 8px 16px;
+        border-radius: var(--mud-radius-full);
+        transition: all 0.2s ease;
+    }
+
+    .login-btn:hover {
+        background: var(--mud-palette-action-hover) !important;
+    }
+
+    .signup-btn {
+        padding: 8px 24px;
+        border-radius: var(--mud-radius-full);
+        font-weight: 600;
+        transition: all 0.2s ease;
+    }
+
+    .signup-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--mud-shadow-sm);
+    }
+
+    /* Main Content */
+    .main-content {
+        flex: 1;
+        background: var(--mud-palette-background);
+        transition: margin-left 0.3s ease;
+        position: relative;
+        z-index: 1;
+    }
+
+    .content-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 24px;
+    }
+
+    /* Footer */
+    .app-footer {
+        background: var(--mud-palette-surface);
+        border-top: 1px solid var(--mud-palette-divider);
+        margin-top: auto;
+    }
+
+    .footer-content {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 32px;
+        padding: 48px 0 24px 0;
+    }
+
+    .footer-section {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+
+    .footer-link {
+        color: var(--mud-palette-text-secondary) !important;
+        text-decoration: none;
+        font-size: 14px;
+        transition: color 0.2s ease;
+    }
+
+    .footer-link:hover {
+        color: var(--mud-palette-primary) !important;
+    }
+
+    .footer-bottom {
+        text-align: center;
+        padding-bottom: 24px;
+    }
+
+    /* Responsive Layout Adjustments - Account for Fixed Sidebar */
+    @@media (min-width: 1200px) {
+        .header-content {
+            margin-left: 280px; /* Desktop sidebar width expanded */
+            transition: margin-left 0.3s ease;
+        }
+        
+        .main-content {
+            margin-left: 280px; /* Desktop sidebar width expanded */
+            transition: margin-left 0.3s ease;
+            min-height: calc(100vh - 64px); /* Account for header height */
+        }
+        
+        /* Dynamic classes based on sidebar state */
+        .main-layout.sidebar-collapsed .header-content {
+            margin-left: 72px; /* Desktop sidebar width collapsed */
+        }
+        
+        .main-layout.sidebar-collapsed .main-content {
+            margin-left: 72px; /* Desktop sidebar width collapsed */
+        }
+    }
+
+    @@media (min-width: 768px) and (max-width: 1199px) {
+        /* Tablet now uses overlay, so no margins needed */
+        .header-content {
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+        }
+        
+        .main-content {
+            margin-left: 0;
+            transition: margin-left 0.3s ease;
+            min-height: calc(100vh - 64px); /* Account for header height */
+        }
+    }
+
+    /* Mobile responsive adjustments */
+    @@media (max-width: 767px) {
+        .header-content {
+            margin-left: 0 !important;
+            padding: 0 16px;
+        }
+        
+        .main-content {
+            margin-left: 0 !important;
+            min-height: calc(100vh - 64px); /* Account for header height */
+        }
+        
+        .content-wrapper {
+            padding: 16px;
+        }
+
+        .footer-content {
+            grid-template-columns: 1fr;
+            gap: 24px;
+            padding: 32px 0 16px 0;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .user-name {
+            display: none;
+        }
+        
+        .brand-text {
+            display: none;
+        }
+    }
+</style>
+
+@code {
+    [Inject] private IAuthService AuthService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private AuthenticationStateProvider AuthStateProvider { get; set; } = default!;
+    [Inject] private IDisputeService DisputeService { get; set; } = default!;
+    [Inject] private MessageService MessageService { get; set; } = default!;
+    [Inject] private AppSettings AppSettings { get; set; } = default!;
+    [Inject] private IJSRuntime JSRuntime { get; set; } = default!;
+    [Inject] private IThemeService ThemeService { get; set; } = default!;
+
+    private NavigationSidebar? sidebarRef;
+    private bool sidebarOpen = false;
+    private string? currentUserId = null;
+    private bool isAdmin = false;
+    private bool hasOpenDisputes = false;
+    private int unreadMessageCount = 0;
+    private string currentBreakpoint = "desktop";
+    private bool sidebarCollapsed = false;
+    
+    // Theme-related fields
+    private bool isDarkMode = false;
+    private MudTheme currentTheme = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize theme system
+        await InitializeThemeAsync();
+        
+        await LoadCurrentUserIdAsync();
+        await DetectBreakpoint();
+        
+        // Subscribe to authentication state changes
+        AuthStateProvider.AuthenticationStateChanged += OnAuthenticationStateChanged;
+        
+        // Subscribe to navigation changes to refresh unread count
+        Navigation.LocationChanged += OnLocationChanged;
+        
+        // Listen for window resize
+        await JSRuntime.InvokeVoidAsync("window.addEventListener", "resize", 
+            DotNetObjectReference.Create(this), "handleResize");
+    }
+
+    [JSInvokable]
+    public async Task HandleResize()
+    {
+        await DetectBreakpoint();
+        StateHasChanged();
+    }
+
+    private async Task DetectBreakpoint()
+    {
+        try
+        {
+            var width = await JSRuntime.InvokeAsync<int>("window.innerWidth");
+            currentBreakpoint = width < 768 ? "mobile" : 
+                               width < 1200 ? "tablet" : "desktop";
+                               
+            // Load sidebar collapsed state for desktop/tablet
+            if (currentBreakpoint != "mobile")
+            {
+                var collapsed = await JSRuntime.InvokeAsync<string>("localStorage.getItem", "sidebar-collapsed");
+                sidebarCollapsed = collapsed == "true";
+            }
+            else
+            {
+                // Ensure mobile sidebar starts closed
+                sidebarOpen = false;
+            }
+        }
+        catch
+        {
+            currentBreakpoint = "desktop";
+            sidebarCollapsed = false;
+        }
+    }
+
+    private async void OnAuthenticationStateChanged(Task<AuthenticationState> task)
+    {
+        await LoadCurrentUserIdAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        // Refresh unread count when navigating (especially useful when coming back from messages page)
+        if (!string.IsNullOrEmpty(currentUserId))
+        {
+            await LoadUnreadMessageCountAsync();
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+
+    private async Task LoadCurrentUserIdAsync()
+    {
+        try
+        {
+            var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+            if (authState.User.Identity?.IsAuthenticated == true)
+            {
+                var userIdClaim = authState.User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+                                ?? authState.User.FindFirst("sub")?.Value 
+                                ?? authState.User.FindFirst("id")?.Value;
+                currentUserId = userIdClaim;
+                
+                // Check if user is admin
+                isAdmin = authState.User.IsInRole("Admin") || 
+                         authState.User.HasClaim(c => c.Type == "IsAdmin" && c.Value == "true");
+                
+                // Check for open disputes
+                await CheckOpenDisputesAsync();
+                
+                // Load unread message count
+                await LoadUnreadMessageCountAsync();
+            }
+            else
+            {
+                currentUserId = null;
+                isAdmin = false;
+                hasOpenDisputes = false;
+                unreadMessageCount = 0;
+            }
+        }
+        catch
+        {
+            currentUserId = null;
+            isAdmin = false;
+            hasOpenDisputes = false;
+            unreadMessageCount = 0;
+        }
+    }
+
+    private async Task CheckOpenDisputesAsync()
+    {
+        try
+        {
+            var disputesResponse = await DisputeService.GetDisputesAsync(new GetDisputesRequest 
+            { 
+                PageSize = 50 // Get recent disputes to check for open ones
+            });
+            
+            if (disputesResponse.Success && disputesResponse.Data != null)
+            {
+                // Check if there are any disputes with open status
+                hasOpenDisputes = disputesResponse.Data.Any(d => 
+                    d.Status == DisputeStatus.Open || 
+                    d.Status == DisputeStatus.InProgress || 
+                    d.Status == DisputeStatus.EscalatedToPayPal);
+            }
+            else
+            {
+                hasOpenDisputes = false;
+            }
+        }
+        catch
+        {
+            hasOpenDisputes = false;
+        }
+    }
+
+    private async Task LoadUnreadMessageCountAsync()
+    {
+        try
+        {
+            var response = await MessageService.GetUnreadMessageCountAsync();
+            if (response.Success)
+            {
+                unreadMessageCount = response.Data;
+            }
+            else
+            {
+                unreadMessageCount = 0;
+            }
+        }
+        catch
+        {
+            unreadMessageCount = 0;
+        }
+    }
+
+    public async Task RefreshUnreadMessageCountAsync()
+    {
+        await LoadUnreadMessageCountAsync();
+        StateHasChanged();
+    }
+
+    private async Task ToggleSidebar()
+    {
+        if (sidebarRef != null)
+        {
+            if (currentBreakpoint == "mobile")
+            {
+                // Mobile: toggle overlay open/close
+                if (sidebarOpen)
+                    await sidebarRef.CloseSidebar();
+                else
+                    await sidebarRef.OpenSidebar();
+            }
+            else
+            {
+                // Desktop/Tablet: toggle collapsed state
+                await sidebarRef.ToggleCollapse();
+            }
+        }
+    }
+
+    private string GetUserDisplayName(AuthenticationState authState)
+    {
+        var name = authState.User.Identity?.Name;
+        if (string.IsNullOrEmpty(name))
+            return "User";
+        
+        // Extract first name or email prefix
+        if (name.Contains("@"))
+            return name.Split('@')[0];
+        
+        var parts = name.Split(' ');
+        return parts.Length > 0 ? parts[0] : name;
+    }
+
+    private async Task OnTermsAcceptedHandler()
+    {
+        // Refresh user data after terms acceptance
+        await LoadCurrentUserIdAsync();
+        StateHasChanged();
+    }
+
+    private async Task OnSidebarStateChanged(bool isCollapsed)
+    {
+        sidebarCollapsed = isCollapsed;
+        StateHasChanged();
+    }
+    
+    private string GetHamburgerVisibility()
+    {
+        // Show hamburger menu based on current breakpoint
+        return currentBreakpoint switch
+        {
+            "mobile" => "", // Always visible on mobile
+            "tablet" => "", // Always visible on tablet
+            "desktop" => "d-none", // Hidden on desktop (sidebar has its own toggle)
+            _ => ""
+        };
+    }
+
+    private async Task InitializeThemeAsync()
+    {
+        try
+        {
+            await ThemeService.InitializeAsync();
+            isDarkMode = await ThemeService.GetThemePreferenceAsync();
+            currentTheme = ThemeService.GetCurrentTheme();
+            
+            // Subscribe to theme changes
+            ThemeService.ThemeChanged += OnThemeChanged;
+        }
+        catch
+        {
+            // Default to light theme if initialization fails
+            isDarkMode = false;
+            currentTheme = ThemeService.GetCurrentTheme();
+        }
+    }
+
+    private void OnThemeChanged(object? sender, bool isDark)
+    {
+        isDarkMode = isDark;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        AuthStateProvider.AuthenticationStateChanged -= OnAuthenticationStateChanged;
+        Navigation.LocationChanged -= OnLocationChanged;
+        if (ThemeService != null)
+            ThemeService.ThemeChanged -= OnThemeChanged;
+    }
+}

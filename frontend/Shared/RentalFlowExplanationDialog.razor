@@ -1,0 +1,199 @@
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@inject ISnackbar Snackbar
+
+<MudDialog>
+    <TitleContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@Icons.Material.Filled.Timeline" Color="Color.Primary" Class="mr-2" />
+            <MudText Typo="Typo.h6">What Happens Next?</MudText>
+        </div>
+    </TitleContent>
+    
+    <DialogContent>
+        <div class="pa-2">
+            <MudAlert Severity="Severity.Success" Dense="true" Class="mb-4">
+                <MudText Typo="Typo.body2">
+                    <strong>Request Sent Successfully!</strong> Your rental request has been sent to @OwnerName.
+                </MudText>
+            </MudAlert>
+
+            <MudTimeline TimelineOrientation="TimelineOrientation.Vertical" TimelineAlign="TimelineAlign.Start">
+                <MudTimelineItem Size="Size.Small" Color="Color.Success">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">
+                            <MudIcon Icon="@Icons.Material.Filled.Send" Size="Size.Small" Class="mr-1" />
+                            Request Sent ✓
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Your rental request was delivered to @OwnerName
+                        </MudText>
+                    </div>
+                </MudTimelineItem>
+                
+                <MudTimelineItem Size="Size.Small" Color="@GetTimelineColor()">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">
+                            <MudIcon Icon="@GetTimelineIcon()" Size="Size.Small" Class="mr-1" />
+                            @GetTimelineText()
+                        </MudText>
+                        @if (AutoApproval)
+                        {
+                            <MudAlert Severity="Severity.Success" Dense="true" Class="mt-2">
+                                <MudText Typo="Typo.caption">
+                                    Great news! This owner has auto-approval enabled. Your request will be approved automatically within minutes.
+                                </MudText>
+                            </MudAlert>
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
+                                @OwnerName typically responds within @GetResponseTimeText()
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                You'll receive an email notification when they respond
+                            </MudText>
+                            @if (LeadTimeHours > 24)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Warning" Class="mt-1">
+                                    <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" /> 
+                                    Note: This owner requires @LeadTimeHours hours advance notice
+                                </MudText>
+                            }
+                        }
+                    </div>
+                </MudTimelineItem>
+                
+                <MudTimelineItem Size="Size.Small" Color="Color.Default">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">
+                            <MudIcon Icon="@Icons.Material.Filled.Payment" Size="Size.Small" Class="mr-1" />
+                            💳 Secure Payment (If Approved)
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-1">
+                            <strong>Important:</strong> You only pay if your request gets approved
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            Safe, secure checkout via PayPal with buyer protection
+                        </MudText>
+                    </div>
+                </MudTimelineItem>
+                
+                <MudTimelineItem Size="Size.Small" Color="Color.Default">
+                    <div>
+                        <MudText Typo="Typo.subtitle2" Class="mb-1">
+                            <MudIcon Icon="@Icons.Material.Filled.Handshake" Size="Size.Small" Class="mr-1" />
+                            🤝 Rental Confirmed
+                        </MudText>
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                            After payment, @OwnerName will contact you about pickup arrangements
+                        </MudText>
+                    </div>
+                </MudTimelineItem>
+            </MudTimeline>
+            
+            <MudPaper Elevation="1" Class="pa-3 mt-4" Style="border-radius: 8px;">
+                <div class="d-flex align-center mb-2">
+                    <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Color="Color.Warning" Class="mr-2" />
+                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">What You Can Do Now</MudText>
+                </div>
+                <MudList T="string" Dense="true" Class="pa-0">
+                    <MudListItem T="string" Class="pa-1">
+                        <ItemContent>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Visibility" Size="Size.Small" Color="Color.Secondary" Class="mr-2" />
+                                <MudText Typo="Typo.caption">Track your request status in "My Rentals"</MudText>
+                            </div>
+                        </ItemContent>
+                    </MudListItem>
+                    <MudListItem T="string" Class="pa-1">
+                        <ItemContent>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Email" Size="Size.Small" Color="Color.Secondary" Class="mr-2" />
+                                <MudText Typo="Typo.caption">Get email updates at each step</MudText>
+                            </div>
+                        </ItemContent>
+                    </MudListItem>
+                    <MudListItem T="string" Class="pa-1">
+                        <ItemContent>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.Message" Size="Size.Small" Color="Color.Secondary" Class="mr-2" />
+                                <MudText Typo="Typo.caption">Message @OwnerName if you have questions</MudText>
+                            </div>
+                        </ItemContent>
+                    </MudListItem>
+                </MudList>
+            </MudPaper>
+
+            @if (!AutoApproval)
+            {
+                <MudAlert Severity="Severity.Info" Class="mt-4">
+                    <MudText Typo="Typo.caption">
+                        <strong>No Risk:</strong> Your request might be declined, but you won't be charged anything unless it's approved and you choose to proceed with payment.
+                    </MudText>
+                </MudAlert>
+            }
+        </div>
+    </DialogContent>
+    
+    <DialogActions>
+        <MudButton Variant="Variant.Text" 
+                   Color="Color.Secondary" 
+                   OnClick="ViewMyRentals"
+                   StartIcon="@Icons.Material.Filled.List">
+            View My Requests
+        </MudButton>
+        <MudButton Variant="Variant.Filled" 
+                   Color="Color.Primary" 
+                   OnClick="Close"
+                   StartIcon="@Icons.Material.Filled.CheckCircle">
+            Got It!
+        </MudButton>
+    </DialogActions>
+</MudDialog>
+
+@code {
+    [CascadingParameter] IMudDialogInstance MudDialog { get; set; } = default!;
+    [Parameter] public string OwnerName { get; set; } = "";
+    [Parameter] public bool AutoApproval { get; set; } = false;
+    [Parameter] public int LeadTimeHours { get; set; } = 24;
+    
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+
+    private string GetResponseTimeText()
+    {
+        // In a real implementation, this could be based on owner's historical response time
+        if (LeadTimeHours <= 2) return "1-2 hours";
+        if (LeadTimeHours <= 6) return "2-6 hours";
+        if (LeadTimeHours <= 12) return "4-12 hours";
+        if (LeadTimeHours <= 24) return "within 24 hours";
+        return $"{LeadTimeHours} hours";
+    }
+    
+    private Color GetTimelineColor()
+    {
+        return AutoApproval ? Color.Success : Color.Info;
+    }
+    
+    private string GetTimelineIcon()
+    {
+        return AutoApproval ? Icons.Material.Filled.AutoAwesome : Icons.Material.Filled.Schedule;
+    }
+    
+    private string GetTimelineText()
+    {
+        return AutoApproval ? "Auto-Approval ✓" : "⏳ Awaiting Owner Response";
+    }
+    
+    private void ViewMyRentals()
+    {
+        MudDialog.Close();
+        Navigation.NavigateTo("/my-rentals");
+    }
+    
+    private void Close()
+    {
+        MudDialog.Close();
+    }
+}

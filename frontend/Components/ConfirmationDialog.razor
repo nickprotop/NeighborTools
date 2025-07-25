@@ -10,6 +10,13 @@
         <MudStack Spacing="3">
             <MudText Typo="Typo.body1">@Message</MudText>
             
+            @if (!string.IsNullOrEmpty(AdditionalInfo))
+            {
+                <MudAlert Severity="Severity.Info" Dense="true" Class="my-2">
+                    <MudText Typo="Typo.body2">@AdditionalInfo</MudText>
+                </MudAlert>
+            }
+            
             @if (ShowReasonInput)
             {
                 <MudTextField @bind-Value="reason"
@@ -38,6 +45,7 @@
     
     [Parameter] public string Title { get; set; } = "Confirm";
     [Parameter] public string Message { get; set; } = "Are you sure?";
+    [Parameter] public string? AdditionalInfo { get; set; }
     [Parameter] public bool ShowReasonInput { get; set; } = false;
     [Parameter] public string ReasonLabel { get; set; } = "Reason";
     [Parameter] public string ConfirmText { get; set; } = "Confirm";
