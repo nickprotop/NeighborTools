@@ -1,0 +1,47 @@
+@using MudBlazor
+
+<div class="d-flex align-center justify-center theme-aware-placeholder" style="@GetPlaceholderStyle()">
+    <MudIcon Icon="@Icon" Size="@IconSize" Color="Color.Secondary" Style="@GetIconStyle()" />
+</div>
+
+<style>
+    .theme-aware-placeholder {
+        background: var(--mud-palette-surface-variant);
+        border: 1px solid var(--mud-palette-divider);
+        transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease;
+        position: relative;
+    }
+    
+    .theme-aware-placeholder:before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: linear-gradient(45deg, transparent 30%, var(--mud-palette-divider) 30%, var(--mud-palette-divider) 70%, transparent 70%);
+        opacity: 0.1;
+        pointer-events: none;
+    }
+</style>
+
+@code {
+    [Parameter] public string Height { get; set; } = "200px";
+    [Parameter] public string Width { get; set; } = "100%";
+    [Parameter] public string BorderRadius { get; set; } = "8px";
+    [Parameter] public string Icon { get; set; } = Icons.Material.Filled.Build;
+    [Parameter] public Size IconSize { get; set; } = Size.Large;
+    [Parameter] public string IconFontSize { get; set; } = "4rem";
+    [Parameter] public string AdditionalClass { get; set; } = "";
+    [Parameter] public string AdditionalStyle { get; set; } = "";
+
+    private string GetPlaceholderStyle()
+    {
+        return $"height: {Height}; width: {Width}; border-radius: {BorderRadius}; {AdditionalStyle}";
+    }
+
+    private string GetIconStyle()
+    {
+        return $"font-size: {IconFontSize};";
+    }
+}
