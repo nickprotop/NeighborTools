@@ -4,10 +4,12 @@
 @using frontend.Services
 @using frontend.Models
 @using MudBlazor
+@using ToolsSharing.Frontend.Services
 @inject FavoritesService FavoritesService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject AuthenticationStateProvider AuthStateProvider
+@inject IUrlService UrlService
 @attribute [Authorize]
 
 <PageTitle>My Favorites - NeighborTools</PageTitle>
@@ -23,7 +25,7 @@
                         My Favorites
                     </MudText>
                     <MudText Typo="Typo.subtitle1" Color="Color.Secondary">
-                        Tools you've saved for later
+                        Tools and bundles you've saved for later
                     </MudText>
                 </MudStack>
                 
@@ -56,15 +58,23 @@
                     <MudStack AlignItems="AlignItems.Center" Spacing="2">
                         <MudText Typo="Typo.h5" Color="Color.Secondary">No favorites yet</MudText>
                         <MudText Typo="Typo.body1" Color="Color.Secondary" Class="text-center">
-                            Start exploring tools and save your favorites for quick access later.
+                            Start exploring tools and bundles to save your favorites for quick access later.
                         </MudText>
                     </MudStack>
-                    <MudButton Variant="Variant.Filled" 
-                              Color="Color.Primary" 
-                              StartIcon="@Icons.Material.Filled.Search"
-                              OnClick="@(() => Navigation.NavigateTo("/tools"))">
-                        Browse Tools
-                    </MudButton>
+                    <MudStack Row Spacing="2">
+                        <MudButton Variant="Variant.Filled" 
+                                  Color="Color.Primary" 
+                                  StartIcon="@Icons.Material.Filled.Search"
+                                  OnClick="@(() => Navigation.NavigateTo("/tools"))">
+                            Browse Tools
+                        </MudButton>
+                        <MudButton Variant="Variant.Outlined" 
+                                  Color="Color.Primary" 
+                                  StartIcon="@Icons.Material.Filled.Inventory"
+                                  OnClick="@(() => Navigation.NavigateTo("/bundles"))">
+                            Browse Bundles
+                        </MudButton>
+                    </MudStack>
                 </MudStack>
             </MudPaper>
         }
@@ -77,53 +87,93 @@
                 {
                     <MudItem xs="12" sm="6" md="4" lg="3">
                         <MudCard Elevation="2" Class="h-100">
-                            <!-- Tool Image -->
-                            <MudCardMedia Image="@GetToolImage(favorite)" Height="200" />
+                            <!-- Item Image -->
+                            @{
+                                var imageUrl = GetItemImageUrl(favorite);
+                            }
+                            @if (!string.IsNullOrEmpty(imageUrl))
+                            {
+                                <MudCardMedia Image="@imageUrl" Height="200" />
+                            }
+                            else
+                            {
+                                <ThemeAwarePlaceholder Height="200px" 
+                                                      Icon="@(favorite.FavoriteType == "Tool" ? Icons.Material.Filled.Build : Icons.Material.Filled.Inventory)" 
+                                                      IconSize="Size.Large"
+                                                      IconFontSize="3rem" />
+                            }
                             
                             <!-- Card Content -->
                             <MudCardContent Class="pb-2">
                                 <MudStack Spacing="2">
-                                    <!-- Tool Name and Category -->
+                                    <!-- Item Type Badge -->
+                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                        <MudChip T="string" Size="Size.Small" 
+                                                Color="@(favorite.FavoriteType == "Tool" ? Color.Primary : Color.Secondary)" 
+                                                Variant="Variant.Filled"
+                                                Icon="@(favorite.FavoriteType == "Tool" ? Icons.Material.Filled.Build : Icons.Material.Filled.Inventory)"
+                                                Class="pa-1">
+                                            @favorite.FavoriteType
+                                        </MudChip>
+                                    </MudStack>
+
+                                    <!-- Item Name and Category -->
                                     <MudStack Spacing="1">
                                         <MudText Typo="Typo.h6" Color="Color.Primary" Class="text-truncate">
-                                            @favorite.ToolName
+                                            @GetItemName(favorite)
                                         </MudText>
                                         <MudChip T="string" Size="Size.Small" 
                                                 Color="Color.Secondary" 
                                                 Variant="Variant.Text"
                                                 Class="pa-1">
-                                            @favorite.ToolCategory
+                                            @GetItemCategory(favorite)
                                         </MudChip>
                                     </MudStack>
 
                                     <!-- Description -->
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="tool-description">
-                                        @GetTruncatedDescription(favorite.ToolDescription)
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="item-description">
+                                        @GetTruncatedDescription(GetItemDescription(favorite))
                                     </MudText>
 
                                     <!-- Pricing and Availability -->
                                     <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
                                         <MudText Typo="Typo.subtitle1" Color="Color.Primary">
-                                            <strong>$@favorite.DailyRate.ToString("0.00")/day</strong>
+                                            <strong>@GetItemPricing(favorite)</strong>
                                         </MudText>
                                         <MudChip T="string" Size="Size.Small" 
-                                                Color="@(favorite.IsToolAvailable ? Color.Success : Color.Warning)"
+                                                Color="@(GetItemAvailability(favorite) ? Color.Success : (favorite.FavoriteType == "Tool" ? Color.Warning : Color.Error))"
                                                 Variant="Variant.Text">
-                                            @(favorite.IsToolAvailable ? "Available" : "Busy")
+                                            @(GetItemAvailability(favorite) ? "Available" : (favorite.FavoriteType == "Tool" ? "Busy" : "Currently Unavailable"))
                                         </MudChip>
                                     </MudStack>
 
-                                    <!-- Location and Owner -->
-                                    <MudStack Spacing="1">
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" />
-                                            @favorite.ToolLocation
-                                        </MudText>
-                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
-                                            @favorite.OwnerName
-                                        </MudText>
-                                    </MudStack>
+                                    <!-- Additional Info -->
+                                    @if (favorite.FavoriteType == "Tool")
+                                    {
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" />
+                                                @favorite.ToolLocation
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                                @favorite.OwnerName
+                                            </MudText>
+                                        </MudStack>
+                                    }
+                                    else
+                                    {
+                                        <MudStack Spacing="1">
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" />
+                                                @favorite.BundleToolCount tools included
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                                @favorite.OwnerName
+                                            </MudText>
+                                        </MudStack>
+                                    }
 
                                     <!-- Added Date -->
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
@@ -139,7 +189,7 @@
                                     <MudButton Variant="Variant.Text" 
                                               Color="Color.Primary"
                                               StartIcon="@Icons.Material.Filled.Visibility"
-                                              OnClick="@(() => ViewTool(favorite.ToolId))">
+                                              OnClick="@(() => ViewItem(favorite))">
                                         View Details
                                     </MudButton>
                                     <MudButton Variant="Variant.Text" 
@@ -160,7 +210,7 @@
 </MudContainer>
 
 <style>
-    .tool-description {
+    .item-description {
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
@@ -242,14 +292,61 @@
         }
     }
 
-    private void ViewTool(string toolId)
+    private void ViewItem(FavoriteDto favorite)
     {
-        Navigation.NavigateTo($"/tools/{toolId}");
+        if (favorite.FavoriteType == "Tool" && !string.IsNullOrEmpty(favorite.ToolId))
+        {
+            Navigation.NavigateTo($"/tools/{favorite.ToolId}");
+        }
+        else if (favorite.FavoriteType == "Bundle" && !string.IsNullOrEmpty(favorite.BundleId))
+        {
+            Navigation.NavigateTo($"/bundles/{favorite.BundleId}");
+        }
     }
 
-    private string GetToolImage(FavoriteDto favorite)
+    private string GetItemImageUrl(FavoriteDto favorite)
     {
-        return favorite.ToolImageUrls?.FirstOrDefault() ?? "/images/placeholder-tool.jpg";
+        if (favorite.FavoriteType == "Tool")
+        {
+            var imageUrl = favorite.ToolImageUrls?.FirstOrDefault();
+            return !string.IsNullOrEmpty(imageUrl) ? UrlService.GetFileUrl(imageUrl) : string.Empty;
+        }
+        else
+        {
+            return !string.IsNullOrEmpty(favorite.BundleImageUrl) ? UrlService.GetFileUrl(favorite.BundleImageUrl) : string.Empty;
+        }
+    }
+
+    private string GetItemName(FavoriteDto favorite)
+    {
+        return favorite.FavoriteType == "Tool" ? favorite.ToolName : favorite.BundleName;
+    }
+
+    private string GetItemCategory(FavoriteDto favorite)
+    {
+        return favorite.FavoriteType == "Tool" ? favorite.ToolCategory : favorite.BundleCategory;
+    }
+
+    private string GetItemDescription(FavoriteDto favorite)
+    {
+        return favorite.FavoriteType == "Tool" ? favorite.ToolDescription : favorite.BundleDescription;
+    }
+
+    private string GetItemPricing(FavoriteDto favorite)
+    {
+        if (favorite.FavoriteType == "Tool")
+        {
+            return $"${favorite.DailyRate:0.00}/day";
+        }
+        else
+        {
+            return $"${favorite.BundleDiscountedCost:0.00}/day";
+        }
+    }
+
+    private bool GetItemAvailability(FavoriteDto favorite)
+    {
+        return favorite.FavoriteType == "Tool" ? favorite.IsToolAvailable : favorite.IsBundleAvailable;
     }
 
     private string GetTruncatedDescription(string description)

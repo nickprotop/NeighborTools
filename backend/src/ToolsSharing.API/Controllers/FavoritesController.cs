@@ -210,4 +210,99 @@ public class FavoritesController : ControllerBase
             return StatusCode(500, "Internal server error");
         }
     }
+
+    // Bundle Favorites Endpoints
+
+    /// <summary>
+    /// Check if a specific bundle is favorited by the current user
+    /// </summary>
+    /// <param name="bundleId">Bundle ID to check</param>
+    /// <returns>Bundle favorite status information</returns>
+    [HttpGet("bundle-status/{bundleId:guid}")]
+    public async Task<IActionResult> CheckBundleFavoriteStatus(Guid bundleId)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _favoritesService.CheckBundleFavoriteStatusAsync(userId, bundleId);
+            
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            
+            return BadRequest(result);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking bundle favorite status for bundle {BundleId}", bundleId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Add a bundle to favorites
+    /// </summary>
+    /// <param name="request">Add bundle to favorites request</param>
+    /// <returns>Created favorite information</returns>
+    [HttpPost("bundle")]
+    public async Task<IActionResult> AddBundleToFavorites([FromBody] AddBundleToFavoritesRequest request)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _favoritesService.AddBundleToFavoritesAsync(userId, request.BundleId);
+            
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            
+            return BadRequest(result);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding bundle {BundleId} to favorites", request.BundleId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
+
+    /// <summary>
+    /// Remove a bundle from favorites by bundle ID
+    /// </summary>
+    /// <param name="bundleId">Bundle ID to remove from favorites</param>
+    /// <returns>Success status</returns>
+    [HttpDelete("bundle/{bundleId:guid}")]
+    public async Task<IActionResult> RemoveBundleFromFavorites(Guid bundleId)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            var result = await _favoritesService.RemoveBundleFromFavoritesAsync(userId, bundleId);
+            
+            if (result.Success)
+            {
+                return Ok(result);
+            }
+            
+            return BadRequest(result);
+        }
+        catch (UnauthorizedAccessException)
+        {
+            return Unauthorized();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing bundle {BundleId} from favorites", bundleId);
+            return StatusCode(500, "Internal server error");
+        }
+    }
 }

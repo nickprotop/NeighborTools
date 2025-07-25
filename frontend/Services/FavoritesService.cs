@@ -177,4 +177,90 @@ public class FavoritesService
             return ApiResponse<int>.CreateFailure("Failed to get favorites count");
         }
     }
+
+    // Bundle Favorites Methods
+    public async Task<ApiResponse<FavoriteStatusDto>> CheckBundleFavoriteStatusAsync(Guid bundleId)
+    {
+        try
+        {
+            var response = await _httpClient.GetAsync($"api/favorites/bundle-status/{bundleId}");
+            var jsonContent = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<FavoriteStatusDto>>(jsonContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                return apiResponse ?? ApiResponse<FavoriteStatusDto>.CreateFailure("Failed to deserialize response");
+            }
+
+            _logger.LogWarning("Failed to check bundle favorite status for bundle {BundleId}. Status: {StatusCode}, Content: {Content}", bundleId, response.StatusCode, jsonContent);
+            return ApiResponse<FavoriteStatusDto>.CreateFailure($"Failed to check bundle favorite status: {response.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking bundle favorite status for bundle {BundleId}", bundleId);
+            return ApiResponse<FavoriteStatusDto>.CreateFailure("Failed to check bundle favorite status");
+        }
+    }
+
+    public async Task<ApiResponse<FavoriteDto>> AddBundleToFavoritesAsync(Guid bundleId)
+    {
+        try
+        {
+            var request = new AddBundleToFavoritesRequest { BundleId = bundleId.ToString() };
+            var json = JsonSerializer.Serialize(request, new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+            });
+            var content = new StringContent(json, System.Text.Encoding.UTF8, "application/json");
+
+            var response = await _httpClient.PostAsync("api/favorites/bundle", content);
+            var jsonContent = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<FavoriteDto>>(jsonContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                return apiResponse ?? ApiResponse<FavoriteDto>.CreateFailure("Failed to deserialize response");
+            }
+
+            _logger.LogWarning("Failed to add bundle {BundleId} to favorites. Status: {StatusCode}, Content: {Content}", bundleId, response.StatusCode, jsonContent);
+            return ApiResponse<FavoriteDto>.CreateFailure($"Failed to add bundle to favorites: {response.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error adding bundle {BundleId} to favorites", bundleId);
+            return ApiResponse<FavoriteDto>.CreateFailure("Failed to add bundle to favorites");
+        }
+    }
+
+    public async Task<ApiResponse<bool>> RemoveBundleFromFavoritesAsync(Guid bundleId)
+    {
+        try
+        {
+            var response = await _httpClient.DeleteAsync($"api/favorites/bundle/{bundleId}");
+            var jsonContent = await response.Content.ReadAsStringAsync();
+
+            if (response.IsSuccessStatusCode)
+            {
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<bool>>(jsonContent, new JsonSerializerOptions
+                {
+                    PropertyNameCaseInsensitive = true
+                });
+                return apiResponse ?? ApiResponse<bool>.CreateFailure("Failed to deserialize response");
+            }
+
+            _logger.LogWarning("Failed to remove bundle {BundleId} from favorites. Status: {StatusCode}, Content: {Content}", bundleId, response.StatusCode, jsonContent);
+            return ApiResponse<bool>.CreateFailure($"Failed to remove bundle from favorites: {response.StatusCode}");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error removing bundle {BundleId} from favorites", bundleId);
+            return ApiResponse<bool>.CreateFailure("Failed to remove bundle from favorites");
+        }
+    }
 }

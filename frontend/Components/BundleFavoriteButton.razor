@@ -1,0 +1,165 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using frontend.Services
+@using frontend.Models
+@using MudBlazor
+@inject FavoritesService FavoritesService
+@inject ISnackbar Snackbar
+@inject AuthenticationStateProvider AuthStateProvider
+
+<MudTooltip Text="@(isFavorited ? "Remove from favorites" : "Add to favorites")" Placement="Placement.Top">
+    <MudIconButton Icon="@(isFavorited ? Icons.Material.Filled.Favorite : Icons.Material.Outlined.FavoriteBorder)"
+                   Color="@(isFavorited ? Color.Error : Color.Default)"
+                   OnClick="@ToggleFavorite"
+                   Disabled="@(isLoading || !isAuthenticated)"
+                   Size="@Size"
+                   Class="@Class"
+                   Style="@Style" />
+</MudTooltip>
+
+@code {
+    [Parameter] public string BundleId { get; set; } = string.Empty;
+    [Parameter] public string OwnerUserId { get; set; } = string.Empty;
+    [Parameter] public MudBlazor.Size Size { get; set; } = MudBlazor.Size.Medium;
+    [Parameter] public string Class { get; set; } = string.Empty;
+    [Parameter] public string Style { get; set; } = string.Empty;
+    [Parameter] public EventCallback<bool> OnFavoriteChanged { get; set; }
+
+    private bool isFavorited = false;
+    private bool isLoading = false;
+    private bool isAuthenticated = false;
+    private string currentUserId = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await CheckAuthenticationState();
+        if (isAuthenticated && !string.IsNullOrEmpty(BundleId))
+        {
+            await LoadFavoriteStatus();
+        }
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (isAuthenticated && !string.IsNullOrEmpty(BundleId))
+        {
+            await LoadFavoriteStatus();
+        }
+    }
+
+    private async Task CheckAuthenticationState()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        isAuthenticated = authState.User.Identity?.IsAuthenticated ?? false;
+        
+        if (isAuthenticated)
+        {
+            currentUserId = authState.User.FindFirst("sub")?.Value ?? 
+                           authState.User.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value ?? 
+                           string.Empty;
+        }
+    }
+
+    private async Task LoadFavoriteStatus()
+    {
+        if (string.IsNullOrEmpty(BundleId) || !isAuthenticated)
+            return;
+
+        // Don't show favorite button for own bundles
+        if (!string.IsNullOrEmpty(OwnerUserId) && OwnerUserId == currentUserId)
+            return;
+
+        try
+        {
+            if (Guid.TryParse(BundleId, out var bundleGuid))
+            {
+                var response = await FavoritesService.CheckBundleFavoriteStatusAsync(bundleGuid);
+                if (response.Success && response.Data != null)
+                {
+                    isFavorited = response.Data.IsFavorited;
+                    StateHasChanged();
+                }
+            }
+        }
+        catch (Exception)
+        {
+            // Silently fail for favorite status check
+        }
+    }
+
+    private async Task ToggleFavorite()
+    {
+        if (isLoading || !isAuthenticated || string.IsNullOrEmpty(BundleId))
+            return;
+
+        // Don't allow favoriting own bundles
+        if (!string.IsNullOrEmpty(OwnerUserId) && OwnerUserId == currentUserId)
+        {
+            Snackbar.Add("You cannot favorite your own bundles", Severity.Info);
+            return;
+        }
+
+        if (!Guid.TryParse(BundleId, out var bundleGuid))
+        {
+            Snackbar.Add("Invalid bundle ID", Severity.Error);
+            return;
+        }
+
+        isLoading = true;
+        try
+        {
+            if (isFavorited)
+            {
+                // Remove from favorites
+                var response = await FavoritesService.RemoveBundleFromFavoritesAsync(bundleGuid);
+                if (response.Success)
+                {
+                    isFavorited = false;
+                    Snackbar.Add("Removed from favorites", Severity.Success);
+                    await OnFavoriteChanged.InvokeAsync(false);
+                }
+                else
+                {
+                    Snackbar.Add(response.Message ?? "Failed to remove from favorites", Severity.Error);
+                }
+            }
+            else
+            {
+                // Add to favorites
+                var response = await FavoritesService.AddBundleToFavoritesAsync(bundleGuid);
+                if (response.Success)
+                {
+                    isFavorited = true;
+                    Snackbar.Add("Added to favorites", Severity.Success);
+                    await OnFavoriteChanged.InvokeAsync(true);
+                }
+                else
+                {
+                    Snackbar.Add(response.Message ?? "Failed to add to favorites", Severity.Error);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add("An error occurred while updating favorites", Severity.Error);
+        }
+        finally
+        {
+            isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    // Public method to refresh favorite status (can be called from parent components)
+    public async Task RefreshFavoriteStatus()
+    {
+        await LoadFavoriteStatus();
+    }
+
+    // Public method to check if this bundle can be favorited
+    public bool CanBeFavorited()
+    {
+        return isAuthenticated && 
+               !string.IsNullOrEmpty(BundleId) && 
+               (string.IsNullOrEmpty(OwnerUserId) || OwnerUserId != currentUserId);
+    }
+}

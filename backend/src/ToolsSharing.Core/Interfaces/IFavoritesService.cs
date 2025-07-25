@@ -11,4 +11,9 @@ public interface IFavoritesService
     Task<ApiResponse<bool>> RemoveFromFavoritesAsync(string userId, Guid toolId);
     Task<ApiResponse<bool>> RemoveFromFavoritesByIdAsync(string userId, Guid favoriteId);
     Task<ApiResponse<int>> GetUserFavoritesCountAsync(string userId);
+    
+    // Bundle favorites methods
+    Task<ApiResponse<FavoriteStatusDto>> CheckBundleFavoriteStatusAsync(string userId, Guid bundleId);
+    Task<ApiResponse<FavoriteDto>> AddBundleToFavoritesAsync(string userId, Guid bundleId);
+    Task<ApiResponse<bool>> RemoveBundleFromFavoritesAsync(string userId, Guid bundleId);
 }

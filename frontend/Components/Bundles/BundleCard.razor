@@ -4,7 +4,29 @@
 
 <MudCard Class="bundle-card h-100" Style="cursor: pointer; transition: transform 0.2s ease-in-out;" 
          @onclick="OnClick">
-    <MudCardMedia Image="@GetImageUrl()" Height="200" Class="bundle-image" />
+    @{
+        var imageUrl = GetImageUrl();
+        var hasValidImage = !string.IsNullOrEmpty(imageUrl);
+    }
+    <div style="position: relative; height: 200px;">
+        @if (hasValidImage)
+        {
+            <img src="@imageUrl" 
+                 style="width: 100%; height: 200px; object-fit: cover; @(imageLoadError ? "display: none;" : "")" 
+                 class="bundle-image"
+                 @onerror="HandleImageError" 
+                 @onload="HandleImageLoad" />
+        }
+        
+        @if (!hasValidImage || imageLoadError)
+        {
+            <ThemeAwarePlaceholder Height="200px" 
+                                  Icon="@Icons.Material.Filled.Inventory" 
+                                  IconSize="Size.Large"
+                                  IconFontSize="3rem"
+                                  AdditionalClass="bundle-image" />
+        }
+    </div>
     
     <MudCardContent Class="pa-4">
         <MudStack Spacing="2">
@@ -128,6 +150,22 @@
         </MudStack>
     </MudCardContent>
 
+    <!-- Card Actions -->
+    <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
+        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       OnClick="OnClick"
+                       StartIcon="@Icons.Material.Filled.Visibility">
+                View Details
+            </MudButton>
+            
+            <BundleFavoriteButton BundleId="@Bundle.Id.ToString()" 
+                                 OwnerUserId="@Bundle.UserId" 
+                                 Size="Size.Small" />
+        </MudStack>
+    </MudCardActions>
+
     <!-- Hover Effect -->
     <style>
         .bundle-card:hover {
@@ -170,12 +208,14 @@
     [Parameter] public EventCallback OnClick { get; set; }
     [Parameter] public bool ShowApprovalWarning { get; set; } = false;
     [Parameter] public int UnapprovedToolCount { get; set; } = 0;
+    
+    private bool imageLoadError = false;
 
     private string GetImageUrl()
     {
         return !string.IsNullOrEmpty(Bundle.ImageUrl) 
             ? UrlService.GetFileUrl(Bundle.ImageUrl)
-            : "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMTAwJSIgaGVpZ2h0PSIxMDAlIiBmaWxsPSIjZGRkZGRkIi8+PHRleHQgeD0iNTAlIiB5PSI1MCUiIGZvbnQtc2l6ZT0iMTgiIHRleHQtYW5jaG9yPSJtaWRkbGUiIGR5PSIuM2VtIj5CdW5kbGU8L3RleHQ+PC9zdmc+";
+            : string.Empty; // Return empty for placeholder handling
     }
 
     private string GetTruncatedDescription()
@@ -186,5 +226,17 @@
         return Bundle.Description.Length > 120 
             ? Bundle.Description.Substring(0, 120) + "..." 
             : Bundle.Description;
+    }
+    
+    private void HandleImageError()
+    {
+        imageLoadError = true;
+        StateHasChanged();
+    }
+    
+    private void HandleImageLoad()
+    {
+        imageLoadError = false;
+        StateHasChanged();
     }
 }
