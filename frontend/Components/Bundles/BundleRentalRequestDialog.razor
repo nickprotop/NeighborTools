@@ -28,7 +28,7 @@
                             }
                             else
                             {
-                                <div class="d-flex align-center justify-center" style="width: 80px; height: 80px; background: var(--mud-palette-surface-variant); border-radius: 8px;">
+                                <div class="d-flex align-center justify-center mud-elevation-1" style="width: 80px; height: 80px; border-radius: 8px;">
                                     <MudIcon Icon="@Icons.Material.Filled.Inventory" Color="Color.Secondary" />
                                 </div>
                             }
@@ -181,7 +181,7 @@
                     @if (availabilityResult != null && availabilityResult.IsAvailable)
                     {
                         <MudItem xs="12">
-                            <MudPaper Elevation="1" Class="pa-3" Style="border-radius: 8px; background: var(--mud-palette-success-container-low);">
+                            <MudAlert Severity="Severity.Success" Class="pa-3" Style="border-radius: 8px;">
                                 <div class="d-flex align-center gap-2 mb-2">
                                     <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Size="Size.Small" Color="Color.Success" />
                                     <MudText Typo="Typo.subtitle2" Color="Color.Success">Bundle Available!</MudText>
@@ -205,7 +205,7 @@
                     else if (costCalculation != null)
                     {
                         <MudItem xs="12">
-                            <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px; background: var(--mud-palette-surface-variant);">
+                            <MudPaper Elevation="2" Class="pa-4" Style="border-radius: 8px;">
                                 <div class="d-flex align-center mb-3">
                                     <MudIcon Icon="@Icons.Material.Filled.Receipt" Color="Color.Primary" Class="mr-2" />
                                     <MudText Typo="Typo.h6">Bundle Rental Breakdown</MudText>

@@ -74,7 +74,7 @@
                             </MudItem>
 
                             <MudItem xs="12">
-                                <MudCard Elevation="0" Style="background: var(--mud-palette-surface-variant);">
+                                <MudCard Elevation="1">
                                     <MudCardContent>
                                         <div class="d-flex align-center mb-2">
                                             <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" Class="mr-2" />
@@ -124,16 +124,14 @@
                             @if (settings.CustomCommissionRate.HasValue)
                             {
                                 <MudItem xs="12">
-                                    <MudCard Elevation="0" Style="background: var(--mud-palette-success-light);">
-                                        <MudCardContent>
-                                            <div class="d-flex align-center">
-                                                <MudIcon Icon="@Icons.Material.Filled.Discount" Color="Color.Success" Class="mr-2" />
-                                                <MudText>
-                                                    Your custom commission rate: @((settings.CustomCommissionRate.Value * 100).ToString("F1"))%
-                                                </MudText>
-                                            </div>
-                                        </MudCardContent>
-                                    </MudCard>
+                                    <MudAlert Severity="Severity.Success">
+                                        <div class="d-flex align-center">
+                                            <MudIcon Icon="@Icons.Material.Filled.Discount" Size="Size.Small" Class="mr-2" />
+                                            <MudText>
+                                                Your custom commission rate: @((settings.CustomCommissionRate.Value * 100).ToString("F1"))%
+                                            </MudText>
+                                        </div>
+                                    </MudAlert>
                                 </MudItem>
                             }
                             else

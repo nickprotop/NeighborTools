@@ -87,8 +87,8 @@
 
         @if (showVerificationNeeded)
         {
-            <MudCard Class="mt-6" Style="border: 2px solid var(--mud-palette-warning); background-color: var(--mud-palette-warning-lighten);">
-                <MudCardContent Class="text-center">
+            <MudAlert Severity="Severity.Warning" Class="mt-6">
+                <div class="text-center">
                     <MudIcon Icon="@Icons.Material.Filled.MarkEmailRead" Size="Size.Large" Color="Color.Warning" Class="mb-3" Style="font-size: 3rem;" />
                     <MudText Typo="Typo.h5" Color="Color.Warning" GutterBottom="true">
                         Email Verification Required
@@ -116,8 +116,8 @@
                             <span>Resend Verification Email</span>
                         }
                     </MudButton>
-                </MudCardContent>
-            </MudCard>
+                </div>
+            </MudAlert>
         }
 
         <MudDivider Class="my-4" />

@@ -111,7 +111,7 @@
 
             <!-- Terms and Privacy Acceptance -->
             <div class="mt-6 mb-4">
-                <MudPaper Class="pa-4" Elevation="1" Style="background-color: var(--mud-palette-surface-variant);">
+                <MudPaper Class="pa-4" Elevation="1">
                     <MudStack Spacing="3">
                         <MudCheckBox T="bool" @bind-Value="registerRequest.AcceptTerms" 
                                     Required="true"
@@ -176,10 +176,10 @@
 
         @if (showVerificationMessage)
         {
-            <MudCard Class="mt-6" Style="border: 2px solid var(--mud-palette-success); background-color: var(--mud-palette-success-lighten);">
-                <MudCardContent Class="text-center">
-                    <MudIcon Icon="@Icons.Material.Filled.MarkEmailRead" Size="Size.Large" Color="Color.Success" Class="mb-3" Style="font-size: 3rem;" />
-                    <MudText Typo="Typo.h5" Color="Color.Success" GutterBottom="true">
+            <MudAlert Severity="Severity.Success" Class="mt-6">
+                <div class="text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.MarkEmailRead" Size="Size.Large" Class="mb-3" Style="font-size: 3rem;" />
+                    <MudText Typo="Typo.h5" GutterBottom="true">
                         Check Your Email!
                     </MudText>
                     <MudText Typo="Typo.body1" Class="mb-3">
@@ -205,8 +205,8 @@
                             <span>Resend Verification Email</span>
                         }
                     </MudButton>
-                </MudCardContent>
-            </MudCard>
+                </div>
+            </MudAlert>
         }
 
         <MudDivider Class="my-4" />
