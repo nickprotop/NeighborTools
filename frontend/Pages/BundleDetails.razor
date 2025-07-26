@@ -1,4 +1,5 @@
 @page "/bundles/{BundleId:guid}"
+@using Microsoft.AspNetCore.Authorization
 @using ToolsSharing.Frontend.Models
 @using frontend.Models
 @using ToolsSharing.Frontend.Services
@@ -13,6 +14,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IUrlService UrlService
 @inject IBreadcrumbService BreadcrumbService
+@attribute [AllowAnonymous]
 
 <PageTitle>@(bundle?.Name ?? "Bundle") - NeighborTools</PageTitle>
 
@@ -235,13 +237,15 @@ else
                                 }
                             </Authorized>
                             <NotAuthorized>
-                                <MudButton Variant="Variant.Filled" 
-                                         Color="Color.Primary" 
-                                         Size="Size.Large"
-                                         StartIcon="@Icons.Material.Filled.Login"
-                                         Href="/login">
-                                    Sign In to Rent
-                                </MudButton>
+                                <MudTooltip Text="You must be logged in to request bundle rentals">
+                                    <MudButton Variant="Variant.Filled" 
+                                             Color="Color.Primary" 
+                                             Size="Size.Large"
+                                             StartIcon="@Icons.Material.Filled.Login"
+                                             Href="/login">
+                                        Sign In to Rent
+                                    </MudButton>
+                                </MudTooltip>
                             </NotAuthorized>
                         </AuthorizeView>
                     </MudStack>

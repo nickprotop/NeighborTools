@@ -70,6 +70,9 @@ MYSQL_ROOT_PASSWORD=$(read_password "MySQL root password" "RootPassword123!")
 # Get MySQL user password
 MYSQL_USER_PASSWORD=$(read_password "MySQL toolsuser password" "ToolsPassword123!")
 
+# Get Redis password
+REDIS_PASSWORD=$(read_password "Redis password" "RedisPassword123!")
+
 echo ""
 echo "📁 MinIO File Storage Configuration"
 echo "=================================="
@@ -118,6 +121,7 @@ echo "================================================"
 echo "Review your configuration:"
 echo "   MySQL root password: $(echo "$MYSQL_ROOT_PASSWORD" | sed 's/./*/g')"
 echo "   MySQL user password: $(echo "$MYSQL_USER_PASSWORD" | sed 's/./*/g')"
+echo "   Redis password: $(echo "$REDIS_PASSWORD" | sed 's/./*/g')"
 echo "   Blazor WASM app URL: $FRONTEND_BASE_URL"
 echo "================================================"
 echo ""
@@ -144,6 +148,9 @@ cat > "$ENV_FILE" << EOF
 # MySQL Configuration
 MYSQL_ROOT_PASSWORD=$MYSQL_ROOT_PASSWORD
 MYSQL_USER_PASSWORD=$MYSQL_USER_PASSWORD
+
+# Redis Configuration
+REDIS_PASSWORD=$REDIS_PASSWORD
 
 # MinIO Configuration
 MINIO_ROOT_USER=$MINIO_ROOT_USER
@@ -183,8 +190,8 @@ done
 # Wait for Redis to be ready
 echo "⏳ Waiting for Redis to be ready..."
 for i in {1..10}; do
-    if docker-compose exec -T redis redis-cli ping | grep -q "PONG"; then
-        echo "✅ Redis is ready"
+    if docker-compose exec -T redis redis-cli -a "$REDIS_PASSWORD" ping | grep -q "PONG"; then
+        echo "✅ Redis is ready with authentication"
         break
     fi
     if [ $i -eq 10 ]; then
@@ -217,15 +224,17 @@ if [ ! -f "config.json" ]; then
     fi
 fi
 
-# Update the database connection string and Blazor WASM app URL in config.json
+# Update the database connection string, Redis connection, and Blazor WASM app URL in config.json
 CONNECTION_STRING="server=localhost;port=3306;database=toolssharing;uid=toolsuser;pwd=${MYSQL_USER_PASSWORD}"
+REDIS_CONNECTION_STRING="localhost:6379,password=${REDIS_PASSWORD}"
 if command -v jq &> /dev/null; then
     # Use jq if available for proper JSON manipulation
     tmp=$(mktemp)
-    jq --arg conn "$CONNECTION_STRING" --arg frontend "$FRONTEND_BASE_URL" \
+    jq --arg conn "$CONNECTION_STRING" --arg redis "$REDIS_CONNECTION_STRING" --arg frontend "$FRONTEND_BASE_URL" \
        --arg minioEndpoint "$MINIO_ENDPOINT" --arg minioKey "$MINIO_ROOT_USER" --arg minioSecret "$MINIO_ROOT_PASSWORD" \
        '
        .ConnectionStrings.DefaultConnection = $conn |
+       .ConnectionStrings.Redis = $redis |
        .Frontend.BaseUrl = $frontend |
        if .Payment then .Payment.FrontendBaseUrl = $frontend else . + {"Payment": {"FrontendBaseUrl": $frontend}} end |
        . + {"MinIO": {
@@ -252,6 +261,7 @@ try:
     
     # Update configuration
     config['ConnectionStrings']['DefaultConnection'] = '$CONNECTION_STRING'
+    config['ConnectionStrings']['Redis'] = '$REDIS_CONNECTION_STRING'
     config['Frontend']['BaseUrl'] = '$FRONTEND_BASE_URL'
     
     # Update or create Payment section
@@ -282,6 +292,7 @@ EOF
         # Last resort: basic sed replacements (limited functionality)
         echo "⚠️  Neither jq nor Python3 available - using basic sed (limited functionality)"
         sed -i "s|\"DefaultConnection\": \".*\"|\"DefaultConnection\": \"$CONNECTION_STRING\"|g" config.json
+        sed -i "s|\"Redis\": \".*\"|\"Redis\": \"$REDIS_CONNECTION_STRING\"|g" config.json
         sed -i "s|\"BaseUrl\": \".*\"|\"BaseUrl\": \"$FRONTEND_BASE_URL\"|g" config.json
         echo "⚠️  MinIO configuration may need manual setup in config.json"
         echo "   Add this section to config.json:"
@@ -307,6 +318,7 @@ echo "============================================="
 echo "Database Configuration:"
 echo "  • MySQL Root Password: $(echo "$MYSQL_ROOT_PASSWORD" | sed 's/./*/g')"
 echo "  • MySQL User Password: $(echo "$MYSQL_USER_PASSWORD" | sed 's/./*/g')"
+echo "  • Redis Password: $(echo "$REDIS_PASSWORD" | sed 's/./*/g')"
 echo ""
 echo "File Storage Configuration:"
 echo "  • MinIO Console: http://localhost:9001 (user: $MINIO_ROOT_USER)"
@@ -318,7 +330,7 @@ echo "  • Or run './start-infrastructure.sh' + 'dotnet run' for API debugging"
 echo "  • Access Swagger UI at: http://localhost:5002/swagger"
 echo "  • Blazor WASM app will be available at: $FRONTEND_BASE_URL"
 echo "  • MySQL: localhost:3306 (user: toolsuser, password: [configured above])"
-echo "  • Redis: localhost:6379"
+echo "  • Redis: localhost:6379 (password: [configured above])"
 echo ""
 echo "Admin Access:"
 echo "  • Essential admin user created: admin@neighbortools.com / Admin123!"

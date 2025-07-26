@@ -17,7 +17,7 @@
 @inject AuthenticationStateProvider AuthStateProvider
 @inject IUrlService UrlService
 @inject IBreadcrumbService BreadcrumbService
-@attribute [Authorize]
+@attribute [AllowAnonymous]
 
 <PageTitle>@(tool?.Name ?? "Tool Details") - NeighborTools</PageTitle>
 
@@ -196,13 +196,15 @@ else if (tool != null)
                                 }
                             </Authorized>
                             <NotAuthorized>
-                                <MudButton Variant="Variant.Filled" 
-                                         Color="Color.Primary" 
-                                         Size="Size.Large"
-                                         StartIcon="@Icons.Material.Filled.Login"
-                                         Href="/login">
-                                    Sign In to Rent
-                                </MudButton>
+                                <MudTooltip Text="You must be logged in to request tool rentals">
+                                    <MudButton Variant="Variant.Filled" 
+                                             Color="Color.Primary" 
+                                             Size="Size.Large"
+                                             StartIcon="@Icons.Material.Filled.Login"
+                                             Href="/login">
+                                        Sign In to Rent
+                                    </MudButton>
+                                </MudTooltip>
                             </NotAuthorized>
                         </AuthorizeView>
                     </MudStack>
