@@ -8,7 +8,8 @@
     "ExpiresInMinutes": "60"
   },
   "ConnectionStrings": {
-    "DefaultConnection": "server=localhost;port=3306;database=toolssharing;uid=toolsuser;pwd=YOUR_MYSQL_PASSWORD_HERE"
+    "DefaultConnection": "server=localhost;port=3306;database=toolssharing;uid=toolsuser;pwd=YOUR_MYSQL_PASSWORD_HERE",
+    "Redis": "localhost:6379,password=YOUR_REDIS_PASSWORD_HERE"
   },
   "Payment": {
     "DefaultCommissionRate": 0.10,
@@ -151,5 +152,82 @@
       "text-classification"
     ],
     "SightEngineTimeoutSeconds": 10
+  },
+  "RequestSecurity": {
+    "_Comment": "Phase 1 Security: Request size limits and timeout protection per endpoint",
+    "EnableRequestSizeLimits": true,
+    "EnableRequestTimeouts": true,
+    "DefaultMaxRequestSize": 5242880,
+    "DefaultRequestTimeout": "00:00:30",
+    "EndpointLimits": {
+      "/api/files/upload": {
+        "MaxRequestSize": 104857600,
+        "RequestTimeout": "00:05:00"
+      },
+      "/api/tools/upload-images": {
+        "MaxRequestSize": 52428800,
+        "RequestTimeout": "00:02:00"
+      },
+      "/api/bundles/upload-image": {
+        "MaxRequestSize": 10485760,
+        "RequestTimeout": "00:01:00"
+      },
+      "/api/auth/login": {
+        "MaxRequestSize": 1024,
+        "RequestTimeout": "00:00:15"
+      },
+      "/api/auth/register": {
+        "MaxRequestSize": 5120,
+        "RequestTimeout": "00:00:15"
+      },
+      "/api/auth/": {
+        "MaxRequestSize": 2048,
+        "RequestTimeout": "00:00:10"
+      },
+      "/api/": {
+        "MaxRequestSize": 512000,
+        "RequestTimeout": "00:00:30"
+      }
+    }
+  },
+  "IPSecurity": {
+    "_Comment": "Phase 1 Security: IP blocking and geographic access control. Add ISO 3166-1 alpha-2 country codes to BlockedCountries (e.g. 'CN', 'RU') or AllowedCountries for whitelist mode. Add known malicious IPs to KnownMaliciousIPs array.",
+    "EnableIPBlocking": true,
+    "EnableGeolocation": true,
+    "DefaultBlockDuration": "02:00:00",
+    "TemporaryBlockDuration": "00:30:00",
+    "ExtendedBlockDuration": "24:00:00",
+    "PermanentBlockDuration": "365.00:00:00",
+    "BlockedCountries": [
+    ],
+    "AllowedCountries": [
+    ],
+    "TrustedProxies": [
+      "127.0.0.1",
+      "::1",
+      "10.0.0.0/8",
+      "172.16.0.0/12",
+      "192.168.0.0/16"
+    ],
+    "KnownMaliciousIPs": [
+    ]
+  },
+  "SecurityHeaders": {
+    "_Comment": "Phase 1 Security: HTTP security headers for enhanced protection",
+    "EnableContentTypeOptions": true,
+    "EnableFrameOptions": true,
+    "EnableXSSProtection": true,
+    "EnableContentSecurityPolicy": true,
+    "EnableHSTS": true,
+    "EnablePermissionsPolicy": true,
+    "ReferrerPolicy": "strict-origin-when-cross-origin",
+    "ContentSecurityPolicy": "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' https:; media-src 'none'; object-src 'none'; frame-src 'none';",
+    "PermissionsPolicy": "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=()",
+    "HSTSMaxAge": 31536000,
+    "HSTSIncludeSubDomains": true,
+    "HSTSPreload": false,
+    "CustomHeaders": {
+      "_Usage": "Add custom security headers as key-value pairs, e.g. 'X-Custom-Header': 'value'"
+    }
   }
 }

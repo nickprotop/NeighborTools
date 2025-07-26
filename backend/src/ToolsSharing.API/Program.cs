@@ -45,6 +45,9 @@ builder.Host.UseSerilog();
 // Add services to the container
 builder.Services.AddInfrastructure(builder.Configuration);
 
+// Add Phase 1 Security Services
+builder.Services.AddPhase1Security(builder.Configuration);
+
 // Add GDPR services
 builder.Services.AddGDPRServices();
 
@@ -163,6 +166,9 @@ app.UseCors("AllowFrontend");
 // PRODUCTION WARNING: Enable HTTPS redirection in production or when behind a proxy that handles SSL
 // app.UseHttpsRedirection();
 
+// Phase 1 Security Middleware - Applied FIRST for maximum protection
+app.UsePhase1Security();
+
 // Add PayPal webhook validation middleware (must be before authentication)
 app.UseMiddleware<PayPalWebhookValidationMiddleware>();
 
@@ -219,6 +225,9 @@ try
     }
     
     Log.Information("Starting Tools Sharing API");
+    
+    // Validate security configuration
+    app.Services.ValidateSecurityConfiguration();
     
     // Run database migrations only (essential data is in migrations)
     using (var scope = app.Services.CreateScope())
