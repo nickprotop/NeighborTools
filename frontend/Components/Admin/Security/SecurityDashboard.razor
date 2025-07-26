@@ -1,0 +1,191 @@
+@using ToolsSharing.Core.Models.SecurityAnalytics
+@inject ISecurityAnalyticsService SecurityAnalyticsService
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+@attribute [Authorize(Roles = "Admin")]
+
+<PageTitle>Security Dashboard - Admin</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Header -->
+    <MudGrid>
+        <MudItem xs="12">
+            <MudCard Elevation="2" Class="mb-4">
+                <MudCardContent>
+                    <MudGrid AlignItems="Center">
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.h4" Class="mb-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Security" Class="mr-2" />
+                                Security Dashboard
+                            </MudText>
+                            <MudText Typo="Typo.body1" Color="Color.Secondary">
+                                Real-time security monitoring and threat detection
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6" Class="text-right">
+                            <MudButtonGroup>
+                                <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                                          OnClick="RefreshDashboard" 
+                                          Disabled="@_isLoading"
+                                          Variant="Variant.Outlined">
+                                    Refresh
+                                </MudButton>
+                                <MudButton StartIcon="@Icons.Material.Filled.Download"
+                                          OnClick="ExportReport"
+                                          Disabled="@_isLoading"
+                                          Variant="Variant.Outlined">
+                                    Export Report
+                                </MudButton>
+                            </MudButtonGroup>
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+    </MudGrid>
+
+    @if (_isLoading)
+    {
+        <MudGrid>
+            <MudItem xs="12" Class="text-center">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-4">Loading Security Data...</MudText>
+            </MudItem>
+        </MudGrid>
+    }
+    else if (_dashboardData != null)
+    {
+        <!-- Security Metrics Overview -->
+        <SecurityMetricsOverview Metrics="_dashboardData.Metrics" />
+
+        <!-- System Health Status -->
+        <SystemHealthCard SystemHealth="_dashboardData.SystemHealth" Class="mb-4" />
+
+        <!-- Active Threats and Alerts -->
+        <MudGrid Class="mb-4">
+            <MudItem xs="12" lg="6">
+                <ActiveThreatsCard Threats="_dashboardData.ActiveThreats" OnThreatAction="@((tuple) => HandleThreatAction(tuple.Item1, tuple.Item2))" />
+            </MudItem>
+            <MudItem xs="12" lg="6">
+                <ActiveAlertsCard Alerts="_dashboardData.RecentAlerts" OnAlertAction="@((tuple) => HandleAlertAction(tuple.Item1, tuple.Item2))" />
+            </MudItem>
+        </MudGrid>
+
+        <!-- Security Trends -->
+        <SecurityTrendsCard TrendData="_dashboardData.TrendData" Class="mb-4" />
+
+        <!-- Geographic Threats -->
+        <GeographicThreatsCard GeographicThreats="_dashboardData.GeographicThreats" Class="mb-4" />
+
+        <!-- Attack Patterns -->
+        <AttackPatternsCard AttackPatterns="_dashboardData.AttackPatterns" Class="mb-4" />
+    }
+    else
+    {
+        <MudAlert Severity="Severity.Error" Class="mt-4">
+            <MudText>Failed to load security dashboard data. Please refresh the page or contact support.</MudText>
+        </MudAlert>
+    }
+</MudContainer>
+
+@code {
+    private SecurityDashboardData? _dashboardData;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            _isLoading = true;
+            var response = await SecurityAnalyticsService.GetSecurityDashboardAsync();
+            _dashboardData = response;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading security dashboard: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RefreshDashboard()
+    {
+        await LoadDashboardData();
+        Snackbar.Add("Security dashboard refreshed", Severity.Success);
+    }
+
+    private async Task ExportReport()
+    {
+        try
+        {
+            // This would call the security analytics service to generate a report
+            // For now, we'll just show a placeholder message
+            Snackbar.Add("Security report export functionality coming soon", Severity.Info);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error exporting report: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task HandleThreatAction(string action, SecurityThreat threat)
+    {
+        try
+        {
+            switch (action)
+            {
+                case "block":
+                    // Block threat implementation would go here
+                    Snackbar.Add($"Blocked threat from {threat.SourceIP}", Severity.Success);
+                    break;
+                case "investigate":
+                    // Investigation implementation would go here
+                    Snackbar.Add($"Investigating threat from {threat.SourceIP}", Severity.Info);
+                    break;
+                default:
+                    Snackbar.Add($"Unknown action: {action}", Severity.Warning);
+                    break;
+            }
+            await RefreshDashboard();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error handling threat action: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task HandleAlertAction(string action, SecurityAlert alert)
+    {
+        try
+        {
+            switch (action)
+            {
+                case "acknowledge":
+                    // Acknowledge alert implementation would go here
+                    Snackbar.Add($"Alert acknowledged: {alert.Title}", Severity.Success);
+                    break;
+                case "resolve":
+                    // Resolve alert implementation would go here
+                    Snackbar.Add($"Alert resolved: {alert.Title}", Severity.Success);
+                    break;
+                default:
+                    Snackbar.Add($"Unknown action: {action}", Severity.Warning);
+                    break;
+            }
+            await RefreshDashboard();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error handling alert action: {ex.Message}", Severity.Error);
+        }
+    }
+}

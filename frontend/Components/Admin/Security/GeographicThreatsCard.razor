@@ -1,0 +1,131 @@
+@using ToolsSharing.Core.Models.SecurityAnalytics
+
+<MudCard Elevation="2" Class="@($"h-100 {Class}")">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Public" Color="Color.Primary" Class="mr-2" />
+                Geographic Threats (@GeographicThreats.Count)
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudIconButton Icon="@Icons.Material.Filled.Map" 
+                          Color="Color.Default" 
+                          Size="Size.Small"
+                          Title="View Full Map" />
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <!-- World Map Placeholder -->
+        <div style="height: 300px; background: linear-gradient(135deg, #e3f2fd 0%, #bbdefb 100%); border-radius: 8px; position: relative; margin-bottom: 16px; display: flex; align-items: center; justify-content: center;">
+            <MudText Typo="Typo.h6" Color="Color.Secondary">
+                <MudIcon Icon="@Icons.Material.Filled.Map" Size="Size.Large" Class="mr-2" />
+                Interactive Threat Map
+            </MudText>
+        </div>
+
+        <!-- Geographic Statistics -->
+        <MudGrid Class="mb-3">
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-2 text-center">
+                    <MudText Typo="Typo.h6" Color="Color.Error">@GeographicThreats.Count(gt => gt.MaxRiskScore >= 80)</MudText>
+                    <MudText Typo="Typo.caption">High Risk Countries</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-2 text-center">
+                    <MudText Typo="Typo.h6" Color="Color.Warning">@GeographicThreats.Count(gt => gt.MaxRiskScore >= 50 && gt.MaxRiskScore < 80)</MudText>
+                    <MudText Typo="Typo.caption">Medium Risk Countries</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-2 text-center">
+                    <MudText Typo="Typo.h6" Color="Color.Primary">@GeographicThreats.Sum(gt => gt.ThreatCount)</MudText>
+                    <MudText Typo="Typo.caption">Total Threats</MudText>
+                </MudPaper>
+            </MudItem>
+            <MudItem xs="6" sm="3">
+                <MudPaper Class="pa-2 text-center">
+                    <MudText Typo="Typo.h6" Color="Color.Secondary">@GeographicThreats.Count</MudText>
+                    <MudText Typo="Typo.caption">Countries</MudText>
+                </MudPaper>
+            </MudItem>
+        </MudGrid>
+
+        <!-- Threat Table -->
+        @if (GeographicThreats.Any())
+        {
+            <MudTable T="GeographicThreat" Items="@GeographicThreats.Take(10)" Dense="true" Elevation="0">
+                <HeaderContent>
+                    <MudTh>Country</MudTh>
+                    <MudTh>Threats</MudTh>
+                    <MudTh>Risk Level</MudTh>
+                    <MudTh>Top Threat</MudTh>
+                </HeaderContent>
+                <RowTemplate>
+                    <MudTd>
+                        <div style="display: flex; align-items: center;">
+                            <MudIcon Icon="@Icons.Material.Filled.Flag" Size="Size.Small" Class="mr-2" />
+                            @context.CountryName
+                        </div>
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="Color.Info">
+                            @context.ThreatCount
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <MudChip T="string" Size="Size.Small" Color="@GetRiskScoreColor(context.MaxRiskScore)">
+                            @GetRiskLevel(context.MaxRiskScore)
+                        </MudChip>
+                    </MudTd>
+                    <MudTd>
+                        <MudText Typo="Typo.body2">@context.Severity.ToString()</MudText>
+                    </MudTd>
+                </RowTemplate>
+            </MudTable>
+
+            @if (GeographicThreats.Count > 10)
+            {
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.caption" Class="text-center">
+                    Showing 10 of @GeographicThreats.Count countries. 
+                    <MudLink Href="/admin/security/geographic">View all countries</MudLink>
+                </MudText>
+            }
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info">
+                <MudText>No geographic threat data available.</MudText>
+            </MudAlert>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public List<GeographicThreat> GeographicThreats { get; set; } = new();
+    [Parameter] public string Class { get; set; } = "";
+
+    private Color GetRiskScoreColor(decimal riskScore)
+    {
+        return riskScore switch
+        {
+            >= 80 => Color.Error,
+            >= 50 => Color.Warning,
+            >= 20 => Color.Info,
+            _ => Color.Success
+        };
+    }
+    
+    private string GetRiskLevel(decimal riskScore)
+    {
+        return riskScore switch
+        {
+            >= 80 => "High",
+            >= 50 => "Medium",
+            >= 20 => "Low",
+            _ => "Minimal"
+        };
+    }
+}

@@ -1,460 +1,373 @@
-# NeighborTools - Community Tool Sharing Platform
+# NeighborTools
 
-A comprehensive full-stack platform for community tool sharing with advanced bundle management, built with .NET 9 backend and Blazor WebAssembly frontend.
+**Enterprise-grade community tool sharing platform with advanced security, payment processing, and bundle management.**
+
+Built with .NET 9 and Blazor WebAssembly, NeighborTools provides a complete solution for tool sharing communities with professional-grade features including comprehensive security systems, payment processing, dispute resolution, and regulatory compliance.
 
 ## 🚀 Quick Start
 
-1. **Clone the repository**
-   ```bash
-   git clone <repository-url>
-   cd NeighborTools
-   ```
+```bash
+# Complete setup (backend + frontend)
+./setup-complete.sh
 
-2. **Start all services**
-   ```bash
-   ./start-services.sh
-   ```
+# Or manual setup
+cd backend && ./scripts/install.sh
+cd frontend && dotnet run
+```
 
-This will start both backend and frontend services with interactive setup.
+## ✨ Core Features
 
-## 📖 Project Overview
+### 🔧 Tool & Bundle Management
+- **Individual Tool Rentals** - Complete rental lifecycle management
+- **Advanced Bundle System** - Curated tool collections for complete project solutions
+- **Smart Availability** - Coordinated booking across multiple tools
+- **Dynamic Pricing** - Bundle discounts and real-time cost calculation
+- **Image Management** - Multi-image upload with MinIO object storage
 
-NeighborTools enables community members to share tools with each other through a modern web platform featuring:
+### 💰 Payment & Financial Services
+- **PayPal Integration** - Secure payment processing with webhook validation
+- **Security Deposits** - Configurable deposit management
+- **Platform Commission** - Automated fee calculation and collection
+- **Payout Management** - Automated owner payments with configurable delays
+- **Receipt Generation** - Professional PDF receipts with detailed breakdowns
+- **Fraud Detection** - Advanced fraud prevention with velocity limits and suspicious activity monitoring
 
-### Core Features
-- **Tool Catalog** - Browse available tools with detailed descriptions and images
-- **Rental System** - Request tool rentals with approval workflow
-- **User Management** - Secure registration and authentication
-- **My Tools** - Manage your own tool listings
-- **Rental History** - Track rental requests and history
+### 🛡️ Security & Compliance
+- **Phase 3 Security System** - Multi-layered security with advanced analytics
+- **Rate Limiting** - Configurable per-endpoint rate limiting with Redis backend
+- **Brute Force Protection** - Advanced attack detection and prevention
+- **IP Security** - Geographic filtering and malicious IP blocking
+- **Session Management** - Device fingerprinting and session hijacking detection
+- **Security Analytics** - Real-time threat monitoring with admin dashboard
+- **GDPR Compliance** - Complete data protection and privacy management
 
-### 🆕 Advanced Bundle System
-- **Bundle Creation** - Create curated tool collections for specific projects
-- **Project Solutions** - Complete tool sets for "Build a Table", "Garden Prep", etc.
-- **Smart Availability** - Coordinated availability checking across all bundle tools
-- **Dynamic Pricing** - Bundle discounts with real-time cost calculation
-- **Bundle Marketplace** - Advanced browsing, filtering, and discovery
-- **Bundle Rentals** - Complete rental workflow for tool bundles
+### 🗣️ Communication & Disputes
+- **Secure Messaging** - Real-time communication with automated content moderation
+- **Dispute Resolution** - Complete dispute management with evidence upload
+- **Mutual Closure** - Collaborative dispute resolution system
+- **Email Notifications** - Comprehensive email system with professional templates
 
-📋 **[Complete Bundle System Documentation](BUNDLE_SYSTEM_DOCUMENTATION.md)**
+### 👤 User Experience
+- **Favorites System** - Save tools and bundles for quick access
+- **Public Profiles** - User profiles with rental history and ratings
+- **Advanced Search** - Powerful filtering and discovery tools
+- **Mobile Responsive** - Optimized for all device sizes
+- **Dark Theme** - Complete dark mode support
+
+### 🔒 Administration & Monitoring
+- **Admin Dashboard** - Comprehensive platform management
+- **Security Analytics** - Real-time threat monitoring and alerting
+- **Performance Metrics** - System health monitoring with CPU/memory tracking
+- **Sample Data Management** - Controlled test data for development
+- **MinIO Management** - File storage administration
+- **User Management** - Complete user lifecycle administration
 
 ## 🏗️ Architecture
 
-### Backend (.NET 9 API)
-- **Clean Architecture** with Core, Infrastructure, and API layers
-- **JWT Authentication** with automatic token handling
-- **Entity Framework Core** with MySQL database
-- **AutoMapper** for object mapping
-- **Redis** integration ready (future feature)
-- **Docker support** with profiles for development
+### Backend (.NET 9)
+- **Clean Architecture** - Separation of Core, Infrastructure, and API layers
+- **CQRS Pattern** - Command/Query separation for scalable operations
+- **Entity Framework Core** - MySQL database with comprehensive migrations
+- **Mapster** - High-performance object mapping
+- **MediatR** - Mediator pattern for loose coupling
+- **Docker Support** - Complete containerization with multi-stage builds
 
 ### Frontend (Blazor WebAssembly)
-- **Component-based architecture** with reusable UI components
-- **Automatic authentication** state management
-- **Responsive design** with Bootstrap
-- **Service-based architecture** for API communication
-- **Local storage** for authentication persistence
+- **Component Architecture** - Reusable UI components with MudBlazor 8.x
+- **State Management** - Centralized authentication and application state
+- **Service Layer** - Clean API communication with automatic token handling
+- **Progressive Web App** - Offline support and app-like experience
+
+### Infrastructure
+- **MySQL 8.0** - Primary database with optimized indexes
+- **Redis 7** - Distributed caching and rate limiting
+- **MinIO** - S3-compatible object storage for files and images
+- **Docker Compose** - Complete development environment orchestration
 
 ## 🛠️ Technology Stack
 
-| Component | Technology |
-|-----------|------------|
-| Backend API | .NET 9, ASP.NET Core Web API |
-| Frontend | Blazor WebAssembly |
-| Database | MySQL 8.0 |
-| Cache | Redis 7 (configured, not implemented) |
-| Authentication | JWT Bearer tokens |
-| ORM | Entity Framework Core |
-| Containerization | Docker & Docker Compose |
-| HTTP Client | HttpClientFactory with message handlers |
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **API** | .NET 9, ASP.NET Core | RESTful API with OpenAPI documentation |
+| **Frontend** | Blazor WebAssembly | Client-side web application |
+| **Database** | MySQL 8.0 | Primary data storage |
+| **Cache** | Redis 7 | Rate limiting and performance |
+| **Storage** | MinIO | File and image storage |
+| **Authentication** | JWT + ASP.NET Identity | Secure user authentication |
+| **Payments** | PayPal API | Payment processing |
+| **Security** | Custom middleware stack | Multi-layered security system |
+| **Monitoring** | Performance metrics | System health monitoring |
 
-## 📁 Project Structure
+## 📋 Development Workflows
 
-```
-NeighborTools/
-├── backend/                    # .NET 9 API Backend
-│   ├── src/
-│   │   ├── ToolsSharing.API/          # Web API controllers and endpoints
-│   │   ├── ToolsSharing.Core/         # Domain entities and business logic
-│   │   └── ToolsSharing.Infrastructure/ # Data access and external services
-│   ├── docker/                        # Docker configuration
-│   ├── scripts/                       # Development scripts
-│   └── tests/                         # Unit tests
-├── frontend/                   # Blazor WebAssembly Frontend
-│   ├── Pages/                         # Razor pages/components
-│   ├── Services/                      # API communication services
-│   ├── Layout/                        # Layout components
-│   └── Models/                        # Frontend models
-├── .github/workflows/          # GitHub Actions workflows
-│   └── gitleaks.yml                   # Secret scanning workflow
-├── .gitleaks.toml             # GitLeaks configuration
-├── setup-gitleaks.sh          # GitLeaks setup script for new developers
-├── TODO_*.md                   # Future implementation tasks
-└── start-services.sh          # Main development startup script
+### Complete Development Environment
+```bash
+# Backend with hot reload + Frontend
+cd backend && ./start-watch.sh
+# In another terminal:
+cd frontend && dotnet run
 ```
 
-## 🔧 Development Setup
+### Production Testing
+```bash
+# Backend in Docker + Frontend
+cd backend && ./start-production.sh
+# In another terminal:
+cd frontend && dotnet run
+```
 
-### Prerequisites
-- **.NET 9 SDK** (required)
-- **Docker & Docker Compose** (required)
-- **Git** (for cloning)
-- **GitLeaks** (recommended for secret scanning)
+### Granular Control
+```bash
+# Start storage services only
+cd backend && ./scripts/storage/start.sh
 
-### Backend Setup
+# Start API (choose one)
+./scripts/api/start-local.sh     # dotnet run
+./scripts/api/start-watch.sh     # hot reload
+./scripts/api/start-docker.sh    # Docker container
+```
+
+## 🌐 Service Endpoints
+
+| Service | URL | Purpose |
+|---------|-----|---------|
+| **Frontend** | http://localhost:5000 | Main application |
+| **API** | http://localhost:5002 | Backend services |
+| **Swagger** | http://localhost:5002/swagger | API documentation |
+| **MinIO Console** | http://localhost:9001 | File storage admin |
+
+## 🔐 Security Features
+
+### Multi-Layer Security System
+- **Phase 1**: Request filtering, IP security, security headers
+- **Phase 2**: Advanced rate limiting with Redis backend
+- **Phase 3**: Session security, brute force protection, analytics
+
+### Advanced Protection
+- **Geographic Filtering** - Block/allow countries with IP geolocation
+- **Attack Detection** - Velocity, distributed, and pattern-based attack detection
+- **Session Monitoring** - Device fingerprinting and impossible travel detection
+- **Token Security** - JWT blacklist and automatic rotation
+- **Content Moderation** - Automated message content filtering
+
+### Compliance & Privacy
+- **GDPR Ready** - Complete data protection compliance
+- **Cookie Consent** - Configurable consent management
+- **Data Export** - Automated personal data export
+- **Privacy Controls** - User data management and deletion rights
+
+## 📊 Monitoring & Analytics
+
+### Real-Time Metrics
+- **System Health** - CPU, memory, response times
+- **Security Threats** - Active threat detection and alerting
+- **Performance** - Database queries, cache hit rates
+- **Geographic Activity** - User location and threat mapping
+
+### Administrative Tools
+- **Security Dashboard** - Comprehensive threat monitoring
+- **User Analytics** - Registration trends and activity patterns
+- **System Status** - Infrastructure health monitoring
+- **Alert Management** - Configurable security alerts
+
+## 🎯 Default Configuration
+
+### Admin Account
+- **Email**: admin@neighbortools.com
+- **Password**: Admin123!
+
+### Test Accounts
+Test accounts available through admin panel sample data management.
+
+### Security Defaults
+- Rate limiting: 2,000 requests per hour per endpoint
+- Redis authentication enabled by default
+- Security headers enforced
+- Content moderation active
+
+## 📚 Documentation
+
+- **API Documentation**: Available at `/swagger` when running
+- **Bundle System**: See `BUNDLE_SYSTEM_DOCUMENTATION.md`
+- **Security Configuration**: See `backend/scripts/README.md`
+- **Development Guide**: See `CLAUDE.md`
+
+## 🔧 Configuration
+
+### Environment Setup
+```bash
+# Complete interactive setup
+./setup-complete.sh
+
+# Backend configuration only
+cd backend && ./scripts/install.sh
+
+# View current configuration
+cd backend && ./scripts/show-config.sh
+```
+
+### Post-Installation Configuration
+
+After running the installation script, you can customize optional features by editing `backend/src/ToolsSharing.API/config.json`:
+
+#### 💳 Payment Processing (Optional)
+Configure PayPal integration for payment processing:
+
+```json
+{
+  "Payment": {
+    "PayPal": {
+      "ClientId": "YOUR_PAYPAL_CLIENT_ID",
+      "ClientSecret": "YOUR_PAYPAL_CLIENT_SECRET", 
+      "Mode": "sandbox",  // or "live" for production
+      "WebhookId": "YOUR_WEBHOOK_ID",
+      "DisputeWebhookId": "YOUR_DISPUTE_WEBHOOK_ID",
+      "IsEnabled": true
+    }
+  }
+}
+```
+
+**PayPal Setup:**
+1. Create a PayPal Developer account at https://developer.paypal.com
+2. Create a new application to get Client ID and Secret
+3. Configure webhooks for payment and dispute events
+4. Update config.json with your credentials
+
+#### 📧 Email Notifications (Optional)
+Configure SMTP settings for email notifications:
+
+```json
+{
+  "EmailSettings": {
+    "SmtpServer": "smtp.gmail.com",
+    "SmtpPort": "587",
+    "SmtpUsername": "your-email@gmail.com",
+    "SmtpPassword": "your-app-password",
+    "FromEmail": "noreply@yoursite.com",
+    "FromName": "Your Platform Name"
+  }
+}
+```
+
+**SMTP Providers:**
+- **Gmail**: smtp.gmail.com:587 (requires app password)
+- **Outlook**: smtp-mail.outlook.com:587
+- **SendGrid**: smtp.sendgrid.net:587
+- **Custom**: Your SMTP provider settings
+
+Leave `SmtpServer` empty to disable email sending (development mode).
+
+#### 🛡️ Content Moderation (Optional)
+Configure SightEngine API for automated content moderation:
+
+```json
+{
+  "SightEngine": {
+    "ApiUser": "YOUR_SIGHTENGINE_USER",
+    "ApiSecret": "YOUR_SIGHTENGINE_SECRET",
+    "Thresholds": {
+      "NudityThreshold": 0.5,
+      "OffensiveThreshold": 0.6,
+      "ProfanityThreshold": 0.5
+    }
+  }
+}
+```
+
+**SightEngine Setup:**
+1. Sign up at https://sightengine.com/
+2. Get API credentials from your dashboard
+3. Configure detection thresholds (0.0-1.0)
+4. Leave credentials empty to disable (basic moderation still active)
+
+#### 🔒 Security Configuration (Pre-configured)
+Advanced security settings with sensible defaults:
+
+```json
+{
+  "RateLimit": {
+    "EnableRateLimiting": true,
+    "EndpointPolicies": {
+      "/api/auth/login": { "RequestsPerWindow": 20 },
+      "/api/*": { "RequestsPerWindow": 2000 }
+    }
+  },
+  "IPSecurity": {
+    "EnableIPBlocking": true,
+    "BlockedCountries": ["CN", "RU"],  // ISO country codes
+    "KnownMaliciousIPs": []
+  },
+  "BruteForceProtection": {
+    "MaxFailedAttemptsBeforeLockout": 5,
+    "AccountLockoutDuration": "00:15:00"
+  }
+}
+```
+
+#### 💰 Fraud Detection (Pre-configured)
+Financial fraud prevention with configurable limits:
+
+```json
+{
+  "FraudDetection": {
+    "DailyAmountLimit": 5000.00,
+    "HighRiskAmountThreshold": 2000.00,
+    "AutoBlockRiskScore": 85.0
+  }
+}
+```
+
+#### 🏛️ GDPR Compliance (Pre-configured)
+Privacy and data protection settings:
+
+```json
+{
+  "GDPR": {
+    "DataRetentionPeriodYears": 7,
+    "CookieConsentExpiryDays": 365,
+    "PrivacyPolicyVersion": "1.0"
+  }
+}
+```
+
+### Configuration Validation
+
+After editing config.json, restart the backend to apply changes:
 
 ```bash
 cd backend
-
-# Complete setup (run once)
-./scripts/install.sh
-
-# Daily development - choose API mode
-./scripts/start-all.sh
-
-# Infrastructure only (for debugging)
-./scripts/start-infrastructure.sh
+./scripts/api/stop.sh
+./scripts/api/start-local.sh  # or start-watch.sh
 ```
 
-### Frontend Setup
-
-```bash
-cd frontend
-dotnet run
-```
-
-## 📋 Available Scripts
-
-### Backend Scripts (`backend/scripts/`)
-
-**Setup & Start:**
-- `install.sh` - Complete installation (infrastructure + migrations + seeding)
-- `start-all.sh` - Daily development with API mode selection
-- `start-infrastructure.sh` - Start MySQL & Redis only
-- `dev-api.sh` - Start API with `dotnet run`
-- `docker-api.sh` - Start API in Docker
-
-**Stop & Cleanup:**
-- `stop-api.sh` - Stop API (Docker or dotnet processes)
-- `stop-infrastructure.sh` - Stop MySQL & Redis
-- `stop-all.sh` - Stop everything, preserve data
-- `uninstall.sh` - Complete removal (⚠️ deletes all data)
-
-### Root Scripts
-- `start-services.sh` - Start both backend and frontend
-
-## 🌐 Service URLs
-
-| Service | URL | Description |
-|---------|-----|-------------|
-| Frontend | http://localhost:5000 | Main application |
-| Frontend (HTTPS) | https://localhost:5001 | Secure frontend |
-| Backend API | http://localhost:5002 | API endpoints |
-| Backend API (HTTPS) | https://localhost:5003 | Secure API |
-| Swagger UI | http://localhost:5002/swagger | API documentation |
-
-## 🔑 Default Accounts
-
-The seeded database includes these test accounts:
-
-| Email | Password | Role |
-|-------|----------|------|
-| john.doe@email.com | Password123! | User |
-| jane.smith@email.com | Password123! | User |
-
-## 🗄️ Database Schema
-
-### Core Entities
-- **Users** - User accounts with authentication
-- **Tools** - Tool listings with owner relationships
-- **Rentals** - Rental requests and approvals
-- **Reviews** - User and tool reviews (future)
-
-### Key Features
-- **Soft deletion** for data integrity
-- **Audit fields** (CreatedAt, UpdatedAt) on all entities
-- **Navigation properties** for relationships
-- **Indexes** for performance optimization
-
-## 🔒 Security Features
-
-- **JWT Authentication** with automatic token refresh
-- **Password hashing** with secure algorithms
-- **CORS configuration** for cross-origin requests
-- **Input validation** throughout the application
-- **Authenticated HTTP client** with automatic token injection
-- **Secret scanning** with GitLeaks integration
-
-## 🚀 Deployment Modes
-
-### Docker Mode (Production-like)
-```bash
-./scripts/start-all.sh  # Choose option 1
-```
-- API runs in Docker container
-- Production-like environment
-- Port 5002/5003 for API
-
-### Development Mode
-```bash
-./scripts/start-all.sh  # Choose option 2 or 3
-```
-- API runs with `dotnet run` or `dotnet watch`
-- Hot reload support
-- Easier debugging
-
-## 🔐 Secret Scanning with GitLeaks
-
-NeighborTools includes GitLeaks integration to prevent secrets from being accidentally committed to version control.
-
-### 🛡️ What's Included
-
-- **Pre-commit hook** - Automatically scans staged changes before each commit
-- **GitHub Actions workflow** - Runs on push, pull requests, and weekly schedule
-- **Custom configuration** - Tailored rules for .NET/Blazor projects with allowlist for test values
-- **Multiple output formats** - JSON, CSV, and SARIF reports
-
-### 📦 Installation Options
-
-#### Option 1: Local GitLeaks Installation (Recommended)
-
-**Ubuntu/WSL:**
-```bash
-sudo apt update && sudo apt install gitleaks
-```
-
-**macOS:**
-```bash
-brew install gitleaks
-```
-
-**Windows:**
-```bash
-# Via chocolatey
-choco install gitleaks
-
-# Via scoop
-scoop install gitleaks
-```
-
-#### Option 2: Docker-only Setup
-
-If you prefer not to install GitLeaks locally, you can use the Docker-based hook:
-
-```bash
-# Copy the Docker hook to replace the standard one
-cp .git/hooks/pre-commit-docker .git/hooks/pre-commit
-chmod +x .git/hooks/pre-commit
-```
-
-This requires Docker but no local GitLeaks installation.
-
-### 🚀 Usage
-
-#### Manual Scanning
-
-```bash
-# Scan entire repository
-gitleaks detect --verbose
-
-# Scan staged changes only (before commit)
-gitleaks protect --verbose
-
-# Generate detailed report
-gitleaks detect --report-format=json --report-path=gitleaks-report.json
-
-# Use custom configuration
-gitleaks detect --config=.gitleaks.toml --verbose
-```
-
-#### Automatic Scanning
-
-**Pre-commit Hook:**
-- ✅ Already configured
-- Runs automatically on every `git commit`
-- Blocks commits if secrets are detected
-- Provides clear feedback on what was found
-
-**GitHub Actions:**
-- ✅ Already configured in `.github/workflows/gitleaks.yml`
-- Runs on push to main branches
-- Runs on pull requests
-- Weekly scheduled scans
-- Uploads reports as artifacts
-
-### ⚙️ Configuration
-
-The repository includes a custom `.gitleaks.toml` configuration with:
-
-**Custom Rules:**
-- Database connection strings
-- PayPal client secrets
-- JWT signing keys
-- SMTP passwords
-
-**Allowlist:**
-- Test and example files
-- Placeholder values (`your-password`, `example.com`, etc.)
-- Binary files and build artifacts
-- Development-specific patterns
-
-### 🔧 Team Setup
-
-**For New Developers:**
-
-1. **Quick Setup** (recommended):
-   ```bash
-   # Run the automated setup script
-   ./setup-gitleaks.sh
-   ```
-
-2. **Manual Install** (alternative):
-   ```bash
-   # Ubuntu/WSL
-   sudo apt install gitleaks
-   
-   # macOS
-   brew install gitleaks
-   
-   # Or use Docker-based hook (no installation needed)
-   cp .git/hooks/pre-commit-docker .git/hooks/pre-commit
-   chmod +x .git/hooks/pre-commit
-   ```
-
-3. **Verify Setup:**
-   ```bash
-   # Test the hook
-   echo "test" > test.txt
-   git add test.txt
-   git commit -m "Test commit"  # Should show GitLeaks scan
-   git reset HEAD~1 && rm test.txt  # Cleanup
-   ```
-
-4. **Understand the Workflow:**
-   - Commits are automatically scanned
-   - If secrets are detected, the commit is blocked
-   - Remove the secrets and try again
-   - Use environment variables for real secrets
-
-### 🆘 Troubleshooting
-
-**Pre-commit Hook Issues:**
-
-```bash
-# Check if hook is executable
-ls -la .git/hooks/pre-commit
-
-# Test hook manually
-./.git/hooks/pre-commit
-
-# Re-enable hook if disabled
-chmod +x .git/hooks/pre-commit
-```
-
-**False Positives:**
-
-If GitLeaks flags safe content, you can:
-
-1. **Add to allowlist** in `.gitleaks.toml`:
-   ```toml
-   regexes = [
-       '''your-safe-pattern'''
-   ]
-   ```
-
-2. **Create baseline** to ignore existing issues:
-   ```bash
-   gitleaks detect --report-path=.gitleaks-baseline.json
-   gitleaks detect --baseline-path=.gitleaks-baseline.json
-   ```
-
-**Bypass Hook (Emergency Only):**
-```bash
-git commit --no-verify -m "Emergency commit"
-```
-⚠️ **Only use in emergencies and scan manually afterward!**
-
-### 📋 Security Best Practices
-
-✅ **DO:**
-- Use environment variables for secrets
-- Store secrets in secure vaults (Azure Key Vault, AWS Secrets Manager)
-- Rotate any exposed secrets immediately
-- Run manual scans before major releases
-- Train team members on secret management
-
-❌ **DON'T:**
-- Commit real API keys, passwords, or tokens
-- Ignore GitLeaks warnings without investigation
-- Disable the pre-commit hook permanently
-- Store secrets in configuration files
-
-### 📊 Integration Status
-
-| Integration | Status | Description |
-|-------------|---------|-------------|
-| Pre-commit Hook | ✅ Active | Scans every commit automatically |
-| GitHub Actions | ✅ Configured | Runs on push/PR/schedule |
-| Custom Rules | ✅ Configured | .NET/Blazor specific patterns |
-| Allowlist | ✅ Configured | Ignores test/placeholder values |
-| Docker Support | ✅ Available | No local installation needed |
-
-## 📊 Future Enhancements
-
-See TODO files for planned features:
-- `TODO_REDIS_IMPLEMENTATION.md` - Caching and session management
-- `TODO_ORCHESTRATION_OBSERVABILITY.md` - Monitoring and observability
-
-## 🐛 Troubleshooting
-
-### Common Issues
-
-1. **Database Connection Errors**
-   ```bash
-   # Restart infrastructure
-   ./scripts/stop-infrastructure.sh
-   ./scripts/start-infrastructure.sh
-   ```
-
-2. **Authentication Issues**
-   - Check browser console for JWT token errors
-   - Clear browser local storage
-   - Restart both frontend and backend
-
-3. **Port Conflicts**
-   - Ensure ports 5000-5003, 3306, 6379 are available
-   - Check with: `netstat -tulpn | grep :5000`
-
-4. **Docker Issues**
-   ```bash
-   # View container logs
-   cd backend/docker
-   docker-compose logs mysql
-   docker-compose logs redis
-   ```
-
-### Reset Everything
-```bash
-cd backend
-./scripts/uninstall.sh  # ⚠️ Deletes all data
-./scripts/install.sh    # Fresh installation
-```
+**Configuration Tips:**
+- Essential services (MySQL, Redis, MinIO) are configured during installation
+- Payment processing requires PayPal developer account
+- Email notifications require SMTP provider or service
+- Content moderation requires SightEngine API account  
+- Security features work with default settings
+- All optional features can be disabled by leaving credentials empty
+
+## 🏆 Production Ready
+
+NeighborTools includes enterprise-grade features for production deployment:
+
+- **Security**: Multi-layered security system with threat detection
+- **Scalability**: Redis caching and optimized database queries
+- **Monitoring**: Performance metrics and health checks
+- **Compliance**: GDPR-ready privacy and data protection
+- **Reliability**: Comprehensive error handling and logging
+- **Maintenance**: Automated database migrations and seeding
 
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature-name`
-3. Make your changes
-4. Test thoroughly
+2. Create a feature branch
+3. Run GitLeaks setup: `./setup-gitleaks.sh`
+4. Make your changes with comprehensive tests
 5. Submit a pull request
 
-## 📝 License
+## 📄 License
 
-This project is licensed under the MIT License.
-
-## 🆘 Support
-
-- Check the troubleshooting section above
-- Review API documentation at `/swagger`
-- Create an issue in the repository
-- Check container logs for debugging
+MIT License - see LICENSE file for details.

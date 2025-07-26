@@ -1,0 +1,278 @@
+@using ToolsSharing.Core.Models.SecurityAnalytics
+
+<MudCard Elevation="2" Class="@Class">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Color="Color.Info" Class="mr-2" />
+                Security Trends
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudButtonGroup Size="Size.Small" Variant="Variant.Outlined">
+                <MudButton StartIcon="@Icons.Material.Filled.Today" 
+                          Color="@(_selectedPeriod == "24h" ? Color.Primary : Color.Default)"
+                          OnClick="@(() => SetPeriod("24h"))">
+                    24H
+                </MudButton>
+                <MudButton StartIcon="@Icons.Material.Filled.DateRange" 
+                          Color="@(_selectedPeriod == "7d" ? Color.Primary : Color.Default)"
+                          OnClick="@(() => SetPeriod("7d"))">
+                    7D
+                </MudButton>
+                <MudButton StartIcon="@Icons.Material.Filled.CalendarMonth" 
+                          Color="@(_selectedPeriod == "30d" ? Color.Primary : Color.Default)"
+                          OnClick="@(() => SetPeriod("30d"))">
+                    30D
+                </MudButton>
+            </MudButtonGroup>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudGrid>
+            <!-- Main Trends Chart Area -->
+            <MudItem xs="12" md="8">
+                <MudCard Elevation="1" Class="pa-4">
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">Security Events Timeline</MudText>
+                    
+                    <!-- Chart placeholder - In a real implementation, you'd use a charting library -->
+                    <div style="height: 300px; background: linear-gradient(45deg, #f5f5f5 25%, transparent 25%), linear-gradient(-45deg, #f5f5f5 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f5f5f5 75%), linear-gradient(-45deg, transparent 75%, #f5f5f5 75%); background-size: 20px 20px; display: flex; align-items: center; justify-content: center; border-radius: 4px;">
+                        <MudText Typo="Typo.h6" Color="Color.Secondary">
+                            <MudIcon Icon="@Icons.Material.Filled.ShowChart" Size="Size.Large" Class="mr-2" />
+                            Security Trends Chart
+                        </MudText>
+                    </div>
+                    
+                    <!-- Chart Legend -->
+                    <MudGrid Class="mt-3">
+                        <MudItem xs="12" sm="3">
+                            <MudText Typo="Typo.caption" Color="Color.Primary">
+                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Primary" Class="mr-1" />
+                                Login Attempts (@TrendData.LoginAttempts.Sum(x => x.Count))
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudText Typo="Typo.caption" Color="Color.Error">
+                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Error" Class="mr-1" />
+                                Failed Logins (@TrendData.FailedLogins.Sum(x => x.Count))
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudText Typo="Typo.caption" Color="Color.Warning">
+                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Warning" Class="mr-1" />
+                                Suspicious Activity (@TrendData.SuspiciousActivity.Sum(x => x.Count))
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" sm="3">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Secondary" Class="mr-1" />
+                                Brute Force (@TrendData.BruteForceAttacks.Sum(x => x.Count))
+                            </MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudCard>
+            </MudItem>
+
+            <!-- Summary Statistics -->
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="1" Class="pa-4 h-100">
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">Trend Summary</MudText>
+                    
+                    <MudList T="string" Dense="true">
+                        <MudListItem T="string">
+                            <MudGrid AlignItems="Center">
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body2">Total Events</MudText>
+                                </MudItem>
+                                <MudItem xs="4" Class="text-right">
+                                    <MudText Typo="Typo.h6">@GetTotalEvents()</MudText>
+                                </MudItem>
+                            </MudGrid>
+                        </MudListItem>
+                        
+                        <MudListItem T="string">
+                            <MudGrid AlignItems="Center">
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body2">Success Rate</MudText>
+                                </MudItem>
+                                <MudItem xs="4" Class="text-right">
+                                    <MudText Typo="Typo.h6" Color="Color.Success">@GetSuccessRate()%</MudText>
+                                </MudItem>
+                            </MudGrid>
+                        </MudListItem>
+                        
+                        <MudListItem T="string">
+                            <MudGrid AlignItems="Center">
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body2">Avg Risk Score</MudText>
+                                </MudItem>
+                                <MudItem xs="4" Class="text-right">
+                                    <MudText Typo="Typo.h6" Color="@GetRiskScoreColor(GetAverageRiskScore())">
+                                        @GetAverageRiskScore().ToString("F1")
+                                    </MudText>
+                                </MudItem>
+                            </MudGrid>
+                        </MudListItem>
+                        
+                        <MudDivider Class="my-2" />
+                        
+                        <MudListItem T="string">
+                            <MudText Typo="Typo.subtitle2" Class="mb-2">Peak Activity Times</MudText>
+                            @foreach (var hourData in TrendData.HourlyData.OrderByDescending(h => h.TotalEvents).Take(3))
+                            {
+                                <MudText Typo="Typo.body2" Class="mb-1">
+                                    @hourData.Hour:00 - @hourData.TotalEvents events
+                                </MudText>
+                            }
+                        </MudListItem>
+                    </MudList>
+                </MudCard>
+            </MudItem>
+
+            <!-- Top Attackers -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="1" Class="pa-4">
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">Top Threat Sources</MudText>
+                    
+                    @if (TrendData.TopAttackers.Any())
+                    {
+                        <MudList T="string" Dense="true">
+                            @foreach (var attacker in TrendData.TopAttackers.Take(5))
+                            {
+                                <MudListItem T="string">
+                                    <MudGrid AlignItems="Center">
+                                        <MudItem xs="6">
+                                            <MudText Typo="Typo.body2">@attacker.IPAddress</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @(attacker.GeographicLocation ?? "Unknown Location")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="3" Class="text-center">
+                                            <MudText Typo="Typo.body2">@attacker.AttackCount</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">attacks</MudText>
+                                        </MudItem>
+                                        <MudItem xs="3" Class="text-right">
+                                            @if (attacker.IsBlocked)
+                                            {
+                                                <MudChip T="string" Color="Color.Error" Size="Size.Small">Blocked</MudChip>
+                                            }
+                                            else
+                                            {
+                                                <MudChip T="string" Color="Color.Warning" Size="Size.Small">Active</MudChip>
+                                            }
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            <MudText>No significant threat sources detected.</MudText>
+                        </MudAlert>
+                    }
+                </MudCard>
+            </MudItem>
+
+            <!-- Country Analysis -->
+            <MudItem xs="12" md="6">
+                <MudCard Elevation="1" Class="pa-4">
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">Geographic Distribution</MudText>
+                    
+                    @if (TrendData.CountryData.Any())
+                    {
+                        <MudList T="string" Dense="true">
+                            @foreach (var country in TrendData.CountryData.OrderByDescending(c => c.TotalEvents).Take(5))
+                            {
+                                <MudListItem T="string">
+                                    <MudGrid AlignItems="Center">
+                                        <MudItem xs="6">
+                                            <MudText Typo="Typo.body2">@country.CountryName</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@country.CountryCode</MudText>
+                                        </MudItem>
+                                        <MudItem xs="3" Class="text-center">
+                                            <MudText Typo="Typo.body2">@country.TotalEvents</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">events</MudText>
+                                        </MudItem>
+                                        <MudItem xs="3" Class="text-right">
+                                            <MudProgressLinear Value="@((double)country.RiskPercentage)" 
+                                                             Color="@GetRiskColor(country.RiskPercentage)" 
+                                                             Size="Size.Small" />
+                                            <MudText Typo="Typo.caption">@country.RiskPercentage.ToString("F1")%</MudText>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    }
+                    else
+                    {
+                        <MudAlert Severity="Severity.Info">
+                            <MudText>No geographic data available.</MudText>
+                        </MudAlert>
+                    }
+                </MudCard>
+            </MudItem>
+        </MudGrid>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public SecurityTrendData TrendData { get; set; } = new();
+    [Parameter] public string Class { get; set; } = "";
+
+    private string _selectedPeriod = "7d";
+
+    private void SetPeriod(string period)
+    {
+        _selectedPeriod = period;
+        // In a real implementation, this would trigger a data refresh
+        StateHasChanged();
+    }
+
+    private int GetTotalEvents()
+    {
+        return TrendData.LoginAttempts.Sum(x => x.Count) + 
+               TrendData.FailedLogins.Sum(x => x.Count) + 
+               TrendData.SuspiciousActivity.Sum(x => x.Count) + 
+               TrendData.BruteForceAttacks.Sum(x => x.Count);
+    }
+
+    private decimal GetSuccessRate()
+    {
+        var totalLogins = TrendData.LoginAttempts.Sum(x => x.Count);
+        var failedLogins = TrendData.FailedLogins.Sum(x => x.Count);
+        var totalAttempts = totalLogins + failedLogins;
+        
+        return totalAttempts > 0 ? Math.Round((decimal)totalLogins / totalAttempts * 100, 1) : 0;
+    }
+
+    private decimal GetAverageRiskScore()
+    {
+        var riskScores = TrendData.RiskScoreTrend.Where(x => x.Value > 0).ToList();
+        return riskScores.Any() ? (decimal)riskScores.Average(x => x.Value) : 0;
+    }
+
+    private Color GetRiskScoreColor(decimal riskScore)
+    {
+        return riskScore switch
+        {
+            >= 90 => Color.Error,
+            >= 70 => Color.Warning,
+            >= 50 => Color.Info,
+            _ => Color.Success
+        };
+    }
+
+    private Color GetRiskColor(decimal riskPercentage)
+    {
+        return riskPercentage switch
+        {
+            >= 75 => Color.Error,
+            >= 50 => Color.Warning,
+            >= 25 => Color.Info,
+            _ => Color.Success
+        };
+    }
+}

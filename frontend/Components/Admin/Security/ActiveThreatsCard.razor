@@ -1,0 +1,199 @@
+@using ToolsSharing.Core.Models.SecurityAnalytics
+
+<MudCard Elevation="2" Class="h-100">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Shield" Color="Color.Error" Class="mr-2" />
+                Active Threats (@Threats.Count)
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudIconButton Icon="@Icons.Material.Filled.MoreVert" 
+                          Color="Color.Default" 
+                          Size="Size.Small" />
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent Style="max-height: 500px; overflow-y: auto;">
+        @if (!Threats.Any())
+        {
+            <MudAlert Severity="Severity.Success">
+                <MudText>No active threats detected. System is secure.</MudText>
+            </MudAlert>
+        }
+        else
+        {
+            <MudList T="SecurityThreat">
+                @foreach (var threat in Threats.Take(10))
+                {
+                    <MudListItem T="SecurityThreat">
+                        <MudCard Elevation="1" Class="pa-3 mb-2">
+                            <MudGrid AlignItems="Center">
+                                <MudItem xs="12" md="8">
+                                    <MudGrid>
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.subtitle1" Class="mb-1">
+                                                @threat.ThreatType
+                                                <MudChip T="string" Size="Size.Small" 
+                                                        Color="@GetSeverityColor(threat.Severity)" 
+                                                        Class="ml-2">
+                                                    @threat.Severity.ToString()
+                                                </MudChip>
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Source IP:</MudText>
+                                            <MudText Typo="Typo.body2">@threat.SourceIP</MudText>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Risk Score:</MudText>
+                                            <MudText Typo="Typo.body2" Color="@GetRiskScoreColor(threat.RiskScore)">
+                                                @threat.RiskScore.ToString("F1")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Events:</MudText>
+                                            <MudText Typo="Typo.body2">@threat.EventCount</MudText>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Last Activity:</MudText>
+                                            <MudText Typo="Typo.body2">@threat.LastActivity.ToString("HH:mm:ss")</MudText>
+                                        </MudItem>
+                                        @if (!string.IsNullOrEmpty(threat.TargetUser))
+                                        {
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Target User:</MudText>
+                                                <MudText Typo="Typo.body2">@threat.TargetUser</MudText>
+                                            </MudItem>
+                                        }
+                                        @if (!string.IsNullOrEmpty(threat.GeographicLocation))
+                                        {
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">Location:</MudText>
+                                                <MudText Typo="Typo.body2">@GetLocationDisplayText(threat.GeographicLocation)</MudText>
+                                            </MudItem>
+                                        }
+                                    </MudGrid>
+                                </MudItem>
+                                <MudItem xs="12" md="4" Class="text-right">
+                                    <MudGrid>
+                                        <MudItem xs="12">
+                                            @if (threat.IsBlocked)
+                                            {
+                                                <MudChip T="string" Color="Color.Error" Size="Size.Small" Icon="@Icons.Material.Filled.Block">
+                                                    Blocked
+                                                </MudChip>
+                                            }
+                                            else
+                                            {
+                                                <MudChip T="string" Color="Color.Warning" Size="Size.Small" Icon="@Icons.Material.Filled.Visibility">
+                                                    Monitoring
+                                                </MudChip>
+                                            }
+                                        </MudItem>
+                                        <MudItem xs="12" Class="mt-2">
+                                            <MudButtonGroup Size="Size.Small" Variant="Variant.Outlined">
+                                                @if (!threat.IsBlocked)
+                                                {
+                                                    <MudButton StartIcon="@Icons.Material.Filled.Block" 
+                                                              Color="Color.Error" 
+                                                              Size="Size.Small"
+                                                              OnClick="@(() => OnThreatAction.InvokeAsync(("block", threat)))">
+                                                        Block
+                                                    </MudButton>
+                                                }
+                                                <MudButton StartIcon="@Icons.Material.Filled.Search" 
+                                                          Color="Color.Info" 
+                                                          Size="Size.Small"
+                                                          OnClick="@(() => OnThreatAction.InvokeAsync(("investigate", threat)))">
+                                                    Investigate
+                                                </MudButton>
+                                            </MudButtonGroup>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudItem>
+                            </MudGrid>
+
+                            <!-- Description -->
+                            <MudDivider Class="my-2" />
+                            <MudText Typo="Typo.body2" Class="mb-2">@threat.Description</MudText>
+
+                            <!-- Recommended Actions -->
+                            @if (threat.RecommendedActions.Any())
+                            {
+                                <MudExpansionPanels>
+                                    <MudExpansionPanel Text="Recommended Actions">
+                                        <MudList T="string" Dense="true">
+                                            @foreach (var action in threat.RecommendedActions)
+                                            {
+                                                <MudListItem T="string">
+                                                    <MudText Typo="Typo.body2">
+                                                        <MudIcon Icon="@Icons.Material.Filled.ArrowRight" Size="Size.Small" Class="mr-2" />
+                                                        @action
+                                                    </MudText>
+                                                </MudListItem>
+                                            }
+                                        </MudList>
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
+                            }
+                        </MudCard>
+                    </MudListItem>
+                }
+            </MudList>
+
+            @if (Threats.Count > 10)
+            {
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.caption" Class="text-center">
+                    Showing 10 of @Threats.Count threats. 
+                    <MudLink Href="/admin/security/threats">View all threats</MudLink>
+                </MudText>
+            }
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public List<SecurityThreat> Threats { get; set; } = new();
+    [Parameter] public EventCallback<(string action, SecurityThreat threat)> OnThreatAction { get; set; }
+
+    private Color GetSeverityColor(ThreatSeverity severity)
+    {
+        return severity switch
+        {
+            ThreatSeverity.Critical => Color.Error,
+            ThreatSeverity.High => Color.Warning,
+            ThreatSeverity.Medium => Color.Info,
+            _ => Color.Success
+        };
+    }
+
+    private Color GetRiskScoreColor(decimal riskScore)
+    {
+        return riskScore switch
+        {
+            >= 90 => Color.Error,
+            >= 70 => Color.Warning,
+            >= 50 => Color.Info,
+            _ => Color.Success
+        };
+    }
+
+    private string GetLocationDisplayText(string? geographicLocation)
+    {
+        if (string.IsNullOrEmpty(geographicLocation))
+            return "Unknown";
+
+        try
+        {
+            // This would parse the JSON geographic location data
+            // For now, return a simplified display
+            return "Geographic Location";
+        }
+        catch
+        {
+            return "Unknown";
+        }
+    }
+}

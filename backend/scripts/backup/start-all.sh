@@ -45,9 +45,17 @@ if ! docker-compose exec -T mysql mysqladmin ping -h localhost --silent; then
     exit 1
 fi
 
-if ! docker-compose exec -T redis redis-cli ping | grep -q "PONG"; then
-    echo "❌ Redis is not ready. Please check the logs with: docker-compose logs redis"
-    exit 1
+# Check Redis (with password authentication if enabled)
+if [ "${ENABLE_REDIS_PASSWORD:-false}" = "true" ] && [ -n "${REDIS_PASSWORD:-}" ]; then
+    if ! docker-compose exec -T redis redis-cli -a "$REDIS_PASSWORD" ping | grep -q "PONG"; then
+        echo "❌ Redis is not ready with authentication. Please check the logs with: docker-compose logs redis"
+        exit 1
+    fi
+else
+    if ! docker-compose exec -T redis redis-cli ping | grep -q "PONG"; then
+        echo "❌ Redis is not ready. Please check the logs with: docker-compose logs redis"
+        exit 1
+    fi
 fi
 
 # Check MinIO (use curl to check health endpoint)

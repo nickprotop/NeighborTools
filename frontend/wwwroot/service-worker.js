@@ -1,4 +1,4 @@
-const CACHE_VERSION = '1.51.7';
+const CACHE_VERSION = '1.51.13';
 const STATIC_CACHE_NAME = `neighbortools-static-v${CACHE_VERSION}`;
 const DYNAMIC_CACHE_NAME = `neighbortools-dynamic-v${CACHE_VERSION}`;
 const OFFLINE_PAGE = '/offline.html';

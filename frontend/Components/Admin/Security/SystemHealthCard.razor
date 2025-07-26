@@ -1,0 +1,222 @@
+@using ToolsSharing.Core.Models.SecurityAnalytics
+
+<MudCard Elevation="2" Class="@Class">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@GetHealthIcon(SystemHealth.OverallHealth)" 
+                        Color="@GetHealthColor(SystemHealth.OverallHealth)" 
+                        Class="mr-2" />
+                System Health Status
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudChip T="string" Color="@GetHealthColor(SystemHealth.OverallHealth)" 
+                    Size="Size.Small">
+                @SystemHealth.OverallHealth.ToString()
+            </MudChip>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        <MudGrid>
+            <!-- Overall Health Summary -->
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="0" Class="border-solid border-2 mud-border-primary pa-3">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Overall Status</MudText>
+                    <MudGrid AlignItems="Center">
+                        <MudItem xs="8">
+                            <MudText Typo="Typo.h5" Color="@GetHealthColor(SystemHealth.OverallHealth)">
+                                @SystemHealth.OverallHealth.ToString()
+                            </MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                Last updated: @SystemHealth.LastUpdateTime.ToString("HH:mm:ss")
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="4" Class="text-center">
+                            <MudIcon Icon="@GetHealthIcon(SystemHealth.OverallHealth)" 
+                                    Color="@GetHealthColor(SystemHealth.OverallHealth)" 
+                                    Size="Size.Large" />
+                        </MudItem>
+                    </MudGrid>
+                </MudCard>
+            </MudItem>
+
+            <!-- Service Status -->
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="0" Class="border-solid border-2 mud-border-info pa-3">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Security Services</MudText>
+                    <MudList T="string" Dense="true">
+                        <MudListItem T="string">
+                            <MudGrid AlignItems="Center">
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body2">Brute Force Protection</MudText>
+                                </MudItem>
+                                <MudItem xs="4" Class="text-right">
+                                    <MudIcon Icon="@GetServiceStatusIcon(SystemHealth.ServiceStatus.BruteForceProtectionActive)" 
+                                            Color="@GetServiceStatusColor(SystemHealth.ServiceStatus.BruteForceProtectionActive)" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudListItem>
+                        <MudListItem T="string">
+                            <MudGrid AlignItems="Center">
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body2">Session Security</MudText>
+                                </MudItem>
+                                <MudItem xs="4" Class="text-right">
+                                    <MudIcon Icon="@GetServiceStatusIcon(SystemHealth.ServiceStatus.SessionSecurityActive)" 
+                                            Color="@GetServiceStatusColor(SystemHealth.ServiceStatus.SessionSecurityActive)" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudListItem>
+                        <MudListItem T="string">
+                            <MudGrid AlignItems="Center">
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body2">Token Blacklist</MudText>
+                                </MudItem>
+                                <MudItem xs="4" Class="text-right">
+                                    <MudIcon Icon="@GetServiceStatusIcon(SystemHealth.ServiceStatus.TokenBlacklistActive)" 
+                                            Color="@GetServiceStatusColor(SystemHealth.ServiceStatus.TokenBlacklistActive)" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudListItem>
+                        <MudListItem T="string">
+                            <MudGrid AlignItems="Center">
+                                <MudItem xs="8">
+                                    <MudText Typo="Typo.body2">Rate Limiting</MudText>
+                                </MudItem>
+                                <MudItem xs="4" Class="text-right">
+                                    <MudIcon Icon="@GetServiceStatusIcon(SystemHealth.ServiceStatus.RateLimitingActive)" 
+                                            Color="@GetServiceStatusColor(SystemHealth.ServiceStatus.RateLimitingActive)" />
+                                </MudItem>
+                            </MudGrid>
+                        </MudListItem>
+                    </MudList>
+                </MudCard>
+            </MudItem>
+
+            <!-- Performance Metrics -->
+            <MudItem xs="12" md="4">
+                <MudCard Elevation="0" Class="border-solid border-2 mud-border-success pa-3">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Performance</MudText>
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Avg Response Time</MudText>
+                            <MudText Typo="Typo.body1">@SystemHealth.Performance.AverageResponseTime.ToString("F0")ms</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Cache Hit Rate</MudText>
+                            <MudText Typo="Typo.body1">@SystemHealth.Performance.CacheHitRate.ToString("F1")%</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Active Connections</MudText>
+                            <MudText Typo="Typo.body1">@SystemHealth.Performance.ActiveConnections</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">Memory Usage</MudText>
+                            <MudText Typo="Typo.body1">@SystemHealth.Performance.MemoryUsage.ToString("F1")%</MudText>
+                        </MudItem>
+                    </MudGrid>
+                </MudCard>
+            </MudItem>
+
+            <!-- Health Metrics Details -->
+            @if (SystemHealth.HealthMetrics.Any())
+            {
+                <MudItem xs="12">
+                    <MudText Typo="Typo.subtitle1" Class="mb-2">Component Health</MudText>
+                    <MudGrid>
+                        @foreach (var metric in SystemHealth.HealthMetrics)
+                        {
+                            <MudItem xs="12" sm="6" md="3">
+                                <MudCard Elevation="1" Class="pa-2">
+                                    <MudGrid AlignItems="Center">
+                                        <MudItem xs="8">
+                                            <MudText Typo="Typo.body2">@metric.Name</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@metric.Category</MudText>
+                                        </MudItem>
+                                        <MudItem xs="4" Class="text-right">
+                                            <MudIcon Icon="@GetHealthIcon(metric.Status)" 
+                                                    Color="@GetHealthColor(metric.Status)" />
+                                        </MudItem>
+                                    </MudGrid>
+                                    <MudText Typo="Typo.body2" Class="mt-1">@metric.Value</MudText>
+                                </MudCard>
+                            </MudItem>
+                        }
+                    </MudGrid>
+                </MudItem>
+            }
+
+            <!-- System Alerts -->
+            @if (SystemHealth.SystemAlerts.Any())
+            {
+                <MudItem xs="12">
+                    <MudAlert Severity="Severity.Warning" Class="mt-2">
+                        <MudText Typo="Typo.subtitle2">System Alerts (@SystemHealth.SystemAlerts.Count)</MudText>
+                        @foreach (var alert in SystemHealth.SystemAlerts.Take(3))
+                        {
+                            <MudText Typo="Typo.body2" Class="mt-1">
+                                <MudIcon Icon="@GetAlertIcon(alert.Severity)" Size="Size.Small" Class="mr-1" />
+                                @alert.Message
+                            </MudText>
+                        }
+                        @if (SystemHealth.SystemAlerts.Count > 3)
+                        {
+                            <MudText Typo="Typo.caption" Class="mt-1">
+                                And @(SystemHealth.SystemAlerts.Count - 3) more alerts...
+                            </MudText>
+                        }
+                    </MudAlert>
+                </MudItem>
+            }
+        </MudGrid>
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public SystemHealthStatus SystemHealth { get; set; } = new();
+    [Parameter] public string Class { get; set; } = "";
+
+    private Color GetHealthColor(HealthStatus status)
+    {
+        return status switch
+        {
+            HealthStatus.Healthy => Color.Success,
+            HealthStatus.Warning => Color.Warning,
+            HealthStatus.Critical => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetHealthIcon(HealthStatus status)
+    {
+        return status switch
+        {
+            HealthStatus.Healthy => Icons.Material.Filled.CheckCircle,
+            HealthStatus.Warning => Icons.Material.Filled.Warning,
+            HealthStatus.Critical => Icons.Material.Filled.Error,
+            _ => Icons.Material.Filled.Help
+        };
+    }
+
+    private Color GetServiceStatusColor(bool isActive)
+    {
+        return isActive ? Color.Success : Color.Error;
+    }
+
+    private string GetServiceStatusIcon(bool isActive)
+    {
+        return isActive ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel;
+    }
+
+    private string GetAlertIcon(AlertSeverity severity)
+    {
+        return severity switch
+        {
+            AlertSeverity.Critical => Icons.Material.Filled.Error,
+            AlertSeverity.Error => Icons.Material.Filled.Warning,
+            AlertSeverity.Warning => Icons.Material.Filled.Info,
+            _ => Icons.Material.Filled.NotificationImportant
+        };
+    }
+}

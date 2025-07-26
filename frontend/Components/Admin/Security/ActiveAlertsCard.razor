@@ -1,0 +1,226 @@
+@using ToolsSharing.Core.Models.SecurityAnalytics
+
+<MudCard Elevation="2" Class="h-100">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.NotificationImportant" Color="Color.Warning" Class="mr-2" />
+                Active Alerts (@Alerts.Count)
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudIconButton Icon="@Icons.Material.Filled.MarkEmailRead" 
+                          Color="Color.Default" 
+                          Size="Size.Small"
+                          Title="Mark All as Read" />
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent Style="max-height: 500px; overflow-y: auto;">
+        @if (!Alerts.Any())
+        {
+            <MudAlert Severity="Severity.Info">
+                <MudText>No active alerts. All systems are operating normally.</MudText>
+            </MudAlert>
+        }
+        else
+        {
+            <MudList T="SecurityAlert">
+                @foreach (var alert in Alerts.Take(10))
+                {
+                    <MudListItem T="SecurityAlert">
+                        <MudCard Elevation="1" Class="pa-3 mb-2" Style="@GetAlertCardStyle(alert.Severity)">
+                            <MudGrid AlignItems="Center">
+                                <MudItem xs="12" md="9">
+                                    <MudGrid>
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.subtitle1" Class="mb-1">
+                                                <MudIcon Icon="@GetAlertIcon(alert.Severity)" 
+                                                        Color="@GetSeverityColor(alert.Severity)" 
+                                                        Size="Size.Small" 
+                                                        Class="mr-2" />
+                                                @alert.Title
+                                                <MudChip T="string" Size="Size.Small" 
+                                                        Color="@GetSeverityColor(alert.Severity)" 
+                                                        Class="ml-2">
+                                                    @alert.Severity.ToString()
+                                                </MudChip>
+                                                @if (alert.RequiresImmedateAction)
+                                                {
+                                                    <MudChip T="string" Size="Size.Small" 
+                                                            Color="Color.Error" 
+                                                            Icon="@Icons.Material.Filled.PriorityHigh"
+                                                            Class="ml-1">
+                                                        Urgent
+                                                    </MudChip>
+                                                }
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            <MudText Typo="Typo.body2" Class="mb-2">@alert.Message</MudText>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Source IP:</MudText>
+                                            <MudText Typo="Typo.body2">@alert.SourceIP</MudText>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Risk Score:</MudText>
+                                            <MudText Typo="Typo.body2" Color="@GetRiskScoreColor(alert.RiskScore)">
+                                                @alert.RiskScore.ToString("F1")
+                                            </MudText>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Created:</MudText>
+                                            <MudText Typo="Typo.body2">@alert.CreatedAt.ToString("yyyy-MM-dd HH:mm")</MudText>
+                                        </MudItem>
+                                        <MudItem xs="12" sm="6">
+                                            <MudText Typo="Typo.body2" Color="Color.Secondary">Status:</MudText>
+                                            <MudChip T="string" Size="Size.Small" Color="@GetStatusColor(alert.Status)">
+                                                @alert.Status.ToString()
+                                            </MudChip>
+                                        </MudItem>
+                                        @if (!string.IsNullOrEmpty(alert.UserEmail))
+                                        {
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">User:</MudText>
+                                                <MudText Typo="Typo.body2">@alert.UserEmail</MudText>
+                                            </MudItem>
+                                        }
+                                        @if (alert.AcknowledgedAt.HasValue)
+                                        {
+                                            <MudItem xs="12">
+                                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                                    Acknowledged by @alert.AcknowledgedBy at @alert.AcknowledgedAt.Value.ToString("HH:mm")
+                                                </MudText>
+                                            </MudItem>
+                                        }
+                                    </MudGrid>
+                                </MudItem>
+                                <MudItem xs="12" md="3" Class="text-right">
+                                    <MudGrid Justify="Justify.FlexEnd">
+                                        <MudItem xs="12">
+                                            @if (alert.Status == AlertStatus.New)
+                                            {
+                                                <MudButton StartIcon="@Icons.Material.Filled.Check" 
+                                                          Color="Color.Info" 
+                                                          Size="Size.Small"
+                                                          Variant="Variant.Outlined"
+                                                          OnClick="@(() => OnAlertAction.InvokeAsync(("acknowledge", alert)))"
+                                                          Class="mb-1">
+                                                    Acknowledge
+                                                </MudButton>
+                                            }
+                                        </MudItem>
+                                        <MudItem xs="12">
+                                            @if (alert.Status != AlertStatus.Resolved)
+                                            {
+                                                <MudButton StartIcon="@Icons.Material.Filled.CheckCircle" 
+                                                          Color="Color.Success" 
+                                                          Size="Size.Small"
+                                                          Variant="Variant.Outlined"
+                                                          OnClick="@(() => OnAlertAction.InvokeAsync(("resolve", alert)))">
+                                                    Resolve
+                                                </MudButton>
+                                            }
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudItem>
+                            </MudGrid>
+
+                            <!-- Suggested Actions -->
+                            @if (alert.SuggestedActions.Any())
+                            {
+                                <MudDivider Class="my-2" />
+                                <MudExpansionPanels>
+                                    <MudExpansionPanel Text="Suggested Actions">
+                                        <MudList T="string" Dense="true">
+                                            @foreach (var action in alert.SuggestedActions)
+                                            {
+                                                <MudListItem T="string">
+                                                    <MudText Typo="Typo.body2">
+                                                        <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" Class="mr-2" />
+                                                        @action
+                                                    </MudText>
+                                                </MudListItem>
+                                            }
+                                        </MudList>
+                                    </MudExpansionPanel>
+                                </MudExpansionPanels>
+                            }
+                        </MudCard>
+                    </MudListItem>
+                }
+            </MudList>
+
+            @if (Alerts.Count > 10)
+            {
+                <MudDivider Class="my-2" />
+                <MudText Typo="Typo.caption" Class="text-center">
+                    Showing 10 of @Alerts.Count alerts. 
+                    <MudLink Href="/admin/security/alerts">View all alerts</MudLink>
+                </MudText>
+            }
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public List<SecurityAlert> Alerts { get; set; } = new();
+    [Parameter] public EventCallback<(string action, SecurityAlert alert)> OnAlertAction { get; set; }
+
+    private Color GetSeverityColor(AlertSeverity severity)
+    {
+        return severity switch
+        {
+            AlertSeverity.Critical => Color.Error,
+            AlertSeverity.Error => Color.Warning,
+            AlertSeverity.Warning => Color.Info,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetStatusColor(AlertStatus status)
+    {
+        return status switch
+        {
+            AlertStatus.New => Color.Warning,
+            AlertStatus.Acknowledged => Color.Info,
+            AlertStatus.InProgress => Color.Primary,
+            AlertStatus.Resolved => Color.Success,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetRiskScoreColor(decimal riskScore)
+    {
+        return riskScore switch
+        {
+            >= 90 => Color.Error,
+            >= 70 => Color.Warning,
+            >= 50 => Color.Info,
+            _ => Color.Success
+        };
+    }
+
+    private string GetAlertIcon(AlertSeverity severity)
+    {
+        return severity switch
+        {
+            AlertSeverity.Critical => Icons.Material.Filled.Error,
+            AlertSeverity.Error => Icons.Material.Filled.Warning,
+            AlertSeverity.Warning => Icons.Material.Filled.Info,
+            _ => Icons.Material.Filled.NotificationImportant
+        };
+    }
+
+    private string GetAlertCardStyle(AlertSeverity severity)
+    {
+        var borderColor = severity switch
+        {
+            AlertSeverity.Critical => "border-left: 4px solid var(--mud-palette-error);",
+            AlertSeverity.Error => "border-left: 4px solid var(--mud-palette-warning);",
+            AlertSeverity.Warning => "border-left: 4px solid var(--mud-palette-info);",
+            _ => "border-left: 4px solid var(--mud-palette-secondary);"
+        };
+        return borderColor;
+    }
+}

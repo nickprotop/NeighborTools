@@ -87,6 +87,7 @@ builder.Services.AddScoped<BundleReviewService>();
 builder.Services.AddScoped<IUrlService, UrlService>();
 builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddScoped<IBreadcrumbService, BreadcrumbService>();
+builder.Services.AddScoped<ISecurityAnalyticsService, SecurityAnalyticsService>();
 
 var app = builder.Build();
 

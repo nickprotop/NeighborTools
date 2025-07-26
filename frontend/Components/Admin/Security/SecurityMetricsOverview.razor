@@ -1,0 +1,233 @@
+@using ToolsSharing.Core.Models.SecurityAnalytics
+
+<MudGrid Class="mb-4">
+    <MudItem xs="12">
+        <MudText Typo="Typo.h5" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-2" />
+            Security Metrics Overview
+        </MudText>
+    </MudItem>
+
+    <!-- Primary Metrics -->
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2" Class="pa-4 h-100">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Event" 
+                        Color="Color.Primary" 
+                        Size="Size.Large" 
+                        Class="mb-2" />
+                <MudText Typo="Typo.h4" Class="mb-1">
+                    @Metrics.TotalSecurityEvents.ToString("N0")
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Total Security Events
+                </MudText>
+                <MudText Typo="Typo.caption" Class="mt-1">
+                    Last @((int)Metrics.AnalysisPeriod.TotalDays) days
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2" Class="pa-4 h-100">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Warning" 
+                        Color="Color.Error" 
+                        Size="Size.Large" 
+                        Class="mb-2" />
+                <MudText Typo="Typo.h4" Class="mb-1" Color="@GetSeverityColor(Metrics.FailedLoginAttempts)">
+                    @Metrics.FailedLoginAttempts.ToString("N0")
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Failed Login Attempts
+                </MudText>
+                <MudChip T="string" Size="Size.Small" 
+                        Color="@GetSeverityColor(Metrics.FailedLoginAttempts)" 
+                        Class="mt-1">
+                    @GetRiskLevel(Metrics.FailedLoginAttempts)
+                </MudChip>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2" Class="pa-4 h-100">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Security" 
+                        Color="Color.Warning" 
+                        Size="Size.Large" 
+                        Class="mb-2" />
+                <MudText Typo="Typo.h4" Class="mb-1" Color="@GetSeverityColor(Metrics.SuspiciousActivities)">
+                    @Metrics.SuspiciousActivities.ToString("N0")
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Suspicious Activities
+                </MudText>
+                <MudProgressLinear Value="@GetThreatPercentage(Metrics.SuspiciousActivities)" 
+                                  Color="@GetSeverityColor(Metrics.SuspiciousActivities)" 
+                                  Class="mt-2" />
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+        <MudCard Elevation="2" Class="pa-4 h-100">
+            <MudCardContent Class="text-center">
+                <MudIcon Icon="@Icons.Material.Filled.Block" 
+                        Color="Color.Error" 
+                        Size="Size.Large" 
+                        Class="mb-2" />
+                <MudText Typo="Typo.h4" Class="mb-1">
+                    @Metrics.BlockedIPs.ToString("N0")
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Blocked IP Addresses
+                </MudText>
+                <MudText Typo="Typo.caption" Class="mt-1">
+                    Active blocks
+                </MudText>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Secondary Metrics -->
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="1" Class="pa-3">
+            <MudCardContent>
+                <MudGrid AlignItems="Center">
+                    <MudItem xs="8">
+                        <MudText Typo="Typo.body1">Account Lockouts</MudText>
+                        <MudText Typo="Typo.h6">@Metrics.AccountLockouts.ToString("N0")</MudText>
+                    </MudItem>
+                    <MudItem xs="4" Class="text-right">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Warning" />
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="1" Class="pa-3">
+            <MudCardContent>
+                <MudGrid AlignItems="Center">
+                    <MudItem xs="8">
+                        <MudText Typo="Typo.body1">Brute Force Attempts</MudText>
+                        <MudText Typo="Typo.h6">@Metrics.BruteForceAttempts.ToString("N0")</MudText>
+                    </MudItem>
+                    <MudItem xs="4" Class="text-right">
+                        <MudIcon Icon="@Icons.Material.Filled.Gavel" Color="Color.Error" />
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="4">
+        <MudCard Elevation="1" Class="pa-3">
+            <MudCardContent>
+                <MudGrid AlignItems="Center">
+                    <MudItem xs="8">
+                        <MudText Typo="Typo.body1">Geographic Anomalies</MudText>
+                        <MudText Typo="Typo.h6">@Metrics.GeographicAnomalies.ToString("N0")</MudText>
+                    </MudItem>
+                    <MudItem xs="4" Class="text-right">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Color="Color.Info" />
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+
+    <!-- Risk Score Summary -->
+    <MudItem xs="12">
+        <MudCard Elevation="2" Class="pa-4">
+            <MudCardContent>
+                <MudGrid AlignItems="Center">
+                    <MudItem xs="12" md="6">
+                        <MudText Typo="Typo.h6" Class="mb-2">Risk Score Analysis</MudText>
+                        <MudGrid>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Average Risk Score</MudText>
+                                <MudText Typo="Typo.h5" Color="@GetRiskScoreColor(Metrics.AverageRiskScore)">
+                                    @Metrics.AverageRiskScore.ToString("F1")
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Maximum Risk Score</MudText>
+                                <MudText Typo="Typo.h5" Color="@GetRiskScoreColor(Metrics.MaxRiskScore)">
+                                    @Metrics.MaxRiskScore.ToString("F1")
+                                </MudText>
+                            </MudItem>
+                        </MudGrid>
+                    </MudItem>
+                    <MudItem xs="12" md="6">
+                        <MudProgressCircular Value="@((double)Metrics.AverageRiskScore)" 
+                                           Color="@GetRiskScoreColor(Metrics.AverageRiskScore)"
+                                           Size="Size.Large" />
+                        <MudText Typo="Typo.caption" Class="mt-2">
+                            Risk Level: @GetRiskLevelText(Metrics.AverageRiskScore)
+                        </MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudCardContent>
+        </MudCard>
+    </MudItem>
+</MudGrid>
+
+@code {
+    [Parameter] public SecurityMetrics Metrics { get; set; } = new();
+
+    private Color GetSeverityColor(int count)
+    {
+        return count switch
+        {
+            > 100 => Color.Error,
+            > 50 => Color.Warning,
+            > 10 => Color.Info,
+            _ => Color.Success
+        };
+    }
+
+    private string GetRiskLevel(int count)
+    {
+        return count switch
+        {
+            > 100 => "Critical",
+            > 50 => "High",
+            > 10 => "Medium",
+            _ => "Low"
+        };
+    }
+
+    private double GetThreatPercentage(int count)
+    {
+        // Calculate percentage based on total events
+        if (Metrics.TotalSecurityEvents == 0) return 0;
+        return Math.Min(100, (double)count / Metrics.TotalSecurityEvents * 100);
+    }
+
+    private Color GetRiskScoreColor(decimal riskScore)
+    {
+        return riskScore switch
+        {
+            >= 90 => Color.Error,
+            >= 70 => Color.Warning,
+            >= 50 => Color.Info,
+            _ => Color.Success
+        };
+    }
+
+    private string GetRiskLevelText(decimal riskScore)
+    {
+        return riskScore switch
+        {
+            >= 90 => "Critical Risk",
+            >= 70 => "High Risk",
+            >= 50 => "Medium Risk",
+            >= 30 => "Low Risk",
+            _ => "Minimal Risk"
+        };
+    }
+}

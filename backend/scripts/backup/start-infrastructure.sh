@@ -47,12 +47,21 @@ else
     exit 1
 fi
 
-# Check Redis
-if docker-compose exec -T redis redis-cli ping | grep -q "PONG"; then
-    echo "✅ Redis is ready (localhost:6379)"
+# Check Redis (with password authentication if enabled)
+if [ "${ENABLE_REDIS_PASSWORD:-false}" = "true" ] && [ -n "${REDIS_PASSWORD:-}" ]; then
+    if docker-compose exec -T redis redis-cli -a "$REDIS_PASSWORD" ping | grep -q "PONG"; then
+        echo "✅ Redis is ready with authentication (localhost:6379)"
+    else
+        echo "❌ Redis is not ready with authentication. Check logs: docker-compose logs redis"
+        exit 1
+    fi
 else
-    echo "❌ Redis is not ready. Check logs: docker-compose logs redis"
-    exit 1
+    if docker-compose exec -T redis redis-cli ping | grep -q "PONG"; then
+        echo "✅ Redis is ready (localhost:6379)"
+    else
+        echo "❌ Redis is not ready. Check logs: docker-compose logs redis"
+        exit 1
+    fi
 fi
 
 # Check MinIO (use curl to check health endpoint)

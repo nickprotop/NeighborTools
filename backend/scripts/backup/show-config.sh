@@ -40,6 +40,8 @@ if [ -f "$ENV_FILE" ]; then
     echo "   📝 .env file: $ENV_FILE"
     echo "   MYSQL_ROOT_PASSWORD: $(grep "MYSQL_ROOT_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2 | sed 's/./*/g')"
     echo "   MYSQL_USER_PASSWORD: $(grep "MYSQL_USER_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2 | sed 's/./*/g')"
+    echo "   REDIS_PASSWORD: $(grep "REDIS_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2 | sed 's/./*/g')"
+    echo "   ENABLE_REDIS_PASSWORD: $(grep "ENABLE_REDIS_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2)"
     echo "   MINIO_ROOT_USER: $(grep "MINIO_ROOT_USER=" "$ENV_FILE" | cut -d'=' -f2)"
     echo "   MINIO_ROOT_PASSWORD: $(grep "MINIO_ROOT_PASSWORD=" "$ENV_FILE" | cut -d'=' -f2 | sed 's/./*/g')"
 else

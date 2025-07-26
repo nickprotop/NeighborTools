@@ -1,0 +1,306 @@
+@using ToolsSharing.Core.Models.SecurityAnalytics
+
+<MudCard Elevation="2" Class="@Class">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Pattern" Color="Color.Warning" Class="mr-2" />
+                Attack Patterns (@AttackPatterns.Count)
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudButton StartIcon="@Icons.Material.Filled.Analytics" 
+                      Variant="Variant.Outlined" 
+                      Size="Size.Small"
+                      Href="/admin/security/patterns">
+                View Details
+            </MudButton>
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (!AttackPatterns.Any())
+        {
+            <MudAlert Severity="Severity.Info">
+                <MudText>No attack patterns detected. This indicates good security posture.</MudText>
+            </MudAlert>
+        }
+        else
+        {
+            <MudGrid>
+                <!-- Pattern Overview -->
+                <MudItem xs="12" md="4">
+                    <MudCard Elevation="1" Class="pa-4 h-100">
+                        <MudText Typo="Typo.subtitle1" Class="mb-3">Pattern Overview</MudText>
+                        
+                        <MudGrid>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Total Patterns</MudText>
+                                <MudText Typo="Typo.h6">@AttackPatterns.Count</MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Total Events</MudText>
+                                <MudText Typo="Typo.h6">@AttackPatterns.Sum(ap => ap.Frequency)</MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Avg Risk Score</MudText>
+                                <MudText Typo="Typo.h6" Color="@GetRiskScoreColor(GetAverageRiskScore())">
+                                    @GetAverageRiskScore().ToString("F1")
+                                </MudText>
+                            </MudItem>
+                            <MudItem xs="6">
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">Active Patterns</MudText>
+                                <MudText Typo="Typo.h6" Color="Color.Warning">
+                                    @GetActivePatterns()
+                                </MudText>
+                            </MudItem>
+                        </MudGrid>
+
+                        <MudDivider Class="my-3" />
+
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Pattern Types</MudText>
+                        <MudList T="string" Dense="true">
+                            @foreach (var patternGroup in AttackPatterns.GroupBy(ap => ap.PatternType).OrderByDescending(g => g.Sum(p => p.Frequency)))
+                            {
+                                <MudListItem T="string">
+                                    <MudGrid AlignItems="Center">
+                                        <MudItem xs="8">
+                                            <MudText Typo="Typo.body2">@patternGroup.Key</MudText>
+                                        </MudItem>
+                                        <MudItem xs="4" Class="text-right">
+                                            <MudText Typo="Typo.body2">@patternGroup.Sum(p => p.Frequency)</MudText>
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudCard>
+                </MudItem>
+
+                <!-- Pattern Trends -->
+                <MudItem xs="12" md="8">
+                    <MudCard Elevation="1" Class="pa-4 h-100">
+                        <MudText Typo="Typo.subtitle1" Class="mb-3">Pattern Analysis</MudText>
+                        
+                        <!-- Chart placeholder -->
+                        <div style="height: 200px; background: linear-gradient(45deg, #f5f5f5 25%, transparent 25%), linear-gradient(-45deg, #f5f5f5 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #f5f5f5 75%), linear-gradient(-45deg, transparent 75%, #f5f5f5 75%); background-size: 15px 15px; display: flex; align-items: center; justify-content: center; border-radius: 4px; margin-bottom: 16px;">
+                            <MudText Typo="Typo.h6" Color="Color.Secondary">
+                                <MudIcon Icon="@Icons.Material.Filled.BarChart" Size="Size.Large" Class="mr-2" />
+                                Attack Pattern Frequency Chart
+                            </MudText>
+                        </div>
+
+                        <!-- Top Patterns List -->
+                        <MudText Typo="Typo.subtitle2" Class="mb-2">Most Frequent Patterns</MudText>
+                        <MudList T="string" Dense="true">
+                            @foreach (var pattern in AttackPatterns.OrderByDescending(ap => ap.Frequency).Take(5))
+                            {
+                                <MudListItem T="string">
+                                    <MudGrid AlignItems="Center">
+                                        <MudItem xs="6">
+                                            <MudText Typo="Typo.body2">@pattern.PatternName</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">@pattern.PatternType</MudText>
+                                        </MudItem>
+                                        <MudItem xs="2" Class="text-center">
+                                            <MudText Typo="Typo.body2">@pattern.Frequency</MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">events</MudText>
+                                        </MudItem>
+                                        <MudItem xs="2" Class="text-center">
+                                            <MudText Typo="Typo.body2" Color="@GetRiskScoreColor(pattern.AverageRiskScore)">
+                                                @pattern.AverageRiskScore.ToString("F1")
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">risk</MudText>
+                                        </MudItem>
+                                        <MudItem xs="2" Class="text-right">
+                                            <MudIcon Icon="@GetTrendIcon(pattern.Trend)" 
+                                                    Color="@GetTrendColor(pattern.Trend)" 
+                                                    Size="Size.Small" />
+                                        </MudItem>
+                                    </MudGrid>
+                                </MudListItem>
+                            }
+                        </MudList>
+                    </MudCard>
+                </MudItem>
+
+                <!-- Detailed Pattern Information -->
+                <MudItem xs="12">
+                    <MudCard Elevation="1" Class="pa-4">
+                        <MudText Typo="Typo.subtitle1" Class="mb-3">Pattern Details</MudText>
+                        
+                        <MudExpansionPanels MultiExpansion="true">
+                            @foreach (var pattern in AttackPatterns.OrderByDescending(ap => ap.AverageRiskScore).Take(8))
+                            {
+                                <MudExpansionPanel>
+                                    <TitleContent>
+                                        <div style="display: flex; align-items: center; width: 100%;">
+                                            <MudIcon Icon="@GetPatternIcon(pattern.PatternType)" Class="mr-3" />
+                                            <div style="flex-grow: 1;">
+                                                <MudText Typo="Typo.subtitle2">@pattern.PatternName</MudText>
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    @pattern.Frequency events • Risk: @pattern.AverageRiskScore.ToString("F1") • @pattern.PatternType
+                                                </MudText>
+                                            </div>
+                                            <MudChip T="string" Color="@GetRiskScoreColor(pattern.AverageRiskScore)" Size="Size.Small">
+                                                @GetRiskLevel(pattern.AverageRiskScore)
+                                            </MudChip>
+                                        </div>
+                                    </TitleContent>
+                                    <ChildContent>
+                                        <MudGrid>
+                                            <MudItem xs="12" md="6">
+                                                <MudText Typo="Typo.body2" Class="mb-2">@pattern.Description</MudText>
+                                                
+                                                <MudGrid>
+                                                    <MudItem xs="6">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">First Seen:</MudText>
+                                                        <MudText Typo="Typo.body2">@pattern.FirstSeen.ToString("yyyy-MM-dd")</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="6">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Last Seen:</MudText>
+                                                        <MudText Typo="Typo.body2">@pattern.LastSeen.ToString("yyyy-MM-dd")</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="6">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Frequency:</MudText>
+                                                        <MudText Typo="Typo.body2">@pattern.Frequency events</MudText>
+                                                    </MudItem>
+                                                    <MudItem xs="6">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">Trend:</MudText>
+                                                        <MudText Typo="Typo.body2" Color="@GetTrendColor(pattern.Trend)">
+                                                            <MudIcon Icon="@GetTrendIcon(pattern.Trend)" Size="Size.Small" Class="mr-1" />
+                                                            @pattern.Trend.ToString()
+                                                        </MudText>
+                                                    </MudItem>
+                                                </MudGrid>
+                                            </MudItem>
+                                            
+                                            <MudItem xs="12" md="6">
+                                                @if (pattern.CommonSources.Any())
+                                                {
+                                                    <MudText Typo="Typo.subtitle2" Class="mb-2">Common Sources</MudText>
+                                                    <MudList T="string" Dense="true">
+                                                        @foreach (var source in pattern.CommonSources.Take(3))
+                                                        {
+                                                            <MudListItem T="string">
+                                                                <MudText Typo="Typo.body2">@source</MudText>
+                                                            </MudListItem>
+                                                        }
+                                                    </MudList>
+                                                }
+                                                
+                                                @if (pattern.TargetedUsers.Any())
+                                                {
+                                                    <MudText Typo="Typo.subtitle2" Class="mb-2 mt-3">Targeted Users</MudText>
+                                                    <MudList T="string" Dense="true">
+                                                        @foreach (var user in pattern.TargetedUsers.Take(3))
+                                                        {
+                                                            <MudListItem T="string">
+                                                                <MudText Typo="Typo.body2">@user</MudText>
+                                                            </MudListItem>
+                                                        }
+                                                    </MudList>
+                                                }
+                                            </MudItem>
+                                            
+                                            @if (pattern.Characteristics.Any())
+                                            {
+                                                <MudItem xs="12">
+                                                    <MudDivider Class="my-2" />
+                                                    <MudText Typo="Typo.subtitle2" Class="mb-2">Pattern Characteristics</MudText>
+                                                    <MudGrid>
+                                                        @foreach (var characteristic in pattern.Characteristics.Take(6))
+                                                        {
+                                                            <MudItem xs="12" sm="6" md="4">
+                                                                <MudCard Elevation="0" Class="border-solid border-1 mud-border-secondary pa-2">
+                                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@characteristic.Key</MudText>
+                                                                    <MudText Typo="Typo.body2">@characteristic.Value</MudText>
+                                                                </MudCard>
+                                                            </MudItem>
+                                                        }
+                                                    </MudGrid>
+                                                </MudItem>
+                                            }
+                                        </MudGrid>
+                                    </ChildContent>
+                                </MudExpansionPanel>
+                            }
+                        </MudExpansionPanels>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        }
+    </MudCardContent>
+</MudCard>
+
+@code {
+    [Parameter] public List<AttackPatternSummary> AttackPatterns { get; set; } = new();
+    [Parameter] public string Class { get; set; } = "";
+
+    private decimal GetAverageRiskScore()
+    {
+        return AttackPatterns.Any() 
+            ? AttackPatterns.Average(ap => ap.AverageRiskScore) 
+            : 0;
+    }
+
+    private int GetActivePatterns()
+    {
+        return AttackPatterns.Count(ap => ap.LastSeen >= DateTime.UtcNow.AddDays(-1));
+    }
+
+    private Color GetRiskScoreColor(decimal riskScore)
+    {
+        return riskScore switch
+        {
+            >= 90 => Color.Error,
+            >= 70 => Color.Warning,
+            >= 50 => Color.Info,
+            _ => Color.Success
+        };
+    }
+
+    private string GetRiskLevel(decimal riskScore)
+    {
+        return riskScore switch
+        {
+            >= 90 => "Critical",
+            >= 70 => "High",
+            >= 50 => "Medium",
+            _ => "Low"
+        };
+    }
+
+    private Color GetTrendColor(AttackPatternTrend trend)
+    {
+        return trend switch
+        {
+            AttackPatternTrend.Increasing => Color.Error,
+            AttackPatternTrend.Decreasing => Color.Success,
+            _ => Color.Info
+        };
+    }
+
+    private string GetTrendIcon(AttackPatternTrend trend)
+    {
+        return trend switch
+        {
+            AttackPatternTrend.Increasing => Icons.Material.Filled.TrendingUp,
+            AttackPatternTrend.Decreasing => Icons.Material.Filled.TrendingDown,
+            _ => Icons.Material.Filled.TrendingFlat
+        };
+    }
+
+    private string GetPatternIcon(string patternType)
+    {
+        return patternType.ToLower() switch
+        {
+            "bruteforce" or "brute force" => Icons.Material.Filled.Gavel,
+            "sequential" => Icons.Material.Filled.LinearScale,
+            "distributed" => Icons.Material.Filled.ScatterPlot,
+            "velocity" => Icons.Material.Filled.Speed,
+            "dictionary" => Icons.Material.Filled.MenuBook,
+            "geographic" => Icons.Material.Filled.LocationOn,
+            "session" => Icons.Material.Filled.AccountCircle,
+            _ => Icons.Material.Filled.Pattern
+        };
+    }
+}
