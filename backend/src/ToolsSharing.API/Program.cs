@@ -48,6 +48,12 @@ builder.Services.AddInfrastructure(builder.Configuration);
 // Add Phase 1 Security Services
 builder.Services.AddPhase1Security(builder.Configuration);
 
+// Add Phase 2 Security Services
+builder.Services.AddPhase2Security(builder.Configuration);
+
+// Add Phase 3 Security Services
+builder.Services.AddPhase3Security(builder.Configuration);
+
 // Add GDPR services
 builder.Services.AddGDPRServices();
 
@@ -169,6 +175,12 @@ app.UseCors("AllowFrontend");
 // Phase 1 Security Middleware - Applied FIRST for maximum protection
 app.UsePhase1Security();
 
+// Phase 2 Security Middleware - Applied AFTER Phase 1
+app.UsePhase2Security();
+
+// Phase 3 Security Middleware - Applied AFTER Phase 2
+app.UsePhase3Security();
+
 // Add PayPal webhook validation middleware (must be before authentication)
 app.UseMiddleware<PayPalWebhookValidationMiddleware>();
 
@@ -228,6 +240,8 @@ try
     
     // Validate security configuration
     app.Services.ValidateSecurityConfiguration();
+    app.Services.ValidatePhase2SecurityConfiguration();
+    app.Services.ValidatePhase3SecurityConfiguration();
     
     // Run database migrations only (essential data is in migrations)
     using (var scope = app.Services.CreateScope())

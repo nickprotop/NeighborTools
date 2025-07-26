@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json.Serialization;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -114,6 +115,15 @@ public class GeolocationService : IGeolocationService
             if (response.IsSuccessStatusCode)
             {
                 var json = await response.Content.ReadAsStringAsync();
+                
+                // Log the actual response for debugging rate limiting issues
+                if (string.IsNullOrEmpty(json) || json.Length < 10)
+                {
+                    _logger.LogWarning("ipwho.is returned empty/invalid response for IP {IP}. Response: '{Response}'", 
+                        ipAddress, json);
+                    return null;
+                }
+                
                 var apiResponse = System.Text.Json.JsonSerializer.Deserialize<IPWhoResponse>(json);
                 
                 if (apiResponse?.Success == true)
@@ -135,8 +145,19 @@ public class GeolocationService : IGeolocationService
                 }
                 else
                 {
-                    _logger.LogWarning("ipwho.is API returned error for IP {IP}: {Message}", 
-                        ipAddress, apiResponse?.Message);
+                    // Check if this might be a rate limiting response
+                    if (json.Contains("rate") || json.Contains("limit") || json.Contains("quota"))
+                    {
+                        _logger.LogWarning("ipwho.is API rate limiting detected for IP {IP}. Response: '{ResponsePreview}'", 
+                            ipAddress, json.Length > 300 ? json.Substring(0, 300) + "..." : json);
+                    }
+                    else
+                    {
+                        // Log both the message and a portion of the raw response for debugging
+                        _logger.LogWarning("ipwho.is API returned error for IP {IP}. Message: '{Message}', Response preview: '{ResponsePreview}'", 
+                            ipAddress, apiResponse?.Message ?? "null", 
+                            json.Length > 200 ? json.Substring(0, 200) + "..." : json);
+                    }
                 }
             }
             else
@@ -191,62 +212,138 @@ public class GeolocationService : IGeolocationService
     // Data model for ipwho.is response
     private class IPWhoResponse
     {
+        [JsonPropertyName("ip")]
         public string? Ip { get; set; }
+        
+        [JsonPropertyName("success")]
         public bool Success { get; set; }
+        
+        [JsonPropertyName("type")]
         public string? Type { get; set; }
+        
+        [JsonPropertyName("continent")]
         public string? Continent { get; set; }
+        
+        [JsonPropertyName("continent_code")]
         public string? ContinentCode { get; set; }
+        
+        [JsonPropertyName("country")]
         public string? Country { get; set; }
+        
+        [JsonPropertyName("country_code")]
         public string? CountryCode { get; set; }
+        
+        [JsonPropertyName("region")]
         public string? Region { get; set; }
+        
+        [JsonPropertyName("region_code")]
         public string? RegionCode { get; set; }
+        
+        [JsonPropertyName("city")]
         public string? City { get; set; }
+        
+        [JsonPropertyName("latitude")]
         public double? Latitude { get; set; }
+        
+        [JsonPropertyName("longitude")]
         public double? Longitude { get; set; }
+        
+        [JsonPropertyName("is_eu")]
         public bool IsEu { get; set; }
+        
+        [JsonPropertyName("postal")]
         public string? PostalCode { get; set; }
+        
+        [JsonPropertyName("calling_code")]
         public string? CallingCode { get; set; }
+        
+        [JsonPropertyName("capital")]
         public string? Capital { get; set; }
+        
+        [JsonPropertyName("borders")]
         public string? Borders { get; set; }
+        [JsonPropertyName("flag")]
         public IPWhoFlag? Flag { get; set; }
+        
+        [JsonPropertyName("connection")]
         public IPWhoConnection? Connection { get; set; }
+        
+        [JsonPropertyName("timezone")]
         public IPWhoTimezone? Timezone { get; set; }
+        
+        [JsonPropertyName("security")]
         public IPWhoSecurity? Security { get; set; }
+        
+        [JsonPropertyName("message")]
         public string? Message { get; set; }
     }
 
     private class IPWhoFlag
     {
+        [JsonPropertyName("img")]
         public string? Img { get; set; }
+        
+        [JsonPropertyName("emoji")]
         public string? Emoji { get; set; }
+        
+        [JsonPropertyName("emoji_unicode")]
         public string? EmojiUnicode { get; set; }
     }
 
     private class IPWhoConnection
     {
+        [JsonPropertyName("asn")]
         public string? Asn { get; set; }
+        
+        [JsonPropertyName("org")]
         public string? Org { get; set; }
+        
+        [JsonPropertyName("isp")]
         public string? Isp { get; set; }
+        
+        [JsonPropertyName("domain")]
         public string? Domain { get; set; }
     }
 
     private class IPWhoTimezone
     {
+        [JsonPropertyName("id")]
         public string? Id { get; set; }
+        
+        [JsonPropertyName("abbr")]
         public string? Abbr { get; set; }
+        
+        [JsonPropertyName("is_dst")]
         public bool IsDst { get; set; }
+        
+        [JsonPropertyName("offset")]
         public int Offset { get; set; }
-        public int Utc { get; set; }
+        
+        [JsonPropertyName("utc")]
+        public string? Utc { get; set; }
+        
+        [JsonPropertyName("current_time")]
         public string? CurrentTime { get; set; }
     }
 
     private class IPWhoSecurity
     {
+        [JsonPropertyName("is_proxy")]
         public bool IsProxy { get; set; }
+        
+        [JsonPropertyName("proxy_type")]
         public string? ProxyType { get; set; }
+        
+        [JsonPropertyName("is_vpn")]
         public bool IsVpn { get; set; }
+        
+        [JsonPropertyName("is_tor")]
         public bool IsTor { get; set; }
+        
+        [JsonPropertyName("is_threat")]
         public bool IsThreat { get; set; }
+        
+        [JsonPropertyName("is_anonymous")]
         public bool IsAnonymous { get; set; }
     }
 }

@@ -229,5 +229,165 @@
     "CustomHeaders": {
       "_Usage": "Add custom security headers as key-value pairs, e.g. 'X-Custom-Header': 'value'"
     }
+  },
+  "RateLimit": {
+    "_Comment": "Phase 2 Security: Advanced rate limiting with sliding window algorithm",
+    "EnableRateLimiting": true,
+    "SlidingWindowDuration": "00:15:00",
+    "EnablePerUserLimiting": true,
+    "EnablePerIPLimiting": true,
+    "EndpointPolicies": {
+      "/api/auth/login": {
+        "RequestsPerWindow": 20,
+        "WindowDuration": "00:15:00",
+        "Priority": 3,
+        "SkipForAdmins": false
+      },
+      "/api/auth/register": {
+        "RequestsPerWindow": 10,
+        "WindowDuration": "01:00:00",
+        "Priority": 3,
+        "SkipForAdmins": false
+      },
+      "/api/auth/reset-password": {
+        "RequestsPerWindow": 5,
+        "WindowDuration": "01:00:00",
+        "Priority": 3,
+        "SkipForAdmins": false
+      },
+      "/api/auth/refresh-token": {
+        "RequestsPerWindow": 50,
+        "WindowDuration": "01:00:00",
+        "Priority": 2,
+        "SkipForAdmins": false
+      },
+      "/api/admin/*": {
+        "RequestsPerWindow": 1000,
+        "WindowDuration": "01:00:00",
+        "Priority": 1,
+        "SkipForAdmins": true
+      },
+      "/api/*": {
+        "RequestsPerWindow": 2000,
+        "WindowDuration": "01:00:00",
+        "PerUserRequestsPerWindow": 4000,
+        "Priority": 1,
+        "SkipForAdmins": false
+      }
+    },
+    "GlobalLimits": {
+      "RequestsPerHourPerIP": 20000,
+      "RequestsPerHourPerUser": 10000,
+      "RequestsPerDayPerIP": 100000,
+      "AnonymousRequestsPerHour": 500
+    },
+    "Penalties": {
+      "FirstViolationBlock": "00:01:00",
+      "SecondViolationBlock": "00:05:00",
+      "RepeatedViolationBlock": "00:15:00",
+      "ViolationTrackingWindow": "01:00:00",
+      "ViolationMultiplier": 2.0,
+      "MaximumBlockDuration": "01:00:00"
+    },
+    "DefaultEndpointLimit": {
+      "RequestsPerWindow": 2000,
+      "WindowDuration": "01:00:00",
+      "Priority": 1,
+      "SkipForAdmins": false
+    }
+  },
+  "AuthenticationLogging": {
+    "_Comment": "Phase 3 Security: Comprehensive authentication event logging and monitoring with real-time alerts",
+    "EnableAuthenticationLogging": true,
+    "LogSuccessfulLogins": true,
+    "LogFailedLogins": true,
+    "LogPasswordChanges": true,
+    "LogAccountLockouts": true,
+    "LogSuspiciousActivity": true,
+    "LogSessionEvents": true,
+    "LogTokenEvents": true,
+    "EnableRealTimeAlerts": true,
+    "AlertOnBruteForce": true,
+    "AlertOnGeographicAnomalies": true,
+    "AlertOnSessionHijacking": true,
+    "AlertOnUnknownDevices": true,
+    "AlertThresholdMinutes": 5,
+    "MaxAlertsPerHour": 10,
+    "NotificationRecipients": [],
+    "EnableSlackNotifications": false,
+    "SlackWebhookUrl": "",
+    "EnableEmailNotifications": true,
+    "EmailRecipients": [],
+    "LogRetentionDays": 90,
+    "CompressOldLogs": true,
+    "CompressionThresholdDays": 30,
+    "EnableMetrics": true,
+    "EnableDashboard": true,
+    "DashboardRefreshSeconds": 30
+  },
+  "SessionSecurity": {
+    "_Comment": "Phase 3 Security: Enhanced session security with device fingerprinting and geographic validation",
+    "EnableSessionSecurity": true,
+    "MaxConcurrentSessions": 5,
+    "SessionTimeoutMinutes": 60,
+    "EnableDeviceFingerprinting": true,
+    "TerminateOnDeviceChange": false,
+    "EnableGeographicValidation": true,
+    "MaxTravelSpeedKmh": 1000,
+    "MinLocationChangeIntervalMinutes": 30,
+    "TerminateOnImpossibleTravel": true,
+    "EnableHijackingDetection": true,
+    "MaxIpChangesPerSession": 3,
+    "TerminateOnSuspectedHijacking": true,
+    "EnableTokenRotation": true,
+    "TokenRotationIntervalMinutes": 15,
+    "TokenGracePeriodMinutes": 5,
+    "EnableSessionCleanup": true,
+    "SessionCleanupIntervalHours": 24,
+    "ExpiredSessionRetentionDays": 30,
+    "SuspiciousSessionThreshold": 70.0,
+    "TerminateSessionThreshold": 90.0,
+    "EnableRealTimeMonitoring": true,
+    "AlertAdminsForHighRisk": true,
+    "ExemptIpRanges": [],
+    "SuspiciousUserAgents": [
+      "curl",
+      "wget", 
+      "python-requests",
+      "PostmanRuntime"
+    ],
+    "RequireReauthForSensitiveOps": true,
+    "SensitiveEndpoints": [
+      "/api/auth/change-password",
+      "/api/auth/delete-account", 
+      "/api/payment/",
+      "/api/admin/"
+    ],
+    "ReauthTimeoutMinutes": 5
+  },
+  "BruteForceProtection": {
+    "_Comment": "Phase 3 Security: Advanced brute force detection with attack pattern analysis",
+    "EnableBruteForceProtection": true,
+    "MaxFailedAttemptsBeforeLockout": 5,
+    "AccountLockoutDuration": "00:15:00",
+    "ProgressiveLockoutMultiplier": 2.0,
+    "MaxLockoutDuration": "24:00:00",
+    "CaptchaThreshold": 3,
+    "SequentialAttackThreshold": 5,
+    "DistributedAttackThreshold": 10,
+    "VelocityAttackThreshold": 3,
+    "VelocityWindowMinutes": 1,
+    "DetectionWindowMinutes": 15,
+    "DataRetentionDays": 30,
+    "EnableGeographicAnalysis": true,
+    "EnableAttackPatternTracking": true,
+    "EnableRealTimeBlocking": true,
+    "WhitelistedIPs": [],
+    "BlacklistedIPs": [],
+    "AlertThresholds": {
+      "HighRiskScore": 80.0,
+      "CriticalRiskScore": 95.0,
+      "AlertAdminsThreshold": 85.0
+    }
   }
 }

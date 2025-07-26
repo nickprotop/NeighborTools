@@ -1436,4 +1436,19 @@ public class EmailNotificationService : IEmailNotificationService
 </body>
 </html>";
     }
+
+    public async Task<bool> SendSecurityAlertAsync(string recipient, string subject, string message, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await SendEmailAsync(recipient, subject, message);
+            _logger.LogInformation("Security alert email sent to {Recipient} with subject {Subject}", recipient, subject);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to send security alert email to {Recipient}", recipient);
+            return false;
+        }
+    }
 }

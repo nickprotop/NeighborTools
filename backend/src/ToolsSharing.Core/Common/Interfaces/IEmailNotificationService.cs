@@ -38,6 +38,9 @@ public interface IEmailNotificationService
     Task<List<EmailQueueItem>> GetFailedEmailsAsync(int count = 50, CancellationToken cancellationToken = default);
     Task<bool> RetryFailedEmailAsync(Guid queueItemId, CancellationToken cancellationToken = default);
     
+    // Security alerts
+    Task<bool> SendSecurityAlertAsync(string recipient, string subject, string message, CancellationToken cancellationToken = default);
+    
     // Additional methods for API endpoints
     Task<Dictionary<string, bool>> GetUserNotificationPreferencesAsync(string userId, CancellationToken cancellationToken = default);
     Task UpdateUserNotificationPreferencesAsync(string userId, Dictionary<string, bool> preferences, CancellationToken cancellationToken = default);

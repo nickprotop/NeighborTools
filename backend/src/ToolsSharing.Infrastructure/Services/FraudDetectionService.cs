@@ -115,7 +115,7 @@ public class FraudDetectionService : IFraudDetectionService
             var fraudCheck = new FraudCheck
             {
                 UserId = userId,
-                PaymentId = payment.Id.ToString(),
+                PaymentId = payment.Id,
                 CheckType = FraudCheckType.PatternAnalysis,
                 RiskLevel = result.RiskLevel,
                 RiskScore = result.RiskScore,

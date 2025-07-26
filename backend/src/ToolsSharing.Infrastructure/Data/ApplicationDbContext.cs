@@ -61,6 +61,12 @@ public class ApplicationDbContext : IdentityDbContext<User>
     public DbSet<Bundle> Bundles { get; set; }
     public DbSet<BundleTool> BundleTools { get; set; }
     public DbSet<BundleRental> BundleRentals { get; set; }
+    
+    // Phase 3 Security entities
+    public DbSet<SecurityEvent> SecurityEvents { get; set; }
+    public DbSet<UserSession> UserSessions { get; set; }
+    public DbSet<BlacklistedToken> BlacklistedTokens { get; set; }
+    public DbSet<AttackPattern> AttackPatterns { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

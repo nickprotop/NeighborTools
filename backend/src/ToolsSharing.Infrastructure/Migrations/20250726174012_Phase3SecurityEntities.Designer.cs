@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ToolsSharing.Infrastructure.Data;
 
@@ -11,9 +12,11 @@ using ToolsSharing.Infrastructure.Data;
 namespace ToolsSharing.Infrastructure.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20250726174012_Phase3SecurityEntities")]
+    partial class Phase3SecurityEntities
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -953,7 +956,7 @@ namespace ToolsSharing.Infrastructure.Migrations
 
                     b.Property<string>("CheckDetails")
                         .IsRequired()
-                        .HasColumnType("JSON");
+                        .HasColumnType("longtext");
 
                     b.Property<int>("CheckType")
                         .HasColumnType("int");
@@ -973,7 +976,11 @@ namespace ToolsSharing.Infrastructure.Migrations
                     b.Property<bool>("PaymentBlocked")
                         .HasColumnType("tinyint(1)");
 
-                    b.Property<Guid>("PaymentId")
+                    b.Property<string>("PaymentId")
+                        .IsRequired()
+                        .HasColumnType("longtext");
+
+                    b.Property<Guid?>("PaymentId1")
                         .HasColumnType("char(36)");
 
                     b.Property<string>("ReviewNotes")
@@ -989,8 +996,7 @@ namespace ToolsSharing.Infrastructure.Migrations
                         .HasColumnType("int");
 
                     b.Property<decimal>("RiskScore")
-                        .HasPrecision(5, 2)
-                        .HasColumnType("decimal(5,2)");
+                        .HasColumnType("decimal(65,30)");
 
                     b.Property<int>("Status")
                         .HasColumnType("int");
@@ -1013,11 +1019,7 @@ namespace ToolsSharing.Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PaymentId");
-
-                    b.HasIndex("RiskLevel");
-
-                    b.HasIndex("Status");
+                    b.HasIndex("PaymentId1");
 
                     b.HasIndex("UserId");
 
@@ -3426,14 +3428,12 @@ namespace ToolsSharing.Infrastructure.Migrations
                 {
                     b.HasOne("ToolsSharing.Core.Entities.Payment", "Payment")
                         .WithMany()
-                        .HasForeignKey("PaymentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .HasForeignKey("PaymentId1");
 
                     b.HasOne("ToolsSharing.Core.Entities.User", "User")
                         .WithMany()
                         .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Restrict)
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Payment");

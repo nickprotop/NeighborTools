@@ -70,8 +70,31 @@ MYSQL_ROOT_PASSWORD=$(read_password "MySQL root password" "RootPassword123!")
 # Get MySQL user password
 MYSQL_USER_PASSWORD=$(read_password "MySQL toolsuser password" "ToolsPassword123!")
 
-# Get Redis password
-REDIS_PASSWORD=$(read_password "Redis password" "RedisPassword123!")
+# Get Redis password with production warning
+echo ""
+echo "⚠️  Redis Security Configuration"
+echo "================================"
+echo "🚨 IMPORTANT: This will enable Redis password authentication."
+echo "   - New installations: Redis will require password"
+echo "   - Existing production: This WILL break existing passwordless connections"
+echo "   - All applications must use: localhost:6379,password=YourPassword"
+echo ""
+echo "Choose Redis configuration:"
+echo "1) Enable Redis password (recommended for security)"
+echo "2) Skip Redis password (keep existing behavior - NOT SECURE)"
+echo ""
+read -p "Enter choice [1-2] (default: 1): " redis_choice
+redis_choice=${redis_choice:-1}
+
+if [ "$redis_choice" = "1" ]; then
+    REDIS_PASSWORD=$(read_password "Redis password" "RedisPassword123!")
+    ENABLE_REDIS_PASSWORD=true
+else
+    echo "⚠️  WARNING: Redis will run WITHOUT password authentication"
+    echo "   This is NOT recommended for production or network-accessible Redis"
+    REDIS_PASSWORD=""
+    ENABLE_REDIS_PASSWORD=false
+fi
 
 echo ""
 echo "📁 MinIO File Storage Configuration"
@@ -121,7 +144,11 @@ echo "================================================"
 echo "Review your configuration:"
 echo "   MySQL root password: $(echo "$MYSQL_ROOT_PASSWORD" | sed 's/./*/g')"
 echo "   MySQL user password: $(echo "$MYSQL_USER_PASSWORD" | sed 's/./*/g')"
-echo "   Redis password: $(echo "$REDIS_PASSWORD" | sed 's/./*/g')"
+if [ "$ENABLE_REDIS_PASSWORD" = "true" ]; then
+    echo "   Redis password: $(echo "$REDIS_PASSWORD" | sed 's/./*/g')"
+else
+    echo "   Redis password: DISABLED (no authentication)"
+fi
 echo "   Blazor WASM app URL: $FRONTEND_BASE_URL"
 echo "================================================"
 echo ""
@@ -151,6 +178,7 @@ MYSQL_USER_PASSWORD=$MYSQL_USER_PASSWORD
 
 # Redis Configuration
 REDIS_PASSWORD=$REDIS_PASSWORD
+ENABLE_REDIS_PASSWORD=$ENABLE_REDIS_PASSWORD
 
 # MinIO Configuration
 MINIO_ROOT_USER=$MINIO_ROOT_USER
@@ -190,9 +218,16 @@ done
 # Wait for Redis to be ready
 echo "⏳ Waiting for Redis to be ready..."
 for i in {1..10}; do
-    if docker-compose exec -T redis redis-cli -a "$REDIS_PASSWORD" ping | grep -q "PONG"; then
-        echo "✅ Redis is ready with authentication"
-        break
+    if [ "$ENABLE_REDIS_PASSWORD" = "true" ]; then
+        if docker-compose exec -T redis redis-cli -a "$REDIS_PASSWORD" ping | grep -q "PONG"; then
+            echo "✅ Redis is ready with authentication"
+            break
+        fi
+    else
+        if docker-compose exec -T redis redis-cli ping | grep -q "PONG"; then
+            echo "✅ Redis is ready (no authentication)"
+            break
+        fi
     fi
     if [ $i -eq 10 ]; then
         echo "❌ Redis failed to start within 10 seconds"
@@ -226,7 +261,11 @@ fi
 
 # Update the database connection string, Redis connection, and Blazor WASM app URL in config.json
 CONNECTION_STRING="server=localhost;port=3306;database=toolssharing;uid=toolsuser;pwd=${MYSQL_USER_PASSWORD}"
-REDIS_CONNECTION_STRING="localhost:6379,password=${REDIS_PASSWORD}"
+if [ "$ENABLE_REDIS_PASSWORD" = "true" ]; then
+    REDIS_CONNECTION_STRING="localhost:6379,password=${REDIS_PASSWORD}"
+else
+    REDIS_CONNECTION_STRING="localhost:6379"
+fi
 if command -v jq &> /dev/null; then
     # Use jq if available for proper JSON manipulation
     tmp=$(mktemp)
@@ -318,7 +357,11 @@ echo "============================================="
 echo "Database Configuration:"
 echo "  • MySQL Root Password: $(echo "$MYSQL_ROOT_PASSWORD" | sed 's/./*/g')"
 echo "  • MySQL User Password: $(echo "$MYSQL_USER_PASSWORD" | sed 's/./*/g')"
-echo "  • Redis Password: $(echo "$REDIS_PASSWORD" | sed 's/./*/g')"
+if [ "$ENABLE_REDIS_PASSWORD" = "true" ]; then
+    echo "  • Redis Password: $(echo "$REDIS_PASSWORD" | sed 's/./*/g')"
+else
+    echo "  • Redis Password: DISABLED (no authentication)"
+fi
 echo ""
 echo "File Storage Configuration:"
 echo "  • MinIO Console: http://localhost:9001 (user: $MINIO_ROOT_USER)"
@@ -330,7 +373,11 @@ echo "  • Or run './start-infrastructure.sh' + 'dotnet run' for API debugging"
 echo "  • Access Swagger UI at: http://localhost:5002/swagger"
 echo "  • Blazor WASM app will be available at: $FRONTEND_BASE_URL"
 echo "  • MySQL: localhost:3306 (user: toolsuser, password: [configured above])"
-echo "  • Redis: localhost:6379 (password: [configured above])"
+if [ "$ENABLE_REDIS_PASSWORD" = "true" ]; then
+    echo "  • Redis: localhost:6379 (password: [configured above])"
+else
+    echo "  • Redis: localhost:6379 (no authentication)"
+fi
 echo ""
 echo "Admin Access:"
 echo "  • Essential admin user created: admin@neighbortools.com / Admin123!"

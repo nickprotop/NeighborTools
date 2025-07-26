@@ -7,7 +7,7 @@ public class FraudCheck : BaseEntity
     public string UserId { get; set; } = string.Empty;
     public User? User { get; set; }
     
-    public string PaymentId { get; set; } = string.Empty;
+    public Guid PaymentId { get; set; }
     public Payment? Payment { get; set; }
     
     public FraudCheckType CheckType { get; set; }

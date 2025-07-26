@@ -37,11 +37,13 @@ public class MessageConfiguration : IEntityTypeConfiguration<Message>
             
         builder.Property(m => m.Priority)
             .HasConversion<int>()
-            .HasDefaultValue(MessagePriority.Normal);
+            .HasDefaultValue(MessagePriority.Normal)
+            .HasSentinel(MessagePriority.Normal); // Explicit sentinel value
             
         builder.Property(m => m.Type)
             .HasConversion<int>()
-            .HasDefaultValue(MessageType.Direct);
+            .HasDefaultValue(MessageType.Direct)
+            .HasSentinel(MessageType.Direct); // Explicit sentinel value
         
         // Indexes for performance
         builder.HasIndex(m => m.SenderId);
