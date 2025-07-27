@@ -88,6 +88,8 @@ builder.Services.AddScoped<IThemeService, ThemeService>();
 builder.Services.AddScoped<IBreadcrumbService, BreadcrumbService>();
 builder.Services.AddScoped<ISecurityAnalyticsService, SecurityAnalyticsService>();
 builder.Services.AddScoped<ISecurityManagementService, SecurityManagementService>();
+builder.Services.AddScoped<IDeviceDetectionService, DeviceDetectionService>();
+builder.Services.AddScoped<IBrowserCacheService, BrowserCacheService>();
 
 var app = builder.Build();
 

@@ -7,6 +7,7 @@ namespace ToolsSharing.Core.Common.Interfaces;
 public interface IToolsService
 {
     Task<ApiResponse<List<DTOs.Tools.ToolDto>>> GetToolsAsync(GetToolsQuery query);
+    Task<ApiResponse<PagedResult<DTOs.Tools.ToolDto>>> GetToolsPagedAsync(GetToolsQuery query);
     Task<ApiResponse<List<DTOs.Tools.ToolDto>>> GetUserToolsAsync(GetToolsQuery query, string userId);
     Task<ApiResponse<DTOs.Tools.ToolDto>> GetToolByIdAsync(GetToolByIdQuery query);
     Task<ApiResponse<DTOs.Tools.ToolDto>> CreateToolAsync(CreateToolCommand command);

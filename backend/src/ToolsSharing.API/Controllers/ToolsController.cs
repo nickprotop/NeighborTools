@@ -31,6 +31,19 @@ public class ToolsController : ControllerBase
         return Ok(result);
     }
 
+    [HttpGet("paged")]
+    public async Task<IActionResult> GetToolsPaged([FromQuery] GetToolsQuery query)
+    {
+        // Set default page size to 24 if not specified
+        if (query.PageSize <= 0)
+        {
+            query = query with { PageSize = 24 };
+        }
+        
+        var result = await _toolsService.GetToolsPagedAsync(query);
+        return Ok(result);
+    }
+
     [HttpGet("my-tools")]
     [Authorize]
     public async Task<IActionResult> GetMyTools([FromQuery] GetToolsQuery query)

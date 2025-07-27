@@ -102,6 +102,84 @@ public class ToolsService : IToolsService
         }
     }
 
+    public async Task<ApiResponse<PagedResult<ToolDto>>> GetToolsPagedAsync(GetToolsQuery query)
+    {
+        try
+        {
+            var toolsQuery = _context.Tools
+                .Include(t => t.Owner)
+                .Include(t => t.Images)
+                .Where(t => !t.IsDeleted && t.IsApproved);
+
+            // Apply filters
+            if (!string.IsNullOrEmpty(query.Category))
+            {
+                toolsQuery = toolsQuery.Where(t => t.Category.ToLower() == query.Category.ToLower());
+            }
+
+            if (!string.IsNullOrEmpty(query.Location))
+            {
+                toolsQuery = toolsQuery.Where(t => t.Location.ToLower().Contains(query.Location.ToLower()));
+            }
+
+            if (query.MaxDailyRate.HasValue)
+            {
+                toolsQuery = toolsQuery.Where(t => t.DailyRate <= query.MaxDailyRate.Value);
+            }
+
+            if (query.AvailableOnly)
+            {
+                toolsQuery = toolsQuery.Where(t => t.IsAvailable);
+            }
+
+            if (!string.IsNullOrEmpty(query.SearchTerm))
+            {
+                var searchTerm = query.SearchTerm.ToLower();
+                toolsQuery = toolsQuery.Where(t => 
+                    t.Name.ToLower().Contains(searchTerm) ||
+                    t.Description.ToLower().Contains(searchTerm) ||
+                    t.Brand.ToLower().Contains(searchTerm) ||
+                    t.Model.ToLower().Contains(searchTerm));
+            }
+
+            // Get total count before applying pagination
+            var totalCount = await toolsQuery.CountAsync();
+
+            // Apply sorting
+            toolsQuery = query.SortBy?.ToLower() switch
+            {
+                "name" => toolsQuery.OrderBy(t => t.Name),
+                "price-low" => toolsQuery.OrderBy(t => t.DailyRate),
+                "price-high" => toolsQuery.OrderByDescending(t => t.DailyRate),
+                "rating" => toolsQuery.OrderByDescending(t => t.AverageRating),
+                "newest" => toolsQuery.OrderByDescending(t => t.CreatedAt),
+                _ => toolsQuery.OrderBy(t => t.Name)
+            };
+
+            // Apply pagination
+            var tools = await toolsQuery
+                .Skip((query.PageNumber - 1) * query.PageSize)
+                .Take(query.PageSize)
+                .ToListAsync();
+
+            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+
+            var pagedResult = new PagedResult<ToolDto>
+            {
+                Items = toolDtos,
+                TotalCount = totalCount,
+                PageNumber = query.PageNumber,
+                PageSize = query.PageSize
+            };
+
+            return ApiResponse<PagedResult<ToolDto>>.CreateSuccess(pagedResult, "Tools retrieved successfully");
+        }
+        catch (Exception ex)
+        {
+            return ApiResponse<PagedResult<ToolDto>>.CreateFailure($"Error retrieving tools: {ex.Message}. Inner: {ex.InnerException?.Message}");
+        }
+    }
+
     public async Task<ApiResponse<List<ToolDto>>> GetUserToolsAsync(GetToolsQuery query, string userId)
     {
         try

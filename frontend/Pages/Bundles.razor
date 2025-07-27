@@ -10,6 +10,8 @@
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject IBreadcrumbService BreadcrumbService
+@inject IDeviceDetectionService DeviceDetectionService
+@inject IBrowserCacheService BrowserCacheService
 @implements IDisposable
 
 <PageTitle>Tool Bundles - NeighborTools</PageTitle>
@@ -62,7 +64,7 @@
                                  Label="Category" 
                                  Variant="Variant.Outlined"
                                  AnchorOrigin="Origin.BottomCenter"
-                                 @bind-Value:after="LoadBundles">
+                                 @bind-Value:after="ApplyFilters">
                             <MudSelectItem Value="@("")">All Categories</MudSelectItem>
                             @foreach (var category in availableCategories)
                             {
@@ -71,7 +73,7 @@
                         </MudSelect>
 
                         <!-- Featured Filter -->
-                        <MudSwitch @bind-Value="featuredOnly" Label="Featured Only" Color="Color.Primary" @bind-Value:after="LoadBundles" />
+                        <MudSwitch @bind-Value="featuredOnly" Label="Featured Only" Color="Color.Primary" @bind-Value:after="ApplyFilters" />
                     </MudStack>
                 </MudPaper>
             </MudItem>
@@ -89,19 +91,33 @@
                         }
                     </MudGrid>
                 }
-                else if (bundles?.Items?.Any() == true)
+                else if ((isMobile && allLoadedBundles.Any()) || (!isMobile && bundles?.Items?.Any() == true))
                 {
                     <!-- Results Header -->
                     <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-                        <MudText Typo="Typo.h6">
-                            Found @bundles.TotalCount bundle@(bundles.TotalCount != 1 ? "s" : "")
+                        <MudText Typo="Typo.body1" Color="Color.Secondary">
+                            @if (isMobile && allLoadedBundles.Any())
+                            {
+                                @($"Showing {allLoadedBundles.Count} of {bundles?.TotalCount ?? 0} bundles")
+                            }
+                            else if (!isMobile && bundles != null)
+                            {
+                                var startItem = (currentPage - 1) * pageSize + 1;
+                                var endItem = Math.Min(currentPage * pageSize, bundles.TotalCount);
+                                @($"Showing {startItem}-{endItem} of {bundles.TotalCount} bundles")
+                            }
+                            else
+                            {
+                                @("No bundles found")
+                            }
                         </MudText>
                         
                         <!-- Sort Options -->
                         <MudSelect @bind-Value="sortBy" 
                                  Label="Sort by" 
                                  Variant="Variant.Outlined"
-                                 AnchorOrigin="Origin.BottomCenter">
+                                 AnchorOrigin="Origin.BottomCenter"
+                                 @bind-Value:after="OnSortChanged">
                             <MudSelectItem Value="@("featured")">Featured First</MudSelectItem>
                             <MudSelectItem Value="@("newest")">Newest First</MudSelectItem>
                             <MudSelectItem Value="@("popular")">Most Popular</MudSelectItem>
@@ -112,24 +128,65 @@
 
                     <!-- Bundle Cards -->
                     <MudGrid>
-                        @foreach (var bundle in bundles.Items)
+                        @if (isMobile)
                         {
-                            <MudItem xs="12" sm="6" md="4">
-                                <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
-                            </MudItem>
+                            @foreach (var bundle in allLoadedBundles)
+                            {
+                                <MudItem xs="12" sm="6" md="4">
+                                    <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
+                                </MudItem>
+                            }
+                        }
+                        else if (bundles?.Items != null)
+                        {
+                            @foreach (var bundle in bundles.Items)
+                            {
+                                <MudItem xs="12" sm="6" md="4">
+                                    <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
+                                </MudItem>
+                            }
                         }
                     </MudGrid>
 
-                    <!-- Pagination -->
-                    @if (bundles.TotalPages > 1)
+                    <!-- Desktop Pagination -->
+                    @if (!isMobile && bundles != null && bundles.TotalPages > 1)
                     {
-                        <MudStack AlignItems="AlignItems.Center" Class="mt-6">
-                            <MudPagination Count="bundles.TotalPages" 
-                                         Selected="currentPage" 
-                                         SelectedChanged="OnPageChanged"
-                                         Color="Color.Primary" 
-                                         Size="Size.Large" />
-                        </MudStack>
+                        <div class="d-flex justify-center mt-6">
+                            <MudPagination Count="@bundles.TotalPages" 
+                                          Selected="@currentPage" 
+                                          SelectedChanged="OnPageChanged"
+                                          Color="Color.Primary"
+                                          Variant="Variant.Filled"
+                                          ShowFirstButton="true"
+                                          ShowLastButton="true"
+                                          ShowPreviousButton="true"
+                                          ShowNextButton="true"
+                                          BoundaryCount="1"
+                                          MiddleCount="3" />
+                        </div>
+                    }
+                    
+                    <!-- Mobile Load More -->
+                    @if (isMobile && hasMoreItems && allLoadedBundles.Any())
+                    {
+                        <div class="d-flex justify-center mt-6">
+                            <MudButton Variant="Variant.Outlined"
+                                      Color="Color.Primary"
+                                      OnClick="LoadMoreItems"
+                                      Disabled="@isLoadingMore"
+                                      StartIcon="@(isLoadingMore ? Icons.Material.Filled.HourglassEmpty : Icons.Material.Filled.ExpandMore)"
+                                      Size="Size.Large"
+                                      Class="load-more-btn">
+                                @if (isLoadingMore)
+                                {
+                                    @("Loading...")
+                                }
+                                else
+                                {
+                                    @($"Load More ({Math.Min(pageSize, (bundles?.TotalCount ?? 0) - allLoadedBundles.Count)} more items)")
+                                }
+                            </MudButton>
+                        </div>
                     }
                 }
                 else
@@ -156,11 +213,40 @@
     </MudPaper>
 </MudContainer>
 
+<style>
+    .load-more-btn {
+        min-width: 200px;
+        border-radius: 25px;
+        padding: 12px 24px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .load-more-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    @@media (max-width: 768px) {
+        .load-more-btn {
+            width: 100%;
+            max-width: 300px;
+        }
+    }
+</style>
+
 @code {
     private PagedResult<BundleModel>? bundles;
     private Dictionary<string, int> availableCategories = new();
     private bool isLoading = true;
     private List<frontend.Models.BreadcrumbItem> breadcrumbItems = new();
+    
+    // Mobile infinite scroll variables
+    private List<BundleModel> allLoadedBundles = new();
+    private bool isMobile = false;
+    private bool isLoadingMore = false;
+    private bool hasMoreItems = true;
+    private IJSObjectReference? screenSizeCleanup;
     
     // Filter parameters
     private string searchTerm = "";
@@ -168,7 +254,7 @@
     private bool featuredOnly = false;
     private string sortBy = "featured";
     private int currentPage = 1;
-    private const int pageSize = 12;
+    private const int pageSize = 24;
 
     private bool hasFiltersApplied => 
         !string.IsNullOrWhiteSpace(searchTerm) || 
@@ -177,6 +263,12 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Detect mobile devices with proper JavaScript interop
+        isMobile = await DetectMobileDevice();
+        
+        // Start monitoring screen size changes for responsive mobile detection
+        await StartScreenSizeMonitoring();
+        
         SetupBreadcrumbs();
         await ParseQueryParameters();
         await LoadCategories();
@@ -184,6 +276,57 @@
         
         // Listen for navigation changes to handle same-route navigation
         Navigation.LocationChanged += OnLocationChanged;
+    }
+    
+    private async Task StartScreenSizeMonitoring()
+    {
+        try
+        {
+            screenSizeCleanup = await DeviceDetectionService.StartScreenSizeMonitoringAsync(OnScreenSizeChanged);
+        }
+        catch (Exception)
+        {
+            // Ignore if screen size monitoring fails
+        }
+    }
+    
+    private async Task OnScreenSizeChanged(DeviceInfo deviceInfo)
+    {
+        var wasMobile = isMobile;
+        isMobile = deviceInfo.IsMobile;
+        
+        // If device type changed, reload data appropriately
+        if (wasMobile != isMobile)
+        {
+            if (isMobile)
+            {
+                // Switching to mobile - prepare accumulated data
+                allLoadedBundles = bundles?.Items?.ToList() ?? new List<BundleModel>();
+                hasMoreItems = currentPage < (bundles?.TotalPages ?? 0);
+            }
+            else
+            {
+                // Switching to desktop - clear accumulated data
+                allLoadedBundles.Clear();
+                hasMoreItems = true;
+            }
+            
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    private async Task<bool> DetectMobileDevice()
+    {
+        try
+        {
+            var deviceInfo = await DeviceDetectionService.GetDeviceInfoAsync();
+            return deviceInfo.IsMobile;
+        }
+        catch (Exception)
+        {
+            // Fallback to desktop if detection fails
+            return false;
+        }
     }
 
     private async Task LoadCategories()
@@ -195,40 +338,184 @@
         }
     }
 
-    private async Task LoadBundles()
+    private async Task LoadBundles(bool append = false)
     {
-        isLoading = true;
+        if (append)
+        {
+            isLoadingMore = true;
+        }
+        else
+        {
+            isLoading = true;
+        }
+        
         StateHasChanged();
 
-        var result = await BundleService.GetBundlesAsync(
-            page: currentPage,
-            pageSize: pageSize,
-            category: string.IsNullOrWhiteSpace(selectedCategory) ? null : selectedCategory,
-            searchTerm: string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
-            featuredOnly: featuredOnly
-        );
+        // Generate cache key for this request
+        var cacheParams = new Dictionary<string, string?>
+        {
+            ["category"] = selectedCategory,
+            ["search"] = searchTerm,
+            ["sort"] = sortBy,
+            ["featured"] = featuredOnly.ToString()
+        };
+        var cacheKey = BrowserCacheService.GeneratePageCacheKey("bundles", currentPage, pageSize, cacheParams);
+        
+        // Try to get cached data first (only for non-append operations)
+        PagedResult<BundleModel>? cachedResult = null;
+        if (!append)
+        {
+            cachedResult = await BrowserCacheService.GetCachedPageAsync<BundleModel>(cacheKey);
+        }
+        
+        ApiResponse<PagedResult<BundleModel>> result;
+        if (cachedResult != null)
+        {
+            // Use cached data
+            result = new ApiResponse<PagedResult<BundleModel>>
+            {
+                Success = true,
+                Data = cachedResult,
+                Message = "Loaded from cache"
+            };
+        }
+        else
+        {
+            // Fetch from API
+            result = await BundleService.GetBundlesAsync(
+                page: currentPage,
+                pageSize: pageSize,
+                category: string.IsNullOrWhiteSpace(selectedCategory) ? null : selectedCategory,
+                searchTerm: string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
+                featuredOnly: featuredOnly
+            );
+            
+            // Cache the result if successful
+            if (result.Success && result.Data != null && !append)
+            {
+                await BrowserCacheService.SetCachedPageAsync(cacheKey, result.Data);
+            }
+        }
 
         if (result.Success && result.Data != null)
         {
             bundles = result.Data;
+            
+            if (isMobile)
+            {
+                if (append)
+                {
+                    // Append new items for infinite scroll
+                    allLoadedBundles.AddRange(result.Data.Items);
+                }
+                else
+                {
+                    // Reset for new search/filter
+                    allLoadedBundles = new List<BundleModel>(result.Data.Items);
+                }
+                hasMoreItems = currentPage < result.Data.TotalPages;
+            }
         }
         else
         {
             Snackbar.Add(result.Message ?? "Failed to load bundles", Severity.Error);
             bundles = new PagedResult<BundleModel> { Items = new List<BundleModel>() };
+            if (isMobile && !append)
+            {
+                allLoadedBundles.Clear();
+            }
         }
 
         // Update breadcrumbs when filters change
         SetupBreadcrumbs();
 
-        isLoading = false;
+        if (append)
+        {
+            isLoadingMore = false;
+        }
+        else
+        {
+            isLoading = false;
+        }
+        
         StateHasChanged();
     }
 
     private async Task OnPageChanged(int page)
     {
+        if (page == currentPage) return;
+        
         currentPage = page;
+        UpdateUrl();
         await LoadBundles();
+    }
+    
+    private async Task OnSortChanged()
+    {
+        // Reset to first page when sort changes
+        currentPage = 1;
+        
+        // Clear mobile accumulated data
+        if (isMobile)
+        {
+            allLoadedBundles.Clear();
+            hasMoreItems = true;
+        }
+        
+        UpdateUrl();
+        await LoadBundles();
+    }
+    
+    private async Task LoadMoreItems()
+    {
+        if (!hasMoreItems || isLoadingMore) return;
+        
+        currentPage++;
+        await LoadBundles(append: true);
+    }
+    
+    private async Task ApplyFilters()
+    {
+        // Reset to first page when filters change
+        currentPage = 1;
+        
+        // Clear mobile accumulated data
+        if (isMobile)
+        {
+            allLoadedBundles.Clear();
+            hasMoreItems = true;
+        }
+        
+        // Update URL with current parameters
+        UpdateUrl();
+        
+        // Reload data with new filters
+        await LoadBundles();
+        
+        // Update breadcrumbs when filters change
+        SetupBreadcrumbs();
+    }
+    
+    private void UpdateUrl()
+    {
+        var queryParams = new List<string>();
+        
+        if (!string.IsNullOrEmpty(searchTerm))
+            queryParams.Add($"search={Uri.EscapeDataString(searchTerm)}");
+            
+        if (!string.IsNullOrEmpty(selectedCategory))
+            queryParams.Add($"category={Uri.EscapeDataString(selectedCategory)}");
+            
+        if (currentPage > 1)
+            queryParams.Add($"page={currentPage}");
+            
+        if (sortBy != "featured")
+            queryParams.Add($"sort={Uri.EscapeDataString(sortBy)}");
+        
+        var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
+        var newUrl = $"/bundles{queryString}";
+        
+        Navigation.NavigateTo(newUrl, false);
     }
 
     private async Task ParseQueryParameters()
@@ -256,6 +543,24 @@
         else
         {
             selectedCategory = string.Empty;
+        }
+        
+        // Handle page parameter
+        var pageParam = query["page"];
+        if (int.TryParse(pageParam, out int page) && page > 0)
+        {
+            currentPage = page;
+        }
+        else
+        {
+            currentPage = 1;
+        }
+        
+        // Handle sort parameter
+        var sort = query["sort"];
+        if (!string.IsNullOrEmpty(sort))
+        {
+            sortBy = sort;
         }
         
         // Update breadcrumbs when parameters change
@@ -308,11 +613,27 @@
 
     private async Task SearchBundles()
     {
-        await LoadBundles();
+        await ApplyFilters();
     }
 
     public void Dispose()
     {
         Navigation.LocationChanged -= OnLocationChanged;
+        
+        // Clean up screen size monitoring
+        if (screenSizeCleanup != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await DeviceDetectionService.StopScreenSizeMonitoringAsync(screenSizeCleanup);
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+            });
+        }
     }
 }

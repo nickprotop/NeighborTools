@@ -8,6 +8,7 @@ namespace frontend.Services;
 public interface IToolService
 {
     Task<ApiResponse<List<Tool>>> GetToolsAsync();
+    Task<ApiResponse<PagedResult<Tool>>> GetToolsPagedAsync(int page = 1, int pageSize = 24, string? category = null, string? searchTerm = null, string? sortBy = null, decimal? maxDailyRate = null, bool? availableOnly = null);
     Task<ApiResponse<List<Tool>>> GetMyToolsAsync();
     Task<ApiResponse<Tool>> GetToolAsync(string id);
     Task<ApiResponse<Tool>> CreateToolAsync(CreateToolRequest request);
@@ -56,6 +57,52 @@ public class ToolService : IToolService
         catch (Exception ex)
         {
             return new ApiResponse<List<Tool>> 
+            { 
+                Success = false, 
+                Message = $"Failed to retrieve tools: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<PagedResult<Tool>>> GetToolsPagedAsync(int page = 1, int pageSize = 24, string? category = null, string? searchTerm = null, string? sortBy = null, decimal? maxDailyRate = null, bool? availableOnly = null)
+    {
+        try
+        {
+            var queryParams = new List<string>
+            {
+                $"PageNumber={page}",
+                $"PageSize={pageSize}"
+            };
+
+            if (!string.IsNullOrEmpty(category))
+                queryParams.Add($"Category={Uri.EscapeDataString(category)}");
+
+            if (!string.IsNullOrEmpty(searchTerm))
+                queryParams.Add($"SearchTerm={Uri.EscapeDataString(searchTerm)}");
+
+            if (!string.IsNullOrEmpty(sortBy))
+                queryParams.Add($"SortBy={Uri.EscapeDataString(sortBy)}");
+
+            if (maxDailyRate.HasValue)
+                queryParams.Add($"MaxDailyRate={maxDailyRate.Value}");
+
+            if (availableOnly.HasValue)
+                queryParams.Add($"AvailableOnly={availableOnly.Value}");
+
+            var queryString = string.Join("&", queryParams);
+            var response = await _httpClient.GetAsync($"/api/tools/paged?{queryString}");
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<PagedResult<Tool>>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            return result ?? new ApiResponse<PagedResult<Tool>> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<PagedResult<Tool>>
             { 
                 Success = false, 
                 Message = $"Failed to retrieve tools: {ex.Message}" 

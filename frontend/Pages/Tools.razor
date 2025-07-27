@@ -10,6 +10,8 @@
 @inject NavigationManager Navigation
 @inject IUrlService UrlService
 @inject IBreadcrumbService BreadcrumbService
+@inject IDeviceDetectionService DeviceDetectionService
+@inject IBrowserCacheService BrowserCacheService
 @attribute [AllowAnonymous]
 @implements IDisposable
 
@@ -122,11 +124,24 @@
     {
         <div class="d-flex justify-space-between align-center mb-4">
             <MudText Typo="Typo.body1" Color="Color.Secondary">
-                Showing @(filteredTools?.Count ?? 0) tools
+                @if (isMobile && allLoadedTools.Any())
+                {
+                    @($"Showing {allLoadedTools.Count} of {pagedResult?.TotalCount ?? 0} tools")
+                }
+                else if (!isMobile && pagedResult != null)
+                {
+                    var startItem = (currentPage - 1) * pageSize + 1;
+                    var endItem = Math.Min(currentPage * pageSize, pagedResult.TotalCount);
+                    @($"Showing {startItem}-{endItem} of {pagedResult.TotalCount} tools")
+                }
+                else
+                {
+                    @("No tools found")
+                }
             </MudText>
             
             <div class="d-flex justify-end">
-                <MudSelect T="string" @bind-Value="sortBy" Label="Sort by" Variant="Variant.Outlined" Dense="true" Style="width: fit-content;" AdornmentIcon="@Icons.Material.Filled.Sort" Adornment="Adornment.Start" @bind-Value:after="StateHasChanged">
+                <MudSelect T="string" @bind-Value="sortBy" Label="Sort by" Variant="Variant.Outlined" Dense="true" Style="width: fit-content;" AdornmentIcon="@Icons.Material.Filled.Sort" Adornment="Adornment.Start" @bind-Value:after="OnSortChanged">
                     <MudSelectItem T="string" Value="@("name")">Name</MudSelectItem>
                     <MudSelectItem T="string" Value="@("price-low")">Price: Low to High</MudSelectItem>
                     <MudSelectItem T="string" Value="@("price-high")">Price: High to Low</MudSelectItem>
@@ -137,91 +152,147 @@
         </div>
         
         <MudGrid>
-            @foreach (var tool in GetSortedTools())
+            @if (pagedResult?.Items != null)
             {
-                <MudItem xs="12" sm="6" md="4" lg="3">
-                    <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s; cursor: pointer;" Class="hover-card" @onclick="() => ViewTool(tool.Id)">
-                        @if (tool.ImageUrls.Any())
-                        {
-                            <MudCardMedia Image="@UrlService.GetFileUrl(tool.ImageUrls.First())" Height="200" Style="border-radius: 12px 12px 0 0;" />
-                        }
-                        else
-                        {
-                            <ThemeAwarePlaceholder Height="200px" 
-                                                  BorderRadius="12px 12px 0 0"
-                                                  Icon="@Icons.Material.Filled.Build" 
-                                                  IconSize="Size.Large"
-                                                  IconFontSize="3rem" />
-                        }
-                        
-                        <MudCardContent>
-                            <MudText Typo="Typo.h6" GutterBottom="true">@tool.Name</MudText>
-                            <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3" Style="height: 3em; overflow: hidden;">
-                                @(tool.Description.Length > 80 ? tool.Description.Substring(0, 80) + "..." : tool.Description)
-                            </MudText>
-                            
-                            <div class="d-flex justify-space-between align-center mb-3">
-                                <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.Category">
-                                    @tool.Category
-                                </MudChip>
-                                <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Error)" 
-                                         Size="Size.Small" 
-                                         Icon="@(tool.IsAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)">
-                                    @(tool.IsAvailable ? "Available" : "Unavailable")
-                                </MudChip>
+                @foreach (var tool in pagedResult.Items)
+                {
+                    <MudItem xs="12" sm="6" md="4" lg="3">
+                        <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s; cursor: pointer;" Class="hover-card" @onclick="() => ViewTool(tool.Id)">
+                            @{
+                                var toolImageUrl = tool.ImageUrls.Any() ? UrlService.GetFileUrl(tool.ImageUrls.First()) : string.Empty;
+                                var hasValidToolImage = !string.IsNullOrEmpty(toolImageUrl);
+                            }
+                            <div style="position: relative; height: 200px; border-radius: 12px 12px 0 0; overflow: hidden;">
+                                @if (hasValidToolImage)
+                                {
+                                    <img src="@toolImageUrl" 
+                                         style="width: 100%; height: 200px; object-fit: cover; @(GetToolImageLoadError(tool.Id) ? "display: none;" : "")" 
+                                         class="tool-image"
+                                         @onerror="@(() => HandleToolImageError(tool.Id))" 
+                                         @onload="@(() => HandleToolImageLoad(tool.Id))" />
+                                }
+                                
+                                @if (!hasValidToolImage || GetToolImageLoadError(tool.Id))
+                                {
+                                    <ThemeAwarePlaceholder Height="200px" 
+                                                          BorderRadius="12px 12px 0 0"
+                                                          Icon="@Icons.Material.Filled.Build" 
+                                                          IconSize="Size.Large"
+                                                          IconFontSize="3rem"
+                                                          AdditionalClass="tool-image" />
+                                }
                             </div>
                             
-                            <div class="d-flex justify-space-between align-center mb-2">
-                                <MudText Typo="Typo.h6" Color="Color.Primary">
-                                    $@tool.DailyRate.ToString("F2")
+                            <MudCardContent>
+                                <MudText Typo="Typo.h6" GutterBottom="true">@tool.Name</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3" Style="height: 3em; overflow: hidden;">
+                                    @(tool.Description.Length > 80 ? tool.Description.Substring(0, 80) + "..." : tool.Description)
                                 </MudText>
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                    per day
-                                </MudText>
-                            </div>
-                            
-                            <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-                                Condition: @tool.Condition
-                            </MudText>
-                            
-                            @if (tool.Rating.HasValue)
-                            {
-                                <div class="d-flex align-center gap-2 mb-3">
-                                    <MudRating ReadOnly="true" SelectedValue="@((int)tool.Rating.Value)" MaxValue="5" Size="Size.Small" />
+                                
+                                <div class="d-flex justify-space-between align-center mb-3">
+                                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.Category">
+                                        @tool.Category
+                                    </MudChip>
+                                    <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Error)" 
+                                             Size="Size.Small" 
+                                             Icon="@(tool.IsAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)">
+                                        @(tool.IsAvailable ? "Available" : "Unavailable")
+                                    </MudChip>
+                                </div>
+                                
+                                <div class="d-flex justify-space-between align-center mb-2">
+                                    <MudText Typo="Typo.h6" Color="Color.Primary">
+                                        $@tool.DailyRate.ToString("F2")
+                                    </MudText>
                                     <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                        (@tool.ReviewCount)
+                                        per day
                                     </MudText>
                                 </div>
-                            }
+                                
+                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
+                                    Condition: @tool.Condition
+                                </MudText>
+                                
+                                @if (tool.Rating.HasValue)
+                                {
+                                    <div class="d-flex align-center gap-2 mb-3">
+                                        <MudRating ReadOnly="true" SelectedValue="@((int)tool.Rating.Value)" MaxValue="5" Size="Size.Small" />
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            (@tool.ReviewCount)
+                                        </MudText>
+                                    </div>
+                                }
+                                
+                                <div class="mt-2">
+                                    <UserLink UserId="@tool.OwnerId" 
+                                              DisplayName="@tool.OwnerName" 
+                                              ShowAvatar="true" 
+                                              AvatarSize="Size.Small"
+                                              AdditionalClass="text-secondary" />
+                                </div>
+                            </MudCardContent>
                             
-                            <div class="mt-2">
-                                <UserLink UserId="@tool.OwnerId" 
-                                          DisplayName="@tool.OwnerName" 
-                                          ShowAvatar="true" 
-                                          AvatarSize="Size.Small"
-                                          AdditionalClass="text-secondary" />
-                            </div>
-                        </MudCardContent>
-                        
-                        <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
-                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
-                                <MudButton Variant="Variant.Filled" 
-                                           Color="@(tool.IsAvailable ? Color.Primary : Color.Secondary)" 
-                                           OnClick="() => ViewTool(tool.Id)"
-                                       Disabled="@(!tool.IsAvailable)"
-                                       StartIcon="@(tool.IsAvailable ? Icons.Material.Filled.Visibility : Icons.Material.Filled.Block)">
-                                @(tool.IsAvailable ? "View Details" : "Unavailable")
-                            </MudButton>
-                            
-                                <FavoriteButton ToolId="@tool.Id" 
-                                               OwnerUserId="@tool.OwnerId" 
-                                               Size="Size.Small" />
-                            </MudStack>
-                        </MudCardActions>
-                    </MudCard>
-                </MudItem>
+                            <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
+                                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+                                    <MudButton Variant="Variant.Filled" 
+                                               Color="@(tool.IsAvailable ? Color.Primary : Color.Secondary)" 
+                                               OnClick="() => ViewTool(tool.Id)"
+                                           Disabled="@(!tool.IsAvailable)"
+                                           StartIcon="@(tool.IsAvailable ? Icons.Material.Filled.Visibility : Icons.Material.Filled.Block)">
+                                    @(tool.IsAvailable ? "View Details" : "Unavailable")
+                                </MudButton>
+                                
+                                    <FavoriteButton ToolId="@tool.Id" 
+                                                   OwnerUserId="@tool.OwnerId" 
+                                                   Size="Size.Small" />
+                                </MudStack>
+                            </MudCardActions>
+                        </MudCard>
+                    </MudItem>
+                }
             }
         </MudGrid>
+        
+        <!-- Desktop Pagination -->
+        @if (!isMobile && pagedResult != null && totalPages > 1)
+        {
+            <div class="d-flex justify-center mt-6">
+                <MudPagination Count="@totalPages" 
+                              Selected="@currentPage" 
+                              SelectedChanged="OnPageChanged"
+                              Color="Color.Primary"
+                              Variant="Variant.Filled"
+                              ShowFirstButton="true"
+                              ShowLastButton="true"
+                              ShowPreviousButton="true"
+                              ShowNextButton="true"
+                              BoundaryCount="1"
+                              MiddleCount="3" />
+            </div>
+        }
+        
+        <!-- Mobile Load More -->
+        @if (isMobile && hasMoreItems && allLoadedTools.Any())
+        {
+            <div class="d-flex justify-center mt-6">
+                <MudButton Variant="Variant.Outlined"
+                          Color="Color.Primary"
+                          OnClick="LoadMoreItems"
+                          Disabled="@isLoadingMore"
+                          StartIcon="@(isLoadingMore ? Icons.Material.Filled.HourglassEmpty : Icons.Material.Filled.ExpandMore)"
+                          Size="Size.Large"
+                          Class="load-more-btn">
+                    @if (isLoadingMore)
+                    {
+                        @("Loading...")
+                    }
+                    else
+                    {
+                        @($"Load More ({Math.Min(pageSize, (pagedResult?.TotalCount ?? 0) - allLoadedTools.Count)} more items)")
+                    }
+                </MudButton>
+            </div>
+        }
     }
     else
     {
@@ -245,12 +316,55 @@
     .hover-card:hover {
         transform: translateY(-4px);
     }
+    
+    .load-more-btn {
+        min-width: 200px;
+        border-radius: 25px;
+        padding: 12px 24px;
+        font-weight: 500;
+        transition: all 0.3s ease;
+    }
+    
+    .load-more-btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    
+    @@media (max-width: 768px) {
+        .load-more-btn {
+            width: 100%;
+            max-width: 300px;
+        }
+    }
+    
+    .tool-image {
+        background: linear-gradient(45deg, #f5f5f5 0%, #e0e0e0 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
 </style>
 
 @code {
-    // Tools variables
-    private List<Tool>? tools;
-    private List<Tool>? filteredTools;
+    // Pagination variables
+    private PagedResult<Tool>? pagedResult;
+    private int currentPage = 1;
+    private int pageSize = 24;
+    private int totalPages = 0;
+    
+    // Mobile infinite scroll variables
+    private List<Tool> allLoadedTools = new();
+    private bool isMobile = false;
+    private bool isLoadingMore = false;
+    private bool hasMoreItems = true;
+    private IJSObjectReference? screenSizeCleanup;
+    private Dictionary<string, bool> toolImageLoadErrors = new();
+    
+    // Legacy tools variable for backwards compatibility
+    private List<Tool>? tools => isMobile ? allLoadedTools : pagedResult?.Items;
+    private List<Tool>? filteredTools => isMobile ? allLoadedTools : pagedResult?.Items;
+    
     private string searchQuery = string.Empty;
     private string errorMessage = string.Empty;
     private bool isLoading = true;
@@ -264,12 +378,69 @@
 
     protected override async Task OnInitializedAsync()
     {
+        // Detect mobile devices with proper JavaScript interop
+        isMobile = await DetectMobileDevice();
+        
+        // Start monitoring screen size changes for responsive mobile detection
+        await StartScreenSizeMonitoring();
+        
         SetupBreadcrumbs();
         await ParseQueryParameters();
         await LoadTools();
         
         // Listen for navigation changes to handle same-route navigation
         Navigation.LocationChanged += OnLocationChanged;
+    }
+    
+    private async Task StartScreenSizeMonitoring()
+    {
+        try
+        {
+            screenSizeCleanup = await DeviceDetectionService.StartScreenSizeMonitoringAsync(OnScreenSizeChanged);
+        }
+        catch (Exception)
+        {
+            // Ignore if screen size monitoring fails
+        }
+    }
+    
+    private async Task OnScreenSizeChanged(DeviceInfo deviceInfo)
+    {
+        var wasMobile = isMobile;
+        isMobile = deviceInfo.IsMobile;
+        
+        // If device type changed, reload data appropriately
+        if (wasMobile != isMobile)
+        {
+            if (isMobile)
+            {
+                // Switching to mobile - prepare accumulated data
+                allLoadedTools = pagedResult?.Items?.ToList() ?? new List<Tool>();
+                hasMoreItems = currentPage < totalPages;
+            }
+            else
+            {
+                // Switching to desktop - clear accumulated data
+                allLoadedTools.Clear();
+                hasMoreItems = true;
+            }
+            
+            await InvokeAsync(StateHasChanged);
+        }
+    }
+    
+    private async Task<bool> DetectMobileDevice()
+    {
+        try
+        {
+            var deviceInfo = await DeviceDetectionService.GetDeviceInfoAsync();
+            return deviceInfo.IsMobile;
+        }
+        catch (Exception)
+        {
+            // Fallback to desktop if detection fails
+            return false;
+        }
     }
 
     private async Task ParseQueryParameters()
@@ -299,45 +470,140 @@
             selectedCategory = string.Empty;
         }
         
+        // Handle page parameter
+        var pageParam = query["page"];
+        if (int.TryParse(pageParam, out int page) && page > 0)
+        {
+            currentPage = page;
+        }
+        else
+        {
+            currentPage = 1;
+        }
+        
+        // Handle sort parameter
+        var sort = query["sort"];
+        if (!string.IsNullOrEmpty(sort))
+        {
+            sortBy = sort;
+        }
+        
         // Update breadcrumbs when parameters change
         SetupBreadcrumbs();
     }
 
-    private async Task LoadTools()
+    private async Task LoadTools(bool append = false)
     {
-        isLoading = true;
-        errorMessage = string.Empty;
+        if (append)
+        {
+            isLoadingMore = true;
+        }
+        else
+        {
+            isLoading = true;
+            errorMessage = string.Empty;
+        }
 
         try
         {
-            ApiResponse<List<Tool>> result;
-            
-            if (!string.IsNullOrWhiteSpace(searchQuery))
+            // Generate cache key for this request
+            var cacheParams = new Dictionary<string, string?>
             {
-                result = await ToolService.SearchToolsAsync(searchQuery);
+                ["category"] = selectedCategory,
+                ["search"] = searchQuery,
+                ["sort"] = sortBy,
+                ["maxRate"] = maxDailyRate == 200 ? null : maxDailyRate.ToString(),
+                ["available"] = availableOnly?.ToString()
+            };
+            var cacheKey = BrowserCacheService.GeneratePageCacheKey("tools", currentPage, pageSize, cacheParams);
+            
+            // Try to get cached data first (only for non-append operations)
+            PagedResult<Tool>? cachedResult = null;
+            if (!append)
+            {
+                cachedResult = await BrowserCacheService.GetCachedPageAsync<Tool>(cacheKey);
+            }
+            
+            ApiResponse<PagedResult<Tool>> result;
+            if (cachedResult != null)
+            {
+                // Use cached data
+                result = new ApiResponse<PagedResult<Tool>>
+                {
+                    Success = true,
+                    Data = cachedResult,
+                    Message = "Loaded from cache"
+                };
             }
             else
             {
-                result = await ToolService.GetToolsAsync();
+                // Fetch from API
+                result = await ToolService.GetToolsPagedAsync(
+                    page: currentPage,
+                    pageSize: pageSize,
+                    category: string.IsNullOrEmpty(selectedCategory) ? null : selectedCategory,
+                    searchTerm: string.IsNullOrWhiteSpace(searchQuery) ? null : searchQuery,
+                    sortBy: sortBy,
+                    maxDailyRate: maxDailyRate == 200 ? null : (decimal)maxDailyRate,
+                    availableOnly: availableOnly
+                );
+                
+                // Cache the result if successful
+                if (result.Success && result.Data != null && !append)
+                {
+                    await BrowserCacheService.SetCachedPageAsync(cacheKey, result.Data);
+                }
             }
             
-            if (result.Success)
+            if (result.Success && result.Data != null)
             {
-                tools = result.Data;
-                ApplyFilters();
+                pagedResult = result.Data;
+                totalPages = pagedResult.TotalPages;
+                
+                if (isMobile)
+                {
+                    if (append)
+                    {
+                        // Append new items for infinite scroll
+                        allLoadedTools.AddRange(result.Data.Items);
+                    }
+                    else
+                    {
+                        // Reset for new search/filter
+                        allLoadedTools = new List<Tool>(result.Data.Items);
+                    }
+                    hasMoreItems = currentPage < totalPages;
+                }
             }
             else
             {
                 errorMessage = result.Message ?? "Failed to load tools.";
+                pagedResult = null;
+                if (isMobile && !append)
+                {
+                    allLoadedTools.Clear();
+                }
             }
         }
         catch (Exception ex)
         {
             errorMessage = $"An error occurred: {ex.Message}";
+            pagedResult = null;
+            if (isMobile && !append)
+            {
+                allLoadedTools.Clear();
+            }
         }
         finally
         {
-            isLoading = false;
+            if (append)
+            {
+                isLoadingMore = false;
+            }
+            else
+            {
+                isLoading = false;
+            }
         }
     }
 
@@ -346,36 +612,81 @@
         await LoadTools();
     }
 
-    private void ApplyFilters()
+    private async Task ApplyFilters()
     {
-        if (tools == null)
+        // Reset to first page when filters change
+        currentPage = 1;
+        
+        // Clear mobile accumulated data
+        if (isMobile)
         {
-            filteredTools = null;
-            return;
+            allLoadedTools.Clear();
+            hasMoreItems = true;
         }
-
-        filteredTools = tools.Where(t =>
-            (string.IsNullOrEmpty(selectedCategory) || t.Category == selectedCategory) &&
-            (availableOnly == null || t.IsAvailable == availableOnly) &&
-            t.DailyRate <= (decimal)maxDailyRate
-        ).ToList();
+        
+        // Update URL with current parameters
+        UpdateUrl();
+        
+        // Reload data with new filters
+        await LoadTools();
         
         // Update breadcrumbs when filters change
         SetupBreadcrumbs();
     }
 
-    private List<Tool> GetSortedTools()
+    private async Task OnPageChanged(int page)
     {
-        if (filteredTools == null) return new List<Tool>();
-
-        return sortBy switch
+        if (page == currentPage) return;
+        
+        currentPage = page;
+        UpdateUrl();
+        await LoadTools();
+    }
+    
+    private async Task OnSortChanged()
+    {
+        // Reset to first page when sort changes
+        currentPage = 1;
+        
+        // Clear mobile accumulated data
+        if (isMobile)
         {
-            "price-low" => filteredTools.OrderBy(t => t.DailyRate).ToList(),
-            "price-high" => filteredTools.OrderByDescending(t => t.DailyRate).ToList(),
-            "rating" => filteredTools.OrderByDescending(t => t.Rating ?? 0).ToList(),
-            "newest" => filteredTools.OrderByDescending(t => t.CreatedAt).ToList(),
-            _ => filteredTools.OrderBy(t => t.Name).ToList()
-        };
+            allLoadedTools.Clear();
+            hasMoreItems = true;
+        }
+        
+        UpdateUrl();
+        await LoadTools();
+    }
+    
+    private async Task LoadMoreItems()
+    {
+        if (!hasMoreItems || isLoadingMore) return;
+        
+        currentPage++;
+        await LoadTools(append: true);
+    }
+    
+    private void UpdateUrl()
+    {
+        var queryParams = new List<string>();
+        
+        if (!string.IsNullOrEmpty(searchQuery))
+            queryParams.Add($"search={Uri.EscapeDataString(searchQuery)}");
+            
+        if (!string.IsNullOrEmpty(selectedCategory))
+            queryParams.Add($"category={Uri.EscapeDataString(selectedCategory)}");
+            
+        if (currentPage > 1)
+            queryParams.Add($"page={currentPage}");
+            
+        if (sortBy != "name")
+            queryParams.Add($"sort={Uri.EscapeDataString(sortBy)}");
+        
+        var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
+        var newUrl = $"/tools{queryString}";
+        
+        Navigation.NavigateTo(newUrl, false);
     }
 
     private void ClearFilters()
@@ -418,9 +729,42 @@
         await LoadTools();
         await InvokeAsync(StateHasChanged);
     }
+    
+    private bool GetToolImageLoadError(string toolId)
+    {
+        return toolImageLoadErrors.GetValueOrDefault(toolId, false);
+    }
+    
+    private void HandleToolImageError(string toolId)
+    {
+        toolImageLoadErrors[toolId] = true;
+        StateHasChanged();
+    }
+    
+    private void HandleToolImageLoad(string toolId)
+    {
+        toolImageLoadErrors[toolId] = false;
+        StateHasChanged();
+    }
 
     public void Dispose()
     {
         Navigation.LocationChanged -= OnLocationChanged;
+        
+        // Clean up screen size monitoring
+        if (screenSizeCleanup != null)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await DeviceDetectionService.StopScreenSizeMonitoringAsync(screenSizeCleanup);
+                }
+                catch
+                {
+                    // Ignore cleanup errors
+                }
+            });
+        }
     }
 }

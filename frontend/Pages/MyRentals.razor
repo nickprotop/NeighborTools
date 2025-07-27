@@ -4,6 +4,7 @@
 @using frontend.Models
 @using frontend.Services
 @using frontend.Components
+@using frontend.Components.Common
 @using frontend.Shared
 @using ToolsSharing.Frontend.Models
 @using ToolsSharing.Frontend.Services
@@ -137,16 +138,31 @@
                 {
                     <MudItem xs="12" md="6" lg="4">
                         <MudCard Elevation="4" Style="height: 100%; border-radius: 12px;">
-                            @if (rental.Tool?.ImageUrls.Any() == true)
-                            {
-                                <MudCardMedia Image="@UrlService.GetFileUrl(rental.Tool.ImageUrls.First())" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                            @{
+                                var renterImageUrl = rental.Tool?.ImageUrls.Any() == true ? UrlService.GetFileUrl(rental.Tool.ImageUrls.First()) : string.Empty;
+                                var hasValidRenterImage = !string.IsNullOrEmpty(renterImageUrl);
+                                var rentalKey = $"renter_{rental.Id}";
                             }
-                            else
-                            {
-                                <div class="d-flex align-center justify-center mud-elevation-1" style="height: 200px; border-radius: 12px 12px 0 0;">
-                                    <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" />
-                                </div>
-                            }
+                            <div style="position: relative; height: 200px; border-radius: 12px 12px 0 0; overflow: hidden;">
+                                @if (hasValidRenterImage)
+                                {
+                                    <img src="@renterImageUrl" 
+                                         style="width: 100%; height: 200px; object-fit: cover; @(GetRentalImageLoadError(rentalKey) ? "display: none;" : "")" 
+                                         class="rental-image"
+                                         @onerror="@(() => HandleRentalImageError(rentalKey))" 
+                                         @onload="@(() => HandleRentalImageLoad(rentalKey))" />
+                                }
+                                
+                                @if (!hasValidRenterImage || GetRentalImageLoadError(rentalKey))
+                                {
+                                    <ThemeAwarePlaceholder Height="200px" 
+                                                          BorderRadius="12px 12px 0 0"
+                                                          Icon="@Icons.Material.Filled.Build" 
+                                                          IconSize="Size.Large"
+                                                          IconFontSize="3rem"
+                                                          AdditionalClass="rental-image" />
+                                }
+                            </div>
                             
                             <MudCardContent>
                                 <MudLink Href="@($"/tools/{rental.ToolId}")" Typo="Typo.h6" Color="Color.Primary" GutterBottom="true">
@@ -411,16 +427,31 @@
                 {
                     <MudItem xs="12" md="6" lg="4">
                         <MudCard Elevation="4" Style="height: 100%; border-radius: 12px;">
-                            @if (rental.Tool?.ImageUrls.Any() == true)
-                            {
-                                <MudCardMedia Image="@UrlService.GetFileUrl(rental.Tool.ImageUrls.First())" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                            @{
+                                var ownerImageUrl = rental.Tool?.ImageUrls.Any() == true ? UrlService.GetFileUrl(rental.Tool.ImageUrls.First()) : string.Empty;
+                                var hasValidOwnerImage = !string.IsNullOrEmpty(ownerImageUrl);
+                                var ownerRentalKey = $"owner_{rental.Id}";
                             }
-                            else
-                            {
-                                <div class="d-flex align-center justify-center mud-elevation-1" style="height: 200px; border-radius: 12px 12px 0 0;">
-                                    <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" />
-                                </div>
-                            }
+                            <div style="position: relative; height: 200px; border-radius: 12px 12px 0 0; overflow: hidden;">
+                                @if (hasValidOwnerImage)
+                                {
+                                    <img src="@ownerImageUrl" 
+                                         style="width: 100%; height: 200px; object-fit: cover; @(GetRentalImageLoadError(ownerRentalKey) ? "display: none;" : "")" 
+                                         class="rental-image"
+                                         @onerror="@(() => HandleRentalImageError(ownerRentalKey))" 
+                                         @onload="@(() => HandleRentalImageLoad(ownerRentalKey))" />
+                                }
+                                
+                                @if (!hasValidOwnerImage || GetRentalImageLoadError(ownerRentalKey))
+                                {
+                                    <ThemeAwarePlaceholder Height="200px" 
+                                                          BorderRadius="12px 12px 0 0"
+                                                          Icon="@Icons.Material.Filled.Build" 
+                                                          IconSize="Size.Large"
+                                                          IconFontSize="3rem"
+                                                          AdditionalClass="rental-image" />
+                                }
+                            </div>
                             
                             <MudCardContent>
                                 <MudLink Href="@($"/tools/{rental.ToolId}")" Typo="Typo.h6" Color="Color.Primary" GutterBottom="true">
@@ -711,6 +742,16 @@
     </MudTabPanel>
 </MudTabs>
 
+<style>
+    .rental-image {
+        background: linear-gradient(45deg, #f5f5f5 0%, #e0e0e0 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
+</style>
+
 @code {
     private List<Rental>? renterRentals;
     private List<Rental>? ownerRentals;
@@ -725,6 +766,7 @@
     private string selectedRenterSort = "newest";
     private int activeTab = 0;
     private Dictionary<string, decimal?> rentalCosts = new();
+    private Dictionary<string, bool> rentalImageLoadErrors = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -2053,6 +2095,23 @@
         {
             Snackbar.Add($"Error opening message: {ex.Message}", Severity.Error);
         }
+    }
+    
+    private bool GetRentalImageLoadError(string rentalKey)
+    {
+        return rentalImageLoadErrors.GetValueOrDefault(rentalKey, false);
+    }
+    
+    private void HandleRentalImageError(string rentalKey)
+    {
+        rentalImageLoadErrors[rentalKey] = true;
+        StateHasChanged();
+    }
+    
+    private void HandleRentalImageLoad(string rentalKey)
+    {
+        rentalImageLoadErrors[rentalKey] = false;
+        StateHasChanged();
     }
 
 }

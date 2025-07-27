@@ -8,6 +8,7 @@
 @using ToolsSharing.Frontend.Services
 @using frontend.Components.Bundles
 @using frontend.Components
+@using frontend.Components.Common
 @inject IToolService ToolService
 @inject BundleService BundleService
 @inject ISnackbar Snackbar
@@ -124,16 +125,31 @@
             {
                 <MudItem xs="12" sm="6" md="4" lg="3">
                     <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s; cursor: pointer;" Class="hover-card" @onclick="() => ViewTool(tool.Id ?? string.Empty)">
-                        @if (tool.ImageUrls != null && tool.ImageUrls.Any())
-                    {
-                        <MudCardMedia Image="@UrlService.GetFileUrl(tool.ImageUrls.First())" Height="200" Style="border-radius: 12px 12px 0 0;" />
-                    }
-                    else
-                    {
-                        <div class="d-flex align-center justify-center mud-elevation-1" style="height: 200px; border-radius: 12px 12px 0 0;">
-                            <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem;" />
+                        @{
+                            var myToolImageUrl = tool.ImageUrls != null && tool.ImageUrls.Any() ? UrlService.GetFileUrl(tool.ImageUrls.First()) : string.Empty;
+                            var hasValidMyToolImage = !string.IsNullOrEmpty(myToolImageUrl);
+                            var myToolKey = $"mytool_{tool.Id}";
+                        }
+                        <div style="position: relative; height: 200px; border-radius: 12px 12px 0 0; overflow: hidden;">
+                            @if (hasValidMyToolImage)
+                            {
+                                <img src="@myToolImageUrl" 
+                                     style="width: 100%; height: 200px; object-fit: cover; @(GetMyToolImageLoadError(myToolKey) ? "display: none;" : "")" 
+                                     class="mytool-image"
+                                     @onerror="@(() => HandleMyToolImageError(myToolKey))" 
+                                     @onload="@(() => HandleMyToolImageLoad(myToolKey))" />
+                            }
+                            
+                            @if (!hasValidMyToolImage || GetMyToolImageLoadError(myToolKey))
+                            {
+                                <ThemeAwarePlaceholder Height="200px" 
+                                                      BorderRadius="12px 12px 0 0"
+                                                      Icon="@Icons.Material.Filled.Build" 
+                                                      IconSize="Size.Large"
+                                                      IconFontSize="3rem"
+                                                      AdditionalClass="mytool-image" />
+                            }
                         </div>
-                    }
                     
                     <MudCardContent>
                         <MudText Typo="Typo.h6" GutterBottom="true">@GetToolName(tool)</MudText>
@@ -299,16 +315,31 @@
                 {
                     <MudItem xs="12" sm="6" md="4">
                         <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s; cursor: pointer;" Class="hover-card" @onclick="() => ViewBundle(bundle.Id)">
-                            @if (!string.IsNullOrEmpty(bundle.ImageUrl))
-                            {
-                                <MudCardMedia Image="@UrlService.GetFileUrl(bundle.ImageUrl)" Height="200" Style="border-radius: 12px 12px 0 0;" />
+                            @{
+                                var myBundleImageUrl = !string.IsNullOrEmpty(bundle.ImageUrl) ? UrlService.GetFileUrl(bundle.ImageUrl) : string.Empty;
+                                var hasValidMyBundleImage = !string.IsNullOrEmpty(myBundleImageUrl);
+                                var myBundleKey = $"mybundle_{bundle.Id}";
                             }
-                            else
-                            {
-                                <div class="d-flex align-center justify-center mud-elevation-1" style="height: 200px; border-radius: 12px 12px 0 0;">
-                                    <MudIcon Icon="@Icons.Material.Filled.Inventory2" Size="Size.Large" Color="Color.Secondary" Style="font-size: 3rem;" />
-                                </div>
-                            }
+                            <div style="position: relative; height: 200px; border-radius: 12px 12px 0 0; overflow: hidden;">
+                                @if (hasValidMyBundleImage)
+                                {
+                                    <img src="@myBundleImageUrl" 
+                                         style="width: 100%; height: 200px; object-fit: cover; @(GetMyBundleImageLoadError(myBundleKey) ? "display: none;" : "")" 
+                                         class="mybundle-image"
+                                         @onerror="@(() => HandleMyBundleImageError(myBundleKey))" 
+                                         @onload="@(() => HandleMyBundleImageLoad(myBundleKey))" />
+                                }
+                                
+                                @if (!hasValidMyBundleImage || GetMyBundleImageLoadError(myBundleKey))
+                                {
+                                    <ThemeAwarePlaceholder Height="200px" 
+                                                          BorderRadius="12px 12px 0 0"
+                                                          Icon="@Icons.Material.Filled.Inventory" 
+                                                          IconSize="Size.Large"
+                                                          IconFontSize="3rem"
+                                                          AdditionalClass="mybundle-image" />
+                                }
+                            </div>
                             
                             <MudCardContent>
                                 <MudText Typo="Typo.h6" GutterBottom="true">@bundle.Name</MudText>
@@ -422,6 +453,15 @@
     .hover-card:hover {
         transform: translateY(-4px);
     }
+    
+    .mytool-image,
+    .mybundle-image {
+        background: linear-gradient(45deg, #f5f5f5 0%, #e0e0e0 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        position: relative;
+    }
 </style>
 
 @code {
@@ -438,6 +478,10 @@
 
     // Tab management
     private int activeTab = 0;
+    
+    // Image error tracking
+    private Dictionary<string, bool> myToolImageLoadErrors = new();
+    private Dictionary<string, bool> myBundleImageLoadErrors = new();
 
     protected override async Task OnInitializedAsync()
     {
@@ -650,5 +694,41 @@
         var result = await dialog.Result;
 
         return !result.Canceled && result.Data is ConfirmationDialogResult dialogResult && dialogResult.Confirmed;
+    }
+    
+    // Image error handling methods for tools
+    private bool GetMyToolImageLoadError(string toolKey)
+    {
+        return myToolImageLoadErrors.GetValueOrDefault(toolKey, false);
+    }
+    
+    private void HandleMyToolImageError(string toolKey)
+    {
+        myToolImageLoadErrors[toolKey] = true;
+        StateHasChanged();
+    }
+    
+    private void HandleMyToolImageLoad(string toolKey)
+    {
+        myToolImageLoadErrors[toolKey] = false;
+        StateHasChanged();
+    }
+    
+    // Image error handling methods for bundles
+    private bool GetMyBundleImageLoadError(string bundleKey)
+    {
+        return myBundleImageLoadErrors.GetValueOrDefault(bundleKey, false);
+    }
+    
+    private void HandleMyBundleImageError(string bundleKey)
+    {
+        myBundleImageLoadErrors[bundleKey] = true;
+        StateHasChanged();
+    }
+    
+    private void HandleMyBundleImageLoad(string bundleKey)
+    {
+        myBundleImageLoadErrors[bundleKey] = false;
+        StateHasChanged();
     }
 }
