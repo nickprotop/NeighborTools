@@ -107,7 +107,7 @@ public class JwtTokenService : IJwtTokenService
                 ValidIssuer = _issuer,
                 ValidAudience = _audience,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
-                ClockSkew = TimeSpan.Zero
+                ClockSkew = TimeSpan.FromMinutes(5)
             }, out SecurityToken validatedToken);
 
             return true;
@@ -149,7 +149,7 @@ public class JwtTokenService : IJwtTokenService
                 ValidIssuer = _issuer,
                 ValidAudience = _audience,
                 IssuerSigningKey = new SymmetricSecurityKey(key),
-                ClockSkew = TimeSpan.Zero
+                ClockSkew = TimeSpan.FromMinutes(5)
             }, out SecurityToken validatedToken);
 
             return principal;
