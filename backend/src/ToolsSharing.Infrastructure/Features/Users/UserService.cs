@@ -18,6 +18,7 @@ public class UserService : IUserService
     private readonly IRepository<Tool> _toolRepository;
     private readonly IRepository<Rental> _rentalRepository;
     private readonly IRepository<Review> _reviewRepository;
+    private readonly IFileStorageService _fileStorageService;
 
     public UserService(
         ApplicationDbContext context,
@@ -25,7 +26,8 @@ public class UserService : IUserService
         IRepository<User> userRepository,
         IRepository<Tool> toolRepository,
         IRepository<Rental> rentalRepository,
-        IRepository<Review> reviewRepository)
+        IRepository<Review> reviewRepository,
+        IFileStorageService fileStorageService)
     {
         _context = context;
         _userManager = userManager;
@@ -33,6 +35,7 @@ public class UserService : IUserService
         _toolRepository = toolRepository;
         _rentalRepository = rentalRepository;
         _reviewRepository = reviewRepository;
+        _fileStorageService = fileStorageService;
     }
 
     public async Task<UserProfileDto?> GetUserProfileAsync(string userId)
@@ -176,15 +179,47 @@ public class UserService : IUserService
         if (user == null || user.IsDeleted)
             return null;
 
-        // For now, we'll just simulate the upload and return a placeholder URL
-        // In a real implementation, you would upload to a cloud storage service
-        var imageUrl = $"/images/profiles/{userId}_{fileName}";
-        
-        user.ProfilePictureUrl = imageUrl;
-        user.UpdatedAt = DateTime.UtcNow;
-        await _userManager.UpdateAsync(user);
+        try
+        {
+            // Delete old profile picture if exists
+            if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+            {
+                await _fileStorageService.DeleteFileAsync(user.ProfilePictureUrl);
+            }
 
-        return imageUrl;
+            // Create unique filename to prevent conflicts
+            var extension = Path.GetExtension(fileName);
+            var uniqueFileName = $"{userId}_{Guid.NewGuid()}{extension}";
+
+            // Create metadata for profile pictures (public access for display)
+            var metadata = new FileAccessMetadata
+            {
+                AccessLevel = "public",
+                FileType = "avatar",
+                OwnerId = userId
+            };
+
+            // Upload to avatars folder with metadata
+            var storagePath = await _fileStorageService.UploadFileAsync(
+                imageStream, 
+                uniqueFileName, 
+                GetContentTypeFromExtension(extension), 
+                "avatars", 
+                metadata);
+
+            // Update user's profile picture URL
+            user.ProfilePictureUrl = storagePath;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            // Return the file URL for frontend consumption
+            return await _fileStorageService.GetFileUrlAsync(storagePath);
+        }
+        catch (Exception)
+        {
+            // If upload fails, don't update the user record
+            return null;
+        }
     }
 
     public async Task<bool> RemoveProfilePictureAsync(string userId)
@@ -193,11 +228,30 @@ public class UserService : IUserService
         if (user == null || user.IsDeleted)
             return false;
 
-        user.ProfilePictureUrl = null;
-        user.UpdatedAt = DateTime.UtcNow;
-        await _userManager.UpdateAsync(user);
+        try
+        {
+            // Delete the actual file from storage
+            if (!string.IsNullOrEmpty(user.ProfilePictureUrl))
+            {
+                await _fileStorageService.DeleteFileAsync(user.ProfilePictureUrl);
+            }
 
-        return true;
+            // Clear the database reference
+            user.ProfilePictureUrl = null;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+
+            return true;
+        }
+        catch (Exception)
+        {
+            // If file deletion fails, still clear the database reference
+            user.ProfilePictureUrl = null;
+            user.UpdatedAt = DateTime.UtcNow;
+            await _userManager.UpdateAsync(user);
+            
+            return true; // Return true since we cleared the database reference
+        }
     }
 
     private async Task<List<RecentActivityDto>> GetRecentActivityAsync(string userId)
@@ -292,5 +346,17 @@ public class UserService : IUserService
         }
 
         return results;
+    }
+
+    private static string GetContentTypeFromExtension(string extension)
+    {
+        return extension?.ToLowerInvariant() switch
+        {
+            ".jpg" or ".jpeg" => "image/jpeg",
+            ".png" => "image/png",
+            ".gif" => "image/gif",
+            ".webp" => "image/webp",
+            _ => "application/octet-stream"
+        };
     }
 }
