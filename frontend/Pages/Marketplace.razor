@@ -16,6 +16,7 @@
 @inject NavigationManager Navigation
 @inject IUrlService UrlService
 @inject IRentalService RentalService
+@inject FavoritesService FavoritesService
 @attribute [AllowAnonymous]
 
 <PageTitle>Marketplace - NeighborTools</PageTitle>
@@ -114,7 +115,7 @@
                                  Style="height: auto; padding: 0; border-radius: 12px;">
                             <MudPaper Class="pa-4 text-center" Style="background: rgba(255,255,255,0.15); border-radius: 12px; backdrop-filter: blur(10px); width: 100%; cursor: pointer;">
                                 <MudIcon Icon="@Icons.Material.Filled.Favorite" Size="Size.Large" Style="color: white; margin-bottom: 8px;" />
-                                <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">0</MudText>
+                                <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">@favoritesCount</MudText>
                                 <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">Favorites</MudText>
                             </MudPaper>
                         </MudButton>
@@ -613,6 +614,7 @@
     private int userBundlesCount = 0;
     private int activeRentalsCount = 0;
     private int pendingRequestsCount = 0;
+    private int favoritesCount = 0;
     private List<Rental>? recentUserActivity;
     
     // Navigation and Hero Display
@@ -845,6 +847,13 @@
                     .OrderByDescending(r => r.CreatedAt)
                     .Take(5)
                     .ToList();
+            }
+
+            // Load favorites count
+            var favoritesResult = await FavoritesService.GetFavoritesCountAsync();
+            if (favoritesResult.Success)
+            {
+                favoritesCount = favoritesResult.Data;
             }
         }
         catch (Exception ex)
