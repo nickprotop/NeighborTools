@@ -1,6 +1,8 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using ToolsSharing.Core.Interfaces;
+using ToolsSharing.Infrastructure.Data;
 
 namespace ToolsSharing.API.Controllers;
 
@@ -10,17 +12,20 @@ public class FilesController : ControllerBase
 {
     private readonly IFileStorageService _fileStorageService;
     private readonly ILogger<FilesController> _logger;
+    private readonly ApplicationDbContext _context;
 
     public FilesController(
         IFileStorageService fileStorageService,
-        ILogger<FilesController> logger)
+        ILogger<FilesController> logger,
+        ApplicationDbContext context)
     {
         _fileStorageService = fileStorageService;
         _logger = logger;
+        _context = context;
     }
 
     /// <summary>
-    /// Download a file by its storage path
+    /// Download a file by its storage path (public files accessible to all, private files require authorization)
     /// </summary>
     /// <param name="fileName">The file name/storage path (URL encoded)</param>
     /// <returns>File stream</returns>
@@ -37,6 +42,13 @@ public class FilesController : ControllerBase
             
             _logger.LogInformation("Decoded fileName: '{DecodedFileName}'", decodedFileName);
             _logger.LogInformation("Attempting to download file: {FileName}", decodedFileName);
+
+            // Check authorization for private folders
+            if (!await IsFileAccessAuthorizedAsync(decodedFileName))
+            {
+                _logger.LogWarning("Unauthorized access attempt to file: {FileName}", decodedFileName);
+                return Forbid("Access denied to this file");
+            }
 
             // Get file stream from storage
             _logger.LogInformation("Calling _fileStorageService.DownloadFileAsync with: '{DecodedFileName}'", decodedFileName);
@@ -175,5 +187,66 @@ public class FilesController : ControllerBase
             ".tiff" => "image/tiff",
             _ => "application/octet-stream"
         };
+    }
+
+    /// <summary>
+    /// Check if the current user is authorized to access the specified file
+    /// </summary>
+    /// <param name="filePath">The file path to check</param>
+    /// <returns>True if access is authorized, false otherwise</returns>
+    private async Task<bool> IsFileAccessAuthorizedAsync(string filePath)
+    {
+        // Public folders - accessible to everyone
+        if (filePath.StartsWith("images/", StringComparison.OrdinalIgnoreCase) ||
+            filePath.StartsWith("avatars/", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        // Private folders require authentication
+        if (filePath.StartsWith("disputes/", StringComparison.OrdinalIgnoreCase))
+        {
+            // Must be authenticated to access dispute files
+            if (!User.Identity?.IsAuthenticated ?? true)
+            {
+                return false;
+            }
+
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return false;
+            }
+
+            // Check if user is admin
+            if (User.IsInRole("Admin"))
+            {
+                return true;
+            }
+
+            // Extract dispute ID from path (disputes/{disputeId}/filename)
+            var pathParts = filePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+            if (pathParts.Length >= 2 && Guid.TryParse(pathParts[1], out var disputeId))
+            {
+                // Check if user is involved in the dispute
+                var dispute = await _context.Disputes
+                    .Include(d => d.Rental)
+                        .ThenInclude(r => r.Tool)
+                    .FirstOrDefaultAsync(d => d.Id == disputeId);
+
+                if (dispute != null)
+                {
+                    // User can access if they are the dispute creator, renter, or tool owner
+                    return dispute.InitiatedBy == userId ||
+                           dispute.Rental.RenterId == userId ||
+                           dispute.Rental.Tool.OwnerId == userId;
+                }
+            }
+
+            return false;
+        }
+
+        // For any other private folders, require authentication
+        return User.Identity?.IsAuthenticated ?? false;
     }
 }
