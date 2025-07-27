@@ -6,10 +6,8 @@ namespace ToolsSharing.Core.Entities;
 /// <summary>
 /// Represents a mutual closure request for a dispute that requires agreement from both parties
 /// </summary>
-public class MutualDisputeClosure
+public class MutualDisputeClosure : BaseEntity
 {
-    [Key]
-    public Guid Id { get; set; }
 
     [Required]
     public Guid DisputeId { get; set; }
@@ -67,11 +65,7 @@ public class MutualDisputeClosure
     /// </summary>
     public RefundRecipient? RefundRecipient { get; set; }
 
-    /// <summary>
-    /// When the request was created
-    /// </summary>
-    [Required]
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    // CreatedAt inherited from BaseEntity
 
     /// <summary>
     /// When the other party responded (if they have)
@@ -213,10 +207,8 @@ public enum RefundRecipient
 /// <summary>
 /// Audit log for mutual closure actions
 /// </summary>
-public class MutualClosureAuditLog
+public class MutualClosureAuditLog : BaseEntity
 {
-    [Key]
-    public Guid Id { get; set; }
 
     [Required]
     public Guid MutualClosureId { get; set; }
@@ -254,11 +246,7 @@ public class MutualClosureAuditLog
     [MaxLength(1000)]
     public string? Metadata { get; set; }
 
-    /// <summary>
-    /// When the action was performed
-    /// </summary>
-    [Required]
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    // CreatedAt inherited from BaseEntity
 
     /// <summary>
     /// IP address of the user (for security audit)
