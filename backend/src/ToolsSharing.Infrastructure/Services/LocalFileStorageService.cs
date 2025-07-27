@@ -31,6 +31,12 @@ public class LocalFileStorageService : IFileStorageService
 
     public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folder = "")
     {
+        // Call with default metadata for backward compatibility
+        return await UploadFileAsync(fileStream, fileName, contentType, folder, null);
+    }
+
+    public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folder, FileAccessMetadata? metadata)
+    {
         if (!IsFileValid(fileName, contentType, fileStream.Length))
         {
             throw new ArgumentException("Invalid file type or size");
@@ -90,6 +96,14 @@ public class LocalFileStorageService : IFileStorageService
             _logger.LogError(ex, "Error downloading file: {StoragePath}", storagePath);
             return null;
         }
+    }
+
+    public async Task<FileAccessMetadata?> GetFileMetadataAsync(string storagePath)
+    {
+        // Local file storage doesn't support metadata
+        // Return null to indicate metadata is not available
+        await Task.CompletedTask;
+        return null;
     }
 
     public async Task<bool> DeleteFileAsync(string storagePath)

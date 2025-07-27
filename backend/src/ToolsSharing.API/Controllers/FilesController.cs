@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using System.Security.Claims;
 using ToolsSharing.Core.Interfaces;
 using ToolsSharing.Infrastructure.Data;
 
@@ -37,17 +38,45 @@ public class FilesController : ControllerBase
             _logger.LogInformation("=== FILE DOWNLOAD DEBUG START ===");
             _logger.LogInformation("Raw fileName parameter: '{FileName}'", fileName);
             
-            // Decode the file name
+            // Validate filename parameter
+            if (string.IsNullOrWhiteSpace(fileName))
+            {
+                _logger.LogWarning("Empty or null filename provided");
+                return BadRequest(new { message = "Filename is required" });
+            }
+            
+            // Decode the file name and normalize path
             var decodedFileName = Uri.UnescapeDataString(fileName);
             
-            _logger.LogInformation("Decoded fileName: '{DecodedFileName}'", decodedFileName);
+            // Normalize path separators and remove double slashes
+            decodedFileName = decodedFileName.Replace("\\", "/");
+            while (decodedFileName.Contains("//"))
+            {
+                decodedFileName = decodedFileName.Replace("//", "/");
+            }
+            
+            // Remove leading slash if present
+            if (decodedFileName.StartsWith("/"))
+            {
+                decodedFileName = decodedFileName.Substring(1);
+            }
+            
+            _logger.LogInformation("Normalized fileName: '{DecodedFileName}'", decodedFileName);
+            
+            // Validate normalized filename
+            if (string.IsNullOrWhiteSpace(decodedFileName))
+            {
+                _logger.LogWarning("Filename became empty after normalization");
+                return BadRequest(new { message = "Invalid filename" });
+            }
+            
             _logger.LogInformation("Attempting to download file: {FileName}", decodedFileName);
 
             // Check authorization for private folders
             if (!await IsFileAccessAuthorizedAsync(decodedFileName))
             {
                 _logger.LogWarning("Unauthorized access attempt to file: {FileName}", decodedFileName);
-                return Forbid("Access denied to this file");
+                return StatusCode(403, new { message = "Access denied to this file" });
             }
 
             // Get file stream from storage
@@ -85,14 +114,24 @@ public class FilesController : ControllerBase
     }
 
     /// <summary>
-    /// Upload a file (requires authentication)
+    /// Upload a file with optional metadata (requires authentication)
     /// </summary>
     /// <param name="file">The file to upload</param>
     /// <param name="folder">Optional folder to organize files</param>
+    /// <param name="accessLevel">Access level: 'public', 'private', or 'restricted'. Defaults to 'private'</param>
+    /// <param name="fileType">File type category for organization. Defaults to 'general'</param>
+    /// <param name="allowedUsers">Comma-separated list of user IDs who can access this file (for restricted access)</param>
+    /// <param name="relatedId">Related entity ID (e.g., rental ID, dispute ID) for context</param>
     /// <returns>File storage information</returns>
     [HttpPost("upload")]
     [Authorize]
-    public async Task<IActionResult> UploadFile(IFormFile file, [FromQuery] string folder = "")
+    public async Task<IActionResult> UploadFile(
+        IFormFile file, 
+        [FromQuery] string folder = "",
+        [FromQuery] string? accessLevel = null,
+        [FromQuery] string? fileType = null,
+        [FromQuery] string? allowedUsers = null,
+        [FromQuery] string? relatedId = null)
     {
         try
         {
@@ -101,14 +140,58 @@ public class FilesController : ControllerBase
                 return BadRequest(new { message = "No file provided" });
             }
 
-            _logger.LogInformation("Uploading file: {FileName} ({FileSize} bytes)", file.FileName, file.Length);
+            // Get current user ID
+            var userId = User.FindFirst(ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrEmpty(userId))
+            {
+                return Unauthorized(new { message = "User not found" });
+            }
+
+            _logger.LogInformation("Uploading file: {FileName} ({FileSize} bytes) by user {UserId}", 
+                file.FileName, file.Length, userId);
+
+            // Create metadata with secure defaults
+            var metadata = new FileAccessMetadata
+            {
+                // Default to private access if not specified (security first)
+                AccessLevel = !string.IsNullOrEmpty(accessLevel) ? accessLevel.ToLowerInvariant() : "private",
+                FileType = !string.IsNullOrEmpty(fileType) ? fileType : "general",
+                OwnerId = userId,
+                AllowedUsers = allowedUsers
+            };
+
+            // Validate access level
+            var validAccessLevels = new[] { "public", "private", "restricted" };
+            if (!validAccessLevels.Contains(metadata.AccessLevel))
+            {
+                return BadRequest(new { message = "Invalid access level. Must be 'public', 'private', or 'restricted'" });
+            }
+
+            // Set related entity IDs based on context
+            if (!string.IsNullOrEmpty(relatedId))
+            {
+                // Try to determine the type of related ID based on file type or folder
+                if (metadata.FileType == "dispute-evidence" || folder.StartsWith("disputes/"))
+                {
+                    metadata.DisputeId = relatedId;
+                }
+                else if (metadata.FileType == "rental-document" || folder.StartsWith("rentals/"))
+                {
+                    metadata.RentalId = relatedId;
+                }
+                // Add more context mappings as needed
+            }
+
+            _logger.LogInformation("File metadata: AccessLevel={AccessLevel}, FileType={FileType}, OwnerId={OwnerId}", 
+                metadata.AccessLevel, metadata.FileType, metadata.OwnerId);
 
             using var fileStream = file.OpenReadStream();
             var storagePath = await _fileStorageService.UploadFileAsync(
                 fileStream, 
                 file.FileName, 
                 file.ContentType, 
-                folder);
+                folder,
+                metadata);
 
             var fileUrl = await _fileStorageService.GetFileUrlAsync(storagePath);
 
@@ -121,7 +204,13 @@ public class FilesController : ControllerBase
                 fileUrl,
                 fileName = file.FileName,
                 contentType = file.ContentType,
-                size = file.Length
+                size = file.Length,
+                metadata = new
+                {
+                    accessLevel = metadata.AccessLevel,
+                    fileType = metadata.FileType,
+                    ownerId = metadata.OwnerId
+                }
             });
         }
         catch (ArgumentException ex)
@@ -190,11 +279,48 @@ public class FilesController : ControllerBase
     }
 
     /// <summary>
-    /// Check if the current user is authorized to access the specified file
+    /// Check if the current user is authorized to access the specified file using metadata-based authorization
     /// </summary>
     /// <param name="filePath">The file path to check</param>
     /// <returns>True if access is authorized, false otherwise</returns>
     private async Task<bool> IsFileAccessAuthorizedAsync(string filePath)
+    {
+        try
+        {
+            // Get file metadata from MinIO
+            var metadata = await _fileStorageService.GetFileMetadataAsync(filePath);
+            
+            // If no metadata exists, fall back to path-based authorization for backward compatibility
+            if (metadata == null)
+            {
+                return await IsPathBasedAuthorizationAsync(filePath);
+            }
+
+            // Get current user info
+            var userId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+            var isAuthenticated = User.Identity?.IsAuthenticated ?? false;
+            var isAdmin = User.IsInRole("Admin");
+
+            // Use metadata-based authorization
+            if (!isAuthenticated && metadata.AccessLevel != "public")
+            {
+                return false;
+            }
+
+            return metadata.IsUserAllowed(userId ?? "", isAdmin);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking file authorization for: {FilePath}", filePath);
+            // In case of error, deny access to be safe
+            return false;
+        }
+    }
+
+    /// <summary>
+    /// Fallback authorization method for files without metadata (backward compatibility)
+    /// </summary>
+    private async Task<bool> IsPathBasedAuthorizationAsync(string filePath)
     {
         // Public folders - accessible to everyone
         if (filePath.StartsWith("images/", StringComparison.OrdinalIgnoreCase) ||

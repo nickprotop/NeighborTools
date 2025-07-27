@@ -28,6 +28,23 @@ public class MinIOFileStorageService : IFileStorageService
 
     public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folder = "")
     {
+        // Default to public access for backward compatibility
+        var defaultMetadata = new FileAccessMetadata
+        {
+            AccessLevel = "public",
+            FileType = folder switch
+            {
+                "images" => "tool-image",
+                "avatars" => "avatar",
+                _ => "general"
+            }
+        };
+        
+        return await UploadFileAsync(fileStream, fileName, contentType, folder, defaultMetadata);
+    }
+
+    public async Task<string> UploadFileAsync(Stream fileStream, string fileName, string contentType, string folder, FileAccessMetadata? metadata)
+    {
         if (!IsFileValid(fileName, contentType, fileStream.Length))
         {
             throw new ArgumentException("Invalid file type or size");
@@ -46,7 +63,7 @@ public class MinIOFileStorageService : IFileStorageService
                 ? uniqueFileName 
                 : $"{folder.Trim('/')}/{uniqueFileName}";
 
-            // Upload file to MinIO
+            // Prepare upload arguments with metadata
             var putObjectArgs = new PutObjectArgs()
                 .WithBucket(_bucketName)
                 .WithObject(objectName)
@@ -54,9 +71,20 @@ public class MinIOFileStorageService : IFileStorageService
                 .WithObjectSize(fileStream.Length)
                 .WithContentType(contentType);
 
+            // Add metadata headers if provided
+            if (metadata != null)
+            {
+                var headers = metadata.ToHeaders();
+                foreach (var header in headers)
+                {
+                    putObjectArgs = putObjectArgs.WithHeaders(new Dictionary<string, string> { { header.Key, header.Value } });
+                }
+            }
+
             await _minioClient.PutObjectAsync(putObjectArgs);
             
-            _logger.LogInformation("File uploaded successfully to MinIO: {FileName} -> {ObjectName}", fileName, objectName);
+            _logger.LogInformation("File uploaded successfully to MinIO: {FileName} -> {ObjectName} with access level: {AccessLevel}", 
+                fileName, objectName, metadata?.AccessLevel ?? "public");
             
             return objectName;
         }
@@ -100,6 +128,34 @@ public class MinIOFileStorageService : IFileStorageService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error downloading file from MinIO: {StoragePath}", storagePath);
+            return null;
+        }
+    }
+
+    public async Task<FileAccessMetadata?> GetFileMetadataAsync(string storagePath)
+    {
+        try
+        {
+            await EnsureBucketExistsAsync();
+
+            // Get object metadata
+            var statObjectArgs = new StatObjectArgs()
+                .WithBucket(_bucketName)
+                .WithObject(storagePath);
+
+            var objectStat = await _minioClient.StatObjectAsync(statObjectArgs);
+            
+            // Convert metadata from object stat
+            return FileAccessMetadata.FromHeaders(objectStat.MetaData);
+        }
+        catch (Minio.Exceptions.ObjectNotFoundException)
+        {
+            _logger.LogWarning("File not found in MinIO when getting metadata: {StoragePath}", storagePath);
+            return null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error getting file metadata from MinIO: {StoragePath}", storagePath);
             return null;
         }
     }
