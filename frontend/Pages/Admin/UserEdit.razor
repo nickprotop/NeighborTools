@@ -312,7 +312,7 @@
                 {
                     <MudPaper Class="pa-4">
                         <MudText Typo="Typo.h6" Class="mb-3">Profile Picture</MudText>
-                        <MudImage Src="@user.ProfilePictureUrl" 
+                        <MudImage Src="@UrlService.GetFileUrl(user.ProfilePictureUrl)" 
                                   Alt="Profile Picture"
                                   Width="200"
                                   Height="200"
@@ -330,6 +330,7 @@
     [Inject] private HttpClient HttpClient { get; set; } = default!;
     [Inject] private ISnackbar Snackbar { get; set; } = default!;
     [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IUrlService UrlService { get; set; } = default!;
 
     private bool isLoading = true;
     private bool isSaving = false;

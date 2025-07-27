@@ -48,7 +48,7 @@
                     {
                         <MudAvatar Size="Size.Large" 
                                    Style="width: 120px; height: 120px; font-size: 2.5rem;">
-                            <MudImage Src="@profile.ProfilePictureUrl" 
+                            <MudImage Src="@UrlService.GetFileUrl(profile.ProfilePictureUrl)" 
                                       Alt="@GetDisplayName()" 
                                       ObjectFit="ObjectFit.Cover"
                                       Style="width: 100%; height: 100%;" />

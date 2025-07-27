@@ -2,6 +2,7 @@
 @using frontend.Services
 @inject IToolService ToolService
 @inject ISnackbar Snackbar
+@inject IUrlService UrlService
 
 <MudCard Class="mb-4">
     <MudCardHeader>
@@ -62,7 +63,7 @@
                     <MudCardContent>
                         <div class="d-flex align-center mb-2">
                             <MudAvatar Size="Size.Small" 
-                                      Image="@(string.IsNullOrEmpty(review.ReviewerAvatar) ? null : review.ReviewerAvatar)">
+                                      Image="@(string.IsNullOrEmpty(review.ReviewerAvatar) ? null : UrlService.GetFileUrl(review.ReviewerAvatar))">
                                 @if (string.IsNullOrEmpty(review.ReviewerAvatar))
                                 {
                                     @review.ReviewerName.Substring(0, 1).ToUpper()
