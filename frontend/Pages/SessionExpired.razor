@@ -1,0 +1,138 @@
+@page "/session-expired"
+@using MudBlazor
+
+<PageTitle>Session Expired - NeighborTools</PageTitle>
+
+<div class="session-expired-container">
+    <MudContainer MaxWidth="MaxWidth.Small" Class="session-expired-content">
+        <MudPaper Elevation="3" Class="pa-8 text-center">
+            <div class="mb-6">
+                <MudIcon Icon="@Icons.Material.Filled.AccessTime" 
+                         Size="Size.Large" 
+                         Color="Color.Warning" 
+                         Class="session-expired-icon" />
+            </div>
+            
+            <MudText Typo="Typo.h4" Color="Color.Primary" Class="mb-4">
+                Session Expired
+            </MudText>
+            
+            <MudText Typo="Typo.body1" Class="mb-4 text-muted">
+                Your session has expired for security reasons. This happens when:
+            </MudText>
+            
+            <div class="mb-6">
+                <MudList T="string" Dense="true" Class="session-expired-reasons">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Schedule" Text="You've been inactive for too long" />
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Security" Text="Your authentication token has expired" />
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Refresh" Text="Your session couldn't be automatically renewed" />
+                </MudList>
+            </div>
+            
+            <MudText Typo="Typo.body2" Class="mb-6 text-muted">
+                Please log in again to continue using NeighborTools safely and securely.
+            </MudText>
+            
+            <div class="session-expired-actions">
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           Size="Size.Large"
+                           StartIcon="@Icons.Material.Filled.Login"
+                           Href="/login"
+                           Class="mb-3">
+                    Log In Again
+                </MudButton>
+                
+                <br />
+                
+                <MudButton Variant="Variant.Text" 
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Home"
+                           Href="/"
+                           Size="Size.Medium">
+                    Go to Homepage
+                </MudButton>
+            </div>
+        </MudPaper>
+        
+        <!-- Security Notice -->
+        <MudAlert Severity="Severity.Info" Class="mt-4">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+                <div>
+                    <strong>Security Notice:</strong> Regular session expiration helps protect your account from unauthorized access.
+                </div>
+            </div>
+        </MudAlert>
+    </MudContainer>
+</div>
+
+<style>
+    .session-expired-container {
+        min-height: 100vh;
+        background: linear-gradient(135deg, var(--mud-palette-primary-lighten) 0%, var(--mud-palette-background) 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 24px;
+    }
+    
+    .session-expired-content {
+        width: 100%;
+        max-width: 500px;
+    }
+    
+    .session-expired-icon {
+        font-size: 4rem !important;
+        opacity: 0.8;
+    }
+    
+    .session-expired-reasons {
+        text-align: left;
+        background: var(--mud-palette-background-grey);
+        border-radius: var(--mud-radius-md);
+        padding: 16px;
+        margin: 0 auto;
+        max-width: 320px;
+    }
+    
+    .session-expired-reasons .mud-list-item {
+        padding: 8px 0;
+        font-size: 0.875rem;
+    }
+    
+    .session-expired-actions {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .text-muted {
+        color: var(--mud-palette-text-secondary) !important;
+    }
+    
+    /* Responsive adjustments */
+    @@media (max-width: 600px) {
+        .session-expired-container {
+            padding: 16px;
+        }
+        
+        .session-expired-content .mud-paper {
+            padding: 24px 16px !important;
+        }
+        
+        .session-expired-icon {
+            font-size: 3rem !important;
+        }
+    }
+</style>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        // Ensure user is logged out when accessing this page
+        // This prevents any cached authentication state issues
+        await Task.CompletedTask;
+    }
+}

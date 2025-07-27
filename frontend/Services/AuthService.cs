@@ -13,6 +13,7 @@ public interface IAuthService
     Task<bool> IsAuthenticatedAsync();
     Task<UserInfo?> GetCurrentUserAsync();
     Task RestoreAuthenticationAsync();
+    Task<ApiResponse<AuthResult>> RefreshCurrentSessionAsync();
     Task<ApiResponse<bool>> ConfirmEmailAsync(ConfirmEmailRequest request);
     Task<ApiResponse<bool>> ResendVerificationAsync(ResendVerificationRequest request);
     Task<EmailVerificationStatus?> GetVerificationStatusAsync(string email);
@@ -297,6 +298,54 @@ public class AuthService : IAuthService
             { 
                 Success = false, 
                 Message = $"Password reset failed: {ex.Message}" 
+            };
+        }
+    }
+
+    public async Task<ApiResponse<AuthResult>> RefreshCurrentSessionAsync()
+    {
+        try
+        {
+            var response = await _httpClient.PostAsync("/api/auth/refresh-current-session", null);
+            var content = await response.Content.ReadAsStringAsync();
+            
+            var result = JsonSerializer.Deserialize<ApiResponse<AuthResult>>(content, new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+            if (result?.Success == true && result.Data != null)
+            {
+                // Update tokens in storage with new expiry
+                var user = await GetCurrentUserAsync();
+                if (user != null)
+                {
+                    var isRememberMe = await _localStorage.GetItemAsync<string>("authToken") != null;
+                    
+                    if (isRememberMe)
+                    {
+                        await _localStorage.SetItemAsync("authToken", result.Data.AccessToken);
+                        await _localStorage.SetItemAsync("refreshToken", result.Data.RefreshToken);
+                    }
+                    else
+                    {
+                        await _localStorage.SetSessionItemAsync("authToken", result.Data.AccessToken);
+                        await _localStorage.SetSessionItemAsync("refreshToken", result.Data.RefreshToken);
+                    }
+
+                    // Update authentication state
+                    ((CustomAuthenticationStateProvider)_authenticationStateProvider).MarkUserAsAuthenticated(user);
+                }
+            }
+
+            return result ?? new ApiResponse<AuthResult> { Success = false, Message = "Invalid response" };
+        }
+        catch (Exception ex)
+        {
+            return new ApiResponse<AuthResult> 
+            { 
+                Success = false, 
+                Message = $"Session refresh failed: {ex.Message}" 
             };
         }
     }

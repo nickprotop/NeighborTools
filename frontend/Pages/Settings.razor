@@ -6,7 +6,7 @@
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject SettingsService SettingsService
-@inject ISessionTimeoutService SessionTimeoutService
+@inject IAuthService AuthService
 @attribute [Authorize]
 
 <PageTitle>Settings - NeighborTools</PageTitle>
@@ -928,10 +928,17 @@
             
             if (response?.Success == true)
             {
-                // Update the session timeout service with the new timeout value
-                await SessionTimeoutService.UpdateTimeoutAsync(settings.Security.SessionTimeoutMinutes);
+                // Immediately refresh the current session to apply new timeout settings
+                var refreshResponse = await AuthService.RefreshCurrentSessionAsync();
                 
-                Snackbar.Add("Security settings saved!", Severity.Success);
+                if (refreshResponse?.Success == true)
+                {
+                    Snackbar.Add("Security settings saved and applied to your current session!", Severity.Success);
+                }
+                else
+                {
+                    Snackbar.Add("Security settings saved! Changes will apply to your next session.", Severity.Warning);
+                }
             }
             else
             {
