@@ -7,6 +7,7 @@
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserService UserService
+@inject IUrlService UrlService
 @attribute [Authorize]
 
 <PageTitle>Profile - NeighborTools</PageTitle>
@@ -31,7 +32,7 @@
         <MudAvatar Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="width: 120px; height: 120px; font-size: 3rem;">
             @if (!string.IsNullOrEmpty(userProfile?.ProfilePictureUrl))
             {
-                <MudImage Src="@userProfile.ProfilePictureUrl" Alt="Profile Picture" />
+                <MudImage Src="@UrlService.GetFileUrl(userProfile.ProfilePictureUrl)" Alt="Profile Picture" />
             }
             else
             {
@@ -192,7 +193,7 @@
                                 <MudAvatar Size="Size.Large" Color="Color.Primary" Style="width: 100px; height: 100px; font-size: 2rem;">
                                     @if (!string.IsNullOrEmpty(userProfile?.ProfilePictureUrl))
                                     {
-                                        <MudImage Src="@userProfile.ProfilePictureUrl" Alt="Profile Picture" />
+                                        <MudImage Src="@UrlService.GetFileUrl(userProfile.ProfilePictureUrl)" Alt="Profile Picture" />
                                     }
                                     else
                                     {
@@ -201,13 +202,25 @@
                                 </MudAvatar>
                             </div>
                             
-                            <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth StartIcon="@Icons.Material.Filled.Upload">
-                                Upload New Photo
-                            </MudButton>
+                            <MudFileUpload T="IBrowserFile" Accept=".jpg,.jpeg,.png,.gif,.webp" OnFilesChanged="@(async args => await OnProfilePictureSelected(args.File))">
+                                <ActivatorContent>
+                                    <MudButton Variant="Variant.Outlined" Color="Color.Primary" FullWidth StartIcon="@Icons.Material.Filled.Upload" Disabled="isUploadingProfilePicture">
+                                        @if (isUploadingProfilePicture)
+                                        {
+                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                            <MudText Class="ml-2">Uploading...</MudText>
+                                        }
+                                        else
+                                        {
+                                            <MudText>Upload New Photo</MudText>
+                                        }
+                                    </MudButton>
+                                </ActivatorContent>
+                            </MudFileUpload>
                             
                             @if (!string.IsNullOrEmpty(userProfile?.ProfilePictureUrl))
                             {
-                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth StartIcon="@Icons.Material.Filled.Delete" Class="mt-2">
+                                <MudButton Variant="Variant.Text" Color="Color.Error" FullWidth StartIcon="@Icons.Material.Filled.Delete" Class="mt-2" OnClick="RemoveProfilePicture" Disabled="isUploadingProfilePicture">
                                     Remove Photo
                                 </MudButton>
                             }
@@ -360,6 +373,7 @@
     private UpdateUserProfileRequest updateRequest = new();
     private bool isLoading = false;
     private bool isPageLoading = true;
+    private bool isUploadingProfilePicture = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -547,5 +561,87 @@
             return $"{timeSpan.Minutes} minute{(timeSpan.Minutes == 1 ? "" : "s")} ago";
         
         return "Just now";
+    }
+
+    private async Task OnProfilePictureSelected(IBrowserFile? file)
+    {
+        if (file == null) return;
+
+        isUploadingProfilePicture = true;
+        StateHasChanged();
+
+        try
+        {
+            // Validate file size (5MB limit)
+            if (file.Size > 5 * 1024 * 1024)
+            {
+                Snackbar.Add("Profile picture is too large. Maximum size is 5MB.", Severity.Warning);
+                return;
+            }
+
+            // Validate file type
+            var extension = Path.GetExtension(file.Name).ToLowerInvariant();
+            var allowedTypes = new[] { ".jpg", ".jpeg", ".png", ".gif", ".webp" };
+            if (!allowedTypes.Contains(extension))
+            {
+                Snackbar.Add("Invalid file type. Only JPG, JPEG, PNG, GIF, and WebP files are allowed.", Severity.Warning);
+                return;
+            }
+
+            // Upload the profile picture
+            var response = await UserService.UploadProfilePictureAsync(file);
+            if (response?.Success == true)
+            {
+                Snackbar.Add("Profile picture updated successfully!", Severity.Success);
+                // Reload the profile to get the updated picture URL
+                await LoadUserProfile();
+            }
+            else
+            {
+                Snackbar.Add(response?.Message ?? "Failed to upload profile picture.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error uploading profile picture: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isUploadingProfilePicture = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task RemoveProfilePicture()
+    {
+        if (string.IsNullOrEmpty(userProfile?.ProfilePictureUrl))
+            return;
+
+        isUploadingProfilePicture = true;
+        StateHasChanged();
+
+        try
+        {
+            var response = await UserService.RemoveProfilePictureAsync();
+            if (response?.Success == true)
+            {
+                Snackbar.Add("Profile picture removed successfully!", Severity.Success);
+                // Reload the profile to reflect the change
+                await LoadUserProfile();
+            }
+            else
+            {
+                Snackbar.Add(response?.Message ?? "Failed to remove profile picture.", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error removing profile picture: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isUploadingProfilePicture = false;
+            StateHasChanged();
+        }
     }
 }
