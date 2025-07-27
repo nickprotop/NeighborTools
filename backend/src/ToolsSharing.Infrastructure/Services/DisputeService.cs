@@ -1321,13 +1321,25 @@ public class DisputeService : IDisputeService
 
             foreach (var file in files)
             {
-                // Upload file to storage
+                // Create metadata for dispute evidence
+                var metadata = new FileAccessMetadata
+                {
+                    AccessLevel = "private",
+                    FileType = "dispute-evidence",
+                    OwnerId = userId,
+                    DisputeId = disputeId.ToString(),
+                    // Allow dispute parties to access this file
+                    AllowedUsers = $"{dispute.InitiatedBy},{dispute.Rental.RenterId},{dispute.Rental.Tool.OwnerId}"
+                };
+
+                // Upload file to storage with metadata
                 using var fileStream = new MemoryStream(file.Content);
                 var storagePath = await _fileStorageService.UploadFileAsync(
                     fileStream, 
                     file.FileName, 
                     file.ContentType, 
-                    $"disputes/{disputeId}");
+                    $"disputes/{disputeId}",
+                    metadata);
 
                 // Create evidence record
                 var evidence = new DisputeEvidence
