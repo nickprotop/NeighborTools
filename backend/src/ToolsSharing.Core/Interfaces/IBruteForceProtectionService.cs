@@ -68,6 +68,21 @@ public interface IBruteForceProtectionService
     /// Gets brute force protection statistics
     /// </summary>
     Task<BruteForceStatistics> GetStatisticsAsync(DateTime? startDate = null, DateTime? endDate = null);
+    
+    /// <summary>
+    /// Gets currently blocked user accounts
+    /// </summary>
+    Task<List<BlockedUserInfo>> GetBlockedUsersAsync();
+    
+    /// <summary>
+    /// Gets currently blocked IP addresses
+    /// </summary>
+    Task<List<BlockedIPInfo>> GetBlockedIPsAsync();
+    
+    /// <summary>
+    /// Gets cleanup status information
+    /// </summary>
+    Task<SecurityCleanupStatus> GetCleanupStatusAsync();
 }
 
 public class BruteForceAnalysisResult
@@ -98,4 +113,41 @@ public class BruteForceStatistics
     public Dictionary<string, int> TopAttackingSources { get; set; } = new();
     public DateTime PeriodStart { get; set; }
     public DateTime PeriodEnd { get; set; }
+}
+
+public class BlockedUserInfo
+{
+    public string UserEmail { get; set; } = string.Empty;
+    public DateTime BlockedAt { get; set; }
+    public DateTime? UnblockAt { get; set; }
+    public TimeSpan? RemainingDuration { get; set; }
+    public string Reason { get; set; } = string.Empty;
+    public string AttackType { get; set; } = string.Empty;
+    public int FailedAttempts { get; set; }
+    public string? BlockedBy { get; set; }
+}
+
+public class BlockedIPInfo
+{
+    public string IPAddress { get; set; } = string.Empty;
+    public DateTime BlockedAt { get; set; }
+    public DateTime? UnblockAt { get; set; }
+    public TimeSpan? RemainingDuration { get; set; }
+    public string Reason { get; set; } = string.Empty;
+    public string AttackType { get; set; } = string.Empty;
+    public int FailedAttempts { get; set; }
+    public string? BlockedBy { get; set; }
+    public string? GeographicLocation { get; set; }
+}
+
+public class SecurityCleanupStatus
+{
+    public DateTime? LastCleanupRun { get; set; }
+    public DateTime? LastActiveCleanupRun { get; set; }
+    public DateTime? LastBulkCleanupRun { get; set; }
+    public int ExpiredPatternsFound { get; set; }
+    public int PatternsUnblocked { get; set; }
+    public int TotalActiveBlocks { get; set; }
+    public bool IsHealthy { get; set; }
+    public List<string> Issues { get; set; } = new();
 }

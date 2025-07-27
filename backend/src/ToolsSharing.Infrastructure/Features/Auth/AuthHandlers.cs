@@ -18,28 +18,33 @@ public class AuthService : IAuthService
 {
     private readonly UserManager<User> _userManager;
     private readonly IJwtTokenService _jwtTokenService;
+    private readonly IRefreshTokenService _refreshTokenService;
     private readonly IEmailNotificationService _emailNotificationService;
     private readonly IConsentService _consentService;
-    private readonly ISettingsService _settingsService;
     private readonly IConfiguration _configuration;
     private readonly ILogger<AuthService> _logger;
+    private readonly int _defaultSessionTimeoutMinutes;
 
     public AuthService(
         UserManager<User> userManager, 
         IJwtTokenService jwtTokenService, 
+        IRefreshTokenService refreshTokenService,
         IEmailNotificationService emailNotificationService,
         IConsentService consentService,
-        ISettingsService settingsService,
         IConfiguration configuration,
         ILogger<AuthService> logger)
     {
         _userManager = userManager;
         _jwtTokenService = jwtTokenService;
+        _refreshTokenService = refreshTokenService;
         _emailNotificationService = emailNotificationService;
         _consentService = consentService;
-        _settingsService = settingsService;
         _configuration = configuration;
         _logger = logger;
+        
+        // Get default session timeout from configuration
+        _defaultSessionTimeoutMinutes = int.Parse(_configuration["JwtSettings:ExpiresInMinutes"] ?? "60");
+        _logger.LogInformation("AuthService initialized with default session timeout: {TimeoutMinutes} minutes", _defaultSessionTimeoutMinutes);
     }
 
     public async Task<ApiResponse<AuthResult>> RegisterAsync(RegisterCommand command)
@@ -189,32 +194,17 @@ public class AuthService : IAuthService
             // Sync consents for existing users who might not have UserConsent records
             await _consentService.SyncAllUserConsentsFromEntityAsync(user.Id);
 
-            // Get user's session timeout preference
-            int sessionTimeoutMinutes = 60; // Default fallback
-            try
-            {
-                var userSettings = await _settingsService.GetUserSettingsAsync(user.Id);
-                if (userSettings != null)
-                {
-                    sessionTimeoutMinutes = userSettings.Security.SessionTimeoutMinutes;
-                    _logger.LogInformation("Using user's session timeout preference: {TimeoutMinutes} minutes for user {UserId}", 
-                        sessionTimeoutMinutes, user.Id);
-                }
-                else
-                {
-                    _logger.LogInformation("No user settings found, using default session timeout: {TimeoutMinutes} minutes for user {UserId}", 
-                        sessionTimeoutMinutes, user.Id);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to load user settings for session timeout, using default: {TimeoutMinutes} minutes for user {UserId}", 
-                    sessionTimeoutMinutes, user.Id);
-            }
+            // Use fixed 8-hour session timeout for all users
+            int sessionTimeoutMinutes = _defaultSessionTimeoutMinutes; // Fixed at 480 minutes (8 hours)
+            _logger.LogInformation("Using fixed session timeout: {TimeoutMinutes} minutes for user {UserId}", 
+                sessionTimeoutMinutes, user.Id);
 
-            // Generate tokens with user's preferred timeout
+            // Generate tokens with fixed timeout
             var accessToken = await _jwtTokenService.GenerateAccessTokenAsync(user, sessionTimeoutMinutes);
-            var refreshToken = _jwtTokenService.GenerateRefreshToken();
+            var refreshTokenString = _refreshTokenService.GenerateRefreshToken();
+            
+            // Store refresh token in database
+            await _refreshTokenService.StoreRefreshTokenAsync(user.Id, refreshTokenString);
 
             // Get user roles
             var roles = await _userManager.GetRolesAsync(user);
@@ -226,7 +216,7 @@ public class AuthService : IAuthService
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 AccessToken = accessToken,
-                RefreshToken = refreshToken,
+                RefreshToken = refreshTokenString,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(sessionTimeoutMinutes), // Match JWT expiration with user preference
                 Roles = roles.ToList(),
                 IsAdmin = roles.Contains("Admin")
@@ -244,17 +234,11 @@ public class AuthService : IAuthService
     {
         try
         {
-            // Validate refresh token
-            var principal = _jwtTokenService.GetPrincipalFromExpiredToken(command.RefreshToken);
-            if (principal == null)
-            {
-                return ApiResponse<AuthResult>.CreateFailure("Invalid refresh token");
-            }
-
-            var userId = principal.FindFirst("sub")?.Value ?? principal.FindFirst("nameidentifier")?.Value;
+            // Validate refresh token using database lookup
+            var userId = await _refreshTokenService.ValidateRefreshTokenAsync(command.RefreshToken);
             if (string.IsNullOrEmpty(userId))
             {
-                return ApiResponse<AuthResult>.CreateFailure("Invalid token claims");
+                return ApiResponse<AuthResult>.CreateFailure("Invalid refresh token");
             }
 
             var user = await _userManager.FindByIdAsync(userId);
@@ -263,25 +247,18 @@ public class AuthService : IAuthService
                 return ApiResponse<AuthResult>.CreateFailure("User not found");
             }
 
-            // Get user's session timeout preference for refresh token
-            int sessionTimeoutMinutes = 60; // Default fallback
-            try
-            {
-                var userSettings = await _settingsService.GetUserSettingsAsync(user.Id);
-                if (userSettings != null)
-                {
-                    sessionTimeoutMinutes = userSettings.Security.SessionTimeoutMinutes;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to load user settings for token refresh, using default timeout: {TimeoutMinutes} minutes for user {UserId}", 
-                    sessionTimeoutMinutes, user.Id);
-            }
+            // Use fixed 8-hour session timeout for refresh tokens
+            int sessionTimeoutMinutes = _defaultSessionTimeoutMinutes; // Fixed at 480 minutes (8 hours)
 
-            // Generate new tokens with user's preferred timeout
+            // Revoke the old refresh token
+            await _refreshTokenService.RevokeRefreshTokenAsync(command.RefreshToken, "Token rotation on refresh");
+
+            // Generate new tokens with fixed timeout
             var newAccessToken = await _jwtTokenService.GenerateAccessTokenAsync(user, sessionTimeoutMinutes);
-            var newRefreshToken = _jwtTokenService.GenerateRefreshToken();
+            var newRefreshTokenString = _refreshTokenService.GenerateRefreshToken();
+            
+            // Store new refresh token in database
+            await _refreshTokenService.StoreRefreshTokenAsync(user.Id, newRefreshTokenString);
 
             // Get user roles
             var roles = await _userManager.GetRolesAsync(user);
@@ -293,7 +270,7 @@ public class AuthService : IAuthService
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken,
+                RefreshToken = newRefreshTokenString,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(sessionTimeoutMinutes),
                 Roles = roles.ToList(),
                 IsAdmin = roles.Contains("Admin")
@@ -318,27 +295,17 @@ public class AuthService : IAuthService
                 return ApiResponse<AuthResult>.CreateFailure("User not found");
             }
 
-            // Get user's current session timeout preference
-            int sessionTimeoutMinutes = 60; // Default fallback
-            try
-            {
-                var userSettings = await _settingsService.GetUserSettingsAsync(user.Id);
-                if (userSettings != null)
-                {
-                    sessionTimeoutMinutes = userSettings.Security.SessionTimeoutMinutes;
-                    _logger.LogInformation("Refreshing current session with updated timeout: {TimeoutMinutes} minutes for user {UserId}", 
-                        sessionTimeoutMinutes, user.Id);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, "Failed to load user settings for session refresh, using default timeout: {TimeoutMinutes} minutes for user {UserId}", 
-                    sessionTimeoutMinutes, user.Id);
-            }
+            // Use fixed 8-hour session timeout for session refresh
+            int sessionTimeoutMinutes = _defaultSessionTimeoutMinutes; // Fixed at 480 minutes (8 hours)
+            _logger.LogInformation("Refreshing current session with fixed timeout: {TimeoutMinutes} minutes for user {UserId}", 
+                sessionTimeoutMinutes, user.Id);
 
-            // Generate new tokens with current user settings
+            // Generate new tokens with fixed timeout
             var newAccessToken = await _jwtTokenService.GenerateAccessTokenAsync(user, sessionTimeoutMinutes);
-            var newRefreshToken = _jwtTokenService.GenerateRefreshToken();
+            var newRefreshTokenString = _refreshTokenService.GenerateRefreshToken();
+            
+            // Store new refresh token in database
+            await _refreshTokenService.StoreRefreshTokenAsync(user.Id, newRefreshTokenString);
 
             // Get user roles
             var roles = await _userManager.GetRolesAsync(user);
@@ -350,7 +317,7 @@ public class AuthService : IAuthService
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 AccessToken = newAccessToken,
-                RefreshToken = newRefreshToken,
+                RefreshToken = newRefreshTokenString,
                 ExpiresAt = DateTime.UtcNow.AddMinutes(sessionTimeoutMinutes),
                 Roles = roles.ToList(),
                 IsAdmin = roles.Contains("Admin")

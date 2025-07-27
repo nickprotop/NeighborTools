@@ -47,10 +47,12 @@ public record GetUnreadMessageCountQuery(
 );
 
 public record GetMessageStatisticsQuery(
-    string UserId,
     DateTime? FromDate = null,
     DateTime? ToDate = null
-);
+)
+{
+    public string UserId { get; init; } = string.Empty;
+}
 
 public record SearchMessagesQuery(
     string UserId,

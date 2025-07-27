@@ -87,7 +87,6 @@ public class SettingsService : ISettingsService
         {
             settings.TwoFactorEnabled = command.Security.TwoFactorEnabled;
             settings.LoginAlertsEnabled = command.Security.LoginAlertsEnabled;
-            settings.SessionTimeoutMinutes = command.Security.SessionTimeoutMinutes;
         }
 
         if (command.Communication != null)
@@ -182,7 +181,6 @@ public class SettingsService : ISettingsService
             // Security defaults
             TwoFactorEnabled = false,
             LoginAlertsEnabled = true,
-            SessionTimeoutMinutes = 480,
             
             // Communication defaults
             AllowDirectMessages = true,
@@ -240,8 +238,7 @@ public class SettingsService : ISettingsService
             Security = new SecuritySettingsDto
             {
                 TwoFactorEnabled = settings.TwoFactorEnabled,
-                LoginAlertsEnabled = settings.LoginAlertsEnabled,
-                SessionTimeoutMinutes = settings.SessionTimeoutMinutes
+                LoginAlertsEnabled = settings.LoginAlertsEnabled
             },
             Communication = new CommunicationSettingsDto
             {

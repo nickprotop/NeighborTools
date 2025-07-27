@@ -93,7 +93,7 @@ public class GlobalRateLimit
     /// <summary>
     /// Anonymous users (no authentication) limits
     /// </summary>
-    public int AnonymousRequestsPerHour { get; set; } = 500;
+    public int AnonymousRequestsPerHour { get; set; } = 5000;
 }
 
 public class RateLimitPenalty

@@ -143,6 +143,14 @@ public class AuthenticatedHttpClientHandler : DelegatingHandler
 
     private async Task HandleSessionExpiredAsync()
     {
+        // Check if this is a first visit (no auth data ever existed)
+        var hadPreviousSession = await _localStorage.ContainsKeyAsync("authToken") ||
+                                await _localStorage.ContainsKeyAsync("refreshToken") ||
+                                await _localStorage.ContainsKeyAsync("user") ||
+                                await _localStorage.ContainsSessionKeyAsync("authToken") ||
+                                await _localStorage.ContainsSessionKeyAsync("refreshToken") ||
+                                await _localStorage.ContainsSessionKeyAsync("user");
+
         // Clear authentication data
         await ClearAuthenticationDataAsync();
         
@@ -152,9 +160,14 @@ public class AuthenticatedHttpClientHandler : DelegatingHandler
             customProvider.MarkUserAsLoggedOut();
         }
 
-        // Navigate to session expired page
-        var navigationManager = _serviceProvider.GetRequiredService<NavigationManager>();
-        navigationManager.NavigateTo("/session-expired", forceLoad: true);
+        // Only redirect to session-expired if user had a previous session
+        if (hadPreviousSession)
+        {
+            // User had a session that expired - show session expired page
+            var navigationManager = _serviceProvider.GetRequiredService<NavigationManager>();
+            navigationManager.NavigateTo("/session-expired", forceLoad: true);
+        }
+        // Otherwise, for first-time visitors, don't redirect anywhere
     }
 
     private async Task ClearAuthenticationDataAsync()

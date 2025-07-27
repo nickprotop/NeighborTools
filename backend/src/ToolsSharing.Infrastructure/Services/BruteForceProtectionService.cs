@@ -101,13 +101,17 @@ public class BruteForceProtectionService : IBruteForceProtectionService
         }
 
         // Check database for active attack patterns with blocking
-        var activeBlock = await _context.AttackPatterns
+        // Use client evaluation to handle DateTime.Add() since EF Core cannot translate it
+        var candidateBlocks = await _context.AttackPatterns
             .Where(ap => ap.SourceIdentifier == ipAddress && 
                         ap.IsActive && 
-                        ap.IsBlocked && 
-                        (!ap.BlockDuration.HasValue || ap.BlockedAt.HasValue && 
-                         ap.BlockedAt.Value.Add(ap.BlockDuration.Value) > DateTime.UtcNow))
-            .AnyAsync();
+                        ap.IsBlocked)
+            .ToListAsync();
+        
+        var now = DateTime.UtcNow;
+        var activeBlock = candidateBlocks.Any(ap => 
+            !ap.BlockDuration.HasValue || 
+            (ap.BlockedAt.HasValue && ap.BlockedAt.Value.Add(ap.BlockDuration.Value) > now));
 
         // Cache result for 1 minute
         await _cache.SetStringAsync(cacheKey, activeBlock.ToString(), new DistributedCacheEntryOptions
@@ -131,13 +135,17 @@ public class BruteForceProtectionService : IBruteForceProtectionService
         }
 
         // Check database for active attack patterns targeting this user
-        var activeBlock = await _context.AttackPatterns
+        // Use client evaluation to handle DateTime.Add() since EF Core cannot translate it
+        var candidateBlocks = await _context.AttackPatterns
             .Where(ap => ap.TargetIdentifier == userEmail && 
                         ap.IsActive && 
-                        ap.IsBlocked && 
-                        (!ap.BlockDuration.HasValue || ap.BlockedAt.HasValue && 
-                         ap.BlockedAt.Value.Add(ap.BlockDuration.Value) > DateTime.UtcNow))
-            .AnyAsync();
+                        ap.IsBlocked)
+            .ToListAsync();
+        
+        var now = DateTime.UtcNow;
+        var activeBlock = candidateBlocks.Any(ap => 
+            !ap.BlockDuration.HasValue || 
+            (ap.BlockedAt.HasValue && ap.BlockedAt.Value.Add(ap.BlockDuration.Value) > now));
 
         // Cache result for 1 minute
         await _cache.SetStringAsync(cacheKey, activeBlock.ToString(), new DistributedCacheEntryOptions
@@ -305,35 +313,63 @@ public class BruteForceProtectionService : IBruteForceProtectionService
 
     public async Task CleanupExpiredDataAsync()
     {
-        var cutoffDate = DateTime.UtcNow.AddDays(-_options.DataRetentionDays);
+        var now = DateTime.UtcNow;
+        var cutoffDate = now.AddDays(-_options.DataRetentionDays);
+        int unblockedCount = 0;
 
-        // Clean up old security events
+        // First priority: Unblock expired patterns (this is what actually unblocks users/IPs)
+        // Use client evaluation to handle DateTime.Add() since EF Core cannot translate it
+        var candidatePatterns = await _context.AttackPatterns
+            .Where(ap => ap.IsActive && 
+                        ap.IsBlocked &&
+                        ap.BlockedAt.HasValue && 
+                        ap.BlockDuration.HasValue)
+            .ToListAsync();
+        
+        // Filter expired patterns on client side
+        var expiredPatterns = candidatePatterns
+            .Where(ap => ap.BlockedAt!.Value.Add(ap.BlockDuration!.Value) < now)
+            .ToList();
+
+        foreach (var pattern in expiredPatterns)
+        {
+            // CRITICAL: Actually unblock the user/IP
+            pattern.IsActive = false;
+            pattern.IsBlocked = false;
+            pattern.ResolvedAt = now;
+            pattern.ResolutionNotes = "Automatically expired";
+            
+            // CRITICAL: Clear cache entries to ensure immediate unblocking
+            if (!string.IsNullOrEmpty(pattern.SourceIdentifier) && pattern.SourceIdentifier != "ADMIN_ACTION")
+            {
+                await _cache.RemoveAsync($"brute_force_ip_blocked:{pattern.SourceIdentifier}");
+            }
+            if (!string.IsNullOrEmpty(pattern.TargetIdentifier))
+            {
+                await _cache.RemoveAsync($"brute_force_user_locked:{pattern.TargetIdentifier}");
+            }
+            
+            unblockedCount++;
+        }
+
+        // Second priority: Clean up old security events (data retention)
         var oldEvents = await _context.SecurityEvents
             .Where(se => se.CreatedAt < cutoffDate)
             .ToListAsync();
 
         _context.SecurityEvents.RemoveRange(oldEvents);
 
-        // Deactivate expired attack patterns
-        var expiredPatterns = await _context.AttackPatterns
-            .Where(ap => ap.IsActive && 
-                        ap.BlockedAt.HasValue && 
-                        ap.BlockDuration.HasValue &&
-                        ap.BlockedAt.Value.Add(ap.BlockDuration.Value) < DateTime.UtcNow)
-            .ToListAsync();
-
-        foreach (var pattern in expiredPatterns)
-        {
-            pattern.IsActive = false;
-            pattern.IsBlocked = false;
-            pattern.ResolvedAt = DateTime.UtcNow;
-            pattern.ResolutionNotes = "Automatically expired";
-        }
-
         await _context.SaveChangesAsync();
 
-        _logger.LogInformation("Cleaned up {EventCount} old security events and {PatternCount} expired attack patterns", 
-            oldEvents.Count, expiredPatterns.Count);
+        if (unblockedCount > 0)
+        {
+            _logger.LogInformation("UNBLOCKED {UnblockedCount} expired patterns (users/IPs now accessible)", unblockedCount);
+        }
+        
+        if (oldEvents.Count > 0)
+        {
+            _logger.LogInformation("Cleaned up {EventCount} old security events", oldEvents.Count);
+        }
     }
 
     public async Task<BruteForceStatistics> GetStatisticsAsync(DateTime? startDate = null, DateTime? endDate = null)
@@ -362,6 +398,98 @@ public class BruteForceProtectionService : IBruteForceProtectionService
             DictionaryAttacks = attackPatterns.Count(ap => ap.AttackType == AttackPatternTypes.Dictionary),
             PeriodStart = start,
             PeriodEnd = end
+        };
+    }
+
+    public async Task<List<BlockedUserInfo>> GetBlockedUsersAsync()
+    {
+        var now = DateTime.UtcNow;
+        var blockedUsers = await _context.AttackPatterns
+            .Where(ap => ap.IsActive && ap.IsBlocked && !string.IsNullOrEmpty(ap.TargetIdentifier))
+            .ToListAsync();
+
+        return blockedUsers.Select(ap =>
+        {
+            var unblockAt = ap.BlockedAt?.Add(ap.BlockDuration ?? TimeSpan.Zero);
+            var remaining = unblockAt.HasValue ? unblockAt.Value - now : (TimeSpan?)null;
+
+            return new BlockedUserInfo
+            {
+                UserEmail = ap.TargetIdentifier!,
+                BlockedAt = ap.BlockedAt ?? ap.FirstDetectedAt,
+                UnblockAt = unblockAt,
+                RemainingDuration = remaining > TimeSpan.Zero ? remaining : null,
+                Reason = ap.ResolutionNotes ?? $"Brute force attack detected ({ap.AttackType})",
+                AttackType = ap.AttackType,
+                FailedAttempts = ap.FailedAttempts,
+                BlockedBy = ap.ResolvedBy ?? "System"
+            };
+        }).ToList();
+    }
+
+    public async Task<List<BlockedIPInfo>> GetBlockedIPsAsync()
+    {
+        var now = DateTime.UtcNow;
+        var blockedIPs = await _context.AttackPatterns
+            .Where(ap => ap.IsActive && ap.IsBlocked && !string.IsNullOrEmpty(ap.SourceIdentifier) && ap.SourceIdentifier != "ADMIN_ACTION")
+            .ToListAsync();
+
+        return blockedIPs.Select(ap =>
+        {
+            var unblockAt = ap.BlockedAt?.Add(ap.BlockDuration ?? TimeSpan.Zero);
+            var remaining = unblockAt.HasValue ? unblockAt.Value - now : (TimeSpan?)null;
+
+            return new BlockedIPInfo
+            {
+                IPAddress = ap.SourceIdentifier!,
+                BlockedAt = ap.BlockedAt ?? ap.FirstDetectedAt,
+                UnblockAt = unblockAt,
+                RemainingDuration = remaining > TimeSpan.Zero ? remaining : null,
+                Reason = ap.ResolutionNotes ?? $"Brute force attack detected ({ap.AttackType})",
+                AttackType = ap.AttackType,
+                FailedAttempts = ap.FailedAttempts,
+                BlockedBy = ap.ResolvedBy ?? "System",
+                GeographicLocation = ap.GeographicData
+            };
+        }).ToList();
+    }
+
+    public async Task<SecurityCleanupStatus> GetCleanupStatusAsync()
+    {
+        var now = DateTime.UtcNow;
+        
+        // Get all active patterns to analyze
+        var activePatterns = await _context.AttackPatterns
+            .Where(ap => ap.IsActive)
+            .ToListAsync();
+
+        var blockedPatterns = activePatterns.Where(ap => ap.IsBlocked).ToList();
+        var expiredPatterns = blockedPatterns.Where(ap =>
+            ap.BlockedAt.HasValue &&
+            ap.BlockDuration.HasValue &&
+            ap.BlockedAt.Value.Add(ap.BlockDuration.Value) < now).ToList();
+
+        var issues = new List<string>();
+        
+        // Check for expired patterns that should have been cleaned up
+        if (expiredPatterns.Count > 0)
+        {
+            issues.Add($"{expiredPatterns.Count} expired patterns still marked as blocked");
+        }
+
+        // Check for very old patterns
+        var oldPatterns = activePatterns.Where(ap => ap.FirstDetectedAt < now.AddDays(-7)).ToList();
+        if (oldPatterns.Count > 10)
+        {
+            issues.Add($"{oldPatterns.Count} patterns older than 7 days still active");
+        }
+
+        return new SecurityCleanupStatus
+        {
+            ExpiredPatternsFound = expiredPatterns.Count,
+            TotalActiveBlocks = blockedPatterns.Count,
+            IsHealthy = issues.Count == 0,
+            Issues = issues
         };
     }
 

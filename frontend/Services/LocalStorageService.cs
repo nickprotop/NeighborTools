@@ -11,6 +11,8 @@ public interface ILocalStorageService
     Task<T?> GetSessionItemAsync<T>(string key);
     Task SetSessionItemAsync<T>(string key, T value);
     Task RemoveSessionItemAsync(string key);
+    Task<bool> ContainsKeyAsync(string key);
+    Task<bool> ContainsSessionKeyAsync(string key);
 }
 
 public class LocalStorageService : ILocalStorageService
@@ -107,6 +109,32 @@ public class LocalStorageService : ILocalStorageService
         catch
         {
             // Silently fail
+        }
+    }
+
+    public async Task<bool> ContainsKeyAsync(string key)
+    {
+        try
+        {
+            var value = await _jsRuntime.InvokeAsync<string>("localStorage.getItem", key);
+            return value != null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public async Task<bool> ContainsSessionKeyAsync(string key)
+    {
+        try
+        {
+            var value = await _jsRuntime.InvokeAsync<string>("sessionStorage.getItem", key);
+            return value != null;
+        }
+        catch
+        {
+            return false;
         }
     }
 }

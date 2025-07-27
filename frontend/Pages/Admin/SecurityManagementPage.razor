@@ -1,0 +1,495 @@
+@page "/admin/security/management"
+@attribute [Authorize(Roles = "Admin")]
+@inject ISecurityManagementService SecurityManagementService
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Security Management - NeighborTools Admin</PageTitle>
+
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
+    <!-- Header -->
+    <MudCard Elevation="2" Class="mb-4">
+        <MudCardContent>
+            <MudGrid AlignItems="Center">
+                <MudItem xs="12" md="6">
+                    <MudText Typo="Typo.h4" Class="mb-2">
+                        <MudIcon Icon="@Icons.Material.Filled.Block" Class="mr-2" />
+                        Security Management
+                    </MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Secondary">
+                        Manage blocked users and IP addresses
+                    </MudText>
+                </MudItem>
+                <MudItem xs="12" md="6" Class="text-right">
+                    <MudButtonGroup>
+                        <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                                  OnClick="RefreshData" 
+                                  Disabled="@_isLoading"
+                                  Variant="Variant.Outlined">
+                            Refresh
+                        </MudButton>
+                        <MudButton StartIcon="@Icons.Material.Filled.CleaningServices"
+                                  OnClick="ForceCleanup"
+                                  Disabled="@_isLoading"
+                                  Color="Color.Primary"
+                                  Variant="Variant.Filled">
+                            Force Cleanup
+                        </MudButton>
+                    </MudButtonGroup>
+                </MudItem>
+            </MudGrid>
+        </MudCardContent>
+    </MudCard>
+
+    @if (_isLoading)
+    {
+        <MudGrid>
+            <MudItem xs="12" Class="text-center">
+                <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+                <MudText Typo="Typo.h6" Class="mt-4">Loading Security Data...</MudText>
+            </MudItem>
+        </MudGrid>
+    }
+    else
+    {
+        <!-- Cleanup Status Card -->
+        @if (_cleanupStatus != null)
+        {
+            <MudCard Elevation="2" Class="mb-4">
+                <MudCardContent>
+                    <MudText Typo="Typo.h6" Class="mb-3">
+                        <MudIcon Icon="@Icons.Material.Filled.HealthAndSafety" Class="mr-2" />
+                        Cleanup Service Status
+                    </MudText>
+                    <MudGrid>
+                        <MudItem xs="12" md="6">
+                            <MudChip T="string" Color="@(_cleanupStatus.OverallHealth ? Color.Success : Color.Error)" 
+                                     Icon="@(_cleanupStatus.OverallHealth ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Error)">
+                                @(_cleanupStatus.OverallHealth ? "Healthy" : "Issues Detected")
+                            </MudChip>
+                            <MudText Typo="Typo.body2" Class="mt-2">
+                                Service: @(_cleanupStatus.ServiceStatus.IsRunning ? "Running" : "Stopped")
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                Last Active Cleanup: @_cleanupStatus.ServiceStatus.LastActiveCleanup.ToString("HH:mm:ss")
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                Next Cleanup: @_cleanupStatus.ServiceStatus.NextActiveCleanup.ToString("HH:mm:ss")
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12" md="6">
+                            <MudText Typo="Typo.body2">
+                                Active Blocks: <strong>@_cleanupStatus.SecurityStatus.TotalActiveBlocks</strong>
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                Expired Patterns: <strong>@_cleanupStatus.SecurityStatus.ExpiredPatternsFound</strong>
+                            </MudText>
+                            @if (_cleanupStatus.SecurityStatus.Issues.Any())
+                            {
+                                <MudText Typo="Typo.body2" Color="Color.Error">
+                                    Issues: @string.Join(", ", _cleanupStatus.SecurityStatus.Issues)
+                                </MudText>
+                            }
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+        }
+
+        <!-- Statistics Cards -->
+        @if (_statistics != null)
+        {
+            <MudGrid Class="mb-4">
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="2">
+                        <MudCardContent Class="text-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Large" Color="Color.Error" />
+                            <MudText Typo="Typo.h5" Class="mt-2">@_statistics.LockedUserAccounts</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Blocked Users</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="2">
+                        <MudCardContent Class="text-center">
+                            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Large" Color="Color.Warning" />
+                            <MudText Typo="Typo.h5" Class="mt-2">@_statistics.BlockedIpAddresses</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Blocked IPs</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="2">
+                        <MudCardContent Class="text-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Large" Color="Color.Info" />
+                            <MudText Typo="Typo.h5" Class="mt-2">@_statistics.ActiveAttackPatterns</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Active Patterns</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+                <MudItem xs="12" sm="6" md="3">
+                    <MudCard Elevation="2">
+                        <MudCardContent Class="text-center">
+                            <MudIcon Icon="@Icons.Material.Filled.Shield" Size="Size.Large" Color="Color.Success" />
+                            <MudText Typo="Typo.h5" Class="mt-2">@_statistics.FailedLoginAttempts</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">Failed Logins</MudText>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            </MudGrid>
+        }
+
+        <!-- Blocked Users Table -->
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.PersonOff" Class="mr-2" />
+                        Blocked Users (@(_blockedUsers?.Count ?? 0))
+                    </MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                              OnClick="LoadBlockedUsers" 
+                              Size="Size.Small"
+                              Disabled="@_isLoading">
+                        Refresh
+                    </MudButton>
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (_blockedUsers?.Any() == true)
+                {
+                    <MudTable Items="_blockedUsers" Hover="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>Email</MudTh>
+                            <MudTh>Blocked At</MudTh>
+                            <MudTh>Unblock At</MudTh>
+                            <MudTh>Remaining</MudTh>
+                            <MudTh>Reason</MudTh>
+                            <MudTh>Attempts</MudTh>
+                            <MudTh>Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>
+                                <MudText Typo="Typo.body2" Style="font-family: monospace;">@context.UserEmail</MudText>
+                            </MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.body2">@context.BlockedAt.ToString("MMM dd, HH:mm")</MudText>
+                            </MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.body2">
+                                    @(context.UnblockAt?.ToString("MMM dd, HH:mm") ?? "Manual")
+                                </MudText>
+                            </MudTd>
+                            <MudTd>
+                                @if (context.RemainingDuration.HasValue)
+                                {
+                                    <MudChip T="string" Color="@(context.RemainingDuration.Value.TotalMinutes < 5 ? Color.Success : Color.Warning)" Size="Size.Small">
+                                        @FormatTimeSpan(context.RemainingDuration.Value)
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Color="Color.Error" Size="Size.Small">Expired</MudChip>
+                                }
+                            </MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.body2">@context.Reason</MudText>
+                            </MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.body2">@context.FailedAttempts</MudText>
+                            </MudTd>
+                            <MudTd>
+                                <MudButton StartIcon="@Icons.Material.Filled.LockOpen"
+                                          OnClick="@(() => UnblockUser(context.UserEmail))"
+                                          Color="Color.Success"
+                                          Size="Size.Small"
+                                          Disabled="@_isLoading">
+                                    Unblock
+                                </MudButton>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">
+                        <MudText>No users are currently blocked.</MudText>
+                    </MudAlert>
+                }
+            </MudCardContent>
+        </MudCard>
+
+        <!-- Blocked IPs Table -->
+        <MudCard Elevation="2" Class="mb-4">
+            <MudCardHeader>
+                <CardHeaderContent>
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationOff" Class="mr-2" />
+                        Blocked IP Addresses (@(_blockedIPs?.Count ?? 0))
+                    </MudText>
+                </CardHeaderContent>
+                <CardHeaderActions>
+                    <MudButton StartIcon="@Icons.Material.Filled.Refresh" 
+                              OnClick="LoadBlockedIPs" 
+                              Size="Size.Small"
+                              Disabled="@_isLoading">
+                        Refresh
+                    </MudButton>
+                </CardHeaderActions>
+            </MudCardHeader>
+            <MudCardContent>
+                @if (_blockedIPs?.Any() == true)
+                {
+                    <MudTable Items="_blockedIPs" Hover="true" Dense="true">
+                        <HeaderContent>
+                            <MudTh>IP Address</MudTh>
+                            <MudTh>Blocked At</MudTh>
+                            <MudTh>Unblock At</MudTh>
+                            <MudTh>Remaining</MudTh>
+                            <MudTh>Location</MudTh>
+                            <MudTh>Attempts</MudTh>
+                            <MudTh>Actions</MudTh>
+                        </HeaderContent>
+                        <RowTemplate>
+                            <MudTd>
+                                <MudText Typo="Typo.body2" Style="font-family: monospace;">@context.IPAddress</MudText>
+                            </MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.body2">@context.BlockedAt.ToString("MMM dd, HH:mm")</MudText>
+                            </MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.body2">
+                                    @(context.UnblockAt?.ToString("MMM dd, HH:mm") ?? "Manual")
+                                </MudText>
+                            </MudTd>
+                            <MudTd>
+                                @if (context.RemainingDuration.HasValue)
+                                {
+                                    <MudChip T="string" Color="@(context.RemainingDuration.Value.TotalMinutes < 5 ? Color.Success : Color.Warning)" Size="Size.Small">
+                                        @FormatTimeSpan(context.RemainingDuration.Value)
+                                    </MudChip>
+                                }
+                                else
+                                {
+                                    <MudChip T="string" Color="Color.Error" Size="Size.Small">Expired</MudChip>
+                                }
+                            </MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.body2">@(context.GeographicLocation ?? "Unknown")</MudText>
+                            </MudTd>
+                            <MudTd>
+                                <MudText Typo="Typo.body2">@context.FailedAttempts</MudText>
+                            </MudTd>
+                            <MudTd>
+                                <MudButton StartIcon="@Icons.Material.Filled.LockOpen"
+                                          OnClick="@(() => UnblockIP(context.IPAddress))"
+                                          Color="Color.Success"
+                                          Size="Size.Small"
+                                          Disabled="@_isLoading">
+                                    Unblock
+                                </MudButton>
+                            </MudTd>
+                        </RowTemplate>
+                    </MudTable>
+                }
+                else
+                {
+                    <MudAlert Severity="Severity.Info">
+                        <MudText>No IP addresses are currently blocked.</MudText>
+                    </MudAlert>
+                }
+            </MudCardContent>
+        </MudCard>
+    }
+</MudContainer>
+
+@code {
+    private bool _isLoading = true;
+    private List<BlockedUserInfo>? _blockedUsers;
+    private List<BlockedIPInfo>? _blockedIPs;
+    private SecurityCleanupStatusResponse? _cleanupStatus;
+    private BruteForceStatistics? _statistics;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await RefreshData();
+    }
+
+    private async Task RefreshData()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            await Task.WhenAll(
+                LoadBlockedUsers(),
+                LoadBlockedIPs(),
+                LoadCleanupStatus(),
+                LoadStatistics()
+            );
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error loading data: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task LoadBlockedUsers()
+    {
+        var response = await SecurityManagementService.GetBlockedUsersAsync();
+        if (response.Success)
+        {
+            _blockedUsers = response.Data ?? new List<BlockedUserInfo>();
+        }
+        else
+        {
+            Snackbar.Add($"Failed to load blocked users: {response.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadBlockedIPs()
+    {
+        var response = await SecurityManagementService.GetBlockedIPsAsync();
+        if (response.Success)
+        {
+            _blockedIPs = response.Data ?? new List<BlockedIPInfo>();
+        }
+        else
+        {
+            Snackbar.Add($"Failed to load blocked IPs: {response.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadCleanupStatus()
+    {
+        var response = await SecurityManagementService.GetCleanupStatusAsync();
+        if (response.Success)
+        {
+            _cleanupStatus = response.Data;
+        }
+        else
+        {
+            Snackbar.Add($"Failed to load cleanup status: {response.Message}", Severity.Error);
+        }
+    }
+
+    private async Task LoadStatistics()
+    {
+        var response = await SecurityManagementService.GetStatisticsAsync();
+        if (response.Success)
+        {
+            _statistics = response.Data;
+        }
+        else
+        {
+            Snackbar.Add($"Failed to load statistics: {response.Message}", Severity.Error);
+        }
+    }
+
+    private async Task UnblockUser(string userEmail)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Confirm Unblock",
+            $"Are you sure you want to unblock user '{userEmail}'?",
+            yesText: "Unblock", 
+            cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            var response = await SecurityManagementService.UnblockUserAsync(userEmail);
+            if (response.Success)
+            {
+                Snackbar.Add($"Successfully unblocked user: {userEmail}", Severity.Success);
+                await LoadBlockedUsers();
+                await LoadStatistics();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to unblock user: {response.Message}", Severity.Error);
+            }
+
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task UnblockIP(string ipAddress)
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Confirm Unblock",
+            $"Are you sure you want to unblock IP address '{ipAddress}'?",
+            yesText: "Unblock", 
+            cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            var response = await SecurityManagementService.UnblockIPAsync(ipAddress);
+            if (response.Success)
+            {
+                Snackbar.Add($"Successfully unblocked IP: {ipAddress}", Severity.Success);
+                await LoadBlockedIPs();
+                await LoadStatistics();
+            }
+            else
+            {
+                Snackbar.Add($"Failed to unblock IP: {response.Message}", Severity.Error);
+            }
+
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task ForceCleanup()
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Confirm Force Cleanup",
+            "This will immediately unblock all expired patterns. Continue?",
+            yesText: "Run Cleanup", 
+            cancelText: "Cancel");
+
+        if (confirmed == true)
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            var response = await SecurityManagementService.ForceCleanupAsync();
+            if (response.Success)
+            {
+                var result = response.Data;
+                Snackbar.Add($"Cleanup completed! Unblocked {result?.PatternsUnblocked ?? 0} patterns in {result?.Duration.TotalSeconds:F1}s", Severity.Success);
+                await RefreshData();
+            }
+            else
+            {
+                Snackbar.Add($"Cleanup failed: {response.Message}", Severity.Error);
+            }
+
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string FormatTimeSpan(TimeSpan timeSpan)
+    {
+        if (timeSpan.TotalDays >= 1)
+            return $"{timeSpan.Days}d {timeSpan.Hours}h";
+        if (timeSpan.TotalHours >= 1)
+            return $"{timeSpan.Hours}h {timeSpan.Minutes}m";
+        return $"{timeSpan.Minutes}m";
+    }
+}

@@ -798,7 +798,7 @@ public class MessageService : IMessageService
         try
         {
             var messagesQuery = _context.Messages
-                .Where(m => m.SenderId == query.UserId || m.RecipientId == query.UserId);
+                .Where(m => (m.SenderId == query.UserId || m.RecipientId == query.UserId) && !m.IsBlocked);
 
             if (query.FromDate.HasValue)
             {

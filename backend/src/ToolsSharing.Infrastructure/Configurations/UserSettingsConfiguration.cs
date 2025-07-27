@@ -37,8 +37,6 @@ public class UserSettingsConfiguration : IEntityTypeConfiguration<UserSettings>
         builder.Property(us => us.RentalLeadTime)
             .HasDefaultValue(24);
             
-        builder.Property(us => us.SessionTimeoutMinutes)
-            .HasDefaultValue(480);
         
         // Set default values for boolean properties
         builder.Property(us => us.ShowProfilePicture).HasDefaultValue(true);

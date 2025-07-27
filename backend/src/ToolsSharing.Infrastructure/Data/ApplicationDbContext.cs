@@ -18,6 +18,9 @@ public class ApplicationDbContext : IdentityDbContext<User>
     public DbSet<Review> Reviews { get; set; }
     public DbSet<UserSettings> UserSettings { get; set; }
     
+    // Authentication entities
+    public DbSet<RefreshToken> RefreshTokens { get; set; }
+    
     // Payment entities
     public DbSet<Payment> Payments { get; set; }
     public DbSet<Transaction> Transactions { get; set; }

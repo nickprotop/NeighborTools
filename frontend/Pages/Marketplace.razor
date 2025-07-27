@@ -17,6 +17,8 @@
 @inject IUrlService UrlService
 @inject IRentalService RentalService
 @inject FavoritesService FavoritesService
+@inject MessageService MessageService
+@inject AuthenticationStateProvider AuthenticationStateProvider
 @attribute [AllowAnonymous]
 
 <PageTitle>Marketplace - NeighborTools</PageTitle>
@@ -128,8 +130,8 @@
                                  Style="height: auto; padding: 0; border-radius: 12px;">
                             <MudPaper Class="pa-4 text-center" Style="background: rgba(255,255,255,0.15); border-radius: 12px; backdrop-filter: blur(10px); width: 100%; cursor: pointer;">
                                 <MudIcon Icon="@Icons.Material.Filled.Message" Size="Size.Large" Style="color: white; margin-bottom: 8px;" />
-                                <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">0</MudText>
-                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">Messages</MudText>
+                                <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">@unreadMessagesCount/@totalMessagesCount</MudText>
+                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">Unread/Total</MudText>
                             </MudPaper>
                         </MudButton>
                     </MudItem>
@@ -615,6 +617,8 @@
     private int activeRentalsCount = 0;
     private int pendingRequestsCount = 0;
     private int favoritesCount = 0;
+    private int unreadMessagesCount = 0;
+    private int totalMessagesCount = 0;
     private List<Rental>? recentUserActivity;
     
     // Navigation and Hero Display
@@ -820,6 +824,14 @@
     {
         try
         {
+            // Check if user is authenticated first
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            if (!authState.User.Identity?.IsAuthenticated ?? true)
+            {
+                // User is not authenticated, skip loading user data
+                return;
+            }
+
             // Load user's tools count
             var userToolsResult = await ToolService.GetMyToolsAsync();
             if (userToolsResult.Success && userToolsResult.Data != null)
@@ -854,6 +866,14 @@
             if (favoritesResult.Success)
             {
                 favoritesCount = favoritesResult.Data;
+            }
+
+            // Load message statistics (both unread and total counts)
+            var messageStatsResult = await MessageService.GetMessageStatisticsAsync();
+            if (messageStatsResult.Success && messageStatsResult.Data != null)
+            {
+                unreadMessagesCount = messageStatsResult.Data.UnreadMessages;
+                totalMessagesCount = messageStatsResult.Data.TotalMessages;
             }
         }
         catch (Exception ex)

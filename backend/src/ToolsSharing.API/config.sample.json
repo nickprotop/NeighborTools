@@ -5,7 +5,8 @@
     "SecretKey": "GENERATE_A_SECURE_256_BIT_JWT_SECRET_KEY_HERE_MINIMUM_32_CHARACTERS_LONG",
     "Issuer": "NeighborTools",
     "Audience": "NeighborTools-Users", 
-    "ExpiresInMinutes": 480
+    "ExpiresInMinutes": 480,
+    "RefreshTokenExpiresInDays": 7
   },
   "ConnectionStrings": {
     "DefaultConnection": "server=localhost;port=3306;database=toolssharing;uid=toolsuser;pwd=YOUR_MYSQL_PASSWORD_HERE",
@@ -158,48 +159,18 @@
     "_SizeReference": "1KB=1024, 1MB=1048576, 5MB=5242880, 10MB=10485760, 50MB=52428800, 100MB=104857600",
     "EnableRequestSizeLimits": true,
     "EnableRequestTimeouts": true,
-    "DefaultMaxRequestSize": 5242880,
-    "DefaultRequestTimeout": "00:00:30",
+    "DefaultMaxRequestBodySize": 5242880,
+    "RequestTimeout": "00:00:30",
     "EndpointLimits": {
-      "/api/files/upload": {
-        "MaxRequestSize": 104857600,
-        "RequestTimeout": "00:05:00"
-      },
-      "/api/tools/upload-images": {
-        "MaxRequestSize": 52428800,
-        "RequestTimeout": "00:02:00"
-      },
-      "/api/bundles/upload-image": {
-        "_Comment": "Bundle image upload - single image up to 10MB",
-        "MaxRequestSize": 10485760,
-        "RequestTimeout": "00:01:00"
-      },
-      "/api/user/profile-picture": {
-        "_Comment": "Profile picture upload - single image up to 10MB",
-        "MaxRequestSize": 10485760,
-        "RequestTimeout": "00:01:00"
-      },
-      "/api/disputes/": {
-        "_Comment": "Dispute evidence upload - multiple files up to 50MB total",
-        "MaxRequestSize": 52428800,
-        "RequestTimeout": "00:02:00"
-      },
-      "/api/auth/login": {
-        "MaxRequestSize": 1024,
-        "RequestTimeout": "00:00:15"
-      },
-      "/api/auth/register": {
-        "MaxRequestSize": 5120,
-        "RequestTimeout": "00:00:15"
-      },
-      "/api/auth/": {
-        "MaxRequestSize": 2048,
-        "RequestTimeout": "00:00:10"
-      },
-      "/api/": {
-        "MaxRequestSize": 512000,
-        "RequestTimeout": "00:00:30"
-      }
+      "/api/files/upload": 104857600,
+      "/api/tools/upload-images": 52428800,
+      "/api/bundles/upload-image": 10485760,
+      "/api/user/profile-picture": 10485760,
+      "/api/disputes/": 52428800,
+      "/api/auth/login": 1024,
+      "/api/auth/register": 5120,
+      "/api/auth/": 2048,
+      "/api/": 512000
     }
   },
   "IPSecurity": {
@@ -291,7 +262,7 @@
       "RequestsPerHourPerIP": 20000,
       "RequestsPerHourPerUser": 10000,
       "RequestsPerDayPerIP": 100000,
-      "AnonymousRequestsPerHour": 500
+      "AnonymousRequestsPerHour": 5000
     },
     "Penalties": {
       "FirstViolationBlock": "00:01:00",

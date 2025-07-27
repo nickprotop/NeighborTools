@@ -174,7 +174,7 @@ public class SampleDataService : ISampleDataService
         }
     }
 
-    // Implementation methods moved from DataSeeder
+    // Sample data implementation methods
     private async Task ApplySampleUsersAsync()
     {
         if (await _context.Users.AnyAsync(u => u.Id == SampleDataIds.JOHN_DOE_USER_ID))
@@ -554,8 +554,75 @@ public class SampleDataService : ISampleDataService
 
     private async Task ApplySampleReviewsAsync()
     {
-        // Implementation similar to tools/rentals
-        _logger.LogInformation("Sample reviews applied (placeholder)");
+        if (await _context.Reviews.AnyAsync(r => r.ToolId == SampleDataIds.DRILL_TOOL_ID))
+        {
+            _logger.LogInformation("Sample reviews already exist, skipping");
+            return;
+        }
+
+        _logger.LogInformation("Creating sample reviews...");
+
+        var reviews = new[]
+        {
+            new Review
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000001"),
+                ToolId = SampleDataIds.DRILL_TOOL_ID,
+                RentalId = SampleDataIds.RENTAL_1_ID,
+                ReviewerId = SampleDataIds.JANE_SMITH_USER_ID,
+                RevieweeId = SampleDataIds.JOHN_DOE_USER_ID,
+                Rating = 5,
+                Title = "Excellent drill, worked perfectly!",
+                Comment = "John's drill was in excellent condition and worked perfectly for my home renovation project. Very reliable and powerful. Would definitely rent from John again!",
+                Type = ReviewType.UserReview,
+                CreatedAt = DateTime.UtcNow.AddDays(-23),
+                UpdatedAt = DateTime.UtcNow.AddDays(-23)
+            },
+            new Review
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000002"),
+                ToolId = SampleDataIds.LADDER_TOOL_ID,
+                RentalId = SampleDataIds.RENTAL_2_ID,
+                ReviewerId = SampleDataIds.JOHN_DOE_USER_ID,
+                RevieweeId = SampleDataIds.JANE_SMITH_USER_ID,
+                Rating = 4,
+                Title = "Good ladder, fair price",
+                Comment = "The ladder was sturdy and perfect for my needs. Jane was very responsive and helpful. Only minor issue was a small dent, but it didn't affect functionality.",
+                Type = ReviewType.UserReview,
+                CreatedAt = DateTime.UtcNow.AddDays(-8),
+                UpdatedAt = DateTime.UtcNow.AddDays(-8)
+            },
+            new Review
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000003"),
+                ToolId = SampleDataIds.DRILL_TOOL_ID,
+                ReviewerId = SampleDataIds.JOHN_DOE_USER_ID,
+                RevieweeId = SampleDataIds.JANE_SMITH_USER_ID,
+                Rating = 5,
+                Title = "Great renter, took good care of my tools",
+                Comment = "Jane was an excellent renter. She picked up and returned the drill on time, and it was in perfect condition. Very professional and trustworthy. Highly recommend!",
+                Type = ReviewType.UserReview,
+                CreatedAt = DateTime.UtcNow.AddDays(-22),
+                UpdatedAt = DateTime.UtcNow.AddDays(-22)
+            },
+            new Review
+            {
+                Id = Guid.Parse("00000000-0000-0000-0000-000000000004"),
+                ToolId = SampleDataIds.LADDER_TOOL_ID,
+                ReviewerId = SampleDataIds.JANE_SMITH_USER_ID,
+                RevieweeId = SampleDataIds.JOHN_DOE_USER_ID,
+                Rating = 4,
+                Title = "Reliable renter, good communication",
+                Comment = "John was very communicative throughout the rental process. He returned the ladder clean and in good condition. Would rent to him again without hesitation.",
+                Type = ReviewType.UserReview,
+                CreatedAt = DateTime.UtcNow.AddDays(-7),
+                UpdatedAt = DateTime.UtcNow.AddDays(-7)
+            }
+        };
+
+        _context.Reviews.AddRange(reviews);
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Created {Count} sample reviews", reviews.Length);
     }
 
     private async Task RemoveSampleReviewsAsync()
@@ -575,8 +642,52 @@ public class SampleDataService : ISampleDataService
 
     private async Task ApplySampleConversationsAsync()
     {
-        // Implementation similar to tools/rentals
-        _logger.LogInformation("Sample conversations applied (placeholder)");
+        if (await _context.Conversations.AnyAsync(c => c.Id == SampleDataIds.CONVERSATION_1_ID))
+        {
+            _logger.LogInformation("Sample conversations already exist, skipping");
+            return;
+        }
+
+        _logger.LogInformation("Creating sample conversations...");
+
+        var conversations = new[]
+        {
+            new Conversation
+            {
+                Id = SampleDataIds.CONVERSATION_1_ID,
+                Participant1Id = SampleDataIds.JOHN_DOE_USER_ID,
+                Participant2Id = SampleDataIds.JANE_SMITH_USER_ID,
+                Title = "Drill Rental Discussion",
+                RentalId = SampleDataIds.RENTAL_1_ID,
+                ToolId = SampleDataIds.DRILL_TOOL_ID,
+                CreatedAt = DateTime.UtcNow.AddDays(-30),
+                UpdatedAt = DateTime.UtcNow.AddDays(-25)
+            },
+            new Conversation
+            {
+                Id = SampleDataIds.CONVERSATION_2_ID,
+                Participant1Id = SampleDataIds.JANE_SMITH_USER_ID,
+                Participant2Id = SampleDataIds.JOHN_DOE_USER_ID,
+                Title = "Ladder Rental Questions",
+                RentalId = SampleDataIds.RENTAL_2_ID,
+                ToolId = SampleDataIds.LADDER_TOOL_ID,
+                CreatedAt = DateTime.UtcNow.AddDays(-15),
+                UpdatedAt = DateTime.UtcNow.AddDays(-10)
+            },
+            new Conversation
+            {
+                Id = SampleDataIds.CONVERSATION_3_ID,
+                Participant1Id = SampleDataIds.JOHN_DOE_USER_ID,
+                Participant2Id = SampleDataIds.JANE_SMITH_USER_ID,
+                Title = "General Chat",
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                UpdatedAt = DateTime.UtcNow.AddDays(-1)
+            }
+        };
+
+        _context.Conversations.AddRange(conversations);
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Created {Count} sample conversations", conversations.Length);
     }
 
     private async Task RemoveSampleConversationsAsync()
@@ -596,8 +707,192 @@ public class SampleDataService : ISampleDataService
 
     private async Task ApplySampleMessagesAsync()
     {
-        // Implementation similar to tools/rentals
-        _logger.LogInformation("Sample messages applied (placeholder)");
+        if (await _context.Messages.AnyAsync(m => m.ConversationId == SampleDataIds.CONVERSATION_1_ID))
+        {
+            _logger.LogInformation("Sample messages already exist, skipping");
+            return;
+        }
+
+        // Ensure conversations exist first - if not, create them
+        var conversationsExist = await _context.Conversations.AnyAsync(c => 
+            c.Id == SampleDataIds.CONVERSATION_1_ID || 
+            c.Id == SampleDataIds.CONVERSATION_2_ID || 
+            c.Id == SampleDataIds.CONVERSATION_3_ID);
+
+        if (!conversationsExist)
+        {
+            _logger.LogInformation("Required conversations don't exist, creating them first...");
+            await ApplySampleConversationsAsync();
+        }
+
+        _logger.LogInformation("Creating sample messages...");
+
+        var messages = new[]
+        {
+            // Conversation 1: Drill Rental Discussion
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+                SenderId = SampleDataIds.JANE_SMITH_USER_ID,
+                RecipientId = SampleDataIds.JOHN_DOE_USER_ID,
+                ConversationId = SampleDataIds.CONVERSATION_1_ID,
+                RentalId = SampleDataIds.RENTAL_1_ID,
+                ToolId = SampleDataIds.DRILL_TOOL_ID,
+                Subject = "Question about your Professional Drill",
+                Content = "Hi John! I'm interested in renting your DeWalt drill for a home improvement project. Is it available for this weekend? Also, does it come with drill bits?",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.ToolInquiry,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-30).AddMinutes(45),
+                CreatedAt = DateTime.UtcNow.AddDays(-30),
+                UpdatedAt = DateTime.UtcNow.AddDays(-30)
+            },
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000002"),
+                SenderId = SampleDataIds.JOHN_DOE_USER_ID,
+                RecipientId = SampleDataIds.JANE_SMITH_USER_ID,
+                ConversationId = SampleDataIds.CONVERSATION_1_ID,
+                RentalId = SampleDataIds.RENTAL_1_ID,
+                ToolId = SampleDataIds.DRILL_TOOL_ID,
+                Subject = "Re: Question about your Professional Drill",
+                Content = "Hi Jane! Yes, the drill is available this weekend. It comes with a basic set of drill bits and driver bits. The battery is fully charged and I have a spare one too. Let me know what dates work for you!",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-29).AddHours(2),
+                CreatedAt = DateTime.UtcNow.AddDays(-29),
+                UpdatedAt = DateTime.UtcNow.AddDays(-29)
+            },
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000003"),
+                SenderId = SampleDataIds.JANE_SMITH_USER_ID,
+                RecipientId = SampleDataIds.JOHN_DOE_USER_ID,
+                ConversationId = SampleDataIds.CONVERSATION_1_ID,
+                RentalId = SampleDataIds.RENTAL_1_ID,
+                ToolId = SampleDataIds.DRILL_TOOL_ID,
+                Subject = "Re: Question about your Professional Drill",
+                Content = "Perfect! Saturday to Monday would work great for me. I'll pick it up Saturday morning and return it Monday evening. Thanks for including the extra battery - that's very helpful!",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-28).AddHours(1),
+                CreatedAt = DateTime.UtcNow.AddDays(-28),
+                UpdatedAt = DateTime.UtcNow.AddDays(-28)
+            },
+            
+            // Conversation 2: Ladder Rental Questions
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000004"),
+                SenderId = SampleDataIds.JOHN_DOE_USER_ID,
+                RecipientId = SampleDataIds.JANE_SMITH_USER_ID,
+                ConversationId = SampleDataIds.CONVERSATION_2_ID,
+                RentalId = SampleDataIds.RENTAL_2_ID,
+                ToolId = SampleDataIds.LADDER_TOOL_ID,
+                Subject = "Ladder rental request",
+                Content = "Hi Jane! I saw your 8ft Werner ladder listing. I need it for cleaning gutters this weekend. Is it still available? Also, what's the weight limit?",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.ToolInquiry,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-15).AddMinutes(30),
+                CreatedAt = DateTime.UtcNow.AddDays(-15),
+                UpdatedAt = DateTime.UtcNow.AddDays(-15)
+            },
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000005"),
+                SenderId = SampleDataIds.JANE_SMITH_USER_ID,
+                RecipientId = SampleDataIds.JOHN_DOE_USER_ID,
+                ConversationId = SampleDataIds.CONVERSATION_2_ID,
+                RentalId = SampleDataIds.RENTAL_2_ID,
+                ToolId = SampleDataIds.LADDER_TOOL_ID,
+                Subject = "Re: Ladder rental request",
+                Content = "Hi John! Yes, the ladder is available. It's rated for 300 lbs and is perfect for gutter cleaning. I can have it ready for pickup Friday evening or Saturday morning. Safety tip: make sure you have someone spot you when using it!",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-14).AddHours(3),
+                CreatedAt = DateTime.UtcNow.AddDays(-14),
+                UpdatedAt = DateTime.UtcNow.AddDays(-14)
+            },
+            
+            // Conversation 3: General Chat
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000006"),
+                SenderId = SampleDataIds.JANE_SMITH_USER_ID,
+                RecipientId = SampleDataIds.JOHN_DOE_USER_ID,
+                ConversationId = SampleDataIds.CONVERSATION_3_ID,
+                Subject = "Thanks for being a great neighbor!",
+                Content = "Hey John! I just wanted to say thanks for all the tool rentals. It's been so helpful having access to quality tools without having to buy everything. You're making this neighborhood sharing economy really work!",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-3).AddHours(2),
+                CreatedAt = DateTime.UtcNow.AddDays(-5),
+                UpdatedAt = DateTime.UtcNow.AddDays(-5)
+            },
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000007"),
+                SenderId = SampleDataIds.JOHN_DOE_USER_ID,
+                RecipientId = SampleDataIds.JANE_SMITH_USER_ID,
+                ConversationId = SampleDataIds.CONVERSATION_3_ID,
+                Subject = "Re: Thanks for being a great neighbor!",
+                Content = "Aw, thank you Jane! That really means a lot. I love that we can help each other out. Your pressure washer saved me a ton of money on my deck cleaning project. Looking forward to more tool sharing adventures! 😊",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = true,
+                ReadAt = DateTime.UtcNow.AddDays(-2).AddHours(1),
+                CreatedAt = DateTime.UtcNow.AddDays(-3),
+                UpdatedAt = DateTime.UtcNow.AddDays(-3)
+            },
+            new Message
+            {
+                Id = Guid.Parse("10000000-0000-0000-0000-000000000008"),
+                SenderId = SampleDataIds.JANE_SMITH_USER_ID,
+                RecipientId = SampleDataIds.JOHN_DOE_USER_ID,
+                ConversationId = SampleDataIds.CONVERSATION_3_ID,
+                Subject = "Re: Thanks for being a great neighbor!",
+                Content = "By the way, I'm thinking of organizing a neighborhood tool share meetup. Maybe we could get more neighbors involved? What do you think?",
+                Priority = MessagePriority.Normal,
+                Type = MessageType.Direct,
+                IsRead = false,
+                CreatedAt = DateTime.UtcNow.AddDays(-1),
+                UpdatedAt = DateTime.UtcNow.AddDays(-1)
+            }
+        };
+
+        _context.Messages.AddRange(messages);
+        await _context.SaveChangesAsync();
+
+        // Update conversation last message info
+        var conversations = await _context.Conversations
+            .Where(c => c.Id == SampleDataIds.CONVERSATION_1_ID ||
+                       c.Id == SampleDataIds.CONVERSATION_2_ID ||
+                       c.Id == SampleDataIds.CONVERSATION_3_ID)
+            .ToArrayAsync();
+
+        foreach (var conversation in conversations)
+        {
+            var lastMessage = messages
+                .Where(m => m.ConversationId == conversation.Id)
+                .OrderByDescending(m => m.CreatedAt)
+                .FirstOrDefault();
+                
+            if (lastMessage != null)
+            {
+                conversation.LastMessageId = lastMessage.Id;
+                conversation.LastMessageAt = lastMessage.CreatedAt;
+                conversation.UpdatedAt = lastMessage.CreatedAt;
+            }
+        }
+
+        await _context.SaveChangesAsync();
+        _logger.LogInformation("Created {MessageCount} sample messages in {ConversationCount} conversations", 
+            messages.Length, conversations.Length);
     }
 
     private async Task RemoveSampleMessagesAsync()

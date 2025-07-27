@@ -281,7 +281,7 @@ public class FavoritesService : IFavoritesService
         try
         {
             var count = await _context.Favorites
-                .CountAsync(f => f.UserId == userId && f.FavoriteType == "Tool");
+                .CountAsync(f => f.UserId == userId);
 
             return ApiResponse<int>.SuccessResult(count, "Favorites count retrieved successfully");
         }

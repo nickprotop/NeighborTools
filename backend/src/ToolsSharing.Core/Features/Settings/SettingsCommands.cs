@@ -81,7 +81,6 @@ public class SecuritySettingsDto
 {
     public bool TwoFactorEnabled { get; set; } = false;
     public bool LoginAlertsEnabled { get; set; } = true;
-    public int SessionTimeoutMinutes { get; set; } = 480; // 8 hours
 }
 
 // Communication preferences

@@ -154,6 +154,10 @@ builder.Services.AddHostedService<PayoutBackgroundService>();
 builder.Services.AddHostedService<RentalLifecycleService>();
 builder.Services.AddHostedService<RentalCompletionService>();
 
+// CRITICAL: Add Security Cleanup Service for automatic user/IP unblocking
+builder.Services.AddSingleton<SecurityCleanupBackgroundService>();
+builder.Services.AddHostedService(provider => provider.GetService<SecurityCleanupBackgroundService>()!);
+
 // Add YARP
 builder.Services.AddReverseProxy()
     .LoadFromConfig(builder.Configuration.GetSection("ReverseProxy"));
