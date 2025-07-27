@@ -5,12 +5,18 @@
 
 set -e  # Exit on any error
 
+# Remember current directory
+ORIGINAL_DIR="$(pwd)"
+
+# Calculate absolute paths before any directory changes
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DOCKER_DIR="$(cd "$SCRIPT_DIR/../../docker" && pwd)"
+ENV_FILE="$DOCKER_DIR/.env"
+
 echo "📦 Starting NeighborTools Storage Services"
 echo "==========================================="
 
 # Load environment variables from .env file
-DOCKER_DIR="$(dirname "$0")/../../docker"
-ENV_FILE="$DOCKER_DIR/.env"
 
 if [ -f "$ENV_FILE" ]; then
     echo "📝 Loading configuration from .env file..."
@@ -71,6 +77,9 @@ else
     echo "❌ MinIO is not ready. Check logs: docker-compose logs minio"
     exit 1
 fi
+
+# Restore original directory
+cd "$ORIGINAL_DIR"
 
 echo ""
 echo "🎉 Storage services are ready!"

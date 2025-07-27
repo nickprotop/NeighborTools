@@ -5,6 +5,9 @@
 
 set -e  # Exit on any error
 
+# Remember current directory
+ORIGINAL_DIR="$(pwd)"
+
 echo "⚠️  NeighborTools Complete Uninstallation"
 echo "========================================="
 echo ""
@@ -21,6 +24,7 @@ read -p "Are you sure you want to proceed? Type 'YES' to continue: " confirmatio
 
 if [ "$confirmation" != "YES" ]; then
     echo "❌ Uninstallation cancelled"
+    cd "$ORIGINAL_DIR"
     exit 0
 fi
 
@@ -28,7 +32,8 @@ echo ""
 echo "🧹 Starting complete cleanup..."
 
 # Navigate to docker directory
-cd "$(dirname "$0")/../docker"
+DOCKER_DIR="$(cd "$(dirname "$0")/../docker" && pwd)"
+cd "$DOCKER_DIR"
 
 # Stop and remove all containers, networks, and volumes
 echo "🔄 Stopping and removing containers..."
@@ -44,12 +49,16 @@ fi
 echo "🔄 Cleaning up dangling resources..."
 docker system prune -f --volumes || true
 
-# Navigate back to backend root
-cd ..
+# Navigate to backend root for dev mode cleanup
+BACKEND_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+cd "$BACKEND_DIR"
 
 # Remove development preferences
 echo "🔄 Cleaning up development files..."
 [ -f ".dev-mode" ] && rm .dev-mode
+
+# Restore original directory
+cd "$ORIGINAL_DIR"
 
 echo ""
 echo "✅ Uninstallation completed successfully!"

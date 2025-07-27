@@ -4,12 +4,18 @@
 
 set -e  # Exit on any error
 
+# Remember current directory
+ORIGINAL_DIR="$(pwd)"
+
+# Calculate absolute paths before any directory changes
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DOCKER_DIR="$(cd "$SCRIPT_DIR/../../docker" && pwd)"
+
 echo "🐳 Starting API in Docker"
 echo "=========================="
 
 # Check if storage services are running
 echo "🔍 Checking storage services..."
-DOCKER_DIR="$(dirname "$0")/../../docker"
 cd "$DOCKER_DIR"
 
 MISSING_SERVICES=""
@@ -27,6 +33,7 @@ if [ -n "$MISSING_SERVICES" ]; then
     echo "❌ Storage services not running:$MISSING_SERVICES"
     echo "💡 Start storage first: ./storage/start.sh"
     echo "   Or use complete workflow: ./start-production.sh"
+    cd "$ORIGINAL_DIR"
     exit 1
 fi
 
@@ -35,6 +42,9 @@ echo "✅ Storage services are running"
 # Start API container
 echo "🔄 Starting API container..."
 docker-compose --profile api up -d
+
+# Restore original directory
+cd "$ORIGINAL_DIR"
 
 echo ""
 echo "✅ API started in Docker"

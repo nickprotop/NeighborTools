@@ -2,11 +2,17 @@
 
 # Stop API (handles both Docker and dotnet processes)
 
+# Remember current directory
+ORIGINAL_DIR="$(pwd)"
+
+# Calculate absolute paths before any directory changes
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DOCKER_DIR="$(cd "$SCRIPT_DIR/../../docker" && pwd)"
+
 echo "🛑 Stopping API"
 echo "==============="
 
 # Navigate to docker directory
-DOCKER_DIR="$(dirname "$0")/../../docker"
 cd "$DOCKER_DIR"
 
 # Check if API container is running
@@ -27,5 +33,8 @@ if [ -n "$API_PROCESSES" ]; then
 else
     echo "ℹ️  No local API processes running"
 fi
+
+# Restore original directory
+cd "$ORIGINAL_DIR"
 
 echo "✅ API stopped"

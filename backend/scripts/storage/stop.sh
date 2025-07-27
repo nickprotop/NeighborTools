@@ -4,16 +4,25 @@
 
 set -e  # Exit on any error
 
+# Remember current directory
+ORIGINAL_DIR="$(pwd)"
+
+# Calculate absolute paths before any directory changes
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DOCKER_DIR="$(cd "$SCRIPT_DIR/../../docker" && pwd)"
+
 echo "🛑 Stopping NeighborTools Storage Services"
 echo "==========================================="
 
 # Navigate to docker directory
-DOCKER_DIR="$(dirname "$0")/../../docker"
 cd "$DOCKER_DIR"
 
 # Stop infrastructure services
 echo "🔄 Stopping MySQL, Redis, and MinIO..."
 docker-compose --profile infrastructure stop
+
+# Restore original directory
+cd "$ORIGINAL_DIR"
 
 echo "✅ Storage services stopped"
 echo ""

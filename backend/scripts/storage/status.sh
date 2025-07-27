@@ -2,11 +2,17 @@
 
 # Show storage services status
 
+# Remember current directory
+ORIGINAL_DIR="$(pwd)"
+
+# Calculate absolute paths before any directory changes
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+DOCKER_DIR="$(cd "$SCRIPT_DIR/../../docker" && pwd)"
+
 echo "📊 Storage Services Status"
 echo "=========================="
 
 # Navigate to docker directory
-DOCKER_DIR="$(dirname "$0")/../../docker"
 cd "$DOCKER_DIR"
 
 echo "🐳 Docker Compose Status:"
@@ -27,6 +33,9 @@ if docker-compose ps --services --filter "status=running" | grep -q "minio"; the
 else
     echo "   MinIO: ❌ Not running"
 fi
+
+# Restore original directory
+cd "$ORIGINAL_DIR"
 
 echo ""
 echo "🔗 Service URLs (when running):"
