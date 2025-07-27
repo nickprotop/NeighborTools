@@ -54,6 +54,29 @@ public class AuthController : ControllerBase
         return Ok(result);
     }
 
+    [HttpPost("refresh-current-session")]
+    [Authorize]
+    public async Task<IActionResult> RefreshCurrentSession()
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var result = await _authService.RefreshCurrentSessionAsync(userId);
+            
+            if (!result.Success)
+                return BadRequest(result);
+                
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Error = "Failed to refresh current session" });
+        }
+    }
+
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordCommand command)
     {
@@ -189,6 +212,14 @@ public class AuthController : ControllerBase
             PrivacyVersion = VersionConstants.GetCurrentPrivacyVersion(),
             ConsentVersion = VersionConstants.GetCurrentConsentVersion()
         });
+    }
+
+    private string GetCurrentUserId()
+    {
+        return User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value 
+               ?? User.FindFirst("sub")?.Value 
+               ?? User.FindFirst("UserId")?.Value 
+               ?? string.Empty;
     }
 }
 

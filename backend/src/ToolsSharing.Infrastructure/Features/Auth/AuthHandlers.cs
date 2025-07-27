@@ -307,6 +307,64 @@ public class AuthService : IAuthService
         }
     }
 
+    public async Task<ApiResponse<AuthResult>> RefreshCurrentSessionAsync(string userId)
+    {
+        try
+        {
+            // Find the user
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return ApiResponse<AuthResult>.CreateFailure("User not found");
+            }
+
+            // Get user's current session timeout preference
+            int sessionTimeoutMinutes = 60; // Default fallback
+            try
+            {
+                var userSettings = await _settingsService.GetUserSettingsAsync(user.Id);
+                if (userSettings != null)
+                {
+                    sessionTimeoutMinutes = userSettings.Security.SessionTimeoutMinutes;
+                    _logger.LogInformation("Refreshing current session with updated timeout: {TimeoutMinutes} minutes for user {UserId}", 
+                        sessionTimeoutMinutes, user.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, "Failed to load user settings for session refresh, using default timeout: {TimeoutMinutes} minutes for user {UserId}", 
+                    sessionTimeoutMinutes, user.Id);
+            }
+
+            // Generate new tokens with current user settings
+            var newAccessToken = await _jwtTokenService.GenerateAccessTokenAsync(user, sessionTimeoutMinutes);
+            var newRefreshToken = _jwtTokenService.GenerateRefreshToken();
+
+            // Get user roles
+            var roles = await _userManager.GetRolesAsync(user);
+
+            var authResult = new AuthResult
+            {
+                UserId = user.Id,
+                Email = user.Email!,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshToken,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(sessionTimeoutMinutes),
+                Roles = roles.ToList(),
+                IsAdmin = roles.Contains("Admin")
+            };
+
+            return ApiResponse<AuthResult>.CreateSuccess(authResult, "Current session refreshed with updated settings");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to refresh current session for user {UserId}", userId);
+            return ApiResponse<AuthResult>.CreateFailure($"Session refresh failed: {ex.Message}");
+        }
+    }
+
     public async Task<ApiResponse<bool>> ForgotPasswordAsync(ForgotPasswordCommand command)
     {
         try
