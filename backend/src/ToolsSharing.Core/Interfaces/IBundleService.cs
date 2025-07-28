@@ -13,7 +13,7 @@ namespace ToolsSharing.Core.Interfaces
         Task<ApiResponse<BundleDto>> UpdateBundleAsync(Guid bundleId, CreateBundleRequest request, string userId);
         Task<ApiResponse<bool>> DeleteBundleAsync(Guid bundleId, string userId);
         Task<ApiResponse<BundleDto?>> GetBundleByIdAsync(Guid bundleId);
-        Task<ApiResponse<PagedResult<BundleDto>>> GetBundlesAsync(int page = 1, int pageSize = 20, string? category = null, string? searchTerm = null, bool featuredOnly = false);
+        Task<ApiResponse<PagedResult<BundleDto>>> GetBundlesAsync(int page = 1, int pageSize = 20, string? category = null, string? searchTerm = null, bool featuredOnly = false, string? tags = null);
         Task<ApiResponse<PagedResult<BundleDto>>> GetUserBundlesAsync(string userId, int page = 1, int pageSize = 20);
         
         // Featured and popular bundles

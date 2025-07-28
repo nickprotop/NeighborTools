@@ -11,6 +11,7 @@ public record GetToolsQuery(
     decimal? MaxDailyRate = null,
     bool AvailableOnly = true,
     string? SearchTerm = null,
-    string? SortBy = null
+    string? SortBy = null,
+    string? Tags = null
 );
 

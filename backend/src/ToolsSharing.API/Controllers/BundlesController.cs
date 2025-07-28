@@ -29,9 +29,10 @@ namespace ToolsSharing.API.Controllers
             [FromQuery] int pageSize = 20,
             [FromQuery] string? category = null,
             [FromQuery] string? searchTerm = null,
-            [FromQuery] bool featuredOnly = false)
+            [FromQuery] bool featuredOnly = false,
+            [FromQuery] string? tags = null)
         {
-            var result = await _bundleService.GetBundlesAsync(page, pageSize, category, searchTerm, featuredOnly);
+            var result = await _bundleService.GetBundlesAsync(page, pageSize, category, searchTerm, featuredOnly, tags);
             return result.Success ? Ok(result) : BadRequest(result);
         }
 

@@ -142,6 +142,21 @@ public class ToolsService : IToolsService
                     t.Model.ToLower().Contains(searchTerm));
             }
 
+            // Apply tags filter
+            if (!string.IsNullOrEmpty(query.Tags))
+            {
+                var tags = query.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                    .Select(tag => tag.Trim().ToLower())
+                    .Where(tag => !string.IsNullOrEmpty(tag))
+                    .ToList();
+
+                if (tags.Any())
+                {
+                    toolsQuery = toolsQuery.Where(t => 
+                        tags.All(tag => t.Tags.ToLower().Contains(tag)));
+                }
+            }
+
             // Get total count before applying pagination
             var totalCount = await toolsQuery.CountAsync();
 

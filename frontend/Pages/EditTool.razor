@@ -230,6 +230,16 @@
                                                   Class="mb-4" />
                                 </MudItem>
                                 <MudItem xs="12">
+                                    <MudTextField @bind-Value="updateToolRequest.Tags"
+                                                  Label="Tags"
+                                                  Variant="Variant.Outlined"
+                                                  FullWidth="true"
+                                                  Adornment="Adornment.Start"
+                                                  AdornmentIcon="@Icons.Material.Filled.Tag"
+                                                  HelperText="Add tags separated by commas (e.g., power tool, woodworking, heavy duty)"
+                                                  Class="mb-4" />
+                                </MudItem>
+                                <MudItem xs="12">
                                     <MudSwitch @bind-Value="updateToolRequest.IsAvailable"
                                                Label="Available for Rent"
                                                Color="Color.Success"
@@ -526,7 +536,8 @@
                     Location = tool.Location ?? string.Empty,
                     IsAvailable = tool.IsAvailable,
                     LeadTimeHours = tool.LeadTimeHours,
-                    ImageUrls = tool.ImageUrls?.ToList() ?? new List<string>()
+                    ImageUrls = tool.ImageUrls?.ToList() ?? new List<string>(),
+                    Tags = tool.Tags ?? string.Empty
                 };
                 
                 // Initialize existing images for display

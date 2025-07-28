@@ -62,46 +62,108 @@
             <!-- Filters Section -->
             <MudItem xs="12">
                 <MudPaper Class="pa-4" Elevation="1">
-        <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-            <!-- Category Filter -->
-            <MudSelect @bind-Value="selectedCategory" 
-                     Label="Category" 
-                     Variant="Variant.Outlined"
-                     AnchorOrigin="Origin.BottomCenter"
-                     @bind-Value:after="ApplyFilters">
-                <MudSelectItem Value="@(string.Empty)">All Categories</MudSelectItem>
-                <MudSelectItem Value="@("Power Tools")">Power Tools</MudSelectItem>
-                <MudSelectItem Value="@("Hand Tools")">Hand Tools</MudSelectItem>
-                <MudSelectItem Value="@("Garden Tools")">Garden Tools</MudSelectItem>
-                <MudSelectItem Value="@("Automotive")">Automotive</MudSelectItem>
-                <MudSelectItem Value="@("Construction")">Construction</MudSelectItem>
-                <MudSelectItem Value="@("Home Improvement")">Home Improvement</MudSelectItem>
-                <MudSelectItem Value="@("Cleaning")">Cleaning</MudSelectItem>
-                <MudSelectItem Value="@("Other")">Other</MudSelectItem>
-            </MudSelect>
+                    <MudStack Spacing="3">
+                        <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                            <!-- Category Filter -->
+                            <MudSelect @bind-Value="selectedCategory" 
+                                     Label="Category" 
+                                     Variant="Variant.Outlined"
+                                     AnchorOrigin="Origin.BottomCenter"
+                                     @bind-Value:after="ApplyFilters">
+                                <MudSelectItem Value="@(string.Empty)">All Categories</MudSelectItem>
+                                <MudSelectItem Value="@("Power Tools")">Power Tools</MudSelectItem>
+                                <MudSelectItem Value="@("Hand Tools")">Hand Tools</MudSelectItem>
+                                <MudSelectItem Value="@("Garden Tools")">Garden Tools</MudSelectItem>
+                                <MudSelectItem Value="@("Automotive")">Automotive</MudSelectItem>
+                                <MudSelectItem Value="@("Construction")">Construction</MudSelectItem>
+                                <MudSelectItem Value="@("Home Improvement")">Home Improvement</MudSelectItem>
+                                <MudSelectItem Value="@("Cleaning")">Cleaning</MudSelectItem>
+                                <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+                            </MudSelect>
 
-            <!-- Availability Filter -->
-            <MudSelect @bind-Value="availableOnly" 
-                     Label="Availability" 
-                     Variant="Variant.Outlined"
-                     AnchorOrigin="Origin.BottomCenter"
-                     @bind-Value:after="ApplyFilters">
-                <MudSelectItem T="bool?" Value="@((bool?)null)">All Tools</MudSelectItem>
-                <MudSelectItem T="bool?" Value="@((bool?)true)">Available Only</MudSelectItem>
-                <MudSelectItem T="bool?" Value="@((bool?)false)">Unavailable</MudSelectItem>
-            </MudSelect>
+                            <!-- Availability Filter -->
+                            <MudSelect @bind-Value="availableOnly" 
+                                     Label="Availability" 
+                                     Variant="Variant.Outlined"
+                                     AnchorOrigin="Origin.BottomCenter"
+                                     @bind-Value:after="ApplyFilters">
+                                <MudSelectItem T="bool?" Value="@((bool?)null)">All Tools</MudSelectItem>
+                                <MudSelectItem T="bool?" Value="@((bool?)true)">Available Only</MudSelectItem>
+                                <MudSelectItem T="bool?" Value="@((bool?)false)">Unavailable</MudSelectItem>
+                            </MudSelect>
 
-            <!-- Price Range -->
-            <div style="min-width: 200px;">
-                <MudText Typo="Typo.body2" Class="mb-2">Max Daily Rate: $@maxDailyRate</MudText>
-                <MudSlider @bind-Value="maxDailyRate" 
-                         Min="0" 
-                         Max="200" 
-                         Step="5" 
-                         Color="Color.Primary" 
-                         @bind-Value:after="ApplyFilters" />
-            </div>
-                </MudStack>
+                            <!-- Price Range -->
+                            <div style="min-width: 200px;">
+                                <MudText Typo="Typo.body2" Class="mb-2">Max Daily Rate: $@maxDailyRate</MudText>
+                                <MudSlider @bind-Value="maxDailyRate" 
+                                         Min="0" 
+                                         Max="200" 
+                                         Step="5" 
+                                         Color="Color.Primary" 
+                                         @bind-Value:after="ApplyFilters" />
+                            </div>
+                        </MudStack>
+                        
+                        <!-- Active Filters Display -->
+                        @if (HasActiveFilters())
+                        {
+                            <MudDivider />
+                            <MudStack Row Spacing="2" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Active filters:</MudText>
+                                
+                                @if (!string.IsNullOrEmpty(selectedCategory))
+                                {
+                                    <MudChip T="string" 
+                                             Text="@($"Category: {selectedCategory}")"
+                                             Color="Color.Primary"
+                                             Size="Size.Small"
+                                             OnClose="() => ClearCategoryFilter()"
+                                             CloseIcon="@Icons.Material.Filled.Close" />
+                                }
+                                
+                                @if (availableOnly.HasValue)
+                                {
+                                    <MudChip T="string" 
+                                             Text="@($"Availability: {(availableOnly.Value ? "Available Only" : "Unavailable")}")" 
+                                             Color="Color.Primary"
+                                             Size="Size.Small"
+                                             OnClose="() => ClearAvailabilityFilter()"
+                                             CloseIcon="@Icons.Material.Filled.Close" />
+                                }
+                                
+                                @if (maxDailyRate < 200)
+                                {
+                                    <MudChip T="string" 
+                                             Text="@($"Max Rate: ${maxDailyRate:F0}")"
+                                             Color="Color.Primary"
+                                             Size="Size.Small"
+                                             OnClose="() => ClearPriceFilter()"
+                                             CloseIcon="@Icons.Material.Filled.Close" />
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(selectedTags))
+                                {
+                                    @foreach (var tag in GetActiveTagList())
+                                    {
+                                        <MudChip T="string" 
+                                                 Text="@($"Tag: {tag}")"
+                                                 Color="Color.Secondary"
+                                                 Size="Size.Small"
+                                                 OnClose="() => RemoveTag(tag)"
+                                                 CloseIcon="@Icons.Material.Filled.Close" />
+                                    }
+                                }
+                                
+                                <MudButton Variant="Variant.Text" 
+                                           Color="Color.Error" 
+                                           Size="Size.Small"
+                                           OnClick="ClearAllFilters"
+                                           StartIcon="@Icons.Material.Filled.Clear">
+                                    Clear All
+                                </MudButton>
+                            </MudStack>
+                        }
+                    </MudStack>
                 </MudPaper>
             </MudItem>
 
@@ -189,10 +251,13 @@
                                     @(tool.Description.Length > 80 ? tool.Description.Substring(0, 80) + "..." : tool.Description)
                                 </MudText>
                                 
+                                <!-- Category and Condition Tags -->
+                                <MudStack Row Spacing="1" AlignItems="AlignItems.Center" Class="mb-3">
+                                    <MudChip Size="Size.Small" Color="Color.Primary" Text="@tool.Category" T="string" />
+                                    <MudChip Size="Size.Small" Color="Color.Secondary" Text="@tool.Condition" T="string" />
+                                </MudStack>
+                                
                                 <div class="d-flex justify-space-between align-center mb-3">
-                                    <MudChip T="string" Color="Color.Primary" Size="Size.Small" Icon="@Icons.Material.Filled.Category">
-                                        @tool.Category
-                                    </MudChip>
                                     <MudChip T="string" Color="@(tool.IsAvailable ? Color.Success : Color.Error)" 
                                              Size="Size.Small" 
                                              Icon="@(tool.IsAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)">
@@ -209,9 +274,6 @@
                                     </MudText>
                                 </div>
                                 
-                                <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-2">
-                                    Condition: @tool.Condition
-                                </MudText>
                                 
                                 @if (tool.Rating.HasValue)
                                 {
@@ -302,6 +364,16 @@
             <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
                 Try adjusting your search or filters, or be the first to share a tool!
             </MudText>
+            @if (HasActiveFilters())
+            {
+                <MudButton Variant="Variant.Text" 
+                         Color="Color.Primary" 
+                         OnClick="ClearAllFilters" 
+                         Class="mb-4"
+                         StartIcon="@Icons.Material.Filled.Clear">
+                    Clear Filters
+                </MudButton>
+            }
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="@Icons.Material.Filled.Add">
                 Add Your Tool
             </MudButton>
@@ -375,6 +447,7 @@
     private bool? availableOnly = null;
     private double maxDailyRate = 200;
     private string sortBy = "name";
+    private string selectedTags = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -488,6 +561,17 @@
             sortBy = sort;
         }
         
+        // Handle tags parameter
+        var tags = query["tags"];
+        if (!string.IsNullOrEmpty(tags))
+        {
+            selectedTags = tags;
+        }
+        else
+        {
+            selectedTags = string.Empty;
+        }
+        
         // Update breadcrumbs when parameters change
         SetupBreadcrumbs();
     }
@@ -513,7 +597,8 @@
                 ["search"] = searchQuery,
                 ["sort"] = sortBy,
                 ["maxRate"] = maxDailyRate == 200 ? null : maxDailyRate.ToString(),
-                ["available"] = availableOnly?.ToString()
+                ["available"] = availableOnly?.ToString(),
+                ["tags"] = string.IsNullOrEmpty(selectedTags) ? null : selectedTags
             };
             var cacheKey = BrowserCacheService.GeneratePageCacheKey("tools", currentPage, pageSize, cacheParams);
             
@@ -545,7 +630,8 @@
                     searchTerm: string.IsNullOrWhiteSpace(searchQuery) ? null : searchQuery,
                     sortBy: sortBy,
                     maxDailyRate: maxDailyRate == 200 ? null : (decimal)maxDailyRate,
-                    availableOnly: availableOnly
+                    availableOnly: availableOnly,
+                    tags: string.IsNullOrEmpty(selectedTags) ? null : selectedTags
                 );
                 
                 // Cache the result if successful
@@ -682,6 +768,9 @@
             
         if (sortBy != "name")
             queryParams.Add($"sort={Uri.EscapeDataString(sortBy)}");
+            
+        if (!string.IsNullOrEmpty(selectedTags))
+            queryParams.Add($"tags={Uri.EscapeDataString(selectedTags)}");
         
         var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
         var newUrl = $"/tools{queryString}";
@@ -694,12 +783,67 @@
         selectedCategory = string.Empty;
         availableOnly = null;
         maxDailyRate = 200;
+        selectedTags = string.Empty;
         ApplyFilters();
         
-        // Update URL to remove category parameter
+        // Update URL to remove all parameters
         var uri = new Uri(Navigation.Uri);
         var baseUrl = $"{uri.Scheme}://{uri.Authority}{uri.AbsolutePath}";
         Navigation.NavigateTo(baseUrl);
+    }
+    
+    private bool HasActiveFilters()
+    {
+        return !string.IsNullOrEmpty(selectedCategory) ||
+               availableOnly.HasValue ||
+               maxDailyRate < 200 ||
+               !string.IsNullOrEmpty(selectedTags);
+    }
+    
+    private List<string> GetActiveTagList()
+    {
+        if (string.IsNullOrEmpty(selectedTags))
+            return new List<string>();
+            
+        return selectedTags.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                          .Select(tag => tag.Trim())
+                          .Where(tag => !string.IsNullOrEmpty(tag))
+                          .ToList();
+    }
+    
+    private async Task ClearCategoryFilter()
+    {
+        selectedCategory = string.Empty;
+        await ApplyFilters();
+    }
+    
+    private async Task ClearAvailabilityFilter()
+    {
+        availableOnly = null;
+        await ApplyFilters();
+    }
+    
+    private async Task ClearPriceFilter()
+    {
+        maxDailyRate = 200;
+        await ApplyFilters();
+    }
+    
+    private async Task RemoveTag(string tag)
+    {
+        var tags = GetActiveTagList();
+        tags.Remove(tag);
+        selectedTags = string.Join(",", tags);
+        await ApplyFilters();
+    }
+    
+    private async Task ClearAllFilters()
+    {
+        selectedCategory = string.Empty;
+        availableOnly = null;
+        maxDailyRate = 200;
+        selectedTags = string.Empty;
+        await ApplyFilters();
     }
 
     private async Task HandleKeyPress(KeyboardEventArgs e)

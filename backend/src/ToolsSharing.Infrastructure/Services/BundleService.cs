@@ -125,7 +125,7 @@ namespace ToolsSharing.Infrastructure.Services
             }
         }
 
-        public async Task<ApiResponse<PagedResult<BundleDto>>> GetBundlesAsync(int page = 1, int pageSize = 20, string? category = null, string? searchTerm = null, bool featuredOnly = false)
+        public async Task<ApiResponse<PagedResult<BundleDto>>> GetBundlesAsync(int page = 1, int pageSize = 20, string? category = null, string? searchTerm = null, bool featuredOnly = false, string? tags = null)
         {
             try
             {
@@ -155,6 +155,21 @@ namespace ToolsSharing.Infrastructure.Services
                         b.Name.ToLower().Contains(lowerSearchTerm) ||
                         b.Description.ToLower().Contains(lowerSearchTerm) ||
                         b.Tags.ToLower().Contains(lowerSearchTerm));
+                }
+
+                // Apply tags filter
+                if (!string.IsNullOrEmpty(tags))
+                {
+                    var tagList = tags.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                        .Select(tag => tag.Trim().ToLower())
+                        .Where(tag => !string.IsNullOrEmpty(tag))
+                        .ToList();
+
+                    if (tagList.Any())
+                    {
+                        query = query.Where(b => 
+                            tagList.All(tag => b.Tags.ToLower().Contains(tag)));
+                    }
                 }
 
                 var totalCount = await query.CountAsync();

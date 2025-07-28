@@ -8,7 +8,7 @@ namespace frontend.Services;
 public interface IToolService
 {
     Task<ApiResponse<List<Tool>>> GetToolsAsync();
-    Task<ApiResponse<PagedResult<Tool>>> GetToolsPagedAsync(int page = 1, int pageSize = 24, string? category = null, string? searchTerm = null, string? sortBy = null, decimal? maxDailyRate = null, bool? availableOnly = null);
+    Task<ApiResponse<PagedResult<Tool>>> GetToolsPagedAsync(int page = 1, int pageSize = 24, string? category = null, string? searchTerm = null, string? sortBy = null, decimal? maxDailyRate = null, bool? availableOnly = null, string? tags = null);
     Task<ApiResponse<List<Tool>>> GetMyToolsAsync();
     Task<ApiResponse<Tool>> GetToolAsync(string id);
     Task<ApiResponse<Tool>> CreateToolAsync(CreateToolRequest request);
@@ -64,7 +64,7 @@ public class ToolService : IToolService
         }
     }
 
-    public async Task<ApiResponse<PagedResult<Tool>>> GetToolsPagedAsync(int page = 1, int pageSize = 24, string? category = null, string? searchTerm = null, string? sortBy = null, decimal? maxDailyRate = null, bool? availableOnly = null)
+    public async Task<ApiResponse<PagedResult<Tool>>> GetToolsPagedAsync(int page = 1, int pageSize = 24, string? category = null, string? searchTerm = null, string? sortBy = null, decimal? maxDailyRate = null, bool? availableOnly = null, string? tags = null)
     {
         try
         {
@@ -88,6 +88,9 @@ public class ToolService : IToolService
 
             if (availableOnly.HasValue)
                 queryParams.Add($"AvailableOnly={availableOnly.Value}");
+
+            if (!string.IsNullOrEmpty(tags))
+                queryParams.Add($"Tags={Uri.EscapeDataString(tags)}");
 
             var queryString = string.Join("&", queryParams);
             var response = await _httpClient.GetAsync($"/api/tools/paged?{queryString}");

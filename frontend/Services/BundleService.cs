@@ -23,7 +23,7 @@ namespace ToolsSharing.Frontend.Services
         // Bundle browsing and retrieval
         public async Task<ApiResponse<PagedResult<BundleModel>>> GetBundlesAsync(
             int page = 1, int pageSize = 20, string? category = null, 
-            string? searchTerm = null, bool featuredOnly = false)
+            string? searchTerm = null, bool featuredOnly = false, string? tags = null)
         {
             try
             {
@@ -41,6 +41,9 @@ namespace ToolsSharing.Frontend.Services
                 
                 if (featuredOnly)
                     queryParams.Add("featuredOnly=true");
+
+                if (!string.IsNullOrEmpty(tags))
+                    queryParams.Add($"tags={Uri.EscapeDataString(tags)}");
 
                 var queryString = string.Join("&", queryParams);
                 var response = await _httpClient.GetAsync($"api/bundles?{queryString}");

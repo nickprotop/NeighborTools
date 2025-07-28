@@ -58,22 +58,74 @@
             <!-- Filters Section -->
             <MudItem xs="12">
                 <MudPaper Class="pa-4" Elevation="1">
-                    <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-                        <!-- Category Filter -->
-                        <MudSelect @bind-Value="selectedCategory" 
-                                 Label="Category" 
-                                 Variant="Variant.Outlined"
-                                 AnchorOrigin="Origin.BottomCenter"
-                                 @bind-Value:after="ApplyFilters">
-                            <MudSelectItem Value="@("")">All Categories</MudSelectItem>
-                            @foreach (var category in availableCategories)
-                            {
-                                <MudSelectItem Value="@category.Key">@category.Key (@category.Value)</MudSelectItem>
-                            }
-                        </MudSelect>
+                    <MudStack Spacing="3">
+                        <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                            <!-- Category Filter -->
+                            <MudSelect @bind-Value="selectedCategory" 
+                                     Label="Category" 
+                                     Variant="Variant.Outlined"
+                                     AnchorOrigin="Origin.BottomCenter"
+                                     @bind-Value:after="ApplyFilters">
+                                <MudSelectItem Value="@("")">All Categories</MudSelectItem>
+                                @foreach (var category in availableCategories)
+                                {
+                                    <MudSelectItem Value="@category.Key">@category.Key (@category.Value)</MudSelectItem>
+                                }
+                            </MudSelect>
 
-                        <!-- Featured Filter -->
-                        <MudSwitch @bind-Value="featuredOnly" Label="Featured Only" Color="Color.Primary" @bind-Value:after="ApplyFilters" />
+                            <!-- Featured Filter -->
+                            <MudSwitch @bind-Value="featuredOnly" Label="Featured Only" Color="Color.Primary" @bind-Value:after="ApplyFilters" />
+                        </MudStack>
+                        
+                        <!-- Active Filters Display -->
+                        @if (HasActiveFilters())
+                        {
+                            <MudDivider />
+                            <MudStack Row Spacing="2" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">Active filters:</MudText>
+                                
+                                @if (!string.IsNullOrEmpty(selectedCategory))
+                                {
+                                    <MudChip T="string" 
+                                             Text="@($"Category: {selectedCategory}")"
+                                             Color="Color.Primary"
+                                             Size="Size.Small"
+                                             OnClose="() => ClearCategoryFilter()"
+                                             CloseIcon="@Icons.Material.Filled.Close" />
+                                }
+                                
+                                @if (featuredOnly)
+                                {
+                                    <MudChip T="string" 
+                                             Text="Featured Only" 
+                                             Color="Color.Primary"
+                                             Size="Size.Small"
+                                             OnClose="() => ClearFeaturedFilter()"
+                                             CloseIcon="@Icons.Material.Filled.Close" />
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(selectedTags))
+                                {
+                                    @foreach (var tag in GetActiveTagList())
+                                    {
+                                        <MudChip T="string" 
+                                                 Text="@($"Tag: {tag}")"
+                                                 Color="Color.Secondary"
+                                                 Size="Size.Small"
+                                                 OnClose="() => RemoveTag(tag)"
+                                                 CloseIcon="@Icons.Material.Filled.Close" />
+                                    }
+                                }
+                                
+                                <MudButton Variant="Variant.Text" 
+                                           Color="Color.Error" 
+                                           Size="Size.Small"
+                                           OnClick="ClearAllFilters"
+                                           StartIcon="@Icons.Material.Filled.Clear">
+                                    Clear All
+                                </MudButton>
+                            </MudStack>
+                        }
                     </MudStack>
                 </MudPaper>
             </MudItem>
@@ -253,12 +305,14 @@
     private string selectedCategory = "";
     private bool featuredOnly = false;
     private string sortBy = "featured";
+    private string selectedTags = "";
     private int currentPage = 1;
     private const int pageSize = 24;
 
     private bool hasFiltersApplied => 
         !string.IsNullOrWhiteSpace(searchTerm) || 
         !string.IsNullOrWhiteSpace(selectedCategory) || 
+        !string.IsNullOrWhiteSpace(selectedTags) || 
         featuredOnly;
 
     protected override async Task OnInitializedAsync()
@@ -357,7 +411,8 @@
             ["category"] = selectedCategory,
             ["search"] = searchTerm,
             ["sort"] = sortBy,
-            ["featured"] = featuredOnly.ToString()
+            ["featured"] = featuredOnly.ToString(),
+            ["tags"] = string.IsNullOrEmpty(selectedTags) ? null : selectedTags
         };
         var cacheKey = BrowserCacheService.GeneratePageCacheKey("bundles", currentPage, pageSize, cacheParams);
         
@@ -387,7 +442,8 @@
                 pageSize: pageSize,
                 category: string.IsNullOrWhiteSpace(selectedCategory) ? null : selectedCategory,
                 searchTerm: string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
-                featuredOnly: featuredOnly
+                featuredOnly: featuredOnly,
+                tags: string.IsNullOrWhiteSpace(selectedTags) ? null : selectedTags
             );
             
             // Cache the result if successful
@@ -511,6 +567,9 @@
             
         if (sortBy != "featured")
             queryParams.Add($"sort={Uri.EscapeDataString(sortBy)}");
+            
+        if (!string.IsNullOrEmpty(selectedTags))
+            queryParams.Add($"tags={Uri.EscapeDataString(selectedTags)}");
         
         var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
         var newUrl = $"/bundles{queryString}";
@@ -545,6 +604,17 @@
             selectedCategory = string.Empty;
         }
         
+        // Handle tags parameter
+        var tags = query["tags"];
+        if (!string.IsNullOrEmpty(tags))
+        {
+            selectedTags = tags;
+        }
+        else
+        {
+            selectedTags = string.Empty;
+        }
+        
         // Handle page parameter
         var pageParam = query["page"];
         if (int.TryParse(pageParam, out int page) && page > 0)
@@ -572,6 +642,7 @@
         searchTerm = "";
         selectedCategory = "";
         featuredOnly = false;
+        selectedTags = "";
         currentPage = 1;
         
         // Update URL to remove parameters
@@ -580,6 +651,53 @@
         Navigation.NavigateTo(baseUrl);
         
         _ = LoadBundles();
+    }
+    
+    private bool HasActiveFilters()
+    {
+        return !string.IsNullOrEmpty(selectedCategory) ||
+               featuredOnly ||
+               !string.IsNullOrEmpty(selectedTags);
+    }
+    
+    private List<string> GetActiveTagList()
+    {
+        if (string.IsNullOrEmpty(selectedTags))
+            return new List<string>();
+            
+        return selectedTags.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                          .Select(tag => tag.Trim())
+                          .Where(tag => !string.IsNullOrEmpty(tag))
+                          .ToList();
+    }
+    
+    private async Task ClearCategoryFilter()
+    {
+        selectedCategory = "";
+        await ApplyFilters();
+    }
+    
+    private async Task ClearFeaturedFilter()
+    {
+        featuredOnly = false;
+        await ApplyFilters();
+    }
+    
+    private async Task RemoveTag(string tag)
+    {
+        var tags = GetActiveTagList();
+        tags.Remove(tag);
+        selectedTags = string.Join(",", tags);
+        await ApplyFilters();
+    }
+    
+    private async Task ClearAllFilters()
+    {
+        searchTerm = "";
+        selectedCategory = "";
+        featuredOnly = false;
+        selectedTags = "";
+        await ApplyFilters();
     }
 
     private void ViewBundle(Guid bundleId)

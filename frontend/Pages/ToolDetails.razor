@@ -308,23 +308,29 @@ else if (tool != null)
             <MudItem xs="12" md="4">
 
                 <!-- Tags -->
-                @if (tool.TagList.Any())
-                {
-                    <MudCard Class="mb-4">
-                        <MudCardHeader>
-                            <CardHeaderContent>
-                                <MudText Typo="Typo.h6">Tags</MudText>
-                            </CardHeaderContent>
-                        </MudCardHeader>
-                        <MudCardContent>
+                <MudCard Class="mb-4">
+                    <MudCardHeader>
+                        <CardHeaderContent>
+                            <MudText Typo="Typo.h6">Tags</MudText>
+                        </CardHeaderContent>
+                    </MudCardHeader>
+                    <MudCardContent>
+                        @if (tool.TagList.Any())
+                        {
                             <TagChips Tags="@tool.TagList" 
                                      Clickable="true" 
                                      OnTagClicked="OnTagClicked"
                                      Size="Size.Small"
                                      Color="Color.Default" />
-                        </MudCardContent>
-                    </MudCard>
-                }
+                        }
+                        else
+                        {
+                            <MudText Typo="Typo.body2" Color="Color.Secondary" Style="font-style: italic;">
+                                No tags available for this tool
+                            </MudText>
+                        }
+                    </MudCardContent>
+                </MudCard>
 
                 <!-- Owner Info -->
                 <MudCard Class="mb-4">
