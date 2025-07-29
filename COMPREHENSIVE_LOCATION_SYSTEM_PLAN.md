@@ -505,6 +505,176 @@ This document outlines the complete implementation plan for upgrading NeighborTo
 - Search pattern analysis
 - Market expansion opportunities
 
+## 📋 PHASE 14: ADVANCED SEARCH ARCHITECTURE
+
+### 14.1 Multi-Criteria Search Backend
+
+**Enhanced Search Request Models:**
+- **AdvancedToolSearchRequest**: Extends ToolSearchRequest with location intelligence
+  - LocationQuery (string) - "near Atlanta", "downtown Athens"
+  - LocationCoordinates (decimal lat/lng) - For map-based searches
+  - RadiusKm (int) - Distance filter with privacy considerations
+  - LocationPriority (enum) - Distance, Relevance, Hybrid weighting
+  - TravelTimeMinutes (int) - Travel time instead of direct distance
+  - LocationAreaTypes (list) - Neighborhood, City, State filtering
+
+- **AdvancedBundleSearchRequest**: Similar location-enhanced bundle search
+  - Include bundle-specific location logic
+  - Multi-tool location consistency validation
+
+**Search Scoring Algorithm:**
+- **Weighted Scoring System**:
+  - Relevance Score (40%) - Text matching quality
+  - Distance Score (30%) - Proximity to search location
+  - Rating Score (20%) - User rating and review quality
+  - Availability Score (10%) - Current availability status
+- **Configurable Weights**: Admin-adjustable scoring parameters
+- **Semantic Understanding**: Handle related terms and synonyms
+- **Fuzzy Matching**: Typo tolerance and spelling corrections
+
+### 14.2 Intelligent Search Features
+
+**IAdvancedSearchService Interface:**
+- SearchWithLocationIntelligenceAsync() - Multi-criteria search
+- GetSearchSuggestionsAsync() - Context-aware suggestions
+- GetTrendingSearchesAsync() - Popular searches by location
+- AnalyzeSearchPatternAsync() - User behavior analysis
+- GetSearchRefinementsAsync() - "More like this" functionality
+
+**Search Intelligence Implementation:**
+- **Auto-Complete with Context**: 
+  - Location-aware category suggestions
+  - Historical search patterns
+  - Popular searches in user's area
+- **Search History Management**:
+  - Personal search history (privacy-compliant)
+  - Anonymous trending analysis
+  - Seasonal pattern detection
+- **Query Understanding**:
+  - Intent detection ("drill near me" = tool search + location)
+  - Entity extraction (tool names, categories, locations)
+  - Query expansion and synonyms
+
+### 14.3 Advanced Location Intelligence
+
+**Geographic Search Enhancement:**
+- **Travel Time Calculation**: Integration with routing services
+  - Walking, driving, public transport time estimates
+  - Real-time traffic consideration
+  - Route optimization for multiple tools
+- **Area Popularity Analysis**:
+  - Tool density heat maps
+  - Seasonal availability patterns
+  - Popular pickup locations
+- **Geographic Clustering**:
+  - "5 tools in downtown Athens" result grouping
+  - Multi-location pickup optimization
+  - Area-based availability notifications
+
+**Location-Aware Features:**
+- **Smart Radius Adjustment**: Auto-expand search radius for better results
+- **Location Quality Scoring**: Rate location accuracy and completeness
+- **Geographic Recommendations**: Suggest similar areas with more tools
+
+### 14.4 Advanced Search UI Components
+
+**AdvancedSearchInterface.razor:**
+- **Multi-Field Search Bar**:
+  - Combined text + location input
+  - Smart parsing of complex queries
+  - Real-time suggestion display
+- **Advanced Filter Panel**:
+  - Location-aware category filtering
+  - Distance vs travel time toggle
+  - Price range with location context
+  - Availability calendar with location
+- **Search Result Modes**:
+  - List view with distance bands
+  - Map view with clustered markers
+  - Table view for comparison
+  - Card view for detailed information
+
+**SearchSuggestionEngine.razor:**
+- **Intelligent Suggestions**:
+  - Query completion as user types
+  - Category suggestions based on location
+  - Historical search patterns
+  - Popular searches in area
+- **Visual Suggestion Display**:
+  - Category icons and descriptions
+  - Location context information
+  - Search result count previews
+
+**SearchResultsClustering.razor:**
+- **Geographic Grouping**:
+  - Area-based result clustering
+  - Expandable location groups
+  - Distance-sorted within clusters
+- **Interactive Map Integration**:
+  - Clustered markers for tool density
+  - Click to expand cluster details
+  - Filter by map viewport
+  - Heat map overlay toggle
+
+### 14.5 Search Analytics and Optimization
+
+**Search Performance Monitoring:**
+- **Query Performance Metrics**:
+  - Search response times by complexity
+  - Cache hit rates for search results
+  - Database query optimization
+- **User Behavior Analytics**:
+  - Search abandonment rates
+  - Query refinement patterns
+  - Result click-through rates
+  - Location-based conversion rates
+
+**Search Quality Metrics:**
+- **Relevance Scoring Validation**:
+  - User feedback on search results
+  - A/B testing for scoring algorithms
+  - Search result quality over time
+- **Location Accuracy Assessment**:
+  - Geocoding success rates
+  - User corrections to locations
+  - Distance calculation accuracy
+
+### 14.6 Search API Enhancements
+
+**New Search Endpoints:**
+- `POST /api/search/advanced` - Multi-criteria search with complex parameters
+- `GET /api/search/suggestions` - Intelligent search suggestions
+- `GET /api/search/trending` - Popular searches by location and time
+- `GET /api/search/history` - User's search history (privacy-compliant)
+- `POST /api/search/refine` - Search refinement suggestions
+
+**Search Result Optimization:**
+- **Pagination with Location Context**: Maintain search context across pages
+- **Result Caching Strategy**: Cache frequent location-based searches
+- **Progressive Loading**: Load basic results first, enhance with location data
+
+### 14.7 Machine Learning Integration (Future)
+
+**Search Learning Capabilities:**
+- **User Preference Learning**:
+  - Implicit feedback from user actions
+  - Search pattern analysis
+  - Personalized result ranking
+- **Location Behavior Patterns**:
+  - Seasonal tool demand by location
+  - Popular tool categories by area
+  - Travel pattern analysis
+
+**Recommendation Engine:**
+- **Location-Based Recommendations**:
+  - "Tools popular in your area"
+  - "Similar tools nearby"
+  - "Trending in your location"
+- **Predictive Search**:
+  - Anticipate user search needs
+  - Pre-load popular local results
+  - Seasonal recommendation adjustments
+
 ## 📋 IMPLEMENTATION TIMELINE
 
 ### Phase 1-3: Backend Foundation (3 weeks)
@@ -531,7 +701,11 @@ This document outlines the complete implementation plan for upgrading NeighborTo
 ### Phase 13: Monitoring (Ongoing)
 - Continuous monitoring setup and optimization
 
-**Total Implementation Time: 9 weeks**
+### Phase 14: Advanced Search Architecture (2 weeks)
+- Week 10: Multi-criteria search backend and algorithms
+- Week 11: Advanced search UI components and intelligence features
+
+**Total Implementation Time: 11 weeks**
 
 ## 📋 SECURITY FEATURES SUMMARY
 
@@ -580,13 +754,20 @@ This document outlines the complete implementation plan for upgrading NeighborTo
 
 ## 📋 FUTURE ENHANCEMENTS
 
-### Advanced Features (Future Phases)
-- **Heat Maps**: Tool density visualization
+### Advanced Features (Included in Phase 14)
+- **Multi-Criteria Search**: Location + name + category + price + rating combinations
+- **Intelligent Search Suggestions**: Context-aware autocomplete with location intelligence
+- **Travel Time Integration**: Walking/driving time instead of direct distance
+- **Geographic Clustering**: Area-based result grouping and heat maps
+- **Search Analytics**: User behavior analysis and result optimization
+- **Machine Learning Ready**: Foundation for AI-powered recommendations
+
+### Future Phase Enhancements
 - **Route Planning**: Directions to tool locations
 - **Delivery Radius**: Owner-defined service areas
 - **Location-based Notifications**: Alerts for nearby tools
-- **Clustering**: Geographic tool grouping
 - **Advanced Analytics**: Market analysis and insights
+- **AI Recommendations**: Predictive search and personalization
 
 ### Integration Possibilities
 - **Mobile App**: Native geolocation features
@@ -610,15 +791,23 @@ This document outlines the complete implementation plan for upgrading NeighborTo
 
 ### Business Metrics
 - **Feature Adoption**: >80% of new tools use enhanced location
-- **Search Conversion**: Improved conversion from location-based searches
+- **Advanced Search Usage**: >60% of searches use location + other criteria
+- **Search Conversion**: 25% improvement in conversion from location-based searches
 - **User Retention**: Increased engagement with location features
 - **Geographic Expansion**: Growth in new geographic markets
 
+### Advanced Search Metrics (Phase 14)
+- **Multi-Criteria Search Adoption**: >40% of users use advanced search features
+- **Search Refinement Rate**: <20% of searches require refinement
+- **Location-Aware Suggestion Click Rate**: >35% click-through on location suggestions
+- **Travel Time Accuracy**: >90% accuracy in travel time estimates
+- **Search Response Time**: <300ms for complex multi-criteria searches
+
 ---
 
-**Document Version**: 1.0
+**Document Version**: 1.1
 **Last Updated**: January 2025
-**Implementation Status**: Ready for development
-**Estimated Effort**: 9 weeks full-time development
-**Risk Level**: Medium (primarily integration complexity)
-**Dependencies**: OpenStreetMap availability, browser geolocation support
+**Implementation Status**: Ready for development (Updated with Advanced Search)
+**Estimated Effort**: 11 weeks full-time development
+**Risk Level**: Medium-High (integration complexity + advanced search algorithms)
+**Dependencies**: OpenStreetMap availability, browser geolocation support, optional routing service for travel times
