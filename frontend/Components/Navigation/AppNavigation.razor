@@ -57,11 +57,46 @@
                         <MudText Typo="Typo.overline" Class="section-title">Navigation</MudText>
                     }
                     
-                    <NavItem Icon="@Icons.Material.Filled.Store" 
-                             Text="Marketplace" 
-                             Href="/marketplace"
-                             IsCollapsed="IsDesktopCollapsed && !IsMobileMenuOpen"
-                             OnClick="HandleNavigation" />
+                    <!-- Marketplace with sub-items -->
+                    @if (IsDesktopCollapsed && !IsMobileMenuOpen)
+                    {
+                        <!-- Collapsed mode - show as single item linking to marketplace -->
+                        <NavItem Icon="@Icons.Material.Filled.Store" 
+                                 Text="Marketplace" 
+                                 Href="/marketplace"
+                                 IsCollapsed="true"
+                                 OnClick="HandleNavigation" />
+                    }
+                    else
+                    {
+                        <!-- Expanded mode - show marketplace with sub-items -->
+                        <div class="nav-group">
+                            <div class="nav-group-header">
+                                <MudIcon Icon="@Icons.Material.Filled.Store" Class="nav-group-icon" />
+                                <MudText Typo="Typo.body2" Class="nav-group-text nav-group-link" @onclick="() => NavigateToMarketplace()">Marketplace</MudText>
+                                <MudIcon Icon="@(marketplaceGroupExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" 
+                                         Class="nav-group-expand-icon" 
+                                         @onclick="ToggleMarketplaceGroup" />
+                            </div>
+                            
+                            @if (marketplaceGroupExpanded)
+                            {
+                                <div class="nav-sub-items">
+                                    <NavItem Icon="@Icons.Material.Filled.Build" 
+                                             Text="Browse Tools" 
+                                             Href="/tools"
+                                             IsCollapsed="false"
+                                             OnClick="HandleNavigation" />
+                                    
+                                    <NavItem Icon="@Icons.Material.Filled.Category" 
+                                             Text="Browse Bundles" 
+                                             Href="/bundles"
+                                             IsCollapsed="false"
+                                             OnClick="HandleNavigation" />
+                                </div>
+                            }
+                        </div>
+                    }
                              
                     <NavItem Icon="@Icons.Material.Filled.Message" 
                              Text="Messages" 
@@ -161,11 +196,46 @@
                         <MudText Typo="Typo.overline" Class="section-title">Navigation</MudText>
                     }
                     
-                    <NavItem Icon="@Icons.Material.Filled.Store" 
-                             Text="Marketplace" 
-                             Href="/marketplace"
-                             IsCollapsed="IsDesktopCollapsed && !IsMobileMenuOpen"
-                             OnClick="HandleNavigation" />
+                    <!-- Marketplace with sub-items -->
+                    @if (IsDesktopCollapsed && !IsMobileMenuOpen)
+                    {
+                        <!-- Collapsed mode - show as single item linking to marketplace -->
+                        <NavItem Icon="@Icons.Material.Filled.Store" 
+                                 Text="Marketplace" 
+                                 Href="/marketplace"
+                                 IsCollapsed="true"
+                                 OnClick="HandleNavigation" />
+                    }
+                    else
+                    {
+                        <!-- Expanded mode - show marketplace with sub-items -->
+                        <div class="nav-group">
+                            <div class="nav-group-header">
+                                <MudIcon Icon="@Icons.Material.Filled.Store" Class="nav-group-icon" />
+                                <MudText Typo="Typo.body2" Class="nav-group-text nav-group-link" @onclick="() => NavigateToMarketplace()">Marketplace</MudText>
+                                <MudIcon Icon="@(marketplaceGroupExpanded ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)" 
+                                         Class="nav-group-expand-icon" 
+                                         @onclick="ToggleMarketplaceGroup" />
+                            </div>
+                            
+                            @if (marketplaceGroupExpanded)
+                            {
+                                <div class="nav-sub-items">
+                                    <NavItem Icon="@Icons.Material.Filled.Build" 
+                                             Text="Browse Tools" 
+                                             Href="/tools"
+                                             IsCollapsed="false"
+                                             OnClick="HandleNavigation" />
+                                    
+                                    <NavItem Icon="@Icons.Material.Filled.Category" 
+                                             Text="Browse Bundles" 
+                                             Href="/bundles"
+                                             IsCollapsed="false"
+                                             OnClick="HandleNavigation" />
+                                </div>
+                            }
+                        </div>
+                    }
                              
                     <NavItem Icon="@Icons.Material.Filled.Help" 
                              Text="Help Center" 
@@ -332,6 +402,69 @@
         letter-spacing: 0.1em;
     }
     
+    /* Nav Group Styles */
+    .nav-group {
+        margin-bottom: 4px;
+    }
+    
+    .nav-group-header {
+        display: flex;
+        align-items: center;
+        padding: 12px 16px;
+        border-radius: var(--mud-radius-md);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        color: var(--mud-text-primary);
+    }
+    
+    .nav-group-header:hover {
+        background-color: var(--mud-palette-action-hover);
+        transform: translateX(2px);
+    }
+    
+    .nav-group-icon {
+        font-size: 1.25rem;
+        margin-right: 12px;
+        color: var(--mud-text-primary);
+    }
+    
+    .nav-group-text {
+        flex: 1;
+        font-weight: 500;
+        color: var(--mud-text-primary);
+    }
+    
+    .nav-group-link {
+        cursor: pointer;
+        transition: color 0.2s ease;
+    }
+    
+    .nav-group-link:hover {
+        color: var(--mud-palette-primary);
+    }
+    
+    .nav-group-expand-icon {
+        font-size: 1rem;
+        color: var(--mud-text-secondary);
+        transition: transform 0.2s ease;
+        cursor: pointer;
+        padding: 4px;
+        border-radius: 50%;
+    }
+    
+    .nav-group-expand-icon:hover {
+        background-color: var(--mud-palette-action-hover);
+    }
+    
+    .nav-sub-items {
+        margin-left: 20px;
+        margin-top: 4px;
+    }
+    
+    .nav-sub-items .nav-item-container {
+        margin-bottom: 2px;
+    }
+    
 </style>
 
 @code {
@@ -347,6 +480,7 @@
     private bool IsMobileMenuOpen = false;
     private bool IsDesktopCollapsed = false;
     private bool IsDesktopMode = false; // Default to mobile (safer fallback)
+    private bool marketplaceGroupExpanded = true; // Default to expanded
 
     protected override async Task OnInitializedAsync()
     {
@@ -426,6 +560,17 @@
         await CloseMobileMenu();
     }
 
+    private void ToggleMarketplaceGroup()
+    {
+        marketplaceGroupExpanded = !marketplaceGroupExpanded;
+        StateHasChanged();
+    }
+
+    private async Task NavigateToMarketplace()
+    {
+        Navigation.NavigateTo("/marketplace");
+        await HandleNavigation(); // Close mobile menu if open
+    }
 
     private async Task NotifyStateChanged()
     {
