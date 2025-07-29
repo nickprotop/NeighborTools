@@ -15,7 +15,6 @@ public class FavoriteDto
     public string ToolCategory { get; set; } = string.Empty;
     public decimal DailyRate { get; set; }
     public string ToolCondition { get; set; } = string.Empty;
-    public string ToolLocation { get; set; } = string.Empty;
     public List<string> ToolImageUrls { get; set; } = new();
     public bool IsToolAvailable { get; set; }
     
@@ -23,7 +22,6 @@ public class FavoriteDto
     public string BundleName { get; set; } = string.Empty;
     public string BundleDescription { get; set; } = string.Empty;
     public string BundleCategory { get; set; } = string.Empty;
-    public string BundleLocation { get; set; } = string.Empty;
     public decimal BundleDiscountedCost { get; set; }
     public string BundleImageUrl { get; set; } = string.Empty;
     public bool IsBundleAvailable { get; set; }

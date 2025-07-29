@@ -17,9 +17,6 @@ namespace ToolsSharing.Core.Entities
         public string UserId { get; set; } = "";
         public User User { get; set; } = null!;
         
-        // Location
-        public string Location { get; set; } = string.Empty; // Bundle location, falls back to owner's LocationDisplay if empty
-        
         // Enhanced location fields (Phase 1 - Comprehensive Location System)
         public string? LocationDisplay { get; set; } // User-friendly display name
         public string? LocationArea { get; set; } // Neighborhood/area name

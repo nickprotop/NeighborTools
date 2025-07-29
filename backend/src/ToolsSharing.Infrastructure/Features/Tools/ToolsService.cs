@@ -48,9 +48,9 @@ public class ToolsService : IToolsService
                 toolsQuery = toolsQuery.Where(t => t.Category.ToLower() == query.Category.ToLower());
             }
 
-            if (!string.IsNullOrEmpty(query.Location))
+            if (!string.IsNullOrEmpty(query.LocationSearch?.LocationQuery))
             {
-                toolsQuery = toolsQuery.Where(t => t.Location.ToLower().Contains(query.Location.ToLower()));
+                toolsQuery = toolsQuery.Where(t => t.LocationDisplay.ToLower().Contains(query.LocationSearch.LocationQuery.ToLower()));
             }
 
             if (query.MaxDailyRate.HasValue)
@@ -117,9 +117,9 @@ public class ToolsService : IToolsService
                 toolsQuery = toolsQuery.Where(t => t.Category.ToLower() == query.Category.ToLower());
             }
 
-            if (!string.IsNullOrEmpty(query.Location))
+            if (!string.IsNullOrEmpty(query.LocationSearch?.LocationQuery))
             {
-                toolsQuery = toolsQuery.Where(t => t.Location.ToLower().Contains(query.Location.ToLower()));
+                toolsQuery = toolsQuery.Where(t => t.LocationDisplay.ToLower().Contains(query.LocationSearch.LocationQuery.ToLower()));
             }
 
             if (query.MaxDailyRate.HasValue)
@@ -210,9 +210,9 @@ public class ToolsService : IToolsService
                 toolsQuery = toolsQuery.Where(t => t.Category.ToLower() == query.Category.ToLower());
             }
 
-            if (!string.IsNullOrEmpty(query.Location))
+            if (!string.IsNullOrEmpty(query.LocationSearch?.LocationQuery))
             {
-                toolsQuery = toolsQuery.Where(t => t.Location.ToLower().Contains(query.Location.ToLower()));
+                toolsQuery = toolsQuery.Where(t => t.LocationDisplay.ToLower().Contains(query.LocationSearch.LocationQuery.ToLower()));
             }
 
             if (query.MaxDailyRate.HasValue)
@@ -311,7 +311,7 @@ public class ToolsService : IToolsService
                 MonthlyRate = command.MonthlyRate,
                 DepositRequired = command.DepositRequired,
                 Condition = command.Condition,
-                Location = command.Location,
+                LocationDisplay = command.EnhancedLocation?.LocationDisplay,
                 IsAvailable = true,
                 LeadTimeHours = command.LeadTimeHours,
                 OwnerId = command.OwnerId,
@@ -385,7 +385,7 @@ public class ToolsService : IToolsService
             tool.MonthlyRate = command.MonthlyRate;
             tool.DepositRequired = command.DepositRequired;
             tool.Condition = command.Condition;
-            tool.Location = command.Location;
+            tool.LocationDisplay = command.EnhancedLocation?.LocationDisplay;
             tool.IsAvailable = command.IsAvailable;
             tool.LeadTimeHours = command.LeadTimeHours;
             tool.Tags = command.Tags ?? string.Empty;
@@ -860,8 +860,8 @@ public class ToolsService : IToolsService
             if (query.MaxPrice.HasValue)
                 toolsQuery = toolsQuery.Where(t => t.DailyRate <= query.MaxPrice.Value);
 
-            if (!string.IsNullOrEmpty(query.Location))
-                toolsQuery = toolsQuery.Where(t => t.Location.ToLower().Contains(query.Location.ToLower()));
+            if (!string.IsNullOrEmpty(query.LocationSearch?.LocationQuery))
+                toolsQuery = toolsQuery.Where(t => t.LocationDisplay.ToLower().Contains(query.LocationSearch.LocationQuery.ToLower()));
 
             if (query.IsAvailable.HasValue)
                 toolsQuery = toolsQuery.Where(t => t.IsAvailable == query.IsAvailable.Value);
@@ -1020,8 +1020,7 @@ public class ToolsService : IToolsService
     {
         var toolDto = _mapper.Map<ToolDto>(tool);
         
-        // Apply location fallback logic - use tool's location if set, otherwise fall back to owner's location display
-        toolDto.Location = !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.LocationDisplay;
+        // Location is now handled through EnhancedLocation field populated from tool.LocationDisplay with owner fallback
         
         return toolDto;
     }

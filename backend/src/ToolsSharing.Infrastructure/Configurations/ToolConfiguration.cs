@@ -44,9 +44,6 @@ public class ToolConfiguration : IEntityTypeConfiguration<Tool>
             .IsRequired()
             .HasMaxLength(50);
 
-        builder.Property(x => x.Location)
-            .HasMaxLength(200);
-
         // Enhanced location fields (Phase 1 - Comprehensive Location System)
         builder.Property(x => x.LocationDisplay)
             .HasMaxLength(255);
@@ -87,7 +84,6 @@ public class ToolConfiguration : IEntityTypeConfiguration<Tool>
 
         // Indexes
         builder.HasIndex(x => x.Category);
-        builder.HasIndex(x => x.Location);
         builder.HasIndex(x => x.IsAvailable);
         builder.HasIndex(x => x.OwnerId);
         

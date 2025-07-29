@@ -154,7 +154,7 @@ public class AuthController : ControllerBase
                 Email = user.Email!,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                PublicLocation = user.LocationDisplay,
+                LocationDisplay = user.LocationDisplay,
                 TermsOfServiceAccepted = user.TermsOfServiceAccepted,
                 TermsVersion = user.TermsVersion,
                 TermsAcceptedDate = user.TermsAcceptedDate,
@@ -231,7 +231,7 @@ public class UserInfoDto
     public string Email { get; set; } = string.Empty;
     public string FirstName { get; set; } = string.Empty;
     public string LastName { get; set; } = string.Empty;
-    public string? PublicLocation { get; set; }
+    public string? LocationDisplay { get; set; }
     public bool TermsOfServiceAccepted { get; set; }
     public string? TermsVersion { get; set; }
     public DateTime? TermsAcceptedDate { get; set; }

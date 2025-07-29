@@ -1384,8 +1384,7 @@ public class AdminController : ControllerBase
             var toolDtos = tools.Select(tool =>
             {
                 var toolDto = _mapper.Map<ToolDto>(tool);
-                // Apply location fallback logic - use tool's location if set, otherwise fall back to owner's location display
-                toolDto.Location = !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.LocationDisplay;
+                // Location is now handled through EnhancedLocation field populated from tool.LocationDisplay with owner fallback
                 return toolDto;
             }).ToList();
 
@@ -1502,8 +1501,7 @@ public class AdminController : ControllerBase
             var bundleDtos = bundles.Select(bundle =>
             {
                 var bundleDto = _mapper.Map<BundleDto>(bundle);
-                // Apply location fallback logic - use bundle's location if set, otherwise fall back to owner's location display
-                bundleDto.Location = !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User?.LocationDisplay;
+                // Location is now handled through EnhancedLocation field populated from bundle.LocationDisplay with owner fallback
                 return bundleDto;
             }).ToList();
 

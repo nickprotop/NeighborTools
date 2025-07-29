@@ -1,4 +1,5 @@
 using ToolsSharing.Core.Common.Models;
+using ToolsSharing.Core.DTOs.Location;
 
 namespace ToolsSharing.Core.Features.Tools;
 
@@ -14,7 +15,7 @@ public record UpdateToolCommand(
     decimal? MonthlyRate,
     decimal DepositRequired,
     string Condition,
-    string? Location,
+    UpdateLocationRequest? EnhancedLocation,
     bool IsAvailable,
     int? LeadTimeHours,
     string OwnerId,

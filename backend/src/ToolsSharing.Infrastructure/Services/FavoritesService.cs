@@ -58,7 +58,6 @@ public class FavoritesService : IFavoritesService
                 ToolCategory = f.Tool?.Category ?? string.Empty,
                 DailyRate = f.Tool?.DailyRate ?? 0,
                 ToolCondition = f.Tool?.Condition ?? string.Empty,
-                ToolLocation = f.Tool != null ? GetToolLocation(f.Tool) : string.Empty,
                 ToolImageUrls = f.Tool?.Images?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
                 IsToolAvailable = f.Tool?.IsAvailable ?? false,
                 
@@ -66,7 +65,6 @@ public class FavoritesService : IFavoritesService
                 BundleName = f.Bundle?.Name ?? string.Empty,
                 BundleDescription = f.Bundle?.Description ?? string.Empty,
                 BundleCategory = f.Bundle?.Category ?? string.Empty,
-                BundleLocation = f.Bundle != null ? GetBundleLocation(f.Bundle) : string.Empty,
                 BundleDiscountedCost = f.Bundle != null ? CalculateBundleDiscountedCost(f.Bundle) : 0,
                 BundleImageUrl = f.Bundle?.ImageUrl ?? string.Empty,
                 IsBundleAvailable = f.Bundle != null && CalculateBundleAvailability(f.Bundle),
@@ -180,7 +178,6 @@ public class FavoritesService : IFavoritesService
                     ToolCategory = tool.Category,
                     DailyRate = tool.DailyRate,
                     ToolCondition = tool.Condition,
-                    ToolLocation = GetToolLocation(tool),
                     ToolImageUrls = tool.Images.Select(img => img.ImageUrl).ToList(),
                     IsToolAvailable = tool.IsAvailable,
                     OwnerName = $"{tool.Owner.FirstName} {tool.Owner.LastName}".Trim(),
@@ -213,7 +210,6 @@ public class FavoritesService : IFavoritesService
                 ToolCategory = tool.Category,
                 DailyRate = tool.DailyRate,
                 ToolCondition = tool.Condition,
-                ToolLocation = GetToolLocation(tool),
                 ToolImageUrls = tool.Images.Select(img => img.ImageUrl).ToList(),
                 IsToolAvailable = tool.IsAvailable,
                 OwnerName = $"{tool.Owner.FirstName} {tool.Owner.LastName}".Trim(),
@@ -355,7 +351,6 @@ public class FavoritesService : IFavoritesService
                     BundleName = bundle.Name,
                     BundleDescription = bundle.Description,
                     BundleCategory = bundle.Category,
-                    BundleLocation = GetBundleLocation(bundle),
                     BundleDiscountedCost = CalculateBundleDiscountedCost(bundle),
                     BundleImageUrl = bundle.ImageUrl ?? string.Empty,
                     IsBundleAvailable = CalculateBundleAvailability(bundle),
@@ -389,7 +384,6 @@ public class FavoritesService : IFavoritesService
                 BundleName = bundle.Name,
                 BundleDescription = bundle.Description,
                 BundleCategory = bundle.Category,
-                BundleLocation = GetBundleLocation(bundle),
                 BundleDiscountedCost = CalculateBundleDiscountedCost(bundle),
                 BundleImageUrl = bundle.ImageUrl ?? string.Empty,
                 IsBundleAvailable = CalculateBundleAvailability(bundle),
@@ -434,12 +428,12 @@ public class FavoritesService : IFavoritesService
     private string GetBundleLocation(Bundle bundle)
     {
         // Use bundle location if available, otherwise fall back to owner's location display
-        return !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User.LocationDisplay ?? string.Empty;
+        return !string.IsNullOrEmpty(bundle.LocationDisplay) ? bundle.LocationDisplay : bundle.User.LocationDisplay ?? string.Empty;
     }
 
     private string GetToolLocation(Tool tool)
     {
         // Use tool location if available, otherwise fall back to owner's location display
-        return !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.LocationDisplay ?? string.Empty;
+        return !string.IsNullOrEmpty(tool.LocationDisplay) ? tool.LocationDisplay : tool.Owner?.LocationDisplay ?? string.Empty;
     }
 }

@@ -58,7 +58,7 @@ namespace ToolsSharing.Infrastructure.Services
                     RequiredSkillLevel = request.RequiredSkillLevel,
                     EstimatedProjectDuration = request.EstimatedProjectDuration,
                     ImageUrl = request.ImageUrl,
-                    Location = request.Location, // Bundle-specific location
+                    LocationDisplay = request.EnhancedLocation?.LocationDisplay, // Bundle-specific location
                     UserId = userId,
                     BundleDiscount = request.BundleDiscount,
                     IsPublished = request.IsPublished,
@@ -549,8 +549,8 @@ namespace ToolsSharing.Infrastructure.Services
             bundleDto.OwnerName = bundle.User.UserName ?? bundle.User.Email ?? "";
             bundleDto.OwnerLocation = bundle.User.LocationDisplay ?? "";
             
-            // Map bundle location - use bundle's location if set, otherwise fall back to owner's location display
-            bundleDto.Location = !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User.LocationDisplay ?? "";
+            // Bundle location is now handled through EnhancedLocation in the DTO
+            // The location display will be populated from bundle.LocationDisplay or fall back to owner's location in the service layer
             
             // Parse tags from string to List<string>
             if (!string.IsNullOrEmpty(bundle.Tags))
@@ -698,7 +698,7 @@ namespace ToolsSharing.Infrastructure.Services
                 existingBundle.RequiredSkillLevel = request.RequiredSkillLevel;
                 existingBundle.EstimatedProjectDuration = request.EstimatedProjectDuration;
                 existingBundle.ImageUrl = request.ImageUrl;
-                existingBundle.Location = request.Location; // Update bundle location
+                existingBundle.LocationDisplay = request.EnhancedLocation?.LocationDisplay; // Update bundle location
                 existingBundle.BundleDiscount = request.BundleDiscount;
                 existingBundle.IsPublished = request.IsPublished;
                 existingBundle.Category = request.Category;

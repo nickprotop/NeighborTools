@@ -19,9 +19,6 @@ namespace ToolsSharing.Core.DTOs.Bundle
         public string OwnerName { get; set; } = "";
         public string OwnerLocation { get; set; } = "";
         
-        // Location
-        public string Location { get; set; } = ""; // Bundle location (independent or falls back to owner's LocationDisplay)
-        
         // Enhanced location fields (Phase 1)
         public LocationDto EnhancedLocation { get; set; } = new();
         
