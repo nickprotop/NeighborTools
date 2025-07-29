@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ToolsSharing.Core.DTOs.Location;
 
 namespace ToolsSharing.Core.DTOs.Bundle
 {
@@ -20,6 +21,9 @@ namespace ToolsSharing.Core.DTOs.Bundle
         
         // Location
         public string Location { get; set; } = ""; // Bundle location (independent or falls back to owner's LocationDisplay)
+        
+        // Enhanced location fields (Phase 1)
+        public LocationDto EnhancedLocation { get; set; } = new();
         
         // Pricing
         public decimal BundleDiscount { get; set; }

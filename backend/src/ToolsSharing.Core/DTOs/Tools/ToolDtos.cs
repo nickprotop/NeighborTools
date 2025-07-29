@@ -1,4 +1,6 @@
 using System.ComponentModel.DataAnnotations;
+using ToolsSharing.Core.DTOs.Location;
+using ToolsSharing.Core.Enums;
 
 namespace ToolsSharing.Core.DTOs.Tools;
 
@@ -50,6 +52,9 @@ public class CreateToolRequest
     
     [MaxLength(500)]
     public string? Tags { get; set; }
+    
+    // Enhanced location fields (Phase 1)
+    public UpdateLocationRequest? EnhancedLocation { get; set; }
 }
 
 public class UpdateToolRequest
@@ -102,6 +107,9 @@ public class UpdateToolRequest
     
     [MaxLength(500)]
     public string? Tags { get; set; }
+    
+    // Enhanced location fields (Phase 1)
+    public UpdateLocationRequest? EnhancedLocation { get; set; }
 }
 
 public class ToolDto
@@ -138,6 +146,9 @@ public class ToolDto
     public decimal AverageRating { get; set; }
     public int ReviewCount { get; set; }
     public bool IsFeatured { get; set; }
+    
+    // Enhanced location fields (Phase 1)
+    public LocationDto EnhancedLocation { get; set; } = new();
 }
 
 // New DTOs for reviews and search
@@ -183,6 +194,9 @@ public class SearchToolsQuery
     public string SortBy { get; set; } = "relevance"; // relevance, price_low, price_high, rating, newest, popular
     public int Page { get; set; } = 1;
     public int PageSize { get; set; } = 12;
+    
+    // Enhanced location search (Phase 1)
+    public LocationSearchRequest? LocationSearch { get; set; }
 }
 
 public class TagDto

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using ToolsSharing.Core.Enums;
 
 namespace ToolsSharing.Core.Entities
 {
@@ -17,7 +18,20 @@ namespace ToolsSharing.Core.Entities
         public User User { get; set; } = null!;
         
         // Location
-        public string Location { get; set; } = string.Empty; // Bundle location, falls back to owner's PublicLocation if empty
+        public string Location { get; set; } = string.Empty; // Bundle location, falls back to owner's LocationDisplay if empty
+        
+        // Enhanced location fields (Phase 1 - Comprehensive Location System)
+        public string? LocationDisplay { get; set; } // User-friendly display name
+        public string? LocationArea { get; set; } // Neighborhood/area name
+        public string? LocationCity { get; set; } // City name
+        public string? LocationState { get; set; } // State/province name
+        public string? LocationCountry { get; set; } // Country name
+        public decimal? LocationLat { get; set; } // Latitude (quantized for privacy)
+        public decimal? LocationLng { get; set; } // Longitude (quantized for privacy)
+        public int? LocationPrecisionRadius { get; set; } // Generalization radius in meters
+        public LocationSource? LocationSource { get; set; } // How location was obtained
+        public PrivacyLevel LocationPrivacyLevel { get; set; } = PrivacyLevel.Neighborhood; // User's privacy preference
+        public DateTime? LocationUpdatedAt { get; set; } // Track location changes
         
         // Pricing
         public decimal BundleDiscount { get; set; } = 0; // Percentage discount when renting as bundle

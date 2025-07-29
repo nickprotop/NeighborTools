@@ -70,6 +70,9 @@ public class ApplicationDbContext : IdentityDbContext<User>
     public DbSet<UserSession> UserSessions { get; set; }
     public DbSet<BlacklistedToken> BlacklistedTokens { get; set; }
     public DbSet<AttackPattern> AttackPatterns { get; set; }
+    
+    // Phase 1 Location System entities
+    public DbSet<LocationSearchLog> LocationSearchLogs { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
