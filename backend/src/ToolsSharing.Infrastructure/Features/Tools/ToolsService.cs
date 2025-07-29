@@ -1020,8 +1020,8 @@ public class ToolsService : IToolsService
     {
         var toolDto = _mapper.Map<ToolDto>(tool);
         
-        // Apply location fallback logic - use tool's location if set, otherwise fall back to owner's public location
-        toolDto.Location = !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.PublicLocation;
+        // Apply location fallback logic - use tool's location if set, otherwise fall back to owner's location display
+        toolDto.Location = !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.LocationDisplay;
         
         return toolDto;
     }

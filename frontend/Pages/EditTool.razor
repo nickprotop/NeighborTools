@@ -494,7 +494,7 @@
     private bool isLoading = true;
     private bool isSubmitting = false;
     private bool isUploadingImages = false;
-    private string? userPublicLocation = null;
+    private string? userLocationDisplay = null;
     
     // For delayed upload pattern
     private List<IBrowserFile> pendingFiles = new();
@@ -503,7 +503,7 @@
     private List<frontend.Models.BreadcrumbItem> breadcrumbItems = new();
     
     // Show warning when both tool location and user public location are empty
-    private bool ShowLocationWarning => string.IsNullOrEmpty(updateToolRequest.Location) && string.IsNullOrEmpty(userPublicLocation);
+    private bool ShowLocationWarning => string.IsNullOrEmpty(updateToolRequest.Location) && string.IsNullOrEmpty(userLocationDisplay);
 
     protected override async Task OnInitializedAsync()
     {
@@ -585,8 +585,8 @@
             var response = await UserService.GetProfileAsync();
             if (response?.Success == true && response.Data != null)
             {
-                // Store user's public location for warning logic
-                userPublicLocation = response.Data.PublicLocation;
+                // Store user's location display for warning logic
+                userLocationDisplay = response.Data.LocationDisplay;
             }
         }
         catch (Exception ex)

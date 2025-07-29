@@ -433,13 +433,13 @@ public class FavoritesService : IFavoritesService
 
     private string GetBundleLocation(Bundle bundle)
     {
-        // Use bundle location if available, otherwise fall back to owner's public location
-        return !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User.PublicLocation ?? string.Empty;
+        // Use bundle location if available, otherwise fall back to owner's location display
+        return !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User.LocationDisplay ?? string.Empty;
     }
 
     private string GetToolLocation(Tool tool)
     {
-        // Use tool location if available, otherwise fall back to owner's public location
-        return !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.PublicLocation ?? string.Empty;
+        // Use tool location if available, otherwise fall back to owner's location display
+        return !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.LocationDisplay ?? string.Empty;
     }
 }

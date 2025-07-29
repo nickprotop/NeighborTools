@@ -547,10 +547,10 @@ namespace ToolsSharing.Infrastructure.Services
             
             // Map owner information
             bundleDto.OwnerName = bundle.User.UserName ?? bundle.User.Email ?? "";
-            bundleDto.OwnerLocation = bundle.User.PublicLocation ?? "";
+            bundleDto.OwnerLocation = bundle.User.LocationDisplay ?? "";
             
-            // Map bundle location - use bundle's location if set, otherwise fall back to owner's public location
-            bundleDto.Location = !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User.PublicLocation ?? "";
+            // Map bundle location - use bundle's location if set, otherwise fall back to owner's location display
+            bundleDto.Location = !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User.LocationDisplay ?? "";
             
             // Parse tags from string to List<string>
             if (!string.IsNullOrEmpty(bundle.Tags))

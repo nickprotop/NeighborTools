@@ -661,7 +661,7 @@
     private bool isSubmitting = false;
     private bool isLoading = false;
     private bool isUploadingImage = false;
-    private string? userPublicLocation = null;
+    private string? userLocationDisplay = null;
     
     // For delayed upload pattern  
     private IBrowserFile? pendingImageFile = null;
@@ -672,7 +672,7 @@
     private string? pendingImageFileName = null;
     
     // Show warning when both bundle location and user public location are empty
-    private bool ShowLocationWarning => string.IsNullOrEmpty(createBundle.Location) && string.IsNullOrEmpty(userPublicLocation);
+    private bool ShowLocationWarning => string.IsNullOrEmpty(createBundle.Location) && string.IsNullOrEmpty(userLocationDisplay);
     
     // Tool selection
     private List<Tool> availableTools = new();
@@ -751,8 +751,8 @@
             var response = await UserService.GetProfileAsync();
             if (response?.Success == true && response.Data != null)
             {
-                // Store user's public location for warning logic
-                userPublicLocation = response.Data.PublicLocation;
+                // Store user's location display for warning logic
+                userLocationDisplay = response.Data.LocationDisplay;
             }
         }
         catch (Exception ex)

@@ -12,7 +12,7 @@ public class User : IdentityUser
     public string? City { get; set; }
     public string? PostalCode { get; set; }
     public string? Country { get; set; }
-    public string? PublicLocation { get; set; }
+    public string? LocationDisplay { get; set; }
     public DateTime DateOfBirth { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

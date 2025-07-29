@@ -932,7 +932,7 @@ else
     private bool isUploadingImage = false;
     private bool hasImageChanged = false;
     private bool removeImageAndUploadNew = false;
-    private string? userPublicLocation = null;
+    private string? userLocationDisplay = null;
     
     // For delayed upload pattern
     private IBrowserFile? pendingImageFile = null;
@@ -942,7 +942,7 @@ else
     private string? pendingImageFileName = null;
     
     // Show warning when both bundle location and user public location are empty
-    private bool ShowLocationWarning => string.IsNullOrEmpty(editBundle.Location) && string.IsNullOrEmpty(userPublicLocation);
+    private bool ShowLocationWarning => string.IsNullOrEmpty(editBundle.Location) && string.IsNullOrEmpty(userLocationDisplay);
     
     // Bundle approval status
     private BundleApprovalStatusDto? approvalStatus = null;
@@ -1117,8 +1117,8 @@ else
             var response = await UserService.GetProfileAsync();
             if (response?.Success == true && response.Data != null)
             {
-                // Store user's public location for warning logic
-                userPublicLocation = response.Data.PublicLocation;
+                // Store user's location display for warning logic
+                userLocationDisplay = response.Data.LocationDisplay;
             }
         }
         catch (Exception ex)

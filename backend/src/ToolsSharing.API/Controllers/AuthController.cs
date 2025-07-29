@@ -154,7 +154,7 @@ public class AuthController : ControllerBase
                 Email = user.Email!,
                 FirstName = user.FirstName,
                 LastName = user.LastName,
-                PublicLocation = user.PublicLocation,
+                PublicLocation = user.LocationDisplay,
                 TermsOfServiceAccepted = user.TermsOfServiceAccepted,
                 TermsVersion = user.TermsVersion,
                 TermsAcceptedDate = user.TermsAcceptedDate,

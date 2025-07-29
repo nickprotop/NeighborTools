@@ -14,7 +14,7 @@ public class UserProfileDto
     public string? City { get; set; }
     public string? PostalCode { get; set; }
     public string? Country { get; set; }
-    public string? PublicLocation { get; set; }
+    public string? LocationDisplay { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public string? ProfilePictureUrl { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -51,7 +51,7 @@ public class UpdateUserProfileRequest
     public string? Country { get; set; }
 
     [StringLength(100)]
-    public string? PublicLocation { get; set; }
+    public string? LocationDisplay { get; set; }
 
     public DateTime? DateOfBirth { get; set; }
 
@@ -104,7 +104,7 @@ public class UserSearchResult
     public string FullName => $"{FirstName} {LastName}".Trim();
     public string DisplayName => FullName;
     public string? ProfilePictureUrl { get; set; }
-    public string? PublicLocation { get; set; }
+    public string? LocationDisplay { get; set; }
     public bool IsVerified { get; set; }
     public double AverageRating { get; set; }
     public int ReviewCount { get; set; }

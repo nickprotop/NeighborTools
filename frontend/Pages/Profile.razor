@@ -145,7 +145,7 @@
                                                   AdornmentIcon="@Icons.Material.Filled.Public" />
                                 </MudItem>
                                 <MudItem xs="12">
-                                    <MudTextField @bind-Value="updateRequest.PublicLocation"
+                                    <MudTextField @bind-Value="updateRequest.LocationDisplay"
                                                   Label="Public Location"
                                                   Variant="Variant.Outlined"
                                                   FullWidth
@@ -412,7 +412,7 @@
                     City = userProfile.City,
                     PostalCode = userProfile.PostalCode,
                     Country = userProfile.Country,
-                    PublicLocation = userProfile.PublicLocation,
+                    LocationDisplay = userProfile.LocationDisplay,
                     DateOfBirth = userProfile.DateOfBirth,
                     ProfilePictureUrl = userProfile.ProfilePictureUrl
                 };
@@ -475,9 +475,9 @@
     {
         if (userProfile == null) return "Unknown";
         
-        if (!string.IsNullOrEmpty(userProfile.PublicLocation))
+        if (!string.IsNullOrEmpty(userProfile.LocationDisplay))
         {
-            return userProfile.PublicLocation;
+            return userProfile.LocationDisplay;
         }
         
         var parts = new List<string>();

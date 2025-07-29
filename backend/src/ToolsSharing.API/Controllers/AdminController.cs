@@ -677,7 +677,7 @@ public class AdminController : ControllerBase
                     FirstName = u.FirstName,
                     LastName = u.LastName,
                     ProfilePictureUrl = u.ProfilePictureUrl,
-                    PublicLocation = u.PublicLocation,
+                    LocationDisplay = u.LocationDisplay,
                     IsVerified = u.EmailConfirmed, // Use EmailConfirmed from IdentityUser
                     AverageRating = 0, // Could calculate if needed
                     ReviewCount = 0 // Could calculate if needed
@@ -1237,7 +1237,7 @@ public class AdminController : ControllerBase
                 user.Country,
                 user.Address,
                 user.PostalCode,
-                user.PublicLocation,
+                user.LocationDisplay,
                 user.DateOfBirth,
                 user.ProfilePictureUrl,
                 IsDeleted = user.IsDeleted,
@@ -1304,7 +1304,7 @@ public class AdminController : ControllerBase
             user.Country = request.Country;
             user.Address = request.Address;
             user.PostalCode = request.PostalCode;
-            user.PublicLocation = request.PublicLocation;
+            user.LocationDisplay = request.LocationDisplay;
             if (request.DateOfBirth.HasValue)
                 user.DateOfBirth = request.DateOfBirth.Value;
             user.EmailConfirmed = request.EmailConfirmed;
@@ -1384,8 +1384,8 @@ public class AdminController : ControllerBase
             var toolDtos = tools.Select(tool =>
             {
                 var toolDto = _mapper.Map<ToolDto>(tool);
-                // Apply location fallback logic - use tool's location if set, otherwise fall back to owner's public location
-                toolDto.Location = !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.PublicLocation;
+                // Apply location fallback logic - use tool's location if set, otherwise fall back to owner's location display
+                toolDto.Location = !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.LocationDisplay;
                 return toolDto;
             }).ToList();
 
@@ -1502,8 +1502,8 @@ public class AdminController : ControllerBase
             var bundleDtos = bundles.Select(bundle =>
             {
                 var bundleDto = _mapper.Map<BundleDto>(bundle);
-                // Apply location fallback logic - use bundle's location if set, otherwise fall back to owner's public location
-                bundleDto.Location = !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User?.PublicLocation;
+                // Apply location fallback logic - use bundle's location if set, otherwise fall back to owner's location display
+                bundleDto.Location = !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User?.LocationDisplay;
                 return bundleDto;
             }).ToList();
 
@@ -1617,7 +1617,7 @@ public class AdminUpdateUserRequest
     public string? Country { get; set; }
     public string? Address { get; set; }
     public string? PostalCode { get; set; }
-    public string? PublicLocation { get; set; }
+    public string? LocationDisplay { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public bool EmailConfirmed { get; set; }
 }

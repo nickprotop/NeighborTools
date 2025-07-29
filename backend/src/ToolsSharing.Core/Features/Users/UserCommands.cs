@@ -11,7 +11,7 @@ public record UpdateUserProfileCommand(
     string? City = null,
     string? PostalCode = null,
     string? Country = null,
-    string? PublicLocation = null,
+    string? LocationDisplay = null,
     DateTime? DateOfBirth = null,
     string? ProfilePictureUrl = null
 );
@@ -31,7 +31,7 @@ public class UserProfileDto
     public string? City { get; set; }
     public string? PostalCode { get; set; }
     public string? Country { get; set; }
-    public string? PublicLocation { get; set; }
+    public string? LocationDisplay { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public string? ProfilePictureUrl { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -86,7 +86,7 @@ public class UserSearchResultDto
     public string LastName { get; set; } = "";
     public string FullName => $"{FirstName} {LastName}".Trim();
     public string? ProfilePictureUrl { get; set; }
-    public string? PublicLocation { get; set; }
+    public string? LocationDisplay { get; set; }
     public bool IsVerified { get; set; }
     public double AverageRating { get; set; }
     public int ReviewCount { get; set; }

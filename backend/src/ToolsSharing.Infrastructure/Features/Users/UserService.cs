@@ -71,7 +71,7 @@ public class UserService : IUserService
         user.City = command.City;
         user.PostalCode = command.PostalCode;
         user.Country = command.Country;
-        user.PublicLocation = command.PublicLocation;
+        user.LocationDisplay = command.LocationDisplay;
         user.ProfilePictureUrl = command.ProfilePictureUrl;
         user.UpdatedAt = DateTime.UtcNow;
 
@@ -336,7 +336,7 @@ public class UserService : IUserService
                 FirstName = user.FirstName,
                 LastName = user.LastName,
                 ProfilePictureUrl = user.ProfilePictureUrl,
-                PublicLocation = user.PublicLocation,
+                LocationDisplay = user.LocationDisplay,
                 IsVerified = !string.IsNullOrEmpty(user.PhoneNumber) && user.EmailConfirmed,
                 AverageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0,
                 ReviewCount = reviews.Count

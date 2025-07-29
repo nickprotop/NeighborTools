@@ -19,7 +19,7 @@ namespace ToolsSharing.Core.DTOs.Bundle
         public string OwnerLocation { get; set; } = "";
         
         // Location
-        public string Location { get; set; } = ""; // Bundle location (independent or falls back to owner's PublicLocation)
+        public string Location { get; set; } = ""; // Bundle location (independent or falls back to owner's LocationDisplay)
         
         // Pricing
         public decimal BundleDiscount { get; set; }

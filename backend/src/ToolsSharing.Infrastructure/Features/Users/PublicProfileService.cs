@@ -83,7 +83,7 @@ public class PublicProfileService : IPublicProfileService
                 // Show location only if allowed
                 if (privacy.ShowLocation)
                 {
-                    publicProfile.Location = user.PublicLocation;
+                    publicProfile.Location = user.LocationDisplay;
                 }
 
                 // Show email only if allowed

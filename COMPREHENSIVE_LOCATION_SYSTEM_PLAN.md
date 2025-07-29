@@ -4,7 +4,7 @@
 
 This document outlines the complete implementation plan for upgrading NeighborTools from basic text-based location handling to a sophisticated, security-aware, map-integrated location system with triangulation protection.
 
-**Current State**: Tool.Location nullable with fallback to owner.PublicLocation
+**Current State**: Tool.Location nullable with fallback to owner.LocationDisplay
 **Target State**: Dual-layer location system with geocoding, maps, and privacy protection
 
 ## 📋 PHASE 1: DATABASE SCHEMA & MIGRATIONS
@@ -23,7 +23,7 @@ This document outlines the complete implementation plan for upgrading NeighborTo
   - LocationPrivacyLevel (int) - User's privacy preference
   - LocationUpdatedAt (DateTime) - Track location changes
 
-- **User Entity**: Add identical dual-layer fields for PublicLocation
+- **User Entity**: Add dual-layer location fields (LocationDisplay replaces PublicLocation)
 - **Bundle Entity**: Add same dual-layer location structure
 - **LocationSearchLog Entity**: Track search patterns for triangulation detection
   - UserId, TargetId, SearchType, SearchLat, SearchLng, SearchQuery, UserAgent, IpAddress, CreatedAt
@@ -252,7 +252,7 @@ This document outlines the complete implementation plan for upgrading NeighborTo
 - Location consistency validation
 
 **UserService Updates:**
-- Public location management with geocoding
+- Location display management with geocoding
 - Privacy level selection for users
 - Location update tracking
 
@@ -276,7 +276,7 @@ This document outlines the complete implementation plan for upgrading NeighborTo
 - Location inheritance from contained tools
 
 **User Profile Pages:**
-- Public location management interface
+- Location display management interface
 - Privacy education and selection
 - Location visibility settings
 
@@ -404,7 +404,7 @@ This document outlines the complete implementation plan for upgrading NeighborTo
 
 **Background Migration Job:**
 - Geocode existing Tool.Location values
-- Geocode existing User.PublicLocation values
+- Geocode existing User.LocationDisplay values
 - Handle failed geocoding attempts
 - Data quality validation and reporting
 - Migration progress tracking
