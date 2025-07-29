@@ -45,6 +45,9 @@ catch (Exception ex)
     }
 }
 
+// Ensure MapSettings has proper defaults if missing or incomplete
+EnsureMapSettingsDefaults(appSettings);
+
 // Register configuration in DI
 builder.Services.AddSingleton(appSettings);
 
@@ -98,3 +101,73 @@ var authService = app.Services.GetRequiredService<IAuthService>();
 await authService.RestoreAuthenticationAsync();
 
 await app.RunAsync();
+
+/// <summary>
+/// Ensures MapSettings has proper defaults when config.json is missing or incomplete
+/// </summary>
+static void EnsureMapSettingsDefaults(AppSettings appSettings)
+{
+    // Initialize MapSettings if null
+    appSettings.MapSettings ??= new MapSettings();
+    
+    var defaults = new MapSettings();
+    
+    // Apply defaults for missing or invalid values
+    if (string.IsNullOrEmpty(appSettings.MapSettings.MapTileUrl))
+    {
+        appSettings.MapSettings.MapTileUrl = defaults.MapTileUrl;
+        Console.WriteLine($"✅ Applied default MapTileUrl: {defaults.MapTileUrl}");
+    }
+    
+    if (string.IsNullOrEmpty(appSettings.MapSettings.MapAttribution))
+    {
+        appSettings.MapSettings.MapAttribution = defaults.MapAttribution;
+        Console.WriteLine($"✅ Applied default MapAttribution: {defaults.MapAttribution}");
+    }
+    
+    if (appSettings.MapSettings.DefaultZoom < 5 || appSettings.MapSettings.DefaultZoom > 18)
+    {
+        appSettings.MapSettings.DefaultZoom = defaults.DefaultZoom;
+        Console.WriteLine($"✅ Applied default DefaultZoom: {defaults.DefaultZoom}");
+    }
+    
+    if (appSettings.MapSettings.MinZoom < 1 || appSettings.MapSettings.MinZoom > appSettings.MapSettings.DefaultZoom)
+    {
+        appSettings.MapSettings.MinZoom = defaults.MinZoom;
+        Console.WriteLine($"✅ Applied default MinZoom: {defaults.MinZoom}");
+    }
+    
+    if (appSettings.MapSettings.MaxZoom < appSettings.MapSettings.DefaultZoom || appSettings.MapSettings.MaxZoom > 20)
+    {
+        appSettings.MapSettings.MaxZoom = defaults.MaxZoom;
+        Console.WriteLine($"✅ Applied default MaxZoom: {defaults.MaxZoom}");
+    }
+    
+    // Initialize DefaultCenter if null
+    appSettings.MapSettings.DefaultCenter ??= new MapCenter();
+    
+    // Apply default center coordinates if invalid (0,0 or out of valid range)
+    if (appSettings.MapSettings.DefaultCenter.Lat == 0 && appSettings.MapSettings.DefaultCenter.Lng == 0 ||
+        appSettings.MapSettings.DefaultCenter.Lat < -90 || appSettings.MapSettings.DefaultCenter.Lat > 90 ||
+        appSettings.MapSettings.DefaultCenter.Lng < -180 || appSettings.MapSettings.DefaultCenter.Lng > 180)
+    {
+        appSettings.MapSettings.DefaultCenter.Lat = defaults.DefaultCenter.Lat;
+        appSettings.MapSettings.DefaultCenter.Lng = defaults.DefaultCenter.Lng;
+        Console.WriteLine($"✅ Applied default map center: {defaults.DefaultCenter.Lat}, {defaults.DefaultCenter.Lng}");
+    }
+    
+    // Apply default timeout values if invalid
+    if (appSettings.MapSettings.LocationTimeout <= 0)
+    {
+        appSettings.MapSettings.LocationTimeout = defaults.LocationTimeout;
+        Console.WriteLine($"✅ Applied default LocationTimeout: {defaults.LocationTimeout}ms");
+    }
+    
+    if (appSettings.MapSettings.MaxLocationAge <= 0)
+    {
+        appSettings.MapSettings.MaxLocationAge = defaults.MaxLocationAge;
+        Console.WriteLine($"✅ Applied default MaxLocationAge: {defaults.MaxLocationAge}ms");
+    }
+    
+    Console.WriteLine("🗺️ MapSettings validation completed");
+}

@@ -194,3 +194,360 @@ public class LocationSearchLogDto
     public int ResponseTimeMs { get; set; }
     public DateTime CreatedAt { get; set; }
 }
+
+/// <summary>
+/// A location option with address details and coordinates for geocoding
+/// </summary>
+public class LocationOption
+{
+    /// <summary>
+    /// Display name for UI (e.g., "Athens, GA, USA")
+    /// </summary>
+    public string DisplayName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Area/neighborhood name
+    /// </summary>
+    public string? Area { get; set; }
+
+    /// <summary>
+    /// City name
+    /// </summary>
+    public string? City { get; set; }
+
+    /// <summary>
+    /// State/province name
+    /// </summary>
+    public string? State { get; set; }
+
+    /// <summary>
+    /// Country name
+    /// </summary>
+    public string? Country { get; set; }
+
+    /// <summary>
+    /// Country code (e.g., "US", "GR")
+    /// </summary>
+    public string? CountryCode { get; set; }
+
+    /// <summary>
+    /// Postal/ZIP code
+    /// </summary>
+    public string? PostalCode { get; set; }
+
+    /// <summary>
+    /// Latitude coordinate
+    /// </summary>
+    public decimal? Lat { get; set; }
+
+    /// <summary>
+    /// Longitude coordinate
+    /// </summary>
+    public decimal? Lng { get; set; }
+
+    /// <summary>
+    /// Precision radius in meters for privacy
+    /// </summary>
+    public int PrecisionRadius { get; set; } = 1000;
+
+    /// <summary>
+    /// Source of the location data
+    /// </summary>
+    public LocationSource Source { get; set; } = LocationSource.Manual;
+
+    /// <summary>
+    /// Confidence score (0.0 to 1.0)
+    /// </summary>
+    public decimal Confidence { get; set; } = 1.0m;
+
+    /// <summary>
+    /// Bounding box for the location (optional)
+    /// </summary>
+    public LocationBounds? Bounds { get; set; }
+}
+
+/// <summary>
+/// Geographic bounding box
+/// </summary>
+public class LocationBounds
+{
+    public decimal NorthLat { get; set; }
+    public decimal SouthLat { get; set; }
+    public decimal EastLng { get; set; }
+    public decimal WestLng { get; set; }
+}
+
+/// <summary>
+/// Response for location search operations
+/// </summary>
+public class LocationSearchResponse
+{
+    /// <summary>
+    /// List of location options
+    /// </summary>
+    public List<LocationOption> Results { get; set; } = new();
+
+    /// <summary>
+    /// Total number of results found
+    /// </summary>
+    public int TotalCount { get; set; }
+
+    /// <summary>
+    /// Search query that was executed
+    /// </summary>
+    public string Query { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Provider used for the search
+    /// </summary>
+    public string Provider { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Time taken for the search in milliseconds
+    /// </summary>
+    public int TimeTakenMs { get; set; }
+
+    /// <summary>
+    /// Whether results were served from cache
+    /// </summary>
+    public bool FromCache { get; set; }
+}
+
+/// <summary>
+/// Request for reverse geocoding operations
+/// </summary>
+public class ReverseGeocodeRequest
+{
+    /// <summary>
+    /// Latitude coordinate
+    /// </summary>
+    public decimal Lat { get; set; }
+
+    /// <summary>
+    /// Longitude coordinate
+    /// </summary>
+    public decimal Lng { get; set; }
+
+    /// <summary>
+    /// Language preference for results
+    /// </summary>
+    public string? Language { get; set; } = "en";
+
+    /// <summary>
+    /// Zoom level for detail (1-18, higher = more detail)
+    /// </summary>
+    public int Zoom { get; set; } = 10;
+}
+
+/// <summary>
+/// Tool with distance information for proximity searches
+/// </summary>
+public class NearbyToolDto
+{
+    /// <summary>
+    /// Tool ID
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Tool name
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Tool description
+    /// </summary>
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Daily rental rate
+    /// </summary>
+    public decimal DailyRate { get; set; }
+
+    /// <summary>
+    /// Tool condition
+    /// </summary>
+    public string Condition { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Tool category
+    /// </summary>
+    public string Category { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Tool image URLs
+    /// </summary>
+    public List<string> ImageUrls { get; set; } = new();
+
+    /// <summary>
+    /// Owner name
+    /// </summary>
+    public string OwnerName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Location display text
+    /// </summary>
+    public string LocationDisplay { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Distance band for privacy
+    /// </summary>
+    public DistanceBand DistanceBand { get; set; }
+
+    /// <summary>
+    /// Human-readable distance text
+    /// </summary>
+    public string DistanceText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether the tool is currently available
+    /// </summary>
+    public bool IsAvailable { get; set; }
+
+    /// <summary>
+    /// Average rating
+    /// </summary>
+    public decimal AverageRating { get; set; }
+
+    /// <summary>
+    /// Number of reviews
+    /// </summary>
+    public int ReviewCount { get; set; }
+}
+
+/// <summary>
+/// Bundle with distance information for proximity searches
+/// </summary>
+public class NearbyBundleDto
+{
+    /// <summary>
+    /// Bundle ID
+    /// </summary>
+    public Guid Id { get; set; }
+
+    /// <summary>
+    /// Bundle name
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Bundle description
+    /// </summary>
+    public string Description { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Bundle category
+    /// </summary>
+    public string Category { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Bundle image URL
+    /// </summary>
+    public string? ImageUrl { get; set; }
+
+    /// <summary>
+    /// Number of tools in bundle
+    /// </summary>
+    public int ToolCount { get; set; }
+
+    /// <summary>
+    /// Original total cost
+    /// </summary>
+    public decimal OriginalCost { get; set; }
+
+    /// <summary>
+    /// Discounted cost
+    /// </summary>
+    public decimal DiscountedCost { get; set; }
+
+    /// <summary>
+    /// Discount percentage
+    /// </summary>
+    public decimal DiscountPercentage { get; set; }
+
+    /// <summary>
+    /// Owner name
+    /// </summary>
+    public string OwnerName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Location display text
+    /// </summary>
+    public string LocationDisplay { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Distance band for privacy
+    /// </summary>
+    public DistanceBand DistanceBand { get; set; }
+
+    /// <summary>
+    /// Human-readable distance text
+    /// </summary>
+    public string DistanceText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Whether the bundle is currently available
+    /// </summary>
+    public bool IsAvailable { get; set; }
+
+    /// <summary>
+    /// Average rating
+    /// </summary>
+    public decimal AverageRating { get; set; }
+
+    /// <summary>
+    /// Number of reviews
+    /// </summary>
+    public int ReviewCount { get; set; }
+}
+
+/// <summary>
+/// Request for nearby search operations
+/// </summary>
+public class NearbySearchRequest
+{
+    /// <summary>
+    /// Search center latitude
+    /// </summary>
+    public decimal? Lat { get; set; }
+
+    /// <summary>
+    /// Search center longitude
+    /// </summary>
+    public decimal? Lng { get; set; }
+
+    /// <summary>
+    /// Search radius in kilometers
+    /// </summary>
+    public decimal RadiusKm { get; set; } = 10;
+
+    /// <summary>
+    /// Category filter (optional)
+    /// </summary>
+    public string? Category { get; set; }
+
+    /// <summary>
+    /// Maximum daily rate filter (optional)
+    /// </summary>
+    public decimal? MaxDailyRate { get; set; }
+
+    /// <summary>
+    /// Minimum rating filter (optional)
+    /// </summary>
+    public decimal? MinRating { get; set; }
+
+    /// <summary>
+    /// Only available items
+    /// </summary>
+    public bool AvailableOnly { get; set; } = true;
+
+    /// <summary>
+    /// Maximum number of results
+    /// </summary>
+    public int Limit { get; set; } = 20;
+
+    /// <summary>
+    /// Skip this many results (for pagination)
+    /// </summary>
+    public int Skip { get; set; } = 0;
+}

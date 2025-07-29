@@ -16,5 +16,23 @@
   },
   "Site": {
     "HomePageUrl": "https://localhost"
+  },
+  "MapSettings": {
+    "_comment": "Map display configuration for location features",
+    "_instructions": "Configure map settings for displaying tool and bundle locations. MapTileUrl supports OpenStreetMap, Google Maps, or other tile providers.",
+    "MapTileUrl": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+    "MapAttribution": "© OpenStreetMap contributors",
+    "DefaultZoom": 13,
+    "MinZoom": 5,
+    "MaxZoom": 18,
+    "DefaultCenter": {
+      "_comment": "Default map center coordinates (New York City coordinates shown as example)",
+      "Lat": 40.7128,
+      "Lng": -74.0060
+    },
+    "ShowLocationControls": true,
+    "EnableGeolocation": true,
+    "LocationTimeout": 10000,
+    "MaxLocationAge": 300000
   }
 }

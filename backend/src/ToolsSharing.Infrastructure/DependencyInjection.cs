@@ -26,15 +26,21 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        // Database
-        services.AddDbContext<ApplicationDbContext>(options =>
-            options.UseMySql(
-                configuration.GetConnectionString("DefaultConnection"),
-                ServerVersion.Parse("8.0.0-mysql"), // Fixed version instead of AutoDetect to prevent connection issues
-                b => {
-                    b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
-                    b.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null); // Add retry logic for transient failures
-                }));
+        // Database - Only register if not already registered (for testing scenarios)
+        if (!services.Any(service => service.ServiceType == typeof(DbContextOptions<ApplicationDbContext>)))
+        {
+            services.AddDbContext<ApplicationDbContext>(options =>
+                options.UseMySql(
+                    configuration.GetConnectionString("DefaultConnection"),
+                    ServerVersion.Parse("8.0.0-mysql"), // Fixed version instead of AutoDetect to prevent connection issues
+                    b => {
+                        b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
+                        b.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null); // Add retry logic for transient failures
+                    }));
+        }
+
+        // Memory Cache (required by location services)
+        services.AddMemoryCache();
 
         // Note: Identity is configured in the API project since it requires ASP.NET Core
 
@@ -160,6 +166,87 @@ public static class DependencyInjection
         services.AddScoped<IMutualClosureConfigurationService, MutualClosureConfigurationService>();
         services.AddScoped<IMutualClosureNotificationService, MutualClosureNotificationService>();
         services.AddScoped<IMutualDisputeClosureService, MutualDisputeClosureService>();
+
+        // Location Services Configuration
+        services.Configure<GeocodingConfiguration>(configuration.GetSection("Geocoding"));
+        services.Configure<LocationSecurityConfiguration>(configuration.GetSection("Geocoding:Security"));
+        services.Configure<GeocodingCacheConfiguration>(configuration.GetSection("Geocoding:Cache"));
+        services.Configure<OpenStreetMapConfiguration>(configuration.GetSection("Geocoding:OpenStreetMap"));
+        services.Configure<HereConfiguration>(configuration.GetSection("Geocoding:HERE"));
+
+        // Register configuration objects directly for services that need them
+        services.AddSingleton<LocationSecurityConfiguration>(provider =>
+        {
+            var config = new LocationSecurityConfiguration();
+            configuration.GetSection("Geocoding:Security").Bind(config);
+            return config;
+        });
+
+        services.AddSingleton<OpenStreetMapConfiguration>(provider =>
+        {
+            var config = new OpenStreetMapConfiguration();
+            configuration.GetSection("Geocoding:OpenStreetMap").Bind(config);
+            return config;
+        });
+
+        services.AddSingleton<HereConfiguration>(provider =>
+        {
+            var config = new HereConfiguration();
+            configuration.GetSection("Geocoding:HERE").Bind(config);
+            return config;
+        });
+
+        // Location Security Service
+        services.AddScoped<ILocationSecurityService, LocationSecurityService>();
+
+        // Geocoding Services - Provider-based registration
+        var geocodingConfig = configuration.GetSection("Geocoding").Get<GeocodingConfiguration>();
+        if (geocodingConfig != null)
+        {
+            // Register OpenStreetMap service (always available, no API key required)
+            services.AddHttpClient<OpenStreetMapGeocodingService>();
+            services.AddScoped<OpenStreetMapGeocodingService>();
+
+            // Register HERE service if API key is configured
+            var hereConfig = configuration.GetSection("Geocoding:HERE").Get<HereConfiguration>();
+            if (!string.IsNullOrWhiteSpace(hereConfig?.ApiKey))
+            {
+                services.AddHttpClient<HereGeocodingService>();
+                services.AddScoped<HereGeocodingService>();
+            }
+
+            // Register the primary IGeocodingService based on configured provider
+            var defaultProvider = geocodingConfig.DefaultProvider ?? "OpenStreetMap";
+            switch (defaultProvider.ToLowerInvariant())
+            {
+                case "here":
+                    if (!string.IsNullOrWhiteSpace(hereConfig?.ApiKey))
+                    {
+                        services.AddScoped<IGeocodingService>(provider => 
+                            provider.GetRequiredService<HereGeocodingService>());
+                    }
+                    else
+                    {
+                        // Fallback to OpenStreetMap if HERE is not properly configured
+                        services.AddScoped<IGeocodingService>(provider => 
+                            provider.GetRequiredService<OpenStreetMapGeocodingService>());
+                    }
+                    break;
+                case "openstreetmap":
+                default:
+                    services.AddScoped<IGeocodingService>(provider => 
+                        provider.GetRequiredService<OpenStreetMapGeocodingService>());
+                    break;
+            }
+        }
+        else
+        {
+            // Default configuration fallback
+            services.AddHttpClient<OpenStreetMapGeocodingService>();
+            services.AddScoped<OpenStreetMapGeocodingService>();
+            services.AddScoped<IGeocodingService>(provider => 
+                provider.GetRequiredService<OpenStreetMapGeocodingService>());
+        }
 
         return services;
     }

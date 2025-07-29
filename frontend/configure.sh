@@ -12,18 +12,23 @@
 #   --api-url URL          Update API base URL
 #   --environment ENV      Update environment name
 #   --home-page-url URL    Update home page URL
+#   --map-tile-url URL     Update map tile URL for location displays
+#   --map-zoom NUM         Update default map zoom level (5-18)
 #   --help                 Show this help message
 #
 # Examples:
 #   ./configure.sh --api-url "https://api.yourapp.com"
 #   ./configure.sh --environment "Production"
 #   ./configure.sh --home-page-url "https://yoursite.com"
+#   ./configure.sh --map-tile-url "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
 #   ./configure.sh --api-url "https://api.prod.com" --environment "Production"
 
 # Initialize variables to track what parameters were provided
 UPDATE_API_URL=""
 UPDATE_ENVIRONMENT=""
 UPDATE_HOME_PAGE_URL=""
+UPDATE_MAP_TILE_URL=""
+UPDATE_MAP_ZOOM=""
 PARAMS_PROVIDED=false
 
 # Parse command line arguments
@@ -44,6 +49,16 @@ while [[ $# -gt 0 ]]; do
             PARAMS_PROVIDED=true
             shift 2
             ;;
+        --map-tile-url)
+            UPDATE_MAP_TILE_URL="$2"
+            PARAMS_PROVIDED=true
+            shift 2
+            ;;
+        --map-zoom)
+            UPDATE_MAP_ZOOM="$2"
+            PARAMS_PROVIDED=true
+            shift 2
+            ;;
         --help|-h)
             echo "Frontend configuration script"
             echo ""
@@ -58,12 +73,15 @@ while [[ $# -gt 0 ]]; do
             echo "  --api-url URL          Update API base URL"
             echo "  --environment ENV      Update environment name"
             echo "  --home-page-url URL    Update home page URL"
+            echo "  --map-tile-url URL     Update map tile URL for location displays"
+            echo "  --map-zoom NUM         Update default map zoom level (5-18)"
             echo "  --help, -h             Show this help message"
             echo ""
             echo "Examples:"
             echo "  ./configure.sh --api-url \"https://api.yourapp.com\""
             echo "  ./configure.sh --environment \"Production\""
             echo "  ./configure.sh --home-page-url \"https://yoursite.com\""
+            echo "  ./configure.sh --map-tile-url \"https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png\""
             echo "  ./configure.sh --api-url \"https://api.prod.com\" --environment \"Production\""
             exit 0
             ;;
@@ -110,6 +128,8 @@ if [ "$PARAMS_PROVIDED" = false ]; then
     UPDATE_API_URL=$(read_input "API Base URL" "http://localhost:5002")
     UPDATE_ENVIRONMENT=$(read_input "Environment (Development/Production)" "Development")
     UPDATE_HOME_PAGE_URL=$(read_input "Home Page URL" "http://localhost")
+    UPDATE_MAP_TILE_URL=$(read_input "Map Tile URL" "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png")
+    UPDATE_MAP_ZOOM=$(read_input "Default Map Zoom (5-18)" "13")
     
     echo ""
     echo "========================================="
@@ -117,6 +137,8 @@ if [ "$PARAMS_PROVIDED" = false ]; then
     echo "   API URL: $UPDATE_API_URL"
     echo "   Environment: $UPDATE_ENVIRONMENT"
     echo "   Home Page URL: $UPDATE_HOME_PAGE_URL"
+    echo "   Map Tile URL: $UPDATE_MAP_TILE_URL"
+    echo "   Map Zoom: $UPDATE_MAP_ZOOM"
     echo "========================================="
     echo ""
     echo -n "Proceed with configuration? [Y/n]: " >&2
@@ -169,18 +191,34 @@ validate_url() {
     fi
 }
 
+# Function to validate zoom level
+validate_zoom() {
+    local zoom="$1"
+    
+    if ! [[ "$zoom" =~ ^[0-9]+$ ]] || [ "$zoom" -lt 5 ] || [ "$zoom" -gt 18 ]; then
+        echo "❌ Error: Map zoom must be a number between 5 and 18"
+        echo "   Example: ./configure.sh --map-zoom \"13\""
+        exit 1
+    fi
+}
+
 # Function to update JSON value using jq or fallback to sed
 update_json_value() {
     local file="$1"
     local json_path="$2"
     local new_value="$3"
     local description="$4"
+    local is_numeric="$5"
     
     # Check if jq is available for robust JSON manipulation
     if command -v jq &> /dev/null; then
         # Use jq for safe JSON manipulation
         local temp_file=$(mktemp)
-        jq "$json_path = \"$new_value\"" "$file" > "$temp_file" && mv "$temp_file" "$file"
+        if [ "$is_numeric" = "true" ]; then
+            jq "$json_path = $new_value" "$file" > "$temp_file" && mv "$temp_file" "$file"
+        else
+            jq "$json_path = \"$new_value\"" "$file" > "$temp_file" && mv "$temp_file" "$file"
+        fi
         echo "✅ Updated $description to: $new_value"
     else
         # Fallback to sed (less robust but works for simple cases)
@@ -193,6 +231,12 @@ update_json_value() {
                 ;;
             ".Site.HomePageUrl")
                 sed -i 's|"HomePageUrl": *"[^"]*"|"HomePageUrl": "'"$new_value"'"|' "$file"
+                ;;
+            ".MapSettings.MapTileUrl")
+                sed -i 's|"MapTileUrl": *"[^"]*"|"MapTileUrl": "'"$new_value"'"|' "$file"
+                ;;
+            ".MapSettings.DefaultZoom")
+                sed -i 's|"DefaultZoom": *[0-9]*|"DefaultZoom": '"$new_value"'|' "$file"
                 ;;
         esac
         echo "✅ Updated $description to: $new_value (using sed fallback)"
@@ -228,6 +272,18 @@ if [ -n "$UPDATE_HOME_PAGE_URL" ]; then
     update_json_value "$CONFIG_FILE" ".Site.HomePageUrl" "$UPDATE_HOME_PAGE_URL" "Home Page URL"
 fi
 
+# Update Map Tile URL if provided
+if [ -n "$UPDATE_MAP_TILE_URL" ]; then
+    validate_url "$UPDATE_MAP_TILE_URL" "Map Tile URL"
+    update_json_value "$CONFIG_FILE" ".MapSettings.MapTileUrl" "$UPDATE_MAP_TILE_URL" "Map Tile URL"
+fi
+
+# Update Map Zoom if provided
+if [ -n "$UPDATE_MAP_ZOOM" ]; then
+    validate_zoom "$UPDATE_MAP_ZOOM"
+    update_json_value "$CONFIG_FILE" ".MapSettings.DefaultZoom" "$UPDATE_MAP_ZOOM" "Default Map Zoom" "true"
+fi
+
 echo "========================================="
 echo "✅ Configuration updated successfully!"
 echo "📁 File: $CONFIG_FILE"
@@ -239,6 +295,8 @@ if command -v jq &> /dev/null; then
     echo "   API URL: $(jq -r '.ApiSettings.BaseUrl' "$CONFIG_FILE")"
     echo "   Environment: $(jq -r '.Environment' "$CONFIG_FILE")"
     echo "   Home Page URL: $(jq -r '.Site.HomePageUrl' "$CONFIG_FILE")"
+    echo "   Map Tile URL: $(jq -r '.MapSettings.MapTileUrl' "$CONFIG_FILE")"
+    echo "   Map Zoom: $(jq -r '.MapSettings.DefaultZoom' "$CONFIG_FILE")"
     echo "   Analytics: $(jq -r '.Features.EnableAnalytics' "$CONFIG_FILE")"
 else
     echo "   (Install 'jq' for better configuration display)"

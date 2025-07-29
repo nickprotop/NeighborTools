@@ -43,7 +43,7 @@ public class EntityTests
         tool.Model.Should().Be(string.Empty);
         tool.IsAvailable.Should().BeTrue();
         tool.Condition.Should().Be(string.Empty);
-        tool.LocationDisplay.Should().Be(string.Empty);
+        tool.LocationDisplay.Should().BeNull();
         tool.IsDeleted.Should().BeFalse();
         tool.Images.Should().NotBeNull();
         tool.Rentals.Should().NotBeNull();

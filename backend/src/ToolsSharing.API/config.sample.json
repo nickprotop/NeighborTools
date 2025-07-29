@@ -348,6 +348,54 @@
     ],
     "ReauthTimeoutMinutes": 5
   },
+  "Geocoding": {
+    "_Comment": "Location services configuration for geocoding providers",
+    "_Instructions": "Configure geocoding providers. OpenStreetMap is free (no API key needed), HERE requires API key from developer.here.com",
+    "DefaultProvider": "OpenStreetMap",
+    "_ProviderOptions": "OpenStreetMap (free, rate limited) or HERE (paid, higher limits)",
+    "OpenStreetMap": {
+      "BaseUrl": "https://nominatim.openstreetmap.org",
+      "UserAgent": "NeighborTools/1.0",
+      "RequestsPerSecond": 1,
+      "CacheDurationHours": 24,
+      "TimeoutSeconds": 30,
+      "DefaultLanguage": "en",
+      "ContactEmail": ""
+    },
+    "HERE": {
+      "_Instructions": "Get API key from developer.here.com",
+      "BaseUrl": "https://geocode.search.hereapi.com/v1",
+      "ApiKey": "YOUR_HERE_API_KEY_HERE",
+      "RequestsPerSecond": 10,
+      "CacheDurationHours": 24,
+      "TimeoutSeconds": 30,
+      "DefaultLanguage": "en",
+      "MaxResults": 20,
+      "IncludeAddressDetails": true,
+      "IncludeMapView": true
+    },
+    "Security": {
+      "_Comment": "Location search security settings to prevent triangulation attacks",
+      "MaxSearchesPerHour": 50,
+      "MaxSearchesPerTarget": 5,
+      "MinSearchIntervalSeconds": 10,
+      "EnableTriangulationDetection": true,
+      "TriangulationMinDistanceKm": 1.0,
+      "TriangulationTimeWindowHours": 24,
+      "TriangulationMinSearchPoints": 3,
+      "LogAllSearches": true,
+      "SearchLogRetentionDays": 90
+    },
+    "Cache": {
+      "_Comment": "Geocoding response caching to reduce API calls and improve performance",
+      "Enabled": true,
+      "DefaultDurationHours": 24,
+      "PopularLocationDurationHours": 168,
+      "ErrorCacheDurationMinutes": 15,
+      "MaxCacheSize": 10000,
+      "KeyPrefix": "geocoding:"
+    }
+  },
   "BruteForceProtection": {
     "_Comment": "Phase 3 Security: Advanced brute force detection with attack pattern analysis",
     "EnableBruteForceProtection": true,

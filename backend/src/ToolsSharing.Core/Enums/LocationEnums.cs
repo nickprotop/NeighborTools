@@ -49,7 +49,17 @@ public enum LocationSource
     /// <summary>
     /// Location obtained from browser geolocation API
     /// </summary>
-    Browser = 4
+    Browser = 4,
+    
+    /// <summary>
+    /// Location from OpenStreetMap Nominatim geocoding
+    /// </summary>
+    OpenStreetMap = 5,
+    
+    /// <summary>
+    /// Location from HERE Maps geocoding
+    /// </summary>
+    HERE = 6
 }
 
 /// <summary>
