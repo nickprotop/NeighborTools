@@ -193,6 +193,15 @@
                                                 </MudText>
                                             </MudStack>
 
+                                            <!-- Location -->
+                                            @if (!string.IsNullOrEmpty(GetBundleLocation(bundle)))
+                                            {
+                                                <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                                                    <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Color="Color.Secondary" />
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">@GetBundleLocation(bundle)</MudText>
+                                                </MudStack>
+                                            }
+
                                             <!-- Description -->
                                             <MudText Typo="Typo.body2" Color="Color.Secondary" Class="bundle-description">
                                                 @GetTruncatedDescription(bundle.Description)
@@ -523,5 +532,11 @@
         return description.Length > 120 
             ? description.Substring(0, 120) + "..." 
             : description;
+    }
+
+    private string GetBundleLocation(BundleModel bundle)
+    {
+        // Use bundle location if available, otherwise fall back to owner location
+        return !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.OwnerLocation;
     }
 }

@@ -66,6 +66,7 @@ public class FavoritesService : IFavoritesService
                 BundleName = f.Bundle?.Name ?? string.Empty,
                 BundleDescription = f.Bundle?.Description ?? string.Empty,
                 BundleCategory = f.Bundle?.Category ?? string.Empty,
+                BundleLocation = f.Bundle != null ? GetBundleLocation(f.Bundle) : string.Empty,
                 BundleDiscountedCost = f.Bundle != null ? CalculateBundleDiscountedCost(f.Bundle) : 0,
                 BundleImageUrl = f.Bundle?.ImageUrl ?? string.Empty,
                 IsBundleAvailable = f.Bundle != null && CalculateBundleAvailability(f.Bundle),
@@ -354,6 +355,7 @@ public class FavoritesService : IFavoritesService
                     BundleName = bundle.Name,
                     BundleDescription = bundle.Description,
                     BundleCategory = bundle.Category,
+                    BundleLocation = GetBundleLocation(bundle),
                     BundleDiscountedCost = CalculateBundleDiscountedCost(bundle),
                     BundleImageUrl = bundle.ImageUrl ?? string.Empty,
                     IsBundleAvailable = CalculateBundleAvailability(bundle),
@@ -387,6 +389,7 @@ public class FavoritesService : IFavoritesService
                 BundleName = bundle.Name,
                 BundleDescription = bundle.Description,
                 BundleCategory = bundle.Category,
+                BundleLocation = GetBundleLocation(bundle),
                 BundleDiscountedCost = CalculateBundleDiscountedCost(bundle),
                 BundleImageUrl = bundle.ImageUrl ?? string.Empty,
                 IsBundleAvailable = CalculateBundleAvailability(bundle),
@@ -426,5 +429,11 @@ public class FavoritesService : IFavoritesService
             _logger.LogError(ex, "Error removing bundle {BundleId} from favorites for user {UserId}", bundleId, userId);
             return ApiResponse<bool>.ErrorResult("Failed to remove bundle from favorites");
         }
+    }
+
+    private string GetBundleLocation(Bundle bundle)
+    {
+        // Use bundle location if available, otherwise fall back to owner's public location
+        return !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User.PublicLocation ?? string.Empty;
     }
 }

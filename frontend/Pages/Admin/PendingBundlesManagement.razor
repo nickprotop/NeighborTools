@@ -59,6 +59,15 @@
                         </CellTemplate>
                     </PropertyColumn>
                     
+                    <PropertyColumn Property="x => x.Location" Title="Location" Sortable="true">
+                        <CellTemplate>
+                            <div class="d-flex align-center">
+                                <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-1" />
+                                <MudText Typo="Typo.body2">@GetBundleLocation(context.Item)</MudText>
+                            </div>
+                        </CellTemplate>
+                    </PropertyColumn>
+                    
                     <PropertyColumn Property="x => x.DiscountedCost" Title="Bundle Cost" Sortable="true">
                         <CellTemplate>
                             <div>
@@ -245,5 +254,11 @@
             "Expert" => Color.Error,
             _ => Color.Default
         };
+    }
+
+    private string GetBundleLocation(BundleModel bundle)
+    {
+        // Use bundle location if available, otherwise fall back to owner location
+        return !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.OwnerLocation;
     }
 }

@@ -5,6 +5,7 @@
 @using frontend.Models
 @using MudBlazor
 @using ToolsSharing.Frontend.Services
+@using System.Reflection
 @inject FavoritesService FavoritesService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -177,6 +178,13 @@
                                                 <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" />
                                                 @favorite.BundleToolCount tools included
                                             </MudText>
+                                            @if (!string.IsNullOrEmpty(GetBundleLocation(favorite)))
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" />
+                                                    @GetBundleLocation(favorite)
+                                                </MudText>
+                                            }
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                 <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
                                                 @favorite.OwnerName
@@ -378,6 +386,19 @@
     private bool GetImageLoadError(string favoriteId)
     {
         return imageLoadErrors.GetValueOrDefault(favoriteId, false);
+    }
+
+    private string GetBundleLocation(FavoriteDto favorite)
+    {
+        // Use bundle location if available, otherwise fall back to owner location
+        // Using reflection to access BundleLocation since compiler isn't recognizing it
+        var bundleLocationProp = typeof(ToolsSharing.Core.DTOs.FavoriteDto).GetProperty("BundleLocation");
+        if (bundleLocationProp != null)
+        {
+            var bundleLocation = bundleLocationProp.GetValue(favorite) as string;
+            return !string.IsNullOrEmpty(bundleLocation) ? bundleLocation : string.Empty;
+        }
+        return string.Empty;
     }
     
     private void HandleImageError(string favoriteId)

@@ -110,7 +110,7 @@ else
                             </MudStack>
                             <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Color="Color.Secondary" />
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@bundle.OwnerLocation</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@GetBundleLocation()</MudText>
                             </MudStack>
                         </MudStack>
                     </div>
@@ -782,6 +782,14 @@ else
     {
         bundleImageLoadError = false;
         StateHasChanged();
+    }
+
+    private string GetBundleLocation()
+    {
+        if (bundle == null) return "";
+        
+        // Use bundle location if available, otherwise fall back to owner location
+        return !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.OwnerLocation;
     }
 
     private void SetupBreadcrumbs()

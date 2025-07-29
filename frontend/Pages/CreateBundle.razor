@@ -114,6 +114,19 @@
                                 </MudSelect>
                             </MudItem>
 
+                            <!-- Location -->
+                            <MudItem xs="12">
+                                <MudTextField @bind-Value="createBundle.Location"
+                                            Label="Bundle Location"
+                                            MaxLength="500"
+                                            Counter="500"
+                                            HelperText="Where is this bundle available? Leave empty to use your profile location. For security, keep it general (e.g., 'Downtown Toronto', 'Berlin Mitte')."
+                                            Variant="Variant.Outlined"
+                                            Adornment="Adornment.Start"
+                                            AdornmentIcon="@Icons.Material.Filled.LocationOn"
+                                            For="@(() => createBundle.Location)" />
+                            </MudItem>
+
                             <!-- Description -->
                             <MudItem xs="12">
                                 <MudTextField @bind-Value="createBundle.Description"

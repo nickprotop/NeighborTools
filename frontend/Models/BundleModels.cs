@@ -19,6 +19,9 @@ namespace ToolsSharing.Frontend.Models
         public string OwnerName { get; set; } = "";
         public string OwnerLocation { get; set; } = "";
         
+        // Location
+        public string Location { get; set; } = ""; // Bundle location (independent or falls back to owner's PublicLocation)
+        
         // Pricing
         public decimal BundleDiscount { get; set; }
         public decimal TotalCost { get; set; }
@@ -93,6 +96,9 @@ namespace ToolsSharing.Frontend.Models
 
         [Range(0, 50)]
         public decimal BundleDiscount { get; set; } = 0;
+
+        [StringLength(500)]
+        public string Location { get; set; } = ""; // Bundle location, falls back to owner's PublicLocation if empty
 
         [Required]
         public string Category { get; set; } = "";

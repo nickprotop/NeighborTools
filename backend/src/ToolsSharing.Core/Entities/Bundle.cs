@@ -16,6 +16,9 @@ namespace ToolsSharing.Core.Entities
         public string UserId { get; set; } = "";
         public User User { get; set; } = null!;
         
+        // Location
+        public string Location { get; set; } = string.Empty; // Bundle location, falls back to owner's PublicLocation if empty
+        
         // Pricing
         public decimal BundleDiscount { get; set; } = 0; // Percentage discount when renting as bundle
         

@@ -97,9 +97,18 @@
                     </MudText>
                 </div>
                 
-                <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
-                    <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Secondary" />
-                    <MudText Typo="Typo.caption" Color="Color.Secondary">@Bundle.OwnerName</MudText>
+                <MudStack Spacing="1">
+                    <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Secondary" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@Bundle.OwnerName</MudText>
+                    </MudStack>
+                    @if (!string.IsNullOrEmpty(GetBundleLocation()))
+                    {
+                        <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Color="Color.Secondary" />
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">@GetBundleLocation()</MudText>
+                        </MudStack>
+                    }
                 </MudStack>
             </MudStack>
 
@@ -226,6 +235,12 @@
         return Bundle.Description.Length > 120 
             ? Bundle.Description.Substring(0, 120) + "..." 
             : Bundle.Description;
+    }
+
+    private string GetBundleLocation()
+    {
+        // Use bundle location if available, otherwise fall back to owner location
+        return !string.IsNullOrEmpty(Bundle.Location) ? Bundle.Location : Bundle.OwnerLocation;
     }
     
     private void HandleImageError()

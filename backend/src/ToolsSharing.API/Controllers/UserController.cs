@@ -248,7 +248,7 @@ public class UserController : ControllerBase
             FirstName = profile.FirstName,
             LastName = profile.LastName,
             ProfilePictureUrl = profile.ProfilePictureUrl,
-            City = profile.City,
+            City = profile.PublicLocation,
             Country = profile.Country,
             CreatedAt = profile.CreatedAt,
             IsVerified = profile.IsVerified,
