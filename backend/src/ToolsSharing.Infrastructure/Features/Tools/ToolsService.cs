@@ -92,7 +92,7 @@ public class ToolsService : IToolsService
             }
 
             var tools = await toolsQuery.ToListAsync();
-            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+            var toolDtos = MapToolsToDto(tools);
 
             return ApiResponse<List<ToolDto>>.CreateSuccess(toolDtos, "Tools retrieved successfully");
         }
@@ -177,7 +177,7 @@ public class ToolsService : IToolsService
                 .Take(query.PageSize)
                 .ToListAsync();
 
-            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+            var toolDtos = MapToolsToDto(tools);
 
             var pagedResult = new PagedResult<ToolDto>
             {
@@ -253,7 +253,7 @@ public class ToolsService : IToolsService
             }
 
             var tools = await toolsQuery.ToListAsync();
-            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+            var toolDtos = MapToolsToDto(tools);
 
             return ApiResponse<List<ToolDto>>.CreateSuccess(toolDtos, "User tools retrieved successfully");
         }
@@ -278,7 +278,7 @@ public class ToolsService : IToolsService
                 return ApiResponse<ToolDto>.CreateFailure("Tool not found");
             }
 
-            var toolDto = _mapper.Map<ToolDto>(tool);
+            var toolDto = MapToolToDto(tool);
             return ApiResponse<ToolDto>.CreateSuccess(toolDto, "Tool retrieved successfully");
         }
         catch (Exception ex)
@@ -345,7 +345,7 @@ public class ToolsService : IToolsService
                 .Include(t => t.Images)
                 .FirstAsync(t => t.Id == tool.Id);
 
-            var toolDto = _mapper.Map<ToolDto>(createdTool);
+            var toolDto = MapToolToDto(createdTool);
             return ApiResponse<ToolDto>.CreateSuccess(toolDto, "Tool created successfully");
         }
         catch (Exception ex)
@@ -438,7 +438,7 @@ public class ToolsService : IToolsService
                 await _context.SaveChangesAsync();
             }
 
-            var toolDto = _mapper.Map<ToolDto>(tool);
+            var toolDto = MapToolToDto(tool);
             return ApiResponse<ToolDto>.CreateSuccess(toolDto, "Tool updated successfully");
         }
         catch (Exception ex)
@@ -753,7 +753,7 @@ public class ToolsService : IToolsService
                 .Take(count)
                 .ToListAsync();
 
-            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+            var toolDtos = MapToolsToDto(tools);
             return ApiResponse<List<ToolDto>>.CreateSuccess(toolDtos);
         }
         catch (Exception ex)
@@ -777,7 +777,7 @@ public class ToolsService : IToolsService
                 .Take(count)
                 .ToListAsync();
 
-            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+            var toolDtos = MapToolsToDto(tools);
             return ApiResponse<List<ToolDto>>.CreateSuccess(toolDtos);
         }
         catch (Exception ex)
@@ -889,7 +889,7 @@ public class ToolsService : IToolsService
                 .Take(query.PageSize)
                 .ToListAsync();
 
-            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+            var toolDtos = MapToolsToDto(tools);
 
             var result = new PagedResult<ToolDto>
             {
@@ -1014,5 +1014,20 @@ public class ToolsService : IToolsService
             _logger.LogError(ex, "Error checking if user can review tool {ToolId} for user {UserId}", toolId, userId);
             return ApiResponse<bool>.CreateFailure("Error checking review eligibility");
         }
+    }
+
+    private ToolDto MapToolToDto(Tool tool)
+    {
+        var toolDto = _mapper.Map<ToolDto>(tool);
+        
+        // Apply location fallback logic - use tool's location if set, otherwise fall back to owner's public location
+        toolDto.Location = !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.PublicLocation;
+        
+        return toolDto;
+    }
+
+    private List<ToolDto> MapToolsToDto(List<Tool> tools)
+    {
+        return tools.Select(MapToolToDto).ToList();
     }
 }

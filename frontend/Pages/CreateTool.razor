@@ -159,15 +159,22 @@
                             </MudItem>
                             <MudItem xs="12">
                                 <MudTextField @bind-Value="createToolRequest.Location"
-                                              Label="Location"
+                                              Label="Location (Optional)"
                                               Variant="Variant.Outlined"
                                               FullWidth="true"
-                                              Required="true"
-                                              RequiredError="Location is required"
                                               Adornment="Adornment.Start"
                                               AdornmentIcon="@Icons.Material.Filled.LocationOn"
-                                              HelperText="Location where the tool is available (defaults to your public profile location)"
+                                              HelperText="Location where the tool is available. Leave empty to use your public profile location."
                                               Class="mb-4" />
+                                
+                                @if (ShowLocationWarning)
+                                {
+                                    <MudAlert Severity="Severity.Warning" Icon="@Icons.Material.Filled.LocationOff" Class="mb-4">
+                                        <strong>Location Warning:</strong> No location specified and your profile has no public location set. 
+                                        This may prevent your tool from appearing in location-based searches and could reduce rental opportunities.
+                                        <MudLink Href="/profile" Class="ml-2">Update your profile location</MudLink>
+                                    </MudAlert>
+                                }
                             </MudItem>
                         </MudGrid>
                     </div>
@@ -370,11 +377,15 @@
     private bool isLoading = false;
     private bool isInitializing = true;
     private bool isUploadingImages = false;
+    private string? userPublicLocation = null;
     
     // For delayed upload pattern
     private List<IBrowserFile> pendingFiles = new();
     private List<string> previewUrls = new();
     private List<frontend.Models.BreadcrumbItem> breadcrumbItems = new();
+    
+    // Show warning when both tool location and user public location are empty
+    private bool ShowLocationWarning => string.IsNullOrEmpty(createToolRequest.Location) && string.IsNullOrEmpty(userPublicLocation);
 
     protected override async Task OnInitializedAsync()
     {
@@ -391,6 +402,9 @@
             var response = await UserService.GetProfileAsync();
             if (response?.Success == true && response.Data != null)
             {
+                // Store user's public location for warning logic
+                userPublicLocation = response.Data.PublicLocation;
+                
                 // Set default location from user's public location
                 if (!string.IsNullOrEmpty(response.Data.PublicLocation))
                 {

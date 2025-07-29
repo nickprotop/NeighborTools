@@ -140,6 +140,7 @@ public class FavoriteDto
     public string BundleName { get; set; } = string.Empty;
     public string BundleDescription { get; set; } = string.Empty;
     public string BundleCategory { get; set; } = string.Empty;
+    public string BundleLocation { get; set; } = string.Empty;
     public decimal BundleDiscountedCost { get; set; }
     public string BundleImageUrl { get; set; } = string.Empty;
     public bool IsBundleAvailable { get; set; }

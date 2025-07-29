@@ -58,7 +58,7 @@ public class FavoritesService : IFavoritesService
                 ToolCategory = f.Tool?.Category ?? string.Empty,
                 DailyRate = f.Tool?.DailyRate ?? 0,
                 ToolCondition = f.Tool?.Condition ?? string.Empty,
-                ToolLocation = f.Tool?.Location ?? string.Empty,
+                ToolLocation = f.Tool != null ? GetToolLocation(f.Tool) : string.Empty,
                 ToolImageUrls = f.Tool?.Images?.Select(img => img.ImageUrl).ToList() ?? new List<string>(),
                 IsToolAvailable = f.Tool?.IsAvailable ?? false,
                 
@@ -180,7 +180,7 @@ public class FavoritesService : IFavoritesService
                     ToolCategory = tool.Category,
                     DailyRate = tool.DailyRate,
                     ToolCondition = tool.Condition,
-                    ToolLocation = tool.Location,
+                    ToolLocation = GetToolLocation(tool),
                     ToolImageUrls = tool.Images.Select(img => img.ImageUrl).ToList(),
                     IsToolAvailable = tool.IsAvailable,
                     OwnerName = $"{tool.Owner.FirstName} {tool.Owner.LastName}".Trim(),
@@ -213,7 +213,7 @@ public class FavoritesService : IFavoritesService
                 ToolCategory = tool.Category,
                 DailyRate = tool.DailyRate,
                 ToolCondition = tool.Condition,
-                ToolLocation = tool.Location,
+                ToolLocation = GetToolLocation(tool),
                 ToolImageUrls = tool.Images.Select(img => img.ImageUrl).ToList(),
                 IsToolAvailable = tool.IsAvailable,
                 OwnerName = $"{tool.Owner.FirstName} {tool.Owner.LastName}".Trim(),
@@ -435,5 +435,11 @@ public class FavoritesService : IFavoritesService
     {
         // Use bundle location if available, otherwise fall back to owner's public location
         return !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User.PublicLocation ?? string.Empty;
+    }
+
+    private string GetToolLocation(Tool tool)
+    {
+        // Use tool location if available, otherwise fall back to owner's public location
+        return !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.PublicLocation ?? string.Empty;
     }
 }

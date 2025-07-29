@@ -40,9 +40,8 @@ public class CreateToolRequest
     [MaxLength(20)]
     public string Condition { get; set; } = string.Empty;
 
-    [Required]
     [MaxLength(200)]
-    public string Location { get; set; } = string.Empty;
+    public string? Location { get; set; }
 
     [Range(1, 8760)] // 1 hour to 1 year
     public int? LeadTimeHours { get; set; }
@@ -91,9 +90,8 @@ public class UpdateToolRequest
     [MaxLength(20)]
     public string Condition { get; set; } = string.Empty;
 
-    [Required]
     [MaxLength(200)]
-    public string Location { get; set; } = string.Empty;
+    public string? Location { get; set; }
 
     [Range(1, 8760)] // 1 hour to 1 year
     public int? LeadTimeHours { get; set; }
@@ -119,7 +117,7 @@ public class ToolDto
     public decimal MonthlyRate { get; set; }
     public decimal DepositRequired { get; set; }
     public string Condition { get; set; } = string.Empty;
-    public string Location { get; set; } = string.Empty;
+    public string? Location { get; set; }
     public bool IsAvailable { get; set; }
     public int? LeadTimeHours { get; set; }
     public string OwnerId { get; set; } = string.Empty;

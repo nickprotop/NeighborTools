@@ -4,6 +4,7 @@
 @using frontend.Models
 @using frontend.Services
 @inject IToolService ToolService
+@inject UserService UserService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
 @inject INavigationHelperService NavigationHelper
@@ -219,15 +220,22 @@
                                 </MudItem>
                                 <MudItem xs="12">
                                     <MudTextField @bind-Value="updateToolRequest.Location"
-                                                  Label="Location"
+                                                  Label="Location (Optional)"
                                                   Variant="Variant.Outlined"
                                                   FullWidth="true"
-                                                  Required="true"
-                                                  RequiredError="Location is required"
                                                   Adornment="Adornment.Start"
                                                   AdornmentIcon="@Icons.Material.Filled.LocationOn"
-                                                  HelperText="Location where the tool is available (can be updated from your public profile location)"
+                                                  HelperText="Location where the tool is available. Leave empty to use your public profile location."
                                                   Class="mb-4" />
+                                    
+                                    @if (ShowLocationWarning)
+                                    {
+                                        <MudAlert Severity="Severity.Warning" Icon="@Icons.Material.Filled.LocationOff" Class="mb-4">
+                                            <strong>Location Warning:</strong> No location specified and your profile has no public location set. 
+                                            This may prevent your tool from appearing in location-based searches and could reduce rental opportunities.
+                                            <MudLink Href="/profile" Class="ml-2">Update your profile location</MudLink>
+                                        </MudAlert>
+                                    }
                                 </MudItem>
                                 <MudItem xs="12">
                                     <MudTextField @bind-Value="updateToolRequest.Tags"
@@ -486,12 +494,16 @@
     private bool isLoading = true;
     private bool isSubmitting = false;
     private bool isUploadingImages = false;
+    private string? userPublicLocation = null;
     
     // For delayed upload pattern
     private List<IBrowserFile> pendingFiles = new();
     private List<string> previewUrls = new();
     private List<string> existingImageUrls = new(); // Track existing images separately
     private List<frontend.Models.BreadcrumbItem> breadcrumbItems = new();
+    
+    // Show warning when both tool location and user public location are empty
+    private bool ShowLocationWarning => string.IsNullOrEmpty(updateToolRequest.Location) && string.IsNullOrEmpty(userPublicLocation);
 
     protected override async Task OnInitializedAsync()
     {
@@ -513,7 +525,12 @@
 
         try
         {
-            var result = await ToolService.GetToolAsync(Id);
+            // Load both tool data and user's public location in parallel
+            var toolTask = ToolService.GetToolAsync(Id);
+            var userTask = LoadUserLocation();
+            
+            await Task.WhenAll(toolTask, userTask);
+            var result = await toolTask;
             
             if (result.Success && result.Data != null)
             {
@@ -558,6 +575,23 @@
         finally
         {
             isLoading = false;
+        }
+    }
+
+    private async Task LoadUserLocation()
+    {
+        try
+        {
+            var response = await UserService.GetProfileAsync();
+            if (response?.Success == true && response.Data != null)
+            {
+                // Store user's public location for warning logic
+                userPublicLocation = response.Data.PublicLocation;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Don't show error for location loading failure, just continue without user location
         }
     }
 

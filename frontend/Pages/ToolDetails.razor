@@ -103,7 +103,7 @@ else if (tool != null)
                             </MudStack>
                             <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
                                 <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Color="Color.Secondary" />
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">@tool.Location</MudText>
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">@(string.IsNullOrEmpty(tool.Location) ? "Location not available" : tool.Location)</MudText>
                             </MudStack>
                             @if (tool.Rating.HasValue)
                             {
@@ -290,7 +290,7 @@ else if (tool != null)
                             }
                             <MudItem xs="6" sm="4">
                                 <MudText Typo="Typo.subtitle2" Color="Color.Secondary">Location</MudText>
-                                <MudText Typo="Typo.body1">@tool.Location</MudText>
+                                <MudText Typo="Typo.body1">@(string.IsNullOrEmpty(tool.Location) ? "Location not available" : tool.Location)</MudText>
                             </MudItem>
                             @if (tool.DepositRequired > 0)
                             {

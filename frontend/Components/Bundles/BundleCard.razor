@@ -102,13 +102,10 @@
                         <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Secondary" />
                         <MudText Typo="Typo.caption" Color="Color.Secondary">@Bundle.OwnerName</MudText>
                     </MudStack>
-                    @if (!string.IsNullOrEmpty(GetBundleLocation()))
-                    {
-                        <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
-                            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Color="Color.Secondary" />
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">@GetBundleLocation()</MudText>
-                        </MudStack>
-                    }
+                    <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Color="Color.Secondary" />
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@GetBundleLocation()</MudText>
+                    </MudStack>
                 </MudStack>
             </MudStack>
 
@@ -239,8 +236,10 @@
 
     private string GetBundleLocation()
     {
-        // Use bundle location if available, otherwise fall back to owner location
-        return !string.IsNullOrEmpty(Bundle.Location) ? Bundle.Location : Bundle.OwnerLocation;
+        // Use bundle location if available, otherwise fall back to owner location, then to placeholder
+        return !string.IsNullOrEmpty(Bundle.Location) ? Bundle.Location : 
+               !string.IsNullOrEmpty(Bundle.OwnerLocation) ? Bundle.OwnerLocation : 
+               "Location not available";
     }
     
     private void HandleImageError()

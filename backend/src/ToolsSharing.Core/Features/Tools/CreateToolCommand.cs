@@ -13,7 +13,7 @@ public record CreateToolCommand(
     decimal MonthlyRate,
     decimal DepositRequired,
     string Condition,
-    string Location,
+    string? Location,
     string OwnerId,
     int? LeadTimeHours = null,
     List<string>? ImageUrls = null,

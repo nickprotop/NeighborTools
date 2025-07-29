@@ -45,7 +45,6 @@ public class ToolConfiguration : IEntityTypeConfiguration<Tool>
             .HasMaxLength(50);
 
         builder.Property(x => x.Location)
-            .IsRequired()
             .HasMaxLength(200);
 
         // Relationships

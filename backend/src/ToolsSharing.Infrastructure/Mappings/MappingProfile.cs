@@ -27,7 +27,7 @@ public static class MappingConfig
             .Map(dest => dest.MonthlyRate, src => src.MonthlyRate)
             .Map(dest => dest.DepositRequired, src => src.DepositRequired)
             .Map(dest => dest.Condition, src => src.Condition ?? "")
-            .Map(dest => dest.Location, src => src.Location ?? "")
+            .Ignore(dest => dest.Location) // Location is handled by service layer fallback logic
             .Map(dest => dest.IsAvailable, src => src.IsAvailable)
             .Map(dest => dest.LeadTimeHours, src => src.LeadTimeHours)
             .Map(dest => dest.OwnerId, src => src.OwnerId ?? "")

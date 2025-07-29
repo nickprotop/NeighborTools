@@ -132,7 +132,7 @@ else if (FeaturedTools.Any())
                                 <div class="d-flex align-center justify-space-between mt-2">
                                     <MudText Typo="Typo.caption" Class="text-muted">
                                         <MudIcon Icon="Icons.Material.Filled.LocationOn" Size="Size.Small" />
-                                        @tool.Location
+                                        @(string.IsNullOrEmpty(tool.Location) ? "Location not available" : tool.Location)
                                     </MudText>
                                     <MudText Typo="Typo.caption" Class="text-muted">
                                         <MudIcon Icon="Icons.Material.Filled.Visibility" Size="Size.Small" />

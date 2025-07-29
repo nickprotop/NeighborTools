@@ -12,7 +12,7 @@ public class Tool : BaseEntity
     public decimal? MonthlyRate { get; set; }
     public decimal DepositRequired { get; set; }
     public string Condition { get; set; } = string.Empty;
-    public string Location { get; set; } = string.Empty;
+    public string? Location { get; set; }
     public bool IsAvailable { get; set; } = true;
     public int? LeadTimeHours { get; set; } // Nullable - falls back to owner's default if not set
     public string OwnerId { get; set; } = string.Empty;

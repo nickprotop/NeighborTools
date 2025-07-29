@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Infrastructure.Data;
 using ToolsSharing.Core.Interfaces;
+using ToolsSharing.Core.Common.Interfaces;
 using ToolsSharing.Core.DTOs.Admin;
 using ToolsSharing.Core.Features.Messaging;
 using ToolsSharing.Core.Features.Users;
@@ -29,6 +30,8 @@ public class AdminController : ControllerBase
     private readonly IPaymentService _paymentService;
     private readonly IMessageService _messageService;
     private readonly IContentModerationService _contentModerationService;
+    private readonly IToolsService _toolsService;
+    private readonly IBundleService _bundleService;
     private readonly IMapper _mapper;
     private readonly ILogger<AdminController> _logger;
 
@@ -39,6 +42,8 @@ public class AdminController : ControllerBase
         IPaymentService paymentService,
         IMessageService messageService,
         IContentModerationService contentModerationService,
+        IToolsService toolsService,
+        IBundleService bundleService,
         IMapper mapper,
         ILogger<AdminController> logger)
     {
@@ -48,6 +53,8 @@ public class AdminController : ControllerBase
         _paymentService = paymentService;
         _messageService = messageService;
         _contentModerationService = contentModerationService;
+        _toolsService = toolsService;
+        _bundleService = bundleService;
         _mapper = mapper;
         _logger = logger;
     }
@@ -1373,7 +1380,14 @@ public class AdminController : ControllerBase
                 .Take(pageSize)
                 .ToListAsync();
 
-            var toolDtos = _mapper.Map<List<ToolDto>>(tools);
+            // Use the same logic as ToolsService.MapToolToDto for location fallback
+            var toolDtos = tools.Select(tool =>
+            {
+                var toolDto = _mapper.Map<ToolDto>(tool);
+                // Apply location fallback logic - use tool's location if set, otherwise fall back to owner's public location
+                toolDto.Location = !string.IsNullOrEmpty(tool.Location) ? tool.Location : tool.Owner?.PublicLocation;
+                return toolDto;
+            }).ToList();
 
             return Ok(ApiResponse<object>.CreateSuccess(new
             {
@@ -1484,7 +1498,14 @@ public class AdminController : ControllerBase
                 .Take(pageSize)
                 .ToListAsync();
 
-            var bundleDtos = _mapper.Map<List<BundleDto>>(bundles);
+            // Apply the same logic as BundleService for location fallback
+            var bundleDtos = bundles.Select(bundle =>
+            {
+                var bundleDto = _mapper.Map<BundleDto>(bundle);
+                // Apply location fallback logic - use bundle's location if set, otherwise fall back to owner's public location
+                bundleDto.Location = !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.User?.PublicLocation;
+                return bundleDto;
+            }).ToList();
 
             return Ok(ApiResponse<object>.CreateSuccess(new
             {

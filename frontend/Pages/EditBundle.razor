@@ -6,6 +6,7 @@
 @using System.ComponentModel.DataAnnotations
 @inject BundleService BundleService
 @inject IToolService ToolService
+@inject UserService UserService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
 @inject IJSRuntime JSRuntime
@@ -279,7 +280,7 @@ else
                                 <!-- Location -->
                                 <MudItem xs="12">
                                     <MudTextField @bind-Value="editBundle.Location"
-                                                Label="Bundle Location"
+                                                Label="Bundle Location (Optional)"
                                                 MaxLength="500"
                                                 Counter="500"
                                                 HelperText="Where is this bundle available? Leave empty to use your profile location. For security, keep it general (e.g., 'Downtown Toronto', 'Berlin Mitte')."
@@ -287,6 +288,15 @@ else
                                                 Adornment="Adornment.Start"
                                                 AdornmentIcon="@Icons.Material.Filled.LocationOn"
                                                 For="@(() => editBundle.Location)" />
+                                    
+                                    @if (ShowLocationWarning)
+                                    {
+                                        <MudAlert Severity="Severity.Warning" Icon="@Icons.Material.Filled.LocationOff" Class="mt-2">
+                                            <strong>Location Warning:</strong> No location specified and your profile has no public location set. 
+                                            This may prevent your bundle from appearing in location-based searches and could reduce rental opportunities.
+                                            <MudLink Href="/profile" Class="ml-2">Update your profile location</MudLink>
+                                        </MudAlert>
+                                    }
                                 </MudItem>
 
                                 <!-- Description -->
@@ -922,6 +932,7 @@ else
     private bool isUploadingImage = false;
     private bool hasImageChanged = false;
     private bool removeImageAndUploadNew = false;
+    private string? userPublicLocation = null;
     
     // For delayed upload pattern
     private IBrowserFile? pendingImageFile = null;
@@ -929,6 +940,9 @@ else
     private byte[]? pendingImageData = null;
     private string? pendingImageContentType = null;
     private string? pendingImageFileName = null;
+    
+    // Show warning when both bundle location and user public location are empty
+    private bool ShowLocationWarning => string.IsNullOrEmpty(editBundle.Location) && string.IsNullOrEmpty(userPublicLocation);
     
     // Bundle approval status
     private BundleApprovalStatusDto? approvalStatus = null;
@@ -967,8 +981,7 @@ else
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadBundle();
-        await LoadAvailableTools();
+        await Task.WhenAll(LoadBundle(), LoadAvailableTools(), LoadUserLocation());
         UpdateSuggestedTags();
     }
 
@@ -1095,6 +1108,23 @@ else
 
         isLoadingTools = false;
         StateHasChanged();
+    }
+
+    private async Task LoadUserLocation()
+    {
+        try
+        {
+            var response = await UserService.GetProfileAsync();
+            if (response?.Success == true && response.Data != null)
+            {
+                // Store user's public location for warning logic
+                userPublicLocation = response.Data.PublicLocation;
+            }
+        }
+        catch (Exception ex)
+        {
+            // Don't show error for location loading failure, just continue without user location
+        }
     }
 
     private void OnCategoryChanged(string value)

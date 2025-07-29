@@ -14,7 +14,7 @@ public record UpdateToolCommand(
     decimal? MonthlyRate,
     decimal DepositRequired,
     string Condition,
-    string Location,
+    string? Location,
     bool IsAvailable,
     int? LeadTimeHours,
     string OwnerId,

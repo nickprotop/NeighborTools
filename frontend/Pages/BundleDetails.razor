@@ -786,10 +786,12 @@ else
 
     private string GetBundleLocation()
     {
-        if (bundle == null) return "";
+        if (bundle == null) return "Location not available";
         
-        // Use bundle location if available, otherwise fall back to owner location
-        return !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : bundle.OwnerLocation;
+        // Use bundle location if available, otherwise fall back to owner location, then to placeholder
+        return !string.IsNullOrEmpty(bundle.Location) ? bundle.Location : 
+               !string.IsNullOrEmpty(bundle.OwnerLocation) ? bundle.OwnerLocation : 
+               "Location not available";
     }
 
     private void SetupBreadcrumbs()

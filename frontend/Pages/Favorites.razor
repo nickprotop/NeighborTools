@@ -163,7 +163,7 @@
                                         <MudStack Spacing="1">
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                 <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" />
-                                                @favorite.ToolLocation
+                                                @(string.IsNullOrEmpty(favorite.ToolLocation) ? "Location not available" : favorite.ToolLocation)
                                             </MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                 <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
@@ -178,13 +178,10 @@
                                                 <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" />
                                                 @favorite.BundleToolCount tools included
                                             </MudText>
-                                            @if (!string.IsNullOrEmpty(GetBundleLocation(favorite)))
-                                            {
-                                                <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                    <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" />
-                                                    @GetBundleLocation(favorite)
-                                                </MudText>
-                                            }
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" />
+                                                @GetBundleLocation(favorite)
+                                            </MudText>
                                             <MudText Typo="Typo.caption" Color="Color.Secondary">
                                                 <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
                                                 @favorite.OwnerName
@@ -390,15 +387,8 @@
 
     private string GetBundleLocation(FavoriteDto favorite)
     {
-        // Use bundle location if available, otherwise fall back to owner location
-        // Using reflection to access BundleLocation since compiler isn't recognizing it
-        var bundleLocationProp = typeof(ToolsSharing.Core.DTOs.FavoriteDto).GetProperty("BundleLocation");
-        if (bundleLocationProp != null)
-        {
-            var bundleLocation = bundleLocationProp.GetValue(favorite) as string;
-            return !string.IsNullOrEmpty(bundleLocation) ? bundleLocation : string.Empty;
-        }
-        return string.Empty;
+        // BundleLocation already includes fallback logic from the backend service
+        return !string.IsNullOrEmpty(favorite.BundleLocation) ? favorite.BundleLocation : "Location not available";
     }
     
     private void HandleImageError(string favoriteId)
