@@ -31,7 +31,9 @@ public enum LocationSource
     Manual = 1,         // User manually entered
     Geocoded = 2,       // From geocoding service
     UserClick = 3,      // User clicked on map
-    Browser = 4         // Browser geolocation API
+    Browser = 4,        // Browser geolocation API
+    OpenStreetMap = 5,  // OpenStreetMap geocoding
+    HERE = 6            // HERE Maps geocoding (matches backend)
 }
 
 /// <summary>

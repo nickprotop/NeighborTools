@@ -184,4 +184,13 @@ public interface ILocationService
     Task<List<LocationCluster>> AnalyzeGeographicClustersAsync(List<LocationOption> locations, decimal clusterRadius = 5.0m);
 
     #endregion
+
+    #region Cache Management
+
+    /// <summary>
+    /// Invalidate location caches when new tools are added or location data changes
+    /// </summary>
+    Task InvalidateLocationCacheAsync();
+
+    #endregion
 }

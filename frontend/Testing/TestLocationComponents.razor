@@ -1,0 +1,222 @@
+@page "/testing/location-components"
+@using ToolsSharing.Frontend.Services.Location
+@using ToolsSharing.Frontend.Models.Location
+@using frontend.Components.Location
+@inject ILocationService LocationService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h4" Color="Color.Primary">
+                🧪 Location Components Test Page
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Testing Phase 6 components with real LocationService API integration
+            </MudText>
+        </MudPaper>
+
+        <!-- LocationAutocomplete Test -->
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    📝 LocationAutocomplete
+                </MudText>
+                <LocationAutocomplete 
+                    Label="Test Location Search"
+                    Placeholder="Search for a location..."
+                    Value="@selectedLocationText"
+                    ValueChanged="@((string value) => selectedLocationText = value)"
+                    ShowPopular="true"
+                    Required="false" />
+                @if (!string.IsNullOrEmpty(selectedLocationText))
+                {
+                    <MudAlert Severity="Severity.Info">
+                        Selected: @selectedLocationText
+                    </MudAlert>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- LocationMapSelector Test -->
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    🗺️ LocationMapSelector
+                </MudText>
+                <LocationMapSelector 
+                    Label="Test Map Location"
+                    Value="@selectedLocationOption"
+                    ValueChanged="@((LocationOption? value) => selectedLocationOption = value)"
+                    ShowMap="true"
+                    ShowPrivacySelector="true"
+                    ShowPopular="true"
+                    MapHeight="300" />
+                @if (selectedLocationOption != null)
+                {
+                    <MudAlert Severity="Severity.Info">
+                        Selected: @selectedLocationOption.DisplayName
+                        @if (selectedLocationOption.Lat.HasValue && selectedLocationOption.Lng.HasValue)
+                        {
+                            <br />
+                            <span>Coordinates: @selectedLocationOption.Lat.Value.ToString("F4"), @selectedLocationOption.Lng.Value.ToString("F4")</span>
+                        }
+                    </MudAlert>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- NearbySearch Test -->
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    📡 NearbySearch
+                </MudText>
+                <NearbySearch 
+                    Title="Test Nearby Search"
+                    Subtitle="Find tools and bundles in your area"
+                    DefaultRadius="15"
+                    MaxResultsPerType="3"
+                    LocationChanged="@OnLocationChanged"
+                    ToolResultsChanged="@OnToolResultsChanged"
+                    BundleResultsChanged="@OnBundleResultsChanged" />
+                
+                @if (nearbyTools.Any() || nearbyBundles.Any())
+                {
+                    <MudAlert Severity="Severity.Success">
+                        Found: @nearbyTools.Count tool(s), @nearbyBundles.Count bundle(s)
+                    </MudAlert>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- NearbyToolsResults Test -->
+        @if (nearbyTools.Any())
+        {
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.h6" Color="Color.Primary">
+                        🔧 NearbyToolsResults
+                    </MudText>
+                    <NearbyToolsResults 
+                        Tools="@nearbyTools"
+                        Title="Test Tool Results"
+                        ShowTitle="true"
+                        MaxResults="5" />
+                </MudStack>
+            </MudPaper>
+        }
+
+        <!-- NearbyBundlesResults Test -->
+        @if (nearbyBundles.Any())
+        {
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.h6" Color="Color.Primary">
+                        📦 NearbyBundlesResults
+                    </MudText>
+                    <NearbyBundlesResults 
+                        Bundles="@nearbyBundles"
+                        Title="Test Bundle Results"
+                        ShowTitle="true"
+                        MaxResults="5" />
+                </MudStack>
+            </MudPaper>
+        }
+
+        <!-- NearbyItemsResults Test -->
+        @if (nearbyTools.Any() || nearbyBundles.Any())
+        {
+            <MudPaper Class="pa-4" Elevation="1">
+                <MudStack Spacing="3">
+                    <MudText Typo="Typo.h6" Color="Color.Primary">
+                        🔄 NearbyItemsResults (Mixed)
+                    </MudText>
+                    <NearbyItemsResults 
+                        Tools="@nearbyTools"
+                        Bundles="@nearbyBundles"
+                        Title="Test Mixed Results"
+                        ShowTitle="true"
+                        ShowFilterToggle="true"
+                        MaxResultsPerType="3" />
+                </MudStack>
+            </MudPaper>
+        }
+
+        <!-- LocationPrivacyEducation Test -->
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    🔒 LocationPrivacyEducation
+                </MudText>
+                <LocationPrivacyEducation 
+                    ShowTitle="true"
+                    ShowOverview="true"
+                    ShowPrivacyLevels="true"
+                    ShowDistanceBands="true"
+                    ShowTriangulationProtection="false"
+                    ShowBestPractices="false"
+                    Compact="true" />
+            </MudStack>
+        </MudPaper>
+
+        <!-- Test Status -->
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h6" Color="Color.Success">
+                ✅ Test Status
+            </MudText>
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.body2">
+                    • LocationAutocomplete: @(string.IsNullOrEmpty(selectedLocationText) ? "Not tested" : "Working ✅")
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    • LocationMapSelector: @(selectedLocationOption == null ? "Not tested" : "Working ✅")
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    • NearbySearch: @(searchLocation == null ? "Not tested" : "Working ✅")
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    • Results Components: @(nearbyTools.Any() || nearbyBundles.Any() ? "Working ✅" : "No results yet")
+                </MudText>
+            </MudStack>
+        </MudPaper>
+    </MudStack>
+</MudContainer>
+
+@code {
+    // Component state
+    private string selectedLocationText = "";
+    private LocationOption? selectedLocationOption;
+    private LocationOption? searchLocation;
+    private List<NearbyToolDto> nearbyTools = new();
+    private List<NearbyBundleDto> nearbyBundles = new();
+
+    // Event handlers
+    private async Task OnLocationChanged(LocationOption? location)
+    {
+        searchLocation = location;
+        if (location != null)
+        {
+            Snackbar.Add($"Search location changed to: {location.DisplayName}", Severity.Info);
+        }
+    }
+
+    private async Task OnToolResultsChanged(List<NearbyToolDto> tools)
+    {
+        nearbyTools = tools ?? new List<NearbyToolDto>();
+        if (tools?.Any() == true)
+        {
+            Snackbar.Add($"Found {tools.Count} nearby tool(s)", Severity.Success);
+        }
+    }
+
+    private async Task OnBundleResultsChanged(List<NearbyBundleDto> bundles)
+    {
+        nearbyBundles = bundles ?? new List<NearbyBundleDto>();
+        if (bundles?.Any() == true)
+        {
+            Snackbar.Add($"Found {bundles.Count} nearby bundle(s)", Severity.Success);
+        }
+    }
+}

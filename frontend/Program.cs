@@ -66,6 +66,10 @@ builder.Services.AddScoped(sp => sp.GetRequiredService<IHttpClientFactory>().Cre
 // Add MudBlazor services
 builder.Services.AddMudServices();
 
+// Add memory cache and logging services (required by LocationService)
+builder.Services.AddMemoryCache();
+builder.Services.AddLogging();
+
 // Add authentication services
 builder.Services.AddAuthorizationCore();
 builder.Services.AddScoped<AuthenticationStateProvider, CustomAuthenticationStateProvider>();
@@ -116,6 +120,12 @@ static void EnsureMapSettingsDefaults(AppSettings appSettings)
     var defaults = new MapSettings();
     
     // Apply defaults for missing or invalid values
+    if (string.IsNullOrEmpty(appSettings.MapSettings.Provider))
+    {
+        appSettings.MapSettings.Provider = defaults.Provider;
+        Console.WriteLine($"✅ Applied default Provider: {defaults.Provider}");
+    }
+    
     if (string.IsNullOrEmpty(appSettings.MapSettings.MapTileUrl))
     {
         appSettings.MapSettings.MapTileUrl = defaults.MapTileUrl;

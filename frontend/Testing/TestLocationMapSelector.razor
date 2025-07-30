@@ -1,0 +1,305 @@
+@page "/testing/location-map-selector"
+@using ToolsSharing.Frontend.Services.Location
+@using ToolsSharing.Frontend.Models.Location
+@using frontend.Components.Location
+@inject ILocationService LocationService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Large">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudPaper Class="pa-4" Elevation="2">
+            <MudText Typo="Typo.h4" Color="Color.Primary">
+                🗺️ LocationMapSelector Test Page
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                Testing the fixed LocationMapSelector component with string-based autocomplete
+            </MudText>
+        </MudPaper>
+
+        <!-- Test Status -->
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Row Spacing="3" AlignItems="AlignItems.Center">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Color="Color.Info" />
+                <div>
+                    <MudText Typo="Typo.subtitle1">Component Status</MudText>
+                    <MudText Typo="Typo.body2">
+                        ✅ Fixed: MudBlazor 8 autocomplete text clearing issue
+                        <br />✅ Using: T="string" with object caching strategy
+                        <br />✅ Pattern: Same as working LocationAutocomplete
+                    </MudText>
+                </div>
+            </MudStack>
+        </MudPaper>
+
+        <!-- Basic LocationMapSelector Test -->
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    🎯 Basic LocationMapSelector Test
+                </MudText>
+                
+                @try
+                {
+                    <LocationMapSelector 
+                        Label="Select Location with Map"
+                        Placeholder="Search and select a location..."
+                        Value="@selectedLocation"
+                        ValueChanged="@OnLocationChanged"
+                        LocationSelected="@OnLocationSelected"
+                        ShowMap="true"
+                        ShowPrivacySelector="true"
+                        ShowPopular="true"
+                        ShowPrivacyEducation="false"
+                        MapHeight="300"
+                        PrivacyLevel="@selectedPrivacyLevel"
+                        PrivacyLevelChanged="@OnPrivacyLevelChanged" />
+                        
+                    @if (selectedLocation != null)
+                    {
+                        <MudCard Elevation="2" Class="mt-3">
+                            <MudCardContent>
+                                <MudText Typo="Typo.subtitle2" Color="Color.Success">
+                                    ✅ Selected Location Details:
+                                </MudText>
+                                <MudText><strong>Name:</strong> @selectedLocation.DisplayName</MudText>
+                                <MudText><strong>Coordinates:</strong> @selectedLocation.Lat, @selectedLocation.Lng</MudText>
+                                <MudText><strong>Source:</strong> @selectedLocation.Source</MudText>
+                                <MudText><strong>Privacy Level:</strong> @selectedPrivacyLevel</MudText>
+                                @if (!string.IsNullOrEmpty(selectedLocation.City) || !string.IsNullOrEmpty(selectedLocation.State))
+                                {
+                                    <MudText><strong>Location:</strong> @selectedLocation.City, @selectedLocation.State</MudText>
+                                }
+                            </MudCardContent>
+                        </MudCard>
+                    }
+                }
+                catch (Exception ex)
+                {
+                    <MudAlert Severity="Severity.Error">
+                        <strong>Component Error:</strong> @ex.Message
+                        <br /><strong>Stack Trace:</strong> @ex.StackTrace
+                    </MudAlert>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- Autocomplete Text Clearing Test -->
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6" Color="Color.Warning">
+                    🧪 Text Clearing Issue Test
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    <strong>Instructions:</strong>
+                    <br />1. Type "New York" in the autocomplete field above
+                    <br />2. Wait for search results to appear
+                    <br />3. Check if your typed text gets cleared when results show
+                    <br />4. If text stays visible = ✅ FIXED
+                    <br />5. If text disappears = ❌ STILL BROKEN
+                </MudText>
+                
+                <MudAlert Severity="@(testStatus == TestStatus.NotTested ? Severity.Info : 
+                                    testStatus == TestStatus.Passed ? Severity.Success : Severity.Error)">
+                    <strong>Current Status:</strong> @GetTestStatusText()
+                </MudAlert>
+                
+                <MudStack Row Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Success" 
+                               OnClick="@(() => testStatus = TestStatus.Passed)">
+                        ✅ Text Stays Visible
+                    </MudButton>
+                    <MudButton Variant="Variant.Filled" Color="Color.Error" 
+                               OnClick="@(() => testStatus = TestStatus.Failed)">
+                        ❌ Text Gets Cleared
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" 
+                               OnClick="@(() => testStatus = TestStatus.NotTested)">
+                        Reset Test
+                    </MudButton>
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+
+        <!-- Map Integration Test -->
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6" Color="Color.Info">
+                    🗺️ Map Integration Test
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    Test that map functionality works with the new string-based autocomplete:
+                </MudText>
+                
+                <MudStack Row Spacing="2">
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" 
+                               OnClick="@TestMapIntegration" Disabled="@(selectedLocation == null)">
+                        Test Map Update
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" Color="Color.Secondary" 
+                               OnClick="@TestCurrentLocation">
+                        Test Current Location
+                    </MudButton>
+                </MudStack>
+                
+                @if (!string.IsNullOrEmpty(mapTestResult))
+                {
+                    <MudAlert Severity="@(mapTestResult.Contains("✅") ? Severity.Success : Severity.Info)">
+                        @mapTestResult
+                    </MudAlert>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- Component Performance Test -->
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Spacing="3">
+                <MudText Typo="Typo.h6" Color="Color.Secondary">
+                    ⚡ Performance Test
+                </MudText>
+                <MudText Typo="Typo.body2">
+                    Test multiple rapid searches to ensure caching works properly:
+                </MudText>
+                
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" 
+                           OnClick="@TestPerformance" Disabled="@isPerformanceTesting">
+                    @(isPerformanceTesting ? "Testing..." : "Run Performance Test")
+                </MudButton>
+                
+                @if (!string.IsNullOrEmpty(performanceResult))
+                {
+                    <MudAlert Severity="Severity.Info">
+                        @performanceResult
+                    </MudAlert>
+                }
+            </MudStack>
+        </MudPaper>
+
+        <!-- Debug Information -->
+        <MudPaper Class="pa-4" Elevation="1">
+            <MudStack Spacing="2">
+                <MudText Typo="Typo.h6" Color="Color.Default">
+                    🔍 Debug Information
+                </MudText>
+                <MudText><strong>Component Type:</strong> LocationMapSelector</MudText>
+                <MudText><strong>Autocomplete Type:</strong> T="string" (Fixed)</MudText>
+                <MudText><strong>Object Caching:</strong> Enabled</MudText>
+                <MudText><strong>MudBlazor Settings:</strong> CoerceText=false, CoerceValue=true, ResetValueOnEmptyText=false</MudText>
+                <MudText><strong>Current Time:</strong> @DateTime.Now.ToString("HH:mm:ss")</MudText>
+            </MudStack>
+        </MudPaper>
+    </MudStack>
+</MudContainer>
+
+@code {
+    private LocationOption? selectedLocation;
+    private PrivacyLevel selectedPrivacyLevel = PrivacyLevel.Neighborhood;
+    private TestStatus testStatus = TestStatus.NotTested;
+    private string mapTestResult = "";
+    private string performanceResult = "";
+    private bool isPerformanceTesting = false;
+
+    private enum TestStatus
+    {
+        NotTested,
+        Passed,
+        Failed
+    }
+
+    private async Task OnLocationChanged(LocationOption? location)
+    {
+        selectedLocation = location;
+        mapTestResult = $"✅ Location changed event fired: {location?.DisplayName ?? "null"}";
+        StateHasChanged();
+    }
+
+    private async Task OnLocationSelected(LocationOption? location)
+    {
+        mapTestResult = $"✅ Location selected event fired: {location?.DisplayName ?? "null"}";
+        StateHasChanged();
+    }
+
+    private async Task OnPrivacyLevelChanged(PrivacyLevel level)
+    {
+        selectedPrivacyLevel = level;
+        mapTestResult = $"✅ Privacy level changed: {level}";
+        StateHasChanged();
+    }
+
+    private string GetTestStatusText()
+    {
+        return testStatus switch
+        {
+            TestStatus.NotTested => "Not tested yet - please test the autocomplete above",
+            TestStatus.Passed => "✅ PASSED - Text clearing issue is FIXED!",
+            TestStatus.Failed => "❌ FAILED - Text clearing issue still exists",
+            _ => "Unknown status"
+        };
+    }
+
+    private async Task TestMapIntegration()
+    {
+        if (selectedLocation != null)
+        {
+            mapTestResult = $"✅ Map integration test: Selected location has coordinates ({selectedLocation.Lat}, {selectedLocation.Lng})";
+        }
+        else
+        {
+            mapTestResult = "❌ No location selected for map test";
+        }
+    }
+
+    private async Task TestCurrentLocation()
+    {
+        mapTestResult = "🔄 Testing current location functionality...";
+        StateHasChanged();
+
+        try
+        {
+            var result = await LocationService.GetCurrentLocationAsync();
+            if (result.Success)
+            {
+                mapTestResult = $"✅ Current location test passed: {result.Latitude}, {result.Longitude}";
+            }
+            else
+            {
+                mapTestResult = $"⚠️ Current location test: {result.ErrorMessage}";
+            }
+        }
+        catch (Exception ex)
+        {
+            mapTestResult = $"❌ Current location test failed: {ex.Message}";
+        }
+    }
+
+    private async Task TestPerformance()
+    {
+        isPerformanceTesting = true;
+        performanceResult = "🔄 Running performance test...";
+        StateHasChanged();
+
+        try
+        {
+            var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+            var testQueries = new[] { "New York", "Los Angeles", "Chicago", "Houston", "Phoenix" };
+            
+            foreach (var query in testQueries)
+            {
+                await LocationService.GetLocationSuggestionsAsync(query);
+                await Task.Delay(100); // Small delay between calls
+            }
+            
+            stopwatch.Stop();
+            performanceResult = $"✅ Performance test completed in {stopwatch.ElapsedMilliseconds}ms for {testQueries.Length} queries";
+        }
+        catch (Exception ex)
+        {
+            performanceResult = $"❌ Performance test failed: {ex.Message}";
+        }
+        finally
+        {
+            isPerformanceTesting = false;
+            StateHasChanged();
+        }
+    }
+}

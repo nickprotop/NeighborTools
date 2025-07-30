@@ -25,7 +25,7 @@ public class LocationService : ILocationService
     // Cache keys and durations
     private const string POPULAR_LOCATIONS_CACHE_KEY = "popular_locations";
     private const string SUGGESTIONS_CACHE_KEY_PREFIX = "location_suggestions_";
-    private static readonly TimeSpan PopularLocationsCacheDuration = TimeSpan.FromHours(6);
+    private static readonly TimeSpan PopularLocationsCacheDuration = TimeSpan.FromHours(1); // Reduced from 6 hours
     private static readonly TimeSpan SuggestionsCacheDuration = TimeSpan.FromMinutes(30);
 
     // Earth radius in kilometers for Haversine calculations
@@ -62,11 +62,20 @@ public class LocationService : ILocationService
                     null, null, query, null, null);
             }
 
-            // Use geocoding service
-            var results = await _geocodingService.SearchLocationsAsync(query, limit, countryCode);
+            // Use geocoding service - request more results to account for deduplication
+            var rawResults = await _geocodingService.SearchLocationsAsync(query, limit * 2, countryCode);
             
-            _logger.LogInformation("Location search for '{Query}' returned {Count} results", query, results.Count);
-            return results;
+            // Deduplicate by DisplayName with normalization
+            var deduplicatedResults = rawResults
+                .GroupBy(r => NormalizeLocationName(r.DisplayName))
+                .Select(g => g.OrderByDescending(r => r.Confidence).First()) // Keep highest confidence
+                .Take(limit)
+                .ToList();
+            
+            _logger.LogInformation("Location search for '{Query}' returned {RawCount} raw results, {DeduplicatedCount} after deduplication", 
+                query, rawResults.Count, deduplicatedResults.Count);
+            
+            return deduplicatedResults;
         }
         catch (Exception ex)
         {
@@ -138,57 +147,73 @@ public class LocationService : ILocationService
                     .Where(t => !string.IsNullOrEmpty(t.LocationDisplay) && t.LocationLat.HasValue && t.LocationLng.HasValue)
                     .ToListAsync();
                 
+                // Group only by normalized display name, aggregate other fields
                 var popularLocations = allTools
-                    .GroupBy(t => new { t.LocationDisplay, t.LocationCity, t.LocationState, t.LocationCountry })
+                    .GroupBy(t => NormalizeLocationName(t.LocationDisplay))
                     .Select(g => new { 
-                        Location = g.Key, 
+                        NormalizedName = g.Key,
                         Count = g.Count(),
-                        FirstTool = g.First()
+                        // Pick the most complete location data
+                        BestTool = g.OrderByDescending(t => 
+                            (string.IsNullOrEmpty(t.LocationCity) ? 0 : 1) +
+                            (string.IsNullOrEmpty(t.LocationState) ? 0 : 1) +
+                            (string.IsNullOrEmpty(t.LocationCountry) ? 0 : 1)
+                        ).First()
                     })
                     .OrderByDescending(x => x.Count)
-                    .Take(limit * 2) // Get more to account for privacy filtering
+                    .Take(limit)
                     .ToList();
 
                 results = popularLocations.Select(p => new LocationOption
                 {
-                    DisplayName = p.Location.LocationDisplay ?? "Unknown Location",
-                    City = p.Location.LocationCity,
-                    State = p.Location.LocationState,
-                    Country = p.Location.LocationCountry,
-                    Lat = p.FirstTool.LocationLat,
-                    Lng = p.FirstTool.LocationLng,
+                    DisplayName = p.BestTool.LocationDisplay ?? "Unknown Location",
+                    City = p.BestTool.LocationCity,
+                    State = p.BestTool.LocationState,
+                    Country = p.BestTool.LocationCountry,
+                    Lat = p.BestTool.LocationLat,
+                    Lng = p.BestTool.LocationLng,
                     Source = LocationSource.Manual,
-                    Confidence = Math.Min(1.0m, p.Count / 10.0m) // Higher confidence for more popular locations
-                }).Take(limit).ToList();
+                    Confidence = Math.Min(1.0m, p.Count / 5.0m) // Adjusted confidence formula
+                }).ToList();
             }
             else
             {
-                // Real database: Use database-level grouping (for production performance)
+                // Real database: Use simplified grouping and post-process normalization
                 _logger.LogDebug("Using database-level grouping strategy for popular locations");
                 
-                var popularLocations = await _context.Tools
+                // First get all tools, then group in memory for consistency with in-memory approach
+                var allTools = await _context.Tools
                     .Where(t => !string.IsNullOrEmpty(t.LocationDisplay) && t.LocationLat.HasValue && t.LocationLng.HasValue)
-                    .GroupBy(t => new { t.LocationDisplay, t.LocationCity, t.LocationState, t.LocationCountry })
+                    .ToListAsync();
+                
+                // Group only by normalized display name, aggregate other fields
+                var popularLocations = allTools
+                    .GroupBy(t => NormalizeLocationName(t.LocationDisplay))
                     .Select(g => new { 
-                        Location = g.Key, 
+                        NormalizedName = g.Key,
                         Count = g.Count(),
-                        FirstTool = g.First()
+                        // Pick the most complete location data
+                        BestTool = g.OrderByDescending(t => 
+                            (string.IsNullOrEmpty(t.LocationCity) ? 0 : 1) +
+                            (string.IsNullOrEmpty(t.LocationState) ? 0 : 1) +
+                            (string.IsNullOrEmpty(t.LocationCountry) ? 0 : 1)
+                        ).First()
                     })
                     .OrderByDescending(x => x.Count)
-                    .Take(limit * 2) // Get more to account for privacy filtering
-                    .ToListAsync();
+                    .Take(limit)
+                    .ToList();
 
                 results = popularLocations.Select(p => new LocationOption
                 {
-                    DisplayName = p.Location.LocationDisplay ?? "Unknown Location",
-                    City = p.Location.LocationCity,
-                    State = p.Location.LocationState,
-                    Country = p.Location.LocationCountry,
-                    Lat = p.FirstTool.LocationLat,
-                    Lng = p.FirstTool.LocationLng,
+                    DisplayName = p.BestTool.LocationDisplay ?? "Unknown Location",
+                    City = p.BestTool.LocationCity,
+                    State = p.BestTool.LocationState,
+                    Country = p.BestTool.LocationCountry,
+                    Lat = p.BestTool.LocationLat,
+                    Lng = p.BestTool.LocationLng,
                     Source = LocationSource.Manual,
-                    Confidence = Math.Min(1.0m, p.Count / 10.0m) // Higher confidence for more popular locations
-                }).Take(limit).ToList();
+                    Confidence = Math.Min(1.0m, p.Count / 5.0m) // Adjusted confidence formula
+                }).ToList();
             }
 
             // Cache the results
@@ -228,14 +253,21 @@ public class LocationService : ILocationService
             // Get geocoding suggestions if we need more
             if (suggestions.Count < limit)
             {
-                var geocodingSuggestions = await _geocodingService.GetLocationSuggestionsAsync(query, limit - suggestions.Count);
+                var rawGeocodingSuggestions = await _geocodingService.GetLocationSuggestionsAsync(query, (limit - suggestions.Count) * 2);
                 
-                // Remove duplicates based on display name similarity
-                foreach (var suggestion in geocodingSuggestions)
+                // Deduplicate geocoding results first
+                var deduplicatedGeocoding = rawGeocodingSuggestions
+                    .GroupBy(s => NormalizeLocationName(s.DisplayName))
+                    .Select(g => g.OrderByDescending(s => s.Confidence).First())
+                    .ToList();
+                
+                // Then check against existing suggestions
+                foreach (var suggestion in deduplicatedGeocoding)
                 {
                     if (!suggestions.Any(s => IsSimilarLocation(s, suggestion)))
                     {
                         suggestions.Add(suggestion);
+                        if (suggestions.Count >= limit) break;
                     }
                 }
             }
@@ -808,17 +840,53 @@ public class LocationService : ILocationService
                 .Take(limit)
                 .ToList();
 
-            return dbResults.Select(r => new LocationOption
+            var locationOptions = new List<LocationOption>();
+            
+            foreach (var r in dbResults)
             {
-                DisplayName = r.Location.LocationDisplay ?? "Unknown",
-                City = r.Location.LocationCity,
-                State = r.Location.LocationState,
-                Country = r.Location.LocationCountry,
-                Lat = r.FirstTool.LocationLat,
-                Lng = r.FirstTool.LocationLng,
-                Source = LocationSource.Manual,
-                Confidence = Math.Min(1.0m, r.Count / 5.0m)
-            }).ToList();
+                var locationOption = new LocationOption
+                {
+                    DisplayName = r.Location.LocationDisplay ?? "Unknown",
+                    City = r.Location.LocationCity,
+                    State = r.Location.LocationState,
+                    Country = r.Location.LocationCountry,
+                    Lat = r.FirstTool.LocationLat,
+                    Lng = r.FirstTool.LocationLng,
+                    Source = LocationSource.Manual,
+                    Confidence = Math.Min(1.0m, r.Count / 5.0m)
+                };
+                
+                // If coordinates are missing, try to geocode the location
+                if (!locationOption.Lat.HasValue || !locationOption.Lng.HasValue || 
+                    (locationOption.Lat == 0 && locationOption.Lng == 0))
+                {
+                    try
+                    {
+                        var geocodedResults = await _geocodingService.SearchLocationsAsync(locationOption.DisplayName, 1);
+                        var geocoded = geocodedResults?.FirstOrDefault();
+                        if (geocoded != null && geocoded.Lat.HasValue && geocoded.Lng.HasValue)
+                        {
+                            locationOption.Lat = geocoded.Lat;
+                            locationOption.Lng = geocoded.Lng;
+                            locationOption.Source = LocationSource.OpenStreetMap; // Updated source since it's now geocoded
+                            locationOption.Confidence = Math.Max(locationOption.Confidence, geocoded.Confidence);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to geocode database location: {DisplayName}", locationOption.DisplayName);
+                    }
+                }
+                
+                // Only add locations that have valid coordinates
+                if (locationOption.Lat.HasValue && locationOption.Lng.HasValue && 
+                    locationOption.Lat != 0 && locationOption.Lng != 0)
+                {
+                    locationOptions.Add(locationOption);
+                }
+            }
+            
+            return locationOptions;
         }
         else
         {
@@ -834,26 +902,107 @@ public class LocationService : ILocationService
                 .Take(limit)
                 .ToListAsync();
 
-            return dbResults.Select(r => new LocationOption
+            var locationOptions = new List<LocationOption>();
+            
+            foreach (var r in dbResults)
             {
-                DisplayName = r.Location.LocationDisplay ?? "Unknown",
-                City = r.Location.LocationCity,
-                State = r.Location.LocationState,
-                Country = r.Location.LocationCountry,
-                Lat = r.FirstTool.LocationLat,
-                Lng = r.FirstTool.LocationLng,
-                Source = LocationSource.Manual,
-                Confidence = Math.Min(1.0m, r.Count / 5.0m)
-            }).ToList();
+                var locationOption = new LocationOption
+                {
+                    DisplayName = r.Location.LocationDisplay ?? "Unknown",
+                    City = r.Location.LocationCity,
+                    State = r.Location.LocationState,
+                    Country = r.Location.LocationCountry,
+                    Lat = r.FirstTool.LocationLat,
+                    Lng = r.FirstTool.LocationLng,
+                    Source = LocationSource.Manual,
+                    Confidence = Math.Min(1.0m, r.Count / 5.0m)
+                };
+                
+                // If coordinates are missing, try to geocode the location
+                if (!locationOption.Lat.HasValue || !locationOption.Lng.HasValue || 
+                    (locationOption.Lat == 0 && locationOption.Lng == 0))
+                {
+                    try
+                    {
+                        var geocodedResults = await _geocodingService.SearchLocationsAsync(locationOption.DisplayName, 1);
+                        var geocoded = geocodedResults?.FirstOrDefault();
+                        if (geocoded != null && geocoded.Lat.HasValue && geocoded.Lng.HasValue)
+                        {
+                            locationOption.Lat = geocoded.Lat;
+                            locationOption.Lng = geocoded.Lng;
+                            locationOption.Source = LocationSource.OpenStreetMap; // Updated source since it's now geocoded
+                            locationOption.Confidence = Math.Max(locationOption.Confidence, geocoded.Confidence);
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogWarning(ex, "Failed to geocode database location: {DisplayName}", locationOption.DisplayName);
+                    }
+                }
+                
+                // Only add locations that have valid coordinates
+                if (locationOption.Lat.HasValue && locationOption.Lng.HasValue && 
+                    locationOption.Lat != 0 && locationOption.Lng != 0)
+                {
+                    locationOptions.Add(locationOption);
+                }
+            }
+            
+            return locationOptions;
         }
+    }
+
+    private static string NormalizeLocationName(string name)
+    {
+        return name?.Trim().ToLowerInvariant()
+            .Replace(",", "")
+            .Replace("  ", " ") ?? "";
+    }
+
+    private static decimal CalculateHaversineDistance(decimal lat1, decimal lng1, decimal lat2, decimal lng2)
+    {
+        const decimal R = 6371.0m; // Earth radius in kilometers
+
+        var dLat = ToRadians(lat2 - lat1);
+        var dLng = ToRadians(lng2 - lng1);
+
+        var a = (decimal)(Math.Sin((double)dLat / 2) * Math.Sin((double)dLat / 2) +
+                Math.Cos(ToRadians(lat1)) * Math.Cos(ToRadians(lat2)) *
+                Math.Sin((double)dLng / 2) * Math.Sin((double)dLng / 2));
+
+        var c = 2 * (decimal)Math.Atan2(Math.Sqrt((double)a), Math.Sqrt(1 - (double)a));
+
+        return R * c;
     }
 
     private static bool IsSimilarLocation(LocationOption loc1, LocationOption loc2)
     {
-        // Simple similarity check based on display name
-        var similarity = CalculateStringSimilarity(loc1.DisplayName.ToLowerInvariant(), 
-                                                 loc2.DisplayName.ToLowerInvariant());
-        return similarity > 0.8; // 80% similarity threshold
+        // Exact normalized match
+        if (NormalizeLocationName(loc1.DisplayName) == NormalizeLocationName(loc2.DisplayName))
+            return true;
+        
+        // Geographic proximity check (if both have coordinates)
+        if (loc1.Lat.HasValue && loc1.Lng.HasValue && loc2.Lat.HasValue && loc2.Lng.HasValue)
+        {
+            var distance = CalculateHaversineDistance(
+                loc1.Lat.Value, loc1.Lng.Value,
+                loc2.Lat.Value, loc2.Lng.Value);
+            
+            // Same location if within 1km and similar names
+            if (distance < 1.0m)
+            {
+                var nameSimilarity = CalculateStringSimilarity(
+                    NormalizeLocationName(loc1.DisplayName), 
+                    NormalizeLocationName(loc2.DisplayName));
+                return nameSimilarity > 0.6; // Lower threshold for geographically close locations
+            }
+        }
+        
+        // Fallback to string similarity (keep existing logic)
+        var similarity = CalculateStringSimilarity(
+            NormalizeLocationName(loc1.DisplayName), 
+            NormalizeLocationName(loc2.DisplayName));
+        return similarity > 0.8;
     }
 
     private static double CalculateStringSimilarity(string s1, string s2)
@@ -939,6 +1088,49 @@ public class LocationService : ILocationService
     private static double ToRadians(decimal degrees)
     {
         return (double)degrees * Math.PI / 180.0;
+    }
+
+    #endregion
+
+    #region Cache Management
+
+    /// <summary>
+    /// Invalidate location caches when new tools are added or location data changes
+    /// </summary>
+    public async Task InvalidateLocationCacheAsync()
+    {
+        try
+        {
+            _cache.Remove(POPULAR_LOCATIONS_CACHE_KEY);
+            
+            // Remove all suggestion caches
+            var cacheField = _cache.GetType().GetField("_coherentState", 
+                System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
+            
+            if (cacheField?.GetValue(_cache) is IDictionary<object, object> cacheDict)
+            {
+                var keysToRemove = cacheDict.Keys
+                    .Where(key => key.ToString()?.StartsWith(SUGGESTIONS_CACHE_KEY_PREFIX) == true)
+                    .ToList();
+
+                foreach (var key in keysToRemove)
+                {
+                    _cache.Remove(key);
+                }
+                
+                _logger.LogInformation("Invalidated location cache: removed popular locations and {Count} suggestion cache entries", keysToRemove.Count);
+            }
+            else
+            {
+                _logger.LogInformation("Invalidated location cache: removed popular locations cache");
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while invalidating location cache");
+        }
+
+        await Task.CompletedTask;
     }
 
     #endregion

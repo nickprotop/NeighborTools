@@ -1,0 +1,435 @@
+@using ToolsSharing.Frontend.Models.Location
+@using ToolsSharing.Frontend.Services.Location
+@using MudBlazor
+@inject ILocationService LocationService
+@inject ISnackbar Snackbar
+
+<MudStack Spacing="3">
+    <!-- Main Autocomplete Input -->
+    <MudAutocomplete T="string"
+                     @bind-Value="@Value"
+                     @bind-Value:after="@OnAfterValueChanged"
+                     SearchFunc="@SearchLocations"
+                     Label="@Label"
+                     Placeholder="@Placeholder"
+                     Variant="@Variant"
+                     Dense="@Dense"
+                     FullWidth="@FullWidth"
+                     Adornment="@Adornment"
+                     AdornmentIcon="@AdornmentIcon"
+                     OnAdornmentClick="@OnCurrentLocationClick"
+                     Clearable="@Clearable"
+                     Required="@Required"
+                     RequiredError="@RequiredError"
+                     HelperText="@HelperText"
+                     Disabled="@Disabled"
+                     ResetValueOnEmptyText="false"
+                     CoerceText="false"
+                     CoerceValue="true"
+                     MaxItems="@MaxItems"
+                     MinCharacters="@MinCharacters"
+                     DebounceInterval="@DebounceInterval"
+                     Class="@Class"
+                     Style="@Style">
+        
+        <ItemTemplate Context="location">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@GetLocationIcon(location)" 
+                         Size="Size.Small" 
+                         Color="Color.Secondary" 
+                         Class="mr-3" />
+                <div>
+                    <MudText Typo="Typo.body2">@location</MudText>
+                </div>
+            </div>
+        </ItemTemplate>
+        
+        <MoreItemsTemplate>
+            <MudText Align="Align.Center" Class="px-4 py-1">
+                Only the first @MaxItems items are shown...
+            </MudText>
+        </MoreItemsTemplate>
+        
+        <NoItemsTemplate>
+            @if (!string.IsNullOrEmpty(currentSearchText) && currentSearchText.Length >= MinCharacters)
+            {
+                <MudText Align="Align.Center" Class="px-4 py-1">
+                    @if (isSearching)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Searching...</span>
+                    }
+                    else
+                    {
+                        <span>No locations found for "@currentSearchText"</span>
+                    }
+                </MudText>
+            }
+            else
+            {
+                <MudText Align="Align.Center" Class="px-4 py-1" Color="Color.Secondary">
+                    Start typing to search locations...
+                </MudText>
+            }
+        </NoItemsTemplate>
+    </MudAutocomplete>
+
+    <!-- Popular Locations Section -->
+    @if (ShowPopular && !string.IsNullOrEmpty(Value))
+    {
+        <!-- Don't show popular when something is selected -->
+    }
+    else if (ShowPopular && popularLocations.Any())
+    {
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Class="mr-1" />
+                Popular locations:
+            </MudText>
+            
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var location in popularLocations.Take(MaxPopularItems))
+                {
+                    <MudChip Text="@location"
+                             Size="Size.Small"
+                             Color="Color.Primary"
+                             Variant="Variant.Outlined"
+                             OnClick="@(() => SelectPopularLocation(location))"
+                             T="string" />
+                }
+            </div>
+        </MudStack>
+    }
+
+    <!-- Validation Errors -->
+    @if (ShowValidationErrors && validationErrors.Any())
+    {
+        <MudAlert Severity="Severity.Error" ShowCloseIcon="true" CloseIconClicked="@ClearValidationErrors">
+            @foreach (var error in validationErrors)
+            {
+                <MudText Typo="Typo.body2">@error</MudText>
+            }
+        </MudAlert>
+    }
+
+    <!-- Current Location Status -->
+    @if (isGettingCurrentLocation)
+    {
+        <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.MyLocation">
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <MudText Typo="Typo.body2">Getting your current location...</MudText>
+            </MudStack>
+        </MudAlert>
+    }
+</MudStack>
+
+@code {
+    // Component Parameters
+    [Parameter] public string Label { get; set; } = "Location";
+    [Parameter] public string Placeholder { get; set; } = "Search for a location...";
+    [Parameter] public Variant Variant { get; set; } = Variant.Outlined;
+    [Parameter] public bool Dense { get; set; } = false;
+    [Parameter] public bool FullWidth { get; set; } = true;
+    [Parameter] public Adornment Adornment { get; set; } = Adornment.End;
+    [Parameter] public string AdornmentIcon { get; set; } = Icons.Material.Filled.MyLocation;
+    [Parameter] public bool Clearable { get; set; } = true;
+    [Parameter] public bool Required { get; set; } = false;
+    [Parameter] public string RequiredError { get; set; } = "Location is required";
+    [Parameter] public string HelperText { get; set; } = "Click the location icon to use your current location";
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public bool ResetValueOnEmptyText { get; set; } = false;
+    [Parameter] public bool CoerceText { get; set; } = false;
+    [Parameter] public bool CoerceValue { get; set; } = false;
+    [Parameter] public int MaxItems { get; set; } = 10;
+    [Parameter] public int MinCharacters { get; set; } = 2;
+    [Parameter] public int DebounceInterval { get; set; } = 500;
+    [Parameter] public string Class { get; set; } = "";
+    [Parameter] public string Style { get; set; } = "";
+    
+    // Popular Locations Parameters
+    [Parameter] public bool ShowPopular { get; set; } = true;
+    [Parameter] public int MaxPopularItems { get; set; } = 6;
+    
+    // Validation Parameters
+    [Parameter] public bool EnableValidation { get; set; } = true;
+    [Parameter] public bool ShowValidationErrors { get; set; } = true;
+    [Parameter] public Func<string, Task<List<string>>>? CustomValidator { get; set; }
+    
+    // Value and Events
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public EventCallback<string> ValueChanged { get; set; }
+    [Parameter] public EventCallback<string> LocationSelected { get; set; }
+    [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
+    [Parameter] public EventCallback CurrentLocationRequested { get; set; }
+    [Parameter] public EventCallback<List<string>> ValidationErrorsChanged { get; set; }
+    
+    // After value changed handler for MudBlazor 8's @bind-Value:after
+    private async Task OnAfterValueChanged()
+    {
+        // Trigger location selected event
+        await LocationSelected.InvokeAsync(Value);
+        
+        // Clear validation errors when value changes
+        if (validationErrors.Any())
+        {
+            validationErrors.Clear();
+            await ValidationErrorsChanged.InvokeAsync(validationErrors);
+        }
+        
+        // Validate if enabled
+        if (EnableValidation && !string.IsNullOrWhiteSpace(Value))
+        {
+            await ValidateLocation(Value);
+        }
+    }
+    
+    // Internal State
+    private bool isSearching = false;
+    private bool isGettingCurrentLocation = false;
+    private bool isLoadingPopular = false;
+    private string currentSearchText = "";
+    private List<string> popularLocations = new();
+    private List<string> validationErrors = new();
+    private List<string> searchCache = new();
+    
+    protected override async Task OnInitializedAsync()
+    {
+        if (ShowPopular)
+        {
+            await LoadPopularLocations();
+        }
+    }
+    
+    // Search functionality
+    private async Task<IEnumerable<string>> SearchLocations(string searchText, CancellationToken cancellationToken)
+    {
+        currentSearchText = searchText ?? "";
+        await SearchTextChanged.InvokeAsync(currentSearchText);
+        
+        if (string.IsNullOrWhiteSpace(searchText) || searchText.Length < MinCharacters)
+        {
+            return Array.Empty<string>();
+        }
+        
+        isSearching = true;
+        StateHasChanged();
+        
+        try
+        {
+            // Use location suggestions (has backend caching + database + geocoding)
+            var searchResponse = await LocationService.GetLocationSuggestionsAsync(searchText, MaxItems);
+            
+            if (searchResponse != null && searchResponse.Any())
+            {
+                // Deduplicate results to prevent duplicate key errors
+                var locations = searchResponse
+                    .Select(loc => loc.DisplayName)
+                    .Where(name => !string.IsNullOrEmpty(name))
+                    .Distinct()
+                    .ToList();
+                
+                Console.WriteLine($"LocationAutocomplete: Suggestions '{searchText}' returned {searchResponse.Count} raw results, {locations.Count} unique results");
+                searchCache = locations;
+                return locations;
+            }
+            
+            Console.WriteLine($"LocationAutocomplete: Suggestions '{searchText}' returned no results");
+            return Array.Empty<string>();
+            
+        }
+        catch (OperationCanceledException)
+        {
+            // Search was cancelled, return empty results
+            return Array.Empty<string>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LocationAutocomplete: Search failed: {ex.Message}");
+            return Array.Empty<string>();
+        }
+        finally
+        {
+            isSearching = false;
+            StateHasChanged();
+        }
+    }
+    
+    // Popular locations functionality
+    private async Task LoadPopularLocations()
+    {
+        if (isLoadingPopular) return;
+        
+        isLoadingPopular = true;
+        
+        try
+        {
+            var response = await LocationService.GetPopularLocationsAsync();
+            
+            popularLocations = response?.Select(loc => loc.DisplayName)
+                .Where(name => !string.IsNullOrEmpty(name))
+                .Distinct()
+                .ToList() ?? new List<string>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LocationAutocomplete: Failed to load popular locations: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingPopular = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task SelectPopularLocation(string location)
+    {
+        // Update the value directly - MudBlazor will handle the binding
+        Value = location;
+        await ValueChanged.InvokeAsync(Value);
+        await OnAfterValueChanged();
+    }
+    
+    // Current location functionality
+    private async Task OnCurrentLocationClick()
+    {
+        if (isGettingCurrentLocation) return;
+        
+        isGettingCurrentLocation = true;
+        StateHasChanged();
+        
+        try
+        {
+            await CurrentLocationRequested.InvokeAsync();
+            
+            var locationResult = await LocationService.GetCurrentLocationAsync();
+            
+            if (locationResult.Success && locationResult.Latitude.HasValue && locationResult.Longitude.HasValue)
+            {
+                // Try to reverse geocode the coordinates to get a readable location
+                var reverseResponse = await LocationService.ReverseGeocodeAsync(
+                    locationResult.Latitude.Value, 
+                    locationResult.Longitude.Value);
+                
+                if (reverseResponse != null)
+                {
+                    Value = reverseResponse.DisplayName;
+                    await ValueChanged.InvokeAsync(Value);
+                    await OnAfterValueChanged();
+                    Snackbar.Add("Current location detected successfully", Severity.Success);
+                }
+                else
+                {
+                    // Fallback to coordinates if reverse geocoding fails
+                    Value = $"Current Location ({locationResult.Latitude:F4}, {locationResult.Longitude:F4})";
+                    await ValueChanged.InvokeAsync(Value);
+                    await OnAfterValueChanged();
+                    Snackbar.Add("Location detected, but address lookup failed", Severity.Warning);
+                }
+            }
+            else
+            {
+                var errorMessage = locationResult.ErrorMessage ?? "Unable to get current location";
+                Snackbar.Add(errorMessage, Severity.Warning);
+                
+                if (EnableValidation)
+                {
+                    validationErrors.Add(errorMessage);
+                    await ValidationErrorsChanged.InvokeAsync(validationErrors);
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            var errorMessage = $"Failed to get current location: {ex.Message}";
+            Snackbar.Add(errorMessage, Severity.Error);
+            
+            if (EnableValidation)
+            {
+                validationErrors.Add(errorMessage);
+                await ValidationErrorsChanged.InvokeAsync(validationErrors);
+            }
+        }
+        finally
+        {
+            isGettingCurrentLocation = false;
+            StateHasChanged();
+        }
+    }
+    
+    // Validation functionality
+    private async Task ValidateLocation(string location)
+    {
+        if (!EnableValidation || string.IsNullOrWhiteSpace(location))
+        {
+            return;
+        }
+        
+        validationErrors.Clear();
+        
+        try
+        {
+            // Basic validation
+            if (location.Length < 2)
+            {
+                validationErrors.Add("Location must be at least 2 characters long");
+            }
+            
+            if (location.Length > 255)
+            {
+                validationErrors.Add("Location must be less than 255 characters");
+            }
+            
+            // Custom validation if provided
+            if (CustomValidator != null)
+            {
+                var customErrors = await CustomValidator(location);
+                if (customErrors != null && customErrors.Any())
+                {
+                    validationErrors.AddRange(customErrors);
+                }
+            }
+            
+            // Try to get suggestions to validate location exists
+            if (validationErrors.Count == 0)
+            {
+                var searchResponse = await LocationService.GetLocationSuggestionsAsync(location);
+                if (searchResponse == null || !searchResponse.Any())
+                {
+                    validationErrors.Add("Location not found. Please try a different search term.");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            validationErrors.Add($"Validation failed: {ex.Message}");
+        }
+        
+        await ValidationErrorsChanged.InvokeAsync(validationErrors);
+        StateHasChanged();
+    }
+    
+    private void ClearValidationErrors()
+    {
+        validationErrors.Clear();
+        ValidationErrorsChanged.InvokeAsync(validationErrors);
+    }
+    
+    // Helper methods
+    private string GetLocationIcon(string location)
+    {
+        if (string.IsNullOrEmpty(location)) return Icons.Material.Filled.LocationOn;
+        
+        // Try to determine icon based on location content
+        var lowerLocation = location.ToLowerInvariant();
+        
+        if (lowerLocation.Contains("current") || lowerLocation.Contains("my location"))
+            return Icons.Material.Filled.MyLocation;
+        if (lowerLocation.Contains("city") || lowerLocation.Contains("town"))
+            return Icons.Material.Filled.LocationCity;
+        if (lowerLocation.Contains("street") || lowerLocation.Contains("avenue") || lowerLocation.Contains("road"))
+            return Icons.Material.Filled.EditRoad;
+        
+        return Icons.Material.Filled.LocationOn;
+    }
+}

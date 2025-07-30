@@ -1,0 +1,932 @@
+@using ToolsSharing.Frontend.Models.Location
+@using ToolsSharing.Frontend.Services.Location
+@using ToolsSharing.Frontend.Configuration
+@using MudBlazor
+@using Microsoft.JSInterop
+@using System.Text.Json
+@inject ILocationService LocationService
+@inject ISnackbar Snackbar
+@inject AppSettings AppSettings
+@inject IJSRuntime JSRuntime
+@implements IAsyncDisposable
+
+<MudStack Spacing="4">
+    <!-- Location Selection Input -->
+    <MudAutocomplete T="string"
+                     @bind-Value="selectedLocationText"
+                     @bind-Value:after="@OnLocationSelected"
+                     SearchFunc="@SearchLocationStrings"
+                     Label="@Label"
+                     Placeholder="@Placeholder"
+                     Variant="@Variant"
+                     Dense="@Dense"
+                     FullWidth="@FullWidth"
+                     Adornment="@Adornment"
+                     AdornmentIcon="@AdornmentIcon"
+                     OnAdornmentClick="@OnCurrentLocationClick"
+                     Clearable="@Clearable"
+                     Required="@Required"
+                     RequiredError="@RequiredError"
+                     HelperText="@HelperText"
+                     Disabled="@Disabled"
+                     ResetValueOnEmptyText="false"
+                     CoerceText="false"
+                     CoerceValue="true"
+                     MaxItems="@MaxItems"
+                     MinCharacters="@MinCharacters"
+                     DebounceInterval="@DebounceInterval"
+                     Class="@Class"
+                     Style="@Style">
+                     
+        <ItemTemplate Context="locationText">
+            <div class="d-flex align-center">
+                <MudIcon Icon="@GetLocationIconFromText(locationText)" 
+                         Size="Size.Small" 
+                         Color="Color.Secondary" 
+                         Class="mr-3" />
+                <div>
+                    <MudText Typo="Typo.body2">@locationText</MudText>
+                    @{
+                        var locationDetails = GetLocationDetailsFromText(locationText);
+                    }
+                    @if (!string.IsNullOrEmpty(locationDetails))
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary">@locationDetails</MudText>
+                    }
+                </div>
+            </div>
+        </ItemTemplate>
+        
+        <MoreItemsTemplate>
+            <MudText Align="Align.Center" Class="px-4 py-1">
+                Only the first @MaxItems items are shown...
+            </MudText>
+        </MoreItemsTemplate>
+        
+        <NoItemsTemplate>
+            @if (!string.IsNullOrEmpty(currentSearchText) && currentSearchText.Length >= MinCharacters)
+            {
+                <MudText Align="Align.Center" Class="px-4 py-1">
+                    @if (isSearching)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                        <span>Searching...</span>
+                    }
+                    else
+                    {
+                        <span>No locations found for "@currentSearchText"</span>
+                    }
+                </MudText>
+            }
+            else
+            {
+                <MudText Align="Align.Center" Class="px-4 py-1" Color="Color.Secondary">
+                    Start typing to search locations...
+                </MudText>
+            }
+        </NoItemsTemplate>
+    </MudAutocomplete>
+
+    <!-- Privacy Level Selector -->
+    @if (ShowPrivacySelector && selectedLocation != null)
+    {
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.subtitle2" Color="Color.Primary">
+                <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" Class="mr-2" />
+                Privacy Level
+            </MudText>
+            
+            <MudSelect @bind-Value="selectedPrivacyLevel"
+                       Label="Select Privacy Level"
+                       Variant="Variant.Outlined"
+                       Dense="true"
+                       HelperText="@GetPrivacyLevelHelperText()">
+                <MudSelectItem T="PrivacyLevel" Value="@PrivacyLevel.Neighborhood">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Home" Color="Color.Success" Size="Size.Small" Class="mr-2" />
+                        <div>
+                            <MudText Typo="Typo.body2">Neighborhood</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">~0.3 mile area (Recommended)</MudText>
+                        </div>
+                    </div>
+                </MudSelectItem>
+                <MudSelectItem T="PrivacyLevel" Value="@PrivacyLevel.ZipCode">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationCity" Color="Color.Warning" Size="Size.Small" Class="mr-2" />
+                        <div>
+                            <MudText Typo="Typo.body2">Zip Code</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">~1 mile area (More Private)</MudText>
+                        </div>
+                    </div>
+                </MudSelectItem>
+                <MudSelectItem T="PrivacyLevel" Value="@PrivacyLevel.District">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.Map" Color="Color.Warning" Size="Size.Small" Class="mr-2" />
+                        <div>
+                            <MudText Typo="Typo.body2">District</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">~3 mile area (Most Private)</MudText>
+                        </div>
+                    </div>
+                </MudSelectItem>
+                <MudSelectItem T="PrivacyLevel" Value="@PrivacyLevel.Exact">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@Icons.Material.Filled.GpsFixed" Color="Color.Error" Size="Size.Small" Class="mr-2" />
+                        <div>
+                            <MudText Typo="Typo.body2">Exact</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">~300 feet area (Use with caution)</MudText>
+                        </div>
+                    </div>
+                </MudSelectItem>
+            </MudSelect>
+        </MudStack>
+    }
+
+    <!-- Interactive Map -->
+    @if (ShowMap)
+    {
+        <MudPaper Class="map-container" Elevation="@MapElevation" Style="@($"height: {MapHeight}px; position: relative; {MapStyle}")">
+            @if (isLoadingMap)
+            {
+                <div class="map-loading-overlay">
+                    <MudStack AlignItems="AlignItems.Center" Spacing="2">
+                        <MudProgressCircular Size="Size.Large" Indeterminate="true" />
+                        <MudText Typo="Typo.body1">Loading map...</MudText>
+                    </MudStack>
+                </div>
+            }
+            
+            <div id="@mapContainerId" class="interactive-map" style="@($"height: {MapHeight}px; width: 100%;")"></div>
+            
+            <!-- Map Controls Overlay -->
+            @if (ShowMapControls && !isLoadingMap)
+            {
+                <div class="map-controls-overlay">
+                    <MudButtonGroup OverrideStyles="false" Class="map-control-group">
+                        <MudIconButton Icon="@Icons.Material.Filled.MyLocation"
+                                       Size="Size.Small"
+                                       Color="Color.Primary"
+                                       Variant="Variant.Filled"
+                                       Title="Get my location"
+                                       OnClick="@OnCurrentLocationClick" />
+                        <MudIconButton Icon="@Icons.Material.Filled.Fullscreen"
+                                       Size="Size.Small"
+                                       Color="Color.Primary"
+                                       Variant="Variant.Filled"
+                                       Title="Toggle fullscreen"
+                                       OnClick="@OnToggleFullscreen" />
+                        @if (selectedLocation != null)
+                        {
+                            <MudIconButton Icon="@Icons.Material.Filled.CenterFocusStrong"
+                                           Size="Size.Small"
+                                           Color="Color.Primary"
+                                           Variant="Variant.Filled"
+                                           Title="Center on location"
+                                           OnClick="@OnCenterOnLocation" />
+                        }
+                    </MudButtonGroup>
+                </div>
+            }
+        </MudPaper>
+    }
+
+    <!-- Popular Locations -->
+    @if (ShowPopular && !string.IsNullOrEmpty(selectedLocation?.DisplayName))
+    {
+        <!-- Don't show popular when something is selected -->
+    }
+    else if (ShowPopular && popularLocations.Any())
+    {
+        <MudStack Spacing="2">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Small" Class="mr-1" />
+                Popular locations:
+            </MudText>
+            
+            <div class="d-flex flex-wrap gap-2">
+                @foreach (var location in popularLocations.Take(MaxPopularItems))
+                {
+                    <MudChip Text="@location.DisplayName"
+                             Size="Size.Small"
+                             Color="Color.Primary"
+                             Variant="Variant.Outlined"
+                             OnClick="@(() => SelectPopularLocation(location))"
+                             T="string" />
+                }
+            </div>
+        </MudStack>
+    }
+
+    <!-- Privacy Education -->
+    @if (ShowPrivacyEducation)
+    {
+        <MudCollapse Expanded="@showPrivacyDetails">
+            <LocationPrivacyEducation ShowTitle="false" 
+                                    ShowOverview="true"
+                                    ShowPrivacyLevels="true"
+                                    ShowDistanceBands="false"
+                                    ShowTriangulationProtection="false"
+                                    ShowBestPractices="false"
+                                    Compact="true"
+                                    Elevation="0" />
+        </MudCollapse>
+        
+        <MudButton Variant="Variant.Text" 
+                   Color="Color.Secondary" 
+                   StartIcon="@(showPrivacyDetails ? Icons.Material.Filled.ExpandLess : Icons.Material.Filled.ExpandMore)"
+                   OnClick="@(() => showPrivacyDetails = !showPrivacyDetails)"
+                   Size="Size.Small">
+            @(showPrivacyDetails ? "Hide" : "Show") Privacy Information
+        </MudButton>
+    }
+
+    <!-- Status Messages -->
+    @if (isGettingCurrentLocation)
+    {
+        <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.MyLocation">
+            <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                <MudText Typo="Typo.body2">Getting your current location...</MudText>
+            </MudStack>
+        </MudAlert>
+    }
+</MudStack>
+
+<style>
+    .map-container {
+        border-radius: 8px;
+        overflow: hidden;
+        position: relative;
+    }
+    
+    .interactive-map {
+        border-radius: 8px;
+        z-index: 1;
+    }
+    
+    .map-loading-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(255, 255, 255, 0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        border-radius: 8px;
+    }
+    
+    .map-controls-overlay {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+    }
+    
+    .map-control-group {
+        background: rgba(255, 255, 255, 0.9);
+        backdrop-filter: blur(4px);
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .map-control-group .mud-button-group > .mud-icon-button {
+        background: transparent;
+        border-radius: 4px;
+    }
+    
+    .map-control-group .mud-button-group > .mud-icon-button:hover {
+        background: rgba(89, 74, 226, 0.1);
+    }
+</style>
+
+@code {
+    // Component Parameters
+    [Parameter] public string Label { get; set; } = "Select Location";
+    [Parameter] public string Placeholder { get; set; } = "Search for a location...";
+    [Parameter] public Variant Variant { get; set; } = Variant.Outlined;
+    [Parameter] public bool Dense { get; set; } = false;
+    [Parameter] public bool FullWidth { get; set; } = true;
+    [Parameter] public Adornment Adornment { get; set; } = Adornment.End;
+    [Parameter] public string AdornmentIcon { get; set; } = Icons.Material.Filled.MyLocation;
+    [Parameter] public bool Clearable { get; set; } = true;
+    [Parameter] public bool Required { get; set; } = false;
+    [Parameter] public string RequiredError { get; set; } = "Location is required";
+    [Parameter] public string HelperText { get; set; } = "Search for a location or click the map";
+    [Parameter] public bool Disabled { get; set; } = false;
+    [Parameter] public bool ResetValueOnEmptyText { get; set; } = false;
+    [Parameter] public bool CoerceText { get; set; } = true;
+    [Parameter] public bool CoerceValue { get; set; } = true;
+    [Parameter] public bool Strict { get; set; } = false;
+    [Parameter] public int MaxItems { get; set; } = 10;
+    [Parameter] public int MinCharacters { get; set; } = 2;
+    [Parameter] public int DebounceInterval { get; set; } = 500;
+    [Parameter] public string Class { get; set; } = "";
+    [Parameter] public string Style { get; set; } = "";
+    
+    // Map Parameters
+    [Parameter] public bool ShowMap { get; set; } = true;
+    [Parameter] public int MapHeight { get; set; } = 300;
+    [Parameter] public int MapElevation { get; set; } = 2;
+    [Parameter] public string MapStyle { get; set; } = "";
+    [Parameter] public bool ShowMapControls { get; set; } = true;
+    [Parameter] public int DefaultZoom { get; set; } = 13;
+    
+    // Feature Parameters
+    [Parameter] public bool ShowPrivacySelector { get; set; } = true;
+    [Parameter] public bool ShowPopular { get; set; } = true;
+    [Parameter] public int MaxPopularItems { get; set; } = 6;
+    [Parameter] public bool ShowPrivacyEducation { get; set; } = true;
+    
+    // Value and Events
+    [Parameter] public LocationOption? Value { get; set; }
+    [Parameter] public EventCallback<LocationOption?> ValueChanged { get; set; }
+    [Parameter] public PrivacyLevel PrivacyLevel { get; set; } = PrivacyLevel.Neighborhood;
+    [Parameter] public EventCallback<PrivacyLevel> PrivacyLevelChanged { get; set; }
+    [Parameter] public EventCallback<LocationOption?> LocationSelected { get; set; }
+    [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
+    [Parameter] public EventCallback CurrentLocationRequested { get; set; }
+    
+    // Two-way Data Binding and Internal State
+    private string selectedLocationText = "";
+    private List<LocationOption> cachedLocationResults = new();
+    
+    private LocationOption? selectedLocation
+    {
+        get => Value;
+        set
+        {
+            if (!EqualityComparer<LocationOption?>.Default.Equals(Value, value))
+            {
+                Value = value;
+                ValueChanged.InvokeAsync(value);
+                LocationSelected.InvokeAsync(value);
+                
+                // Update map when location changes
+                if (value != null && !isLoadingMap)
+                {
+                    _ = Task.Run(async () => await UpdateMapLocation(value));
+                }
+            }
+        }
+    }
+    
+    private PrivacyLevel selectedPrivacyLevel
+    {
+        get => PrivacyLevel;
+        set
+        {
+            if (PrivacyLevel != value)
+            {
+                PrivacyLevel = value;
+                PrivacyLevelChanged.InvokeAsync(value);
+                
+                // Update privacy circle on map
+                if (selectedLocation != null && !isLoadingMap)
+                {
+                    _ = Task.Run(async () => await UpdatePrivacyCircle());
+                }
+            }
+        }
+    }
+    
+    // Internal State
+    private bool isSearching = false;
+    private bool isGettingCurrentLocation = false;
+    private bool isLoadingMap = true;
+    private bool isLoadingPopular = false;
+    private bool showPrivacyDetails = false;
+    private string currentSearchText = "";
+    private List<LocationOption> popularLocations = new();
+    private string mapContainerId = "";
+    private bool isMapInitialized = false;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        mapContainerId = $"map-{Guid.NewGuid():N}"; 
+        
+        if (ShowPopular)
+        {
+            await LoadPopularLocations();
+        }
+    }
+    
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender && ShowMap)
+        {
+            await InitializeMap();
+            await SetupMapClickListener();
+        }
+    }
+    
+    // Map functionality
+    private async Task InitializeMap()
+    {
+        if (isMapInitialized) return;
+        
+        try
+        {
+            isLoadingMap = true;
+            StateHasChanged();
+            
+            // Prepare map settings from AppSettings
+            var mapSettings = new
+            {
+                AppSettings.MapSettings.Provider,
+                AppSettings.MapSettings.MapTileUrl,
+                AppSettings.MapSettings.MapAttribution,
+                DefaultZoom = DefaultZoom,
+                AppSettings.MapSettings.MinZoom,
+                AppSettings.MapSettings.MaxZoom,
+                DefaultCenter = new 
+                {
+                    Lat = selectedLocation?.Lat ?? (decimal)AppSettings.MapSettings.DefaultCenter.Lat,
+                    Lng = selectedLocation?.Lng ?? (decimal)AppSettings.MapSettings.DefaultCenter.Lng
+                },
+                AppSettings.MapSettings.ShowLocationControls,
+                AppSettings.MapSettings.EnableGeolocation,
+                AppSettings.MapSettings.LocationTimeout,
+                AppSettings.MapSettings.MaxLocationAge
+            };
+            
+            // Initialize map via JavaScript
+            var success = await JSRuntime.InvokeAsync<bool>("initializeMap", mapContainerId, mapSettings);
+            
+            if (success)
+            {
+                isMapInitialized = true;
+                
+                // Update map with current location if available
+                if (selectedLocation != null)
+                {
+                    await UpdateMapLocation(selectedLocation);
+                }
+            }
+            else
+            {
+                Snackbar.Add("Failed to initialize map", Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LocationMapSelector: Failed to initialize map: {ex.Message}");
+            Snackbar.Add("Map initialization failed", Severity.Warning);
+        }
+        finally
+        {
+            isLoadingMap = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task UpdateMapLocation(LocationOption location)
+    {
+        if (!isMapInitialized || location.Lat == 0 && location.Lng == 0) return;
+        
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("updateMapLocation", 
+                mapContainerId,
+                location.Lat,
+                location.Lng,
+                DefaultZoom,
+                new 
+                {
+                    markerId = "selected-location",
+                    markerType = "default",
+                    showPopup = true,
+                    popupContent = location.DisplayName,
+                    privacyLevel = (int)selectedPrivacyLevel,
+                    panTo = true
+                });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LocationMapSelector: Failed to update map location: {ex.Message}");
+        }
+    }
+    
+    private async Task UpdatePrivacyCircle()
+    {
+        if (!isMapInitialized || selectedLocation == null) return;
+        
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("addPrivacyCircle",
+                mapContainerId,
+                selectedLocation.Lat,
+                selectedLocation.Lng,
+                (int)selectedPrivacyLevel);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LocationMapSelector: Failed to update privacy circle: {ex.Message}");
+        }
+    }
+    
+    private async Task OnToggleFullscreen()
+    {
+        if (!isMapInitialized) return;
+        
+        try
+        {
+            await JSRuntime.InvokeVoidAsync("toggleFullscreen", mapContainerId);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LocationMapSelector: Failed to toggle fullscreen: {ex.Message}");
+        }
+    }
+    
+    private async Task OnCenterOnLocation()
+    {
+        if (selectedLocation != null)
+        {
+            await UpdateMapLocation(selectedLocation);
+        }
+    }
+    
+    // Search functionality (string-based like LocationAutocomplete)
+    private async Task<IEnumerable<string>> SearchLocationStrings(string searchText, CancellationToken cancellationToken)
+    {
+        currentSearchText = searchText ?? "";
+        await SearchTextChanged.InvokeAsync(currentSearchText);
+        
+        if (string.IsNullOrWhiteSpace(searchText) || searchText.Length < MinCharacters)
+        {
+            cachedLocationResults.Clear(); // Clear cache for empty search
+            return Array.Empty<string>();
+        }
+        
+        isSearching = true;
+        StateHasChanged();
+        
+        try
+        {
+            var response = await LocationService.GetLocationSuggestionsAsync(searchText);
+            cachedLocationResults = response ?? new List<LocationOption>(); // Cache the full objects
+            
+            // Return just the display names for the autocomplete
+            return cachedLocationResults.Select(loc => loc.DisplayName).Where(name => !string.IsNullOrEmpty(name)).Distinct();
+        }
+        catch (OperationCanceledException)
+        {
+            cachedLocationResults.Clear();
+            return Array.Empty<string>();
+        }
+        catch (Exception)
+        {
+            cachedLocationResults.Clear();
+            return Array.Empty<string>();
+        }
+        finally
+        {
+            isSearching = false;
+            StateHasChanged();
+        }
+    }
+    
+    // Location selection handler
+    private async Task OnLocationSelected()
+    {
+        // Find the matching LocationOption object from cache using the selected text
+        var matchedLocation = cachedLocationResults.FirstOrDefault(loc => loc.DisplayName == selectedLocationText);
+        
+        if (matchedLocation != null)
+        {
+            selectedLocation = matchedLocation;
+        }
+    }
+    
+    // Popular locations functionality
+    private async Task LoadPopularLocations()
+    {
+        if (isLoadingPopular) return;
+        
+        isLoadingPopular = true;
+        
+        try
+        {
+            var response = await LocationService.GetPopularLocationsAsync();
+            
+            popularLocations = response ?? new List<LocationOption>();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LocationMapSelector: Failed to load popular locations: {ex.Message}");
+        }
+        finally
+        {
+            isLoadingPopular = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task SelectPopularLocation(LocationOption location)
+    {
+        selectedLocation = location;
+        selectedLocationText = location.DisplayName;
+        // Add to cache for consistency
+        if (!cachedLocationResults.Any(loc => loc.DisplayName == location.DisplayName))
+        {
+            cachedLocationResults.Add(location);
+        }
+    }
+    
+    // Current location functionality
+    private async Task OnCurrentLocationClick()
+    {
+        if (isGettingCurrentLocation) return;
+        
+        isGettingCurrentLocation = true;
+        StateHasChanged();
+        
+        try
+        {
+            await CurrentLocationRequested.InvokeAsync();
+            
+            var locationResult = await LocationService.GetCurrentLocationAsync();
+            
+            if (locationResult.Success && locationResult.Latitude.HasValue && locationResult.Longitude.HasValue)
+            {
+                // Try to reverse geocode the coordinates
+                var reverseResponse = await LocationService.ReverseGeocodeAsync(
+                    locationResult.Latitude!.Value, 
+                    locationResult.Longitude!.Value);
+                
+                LocationOption currentLocationOption;
+                
+                if (reverseResponse != null)
+                {
+                    currentLocationOption = reverseResponse;
+                }
+                else
+                {
+                    // Create a basic location option from coordinates
+                    currentLocationOption = new LocationOption
+                    {
+                        DisplayName = $"Current Location ({locationResult.Latitude:F4}, {locationResult.Longitude:F4})",
+                        Lat = locationResult.Latitude,
+                        Lng = locationResult.Longitude,
+                        Source = LocationSource.Browser
+                    };
+                }
+                
+                selectedLocation = currentLocationOption;
+                selectedLocationText = currentLocationOption.DisplayName;
+                // Add to cache for consistency
+                cachedLocationResults.Clear();
+                cachedLocationResults.Add(currentLocationOption);
+                Snackbar.Add("Current location detected successfully", Severity.Success);
+            }
+            else
+            {
+                var errorMessage = locationResult.ErrorMessage ?? "Unable to get current location";
+                Snackbar.Add(errorMessage, Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to get current location: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isGettingCurrentLocation = false;
+            StateHasChanged();
+        }
+    }
+    
+    // Helper methods
+    private string GetLocationIconFromText(string locationText)
+    {
+        var locationOption = cachedLocationResults.FirstOrDefault(loc => loc.DisplayName == locationText);
+        return GetLocationIcon(locationOption);
+    }
+    
+    private string GetLocationDetailsFromText(string locationText)
+    {
+        var locationOption = cachedLocationResults.FirstOrDefault(loc => loc.DisplayName == locationText);
+        if (locationOption != null && (locationOption.City != null || locationOption.State != null))
+        {
+            return $"{locationOption.City}, {locationOption.State}";
+        }
+        return "";
+    }
+    
+    private string GetLocationIcon(LocationOption? option)
+    {
+        if (option == null) return Icons.Material.Filled.LocationOn;
+        
+        return option.Source switch
+        {
+            LocationSource.Browser => Icons.Material.Filled.MyLocation,
+            LocationSource.OpenStreetMap => Icons.Material.Filled.Map,
+            LocationSource.HERE => Icons.Material.Filled.LocationOn,
+            _ => Icons.Material.Filled.Place
+        };
+    }
+    
+    private string GetPrivacyLevelHelperText()
+    {
+        return selectedPrivacyLevel switch
+        {
+            PrivacyLevel.Neighborhood => "Good balance of privacy and utility for most users",
+            PrivacyLevel.ZipCode => "More privacy while still being useful for local searches", 
+            PrivacyLevel.District => "Maximum privacy with broader search capability",
+            PrivacyLevel.Exact => "Use only when exact location is necessary",
+            _ => "Select your preferred privacy level"
+        };
+    }
+    
+    // Map event handling
+    private async Task SetupMapClickListener()
+    {
+        try
+        {
+            Console.WriteLine($"LocationMapSelector: Setting up map click listener for container {mapContainerId}");
+            
+            // Start simple polling for map click events
+            _ = Task.Run(async () => await PollForMapClicks());
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LocationMapSelector: Failed to setup map click listener: {ex.Message}");
+        }
+    }
+
+    private async Task PollForMapClicks()
+    {
+        try
+        {
+            Console.WriteLine($"LocationMapSelector: Starting polling for container {mapContainerId}");
+            
+            while (isMapInitialized)
+            {
+                await Task.Delay(300); // Poll every 300ms
+                
+                try
+                {
+                    // Check if there's a new map click location using a safer property access
+                    var result = await JSRuntime.InvokeAsync<object>("eval", $"window['selectedMapLocation_{mapContainerId}']");
+                    
+                    if (result != null)
+                    {
+                        Console.WriteLine($"LocationMapSelector: Polling found map click data");
+                        
+                        // Clear the stored location to avoid processing it again
+                        await JSRuntime.InvokeVoidAsync("eval", $"window['selectedMapLocation_{mapContainerId}'] = null;");
+                        
+                        // Process the map click
+                        await InvokeAsync(() => ProcessMapClick(result));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    // Ignore polling errors (component might be disposed)
+                    Console.WriteLine($"LocationMapSelector: Polling error: {ex.Message}");
+                    if (ex.Message.Contains("disposed") || ex.Message.Contains("circuit"))
+                    {
+                        break;
+                    }
+                }
+            }
+            Console.WriteLine($"LocationMapSelector: Polling stopped for container {mapContainerId}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LocationMapSelector: Polling task error: {ex.Message}");
+        }
+    }
+
+    private async Task ProcessMapClick(object mapClickData)
+    {
+        try
+        {
+            Console.WriteLine($"LocationMapSelector: Raw map click data: {mapClickData}");
+            
+            // Parse the JavaScript object
+            var json = System.Text.Json.JsonSerializer.Serialize(mapClickData);
+            Console.WriteLine($"LocationMapSelector: Serialized JSON: {json}");
+            
+            var locationData = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(json);
+            
+            if (locationData != null && 
+                locationData.ContainsKey("lat") && 
+                locationData.ContainsKey("lng"))
+            {
+                // Extract coordinates from JsonElement objects
+                decimal lat, lng;
+                
+                try
+                {
+                    // JsonElement can handle various numeric types from JavaScript
+                    lat = locationData["lat"].GetDecimal();
+                    lng = locationData["lng"].GetDecimal();
+                }
+                catch (Exception)
+                {
+                    // Fallback: try as double first, then convert to decimal
+                    try
+                    {
+                        lat = (decimal)locationData["lat"].GetDouble();
+                        lng = (decimal)locationData["lng"].GetDouble();
+                    }
+                    catch (Exception)
+                    {
+                        // Final fallback: parse as string
+                        lat = decimal.Parse(locationData["lat"].GetString() ?? "0");
+                        lng = decimal.Parse(locationData["lng"].GetString() ?? "0");
+                    }
+                }
+                
+                Console.WriteLine($"LocationMapSelector: Processing map click at ({lat}, {lng})");
+                
+                // Call our backend API for reverse geocoding
+                var reverseGeocodedLocation = await LocationService.ReverseGeocodeAsync(lat, lng);
+                
+                LocationOption mapClickLocation;
+                
+                if (reverseGeocodedLocation != null)
+                {
+                    // Use the reverse geocoded location from our backend
+                    mapClickLocation = reverseGeocodedLocation;
+                    Console.WriteLine($"LocationMapSelector: Backend reverse geocoding successful: {reverseGeocodedLocation.DisplayName}");
+                }
+                else
+                {
+                    // Create fallback location if reverse geocoding fails
+                    mapClickLocation = new LocationOption
+                    {
+                        DisplayName = $"Location ({lat:F4}, {lng:F4})",
+                        Lat = lat,
+                        Lng = lng,
+                        Source = LocationSource.Manual,
+                        Confidence = 0.8m // High confidence for user-selected coordinates
+                    };
+                    Console.WriteLine($"LocationMapSelector: Using fallback location name: {mapClickLocation.DisplayName}");
+                }
+                
+                // Update the selected location
+                selectedLocation = mapClickLocation;
+                selectedLocationText = mapClickLocation.DisplayName;
+                
+                // Add to cache for consistency
+                cachedLocationResults.Clear();
+                cachedLocationResults.Add(mapClickLocation);
+                
+                // Update the map marker popup with the final location name
+                var escapedDisplayName = mapClickLocation.DisplayName.Replace("'", "\\'");
+                await JSRuntime.InvokeVoidAsync("eval", $@"
+                    try {{
+                        const markers = window.OpenStreetMapProvider ? 
+                            window.OpenStreetMapProvider.mapMarkers?.get('{mapContainerId}') : null;
+                        if (markers) {{
+                            const tempMarkers = Array.from(markers.keys()).filter(id => id.startsWith('temp-click-'));
+                            if (tempMarkers.length > 0) {{
+                                const marker = markers.get(tempMarkers[0]);
+                                if (marker && marker.setPopupContent) {{
+                                    marker.setPopupContent('{escapedDisplayName}');
+                                }}
+                            }}
+                        }}
+                    }} catch (e) {{
+                        console.log('Failed to update marker popup:', e);
+                    }}
+                ");
+                
+                Console.WriteLine($"LocationMapSelector: Location selected from map: {mapClickLocation.DisplayName} ({lat}, {lng})");
+                
+                // Trigger state change
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LocationMapSelector: Failed to process map click: {ex.Message}");
+        }
+    }
+
+    // Cleanup
+    public async ValueTask DisposeAsync()
+    {
+        isMapInitialized = false; // Stop polling
+        
+        if (!string.IsNullOrEmpty(mapContainerId))
+        {
+            try
+            {
+                // Clean up stored location data
+                await JSRuntime.InvokeVoidAsync("eval", $"delete window['selectedMapLocation_{mapContainerId}'];");
+                
+                // Dispose the map
+                await JSRuntime.InvokeVoidAsync("disposeMap", mapContainerId);
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"LocationMapSelector: Failed to dispose resources: {ex.Message}");
+            }
+        }
+    }
+}

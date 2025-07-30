@@ -350,6 +350,11 @@ public class NearbyToolDto
     public Guid Id { get; set; }
 
     /// <summary>
+    /// Owner ID
+    /// </summary>
+    public string OwnerId { get; set; } = string.Empty;
+
+    /// <summary>
     /// Tool name
     /// </summary>
     public string Name { get; set; } = string.Empty;
@@ -373,6 +378,16 @@ public class NearbyToolDto
     /// Tool category
     /// </summary>
     public string Category { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Required skill level
+    /// </summary>
+    public string RequiredSkillLevel { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Estimated project duration
+    /// </summary>
+    public string EstimatedProjectDuration { get; set; } = string.Empty;
 
     /// <summary>
     /// Tool image URLs
@@ -413,6 +428,21 @@ public class NearbyToolDto
     /// Number of reviews
     /// </summary>
     public int ReviewCount { get; set; }
+
+    /// <summary>
+    /// Number of times rented
+    /// </summary>
+    public int RentalCount { get; set; }
+
+    /// <summary>
+    /// Whether the tool is featured
+    /// </summary>
+    public bool IsFeatured { get; set; }
+
+    /// <summary>
+    /// When the tool was created
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
 }
 
 /// <summary>
@@ -424,6 +454,11 @@ public class NearbyBundleDto
     /// Bundle ID
     /// </summary>
     public Guid Id { get; set; }
+
+    /// <summary>
+    /// Owner ID
+    /// </summary>
+    public string OwnerId { get; set; } = string.Empty;
 
     /// <summary>
     /// Bundle name
@@ -439,6 +474,16 @@ public class NearbyBundleDto
     /// Bundle category
     /// </summary>
     public string Category { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Required skill level
+    /// </summary>
+    public string RequiredSkillLevel { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Estimated project duration
+    /// </summary>
+    public string EstimatedProjectDuration { get; set; } = string.Empty;
 
     /// <summary>
     /// Bundle image URL
@@ -499,6 +544,21 @@ public class NearbyBundleDto
     /// Number of reviews
     /// </summary>
     public int ReviewCount { get; set; }
+
+    /// <summary>
+    /// Number of times rented
+    /// </summary>
+    public int RentalCount { get; set; }
+
+    /// <summary>
+    /// Whether the bundle is featured
+    /// </summary>
+    public bool IsFeatured { get; set; }
+
+    /// <summary>
+    /// When the bundle was created
+    /// </summary>
+    public DateTime CreatedAt { get; set; }
 }
 
 /// <summary>

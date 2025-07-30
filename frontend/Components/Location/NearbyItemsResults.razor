@@ -1,0 +1,878 @@
+@using ToolsSharing.Frontend.Models.Location
+@using frontend.Models
+@using frontend.Services
+@using ToolsSharing.Frontend.Utilities
+@using MudBlazor
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+@inject IUrlService UrlService
+
+<MudStack Spacing="3">
+    @if (ShowHeader)
+    {
+        <!-- Header -->
+        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="@HeaderTypography" Color="Color.Primary">
+                <MudIcon Icon="@Icons.Material.Filled.Search" Class="mr-2" />
+                @Title
+            </MudText>
+            
+            @if (ShowResultsCount && (Tools.Any() || Bundles.Any()))
+            {
+                <MudChip Color="Color.Primary" 
+                         Size="Size.Small" 
+                         Text="@GetResultsCountText()" 
+                         T="string" />
+            }
+        </MudStack>
+    }
+
+    @if (ShowFilters && (Tools.Any() || Bundles.Any()))
+    {
+        <!-- Filters -->
+        <MudPaper Class="pa-3" Elevation="1">
+            <MudStack Spacing="3">
+                <!-- Item Type Filter -->
+                <MudStack Row Spacing="2" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">Show:</MudText>
+                    <MudButtonGroup OverrideStyles="false" Class="item-type-filter">
+                        <MudButton Variant="@(itemTypeFilter == ItemTypeFilter.All ? Variant.Filled : Variant.Outlined)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => SetItemTypeFilter(ItemTypeFilter.All))"
+                                   StartIcon="@Icons.Material.Filled.Apps"
+                                   Size="Size.Small">
+                            All Items (@(Tools.Count + Bundles.Count))
+                        </MudButton>
+                        <MudButton Variant="@(itemTypeFilter == ItemTypeFilter.ToolsOnly ? Variant.Filled : Variant.Outlined)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => SetItemTypeFilter(ItemTypeFilter.ToolsOnly))"
+                                   StartIcon="@Icons.Material.Filled.Build"
+                                   Size="Size.Small"
+                                   Disabled="@(!Tools.Any())">
+                            Tools Only (@Tools.Count)
+                        </MudButton>
+                        <MudButton Variant="@(itemTypeFilter == ItemTypeFilter.BundlesOnly ? Variant.Filled : Variant.Outlined)"
+                                   Color="Color.Primary"
+                                   OnClick="@(() => SetItemTypeFilter(ItemTypeFilter.BundlesOnly))"
+                                   StartIcon="@Icons.Material.Filled.Inventory"
+                                   Size="Size.Small"
+                                   Disabled="@(!Bundles.Any())">
+                            Bundles Only (@Bundles.Count)
+                        </MudButton>
+                    </MudButtonGroup>
+                </MudStack>
+
+                <!-- Additional Filters -->
+                <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                    <!-- Sort By -->
+                    <MudSelect @bind-Value="sortBy"
+                               Label="Sort by"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Style="min-width: 150px;"
+                               @bind-Value:after="ApplySorting">
+                        <MudSelectItem T="string" Value="@("distance")">Distance</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("price-low")">Price: Low to High</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("price-high")">Price: High to Low</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("name")">Name</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("rating")">Rating</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("newest")">Newest First</MudSelectItem>
+                        <MudSelectItem T="string" Value="@("relevance")">Relevance</MudSelectItem>
+                    </MudSelect>
+
+                    <!-- Category Filter -->
+                    <MudSelect @bind-Value="categoryFilter"
+                               Label="Category"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Style="min-width: 150px;"
+                               @bind-Value:after="ApplyFilters">
+                        <MudSelectItem T="string" Value="@string.Empty">All Categories</MudSelectItem>
+                        @foreach (var category in GetAvailableCategories())
+                        {
+                            <MudSelectItem T="string" Value="@category">@category</MudSelectItem>
+                        }
+                    </MudSelect>
+
+                    <!-- Distance Filter -->
+                    <MudSelect @bind-Value="distanceFilter"
+                               Label="Max Distance"
+                               Variant="Variant.Outlined"
+                               Dense="true"
+                               Style="min-width: 120px;"
+                               @bind-Value:after="ApplyFilters">
+                        <MudSelectItem T="DistanceBand?" Value="@((DistanceBand?)null)">All Distances</MudSelectItem>
+                        <MudSelectItem T="DistanceBand?" Value="@DistanceBand.VeryClose">Very Close</MudSelectItem>
+                        <MudSelectItem T="DistanceBand?" Value="@DistanceBand.Nearby">Nearby</MudSelectItem>
+                        <MudSelectItem T="DistanceBand?" Value="@DistanceBand.Moderate">Moderate Distance</MudSelectItem>
+                    </MudSelect>
+
+                    <!-- Availability Filter -->
+                    <MudCheckBox @bind-Value="availableOnlyFilter"
+                                 Label="Available Only"
+                                 Color="Color.Success"
+                                 Dense="true"
+                                 @bind-Value:after="ApplyFilters" />
+
+                    @if (HasActiveFilters())
+                    {
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Error"
+                                   StartIcon="@Icons.Material.Filled.Clear"
+                                   OnClick="ClearFilters"
+                                   Size="Size.Small">
+                            Clear Filters
+                        </MudButton>
+                    }
+                </MudStack>
+            </MudStack>
+        </MudPaper>
+    }
+
+    @if (IsLoading)
+    {
+        <!-- Loading State -->
+        <MudPaper Class="pa-8 text-center" Elevation="2">
+            <MudProgressCircular Color="Color.Primary" Size="Size.Large" Indeterminate="true" />
+            <MudText Typo="Typo.h6" Class="mt-4">Loading nearby items...</MudText>
+        </MudPaper>
+    }
+    else if (!filteredItems.Any())
+    {
+        <!-- Empty State -->
+        <MudPaper Class="pa-8 text-center" Elevation="2">
+            <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" Class="mb-4" />
+            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mb-2">
+                @(HasActiveFilters() ? "No items match your filters" : "No items found")
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                @if (HasActiveFilters())
+                {
+                    <span>Try adjusting your search criteria or clear the filters.</span>
+                }
+                else
+                {
+                    <span>@EmptyStateMessage</span>
+                }
+            </MudText>
+            
+            @if (HasActiveFilters())
+            {
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           StartIcon="@Icons.Material.Filled.Clear"
+                           OnClick="ClearFilters">
+                    Clear Filters
+                </MudButton>
+            }
+        </MudPaper>
+    }
+    else
+    {
+        <!-- Mixed Results Grid -->
+        <MudGrid>
+            @foreach (var item in GetDisplayedItems())
+            {
+                <MudItem xs="12" sm="6" md="@(Compact ? 6 : 4)" lg="@(Compact ? 4 : 3)">
+                    @if (item.ItemType == ItemType.Tool)
+                    {
+                        <!-- Tool Card -->
+                        <MudCard Elevation="@CardElevation" 
+                                 Class="item-result-card tool-card h-100" 
+                                 Style="@($"border-radius: 12px; transition: transform 0.2s; cursor: pointer; {CardStyle}")"
+                                 @onclick="@(() => OnItemClick(item))">
+                            
+                            <!-- Tool Image -->
+                            <div style="position: relative; height: 200px; border-radius: 12px 12px 0 0; overflow: hidden;">
+                                @{
+                                    var toolImageUrl = !string.IsNullOrEmpty(item.ImageUrl) ? UrlService.GetFileUrl(item.ImageUrl) : string.Empty;
+                                    var hasValidToolImage = !string.IsNullOrEmpty(toolImageUrl);
+                                }
+                                
+                                @if (hasValidToolImage)
+                                {
+                                    <img src="@toolImageUrl" 
+                                         style="width: 100%; height: 200px; object-fit: cover; @(GetImageLoadError(item.Id) ? "display: none;" : "")" 
+                                         class="item-image"
+                                         @onerror="@(() => HandleImageError(item.Id))" 
+                                         @onload="@(() => HandleImageLoad(item.Id))" />
+                                }
+                                
+                                @if (!hasValidToolImage || GetImageLoadError(item.Id))
+                                {
+                                    <div class="item-image-placeholder">
+                                        <MudIcon Icon="@Icons.Material.Filled.Build" 
+                                                 Size="Size.Large" 
+                                                 Color="Color.Secondary" 
+                                                 Style="font-size: 3rem;" />
+                                    </div>
+                                }
+
+                                <!-- Item Type Badge -->
+                                <MudChip Class="item-type-badge"
+                                         Size="Size.Small"
+                                         Color="Color.Info"
+                                         Icon="@Icons.Material.Filled.Build"
+                                         Text="Tool"
+                                         T="string" />
+
+                                <!-- Distance Band Overlay -->
+                                <MudChip Class="distance-band-chip"
+                                         Size="Size.Small"
+                                         Color="@GetDistanceBandColor(item.DistanceBand)"
+                                         Text="@LocationUtilities.GetDistanceBandText(item.DistanceBand)"
+                                         T="string" />
+                            </div>
+
+                            <MudCardContent Class="pa-4">
+                                <MudStack Spacing="2">
+                                    <!-- Tool Name -->
+                                    <MudText Typo="Typo.h6" Class="item-name">@item.Name</MudText>
+
+                                    <!-- Description -->
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="item-description">
+                                        @GetTruncatedDescription(item.Description)
+                                    </MudText>
+
+                                    <!-- Category and Condition -->
+                                    <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                                        <MudChip Size="Size.Small" Color="Color.Primary" Text="@item.Category" T="string" />
+                                        @if (!string.IsNullOrEmpty(item.ToolCondition))
+                                        {
+                                            <MudChip Size="Size.Small" Color="@GetConditionColor(item.ToolCondition)" Text="@item.ToolCondition" T="string" />
+                                        }
+                                    </MudStack>
+
+                                    <!-- Owner Info -->
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Secondary" />
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@item.OwnerName</MudText>
+                                    </MudStack>
+
+                                    <!-- Pricing -->
+                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                        <MudText Typo="Typo.h6" Color="Color.Primary">
+                                            $@item.Price.ToString("F2")
+                                        </MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            per day
+                                        </MudText>
+                                    </MudStack>
+
+                                    <!-- Availability Status -->
+                                    <MudChip Size="Size.Small"
+                                             Color="@(item.IsAvailable ? Color.Success : Color.Error)"
+                                             Icon="@(item.IsAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                             Text="@(item.IsAvailable ? "Available" : "Unavailable")"
+                                             T="string" />
+                                </MudStack>
+                            </MudCardContent>
+
+                            <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
+                                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="@(item.IsAvailable ? Color.Primary : Color.Secondary)"
+                                               OnClick="@(() => OnItemClick(item))"
+                                               Disabled="@(!item.IsAvailable)"
+                                               StartIcon="@Icons.Material.Filled.Visibility"
+                                               Size="Size.Small">
+                                        View Tool
+                                    </MudButton>
+
+                                    @if (ShowQuickActions)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.FavoriteBorder"
+                                                       Size="Size.Small"
+                                                       Color="Color.Secondary"
+                                                       OnClick="@(() => OnFavoriteClick(item))" />
+                                    }
+                                </MudStack>
+                            </MudCardActions>
+                        </MudCard>
+                    }
+                    else
+                    {
+                        <!-- Bundle Card -->
+                        <MudCard Elevation="@CardElevation" 
+                                 Class="item-result-card bundle-card h-100" 
+                                 Style="@($"border-radius: 12px; transition: transform 0.2s; cursor: pointer; {CardStyle}")"
+                                 @onclick="@(() => OnItemClick(item))">
+                            
+                            <!-- Bundle Image -->
+                            <div style="position: relative; height: 200px; border-radius: 12px 12px 0 0; overflow: hidden;">
+                                @{
+                                    var bundleImageUrl = !string.IsNullOrEmpty(item.ImageUrl) ? UrlService.GetFileUrl(item.ImageUrl) : string.Empty;
+                                    var hasValidBundleImage = !string.IsNullOrEmpty(bundleImageUrl);
+                                }
+                                
+                                @if (hasValidBundleImage)
+                                {
+                                    <img src="@bundleImageUrl" 
+                                         style="width: 100%; height: 200px; object-fit: cover; @(GetImageLoadError(item.Id) ? "display: none;" : "")" 
+                                         class="item-image"
+                                         @onerror="@(() => HandleImageError(item.Id))" 
+                                         @onload="@(() => HandleImageLoad(item.Id))" />
+                                }
+                                
+                                @if (!hasValidBundleImage || GetImageLoadError(item.Id))
+                                {
+                                    <div class="item-image-placeholder">
+                                        <MudIcon Icon="@Icons.Material.Filled.Inventory" 
+                                                 Size="Size.Large" 
+                                                 Color="Color.Secondary" 
+                                                 Style="font-size: 3rem;" />
+                                    </div>
+                                }
+
+                                <!-- Item Type Badge -->
+                                <MudChip Class="item-type-badge"
+                                         Size="Size.Small"
+                                         Color="Color.Warning"
+                                         Icon="@Icons.Material.Filled.Inventory"
+                                         Text="Bundle"
+                                         T="string" />
+
+                                <!-- Distance Band Overlay -->
+                                <MudChip Class="distance-band-chip"
+                                         Size="Size.Small"
+                                         Color="@GetDistanceBandColor(item.DistanceBand)"
+                                         Text="@LocationUtilities.GetDistanceBandText(item.DistanceBand)"
+                                         T="string" />
+
+                                <!-- Featured Badge -->
+                                @if (item.IsFeatured)
+                                {
+                                    <MudChip Class="featured-badge"
+                                             Size="Size.Small"
+                                             Color="Color.Success"
+                                             Icon="@Icons.Material.Filled.Star"
+                                             Text="Featured"
+                                             T="string" />
+                                }
+                            </div>
+
+                            <MudCardContent Class="pa-4">
+                                <MudStack Spacing="2">
+                                    <!-- Bundle Name -->
+                                    <MudText Typo="Typo.h6" Class="item-name">@item.Name</MudText>
+
+                                    <!-- Description -->
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="item-description">
+                                        @GetTruncatedDescription(item.Description)
+                                    </MudText>
+
+                                    <!-- Category and Tools Count -->
+                                    <MudStack Row Spacing="1" AlignItems="AlignItems.Center">
+                                        <MudChip Size="Size.Small" Color="Color.Primary" Text="@item.Category" T="string" />
+                                        <MudChip Size="Size.Small" Color="Color.Info" Text="@($"{item.ToolCount} tools")" T="string" />
+                                    </MudStack>
+
+                                    <!-- Owner Info -->
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Secondary" />
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">@item.OwnerName</MudText>
+                                    </MudStack>
+
+                                    <!-- Pricing with Discount -->
+                                    <div>
+                                        @if (item.BundleDiscount > 0)
+                                        {
+                                            <MudStack Row AlignItems="AlignItems.Center" Spacing="1" Class="mb-1">
+                                                <MudText Typo="Typo.body2" 
+                                                         Style="text-decoration: line-through;" 
+                                                         Color="Color.Secondary">
+                                                    $@item.OriginalPrice.ToString("F2")/day
+                                                </MudText>
+                                                <MudChip Size="Size.Small" 
+                                                         Color="Color.Success" 
+                                                         Text="@($"-{item.BundleDiscount:F0}%")" 
+                                                         T="string" />
+                                            </MudStack>
+                                        }
+                                        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                            <MudText Typo="Typo.h6" Color="Color.Primary">
+                                                $@item.Price.ToString("F2")
+                                            </MudText>
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                per day
+                                            </MudText>
+                                        </MudStack>
+                                    </div>
+
+                                    <!-- Availability Status -->
+                                    <MudChip Size="Size.Small"
+                                             Color="@(item.IsAvailable ? Color.Success : Color.Error)"
+                                             Icon="@(item.IsAvailable ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Cancel)"
+                                             Text="@(item.IsAvailable ? "Available" : "Unavailable")"
+                                             T="string" />
+                                </MudStack>
+                            </MudCardContent>
+
+                            <MudCardActions Class="pa-4" @onclick:stopPropagation="true">
+                                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="w-100">
+                                    <MudButton Variant="Variant.Filled"
+                                               Color="@(item.IsAvailable ? Color.Primary : Color.Secondary)"
+                                               OnClick="@(() => OnItemClick(item))"
+                                               Disabled="@(!item.IsAvailable)"
+                                               StartIcon="@Icons.Material.Filled.Visibility"
+                                               Size="Size.Small">
+                                        View Bundle
+                                    </MudButton>
+
+                                    @if (ShowQuickActions)
+                                    {
+                                        <MudIconButton Icon="@Icons.Material.Filled.FavoriteBorder"
+                                                       Size="Size.Small"
+                                                       Color="Color.Secondary"
+                                                       OnClick="@(() => OnFavoriteClick(item))" />
+                                    }
+                                </MudStack>
+                            </MudCardActions>
+                        </MudCard>
+                    }
+                </MudItem>
+            }
+        </MudGrid>
+
+        <!-- Pagination -->
+        @if (ShowPagination && totalPages > 1)
+        {
+            <div class="d-flex justify-center mt-4">
+                <MudPagination Count="@totalPages"
+                               Selected="@currentPage"
+                               SelectedChanged="OnPageChanged"
+                               Color="Color.Primary"
+                               Variant="Variant.Filled"
+                               ShowFirstButton="true"
+                               ShowLastButton="true"
+                               BoundaryCount="1"
+                               MiddleCount="3" />
+            </div>
+        }
+
+        <!-- Load More (for infinite scroll) -->
+        @if (ShowLoadMore && hasMoreItems)
+        {
+            <div class="d-flex justify-center mt-4">
+                <MudButton Variant="Variant.Outlined"
+                           Color="Color.Primary"
+                           OnClick="OnLoadMore"
+                           Disabled="@isLoadingMore"
+                           StartIcon="@(isLoadingMore ? Icons.Material.Filled.HourglassEmpty : Icons.Material.Filled.ExpandMore)"
+                           Size="Size.Large">
+                    @if (isLoadingMore)
+                    {
+                        <span>Loading...</span>
+                    }
+                    else
+                    {
+                        <span>Load More Items</span>
+                    }
+                </MudButton>
+            </div>
+        }
+    }
+</MudStack>
+
+<style>
+    .item-result-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
+    }
+
+    .tool-card {
+        border-left: 4px solid var(--mud-palette-info);
+    }
+
+    .bundle-card {
+        border-left: 4px solid var(--mud-palette-warning);
+    }
+
+    .item-image-placeholder {
+        width: 100%;
+        height: 200px;
+        background: linear-gradient(45deg, #f5f5f5 0%, #e0e0e0 100%);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .item-type-badge {
+        position: absolute;
+        top: 8px;
+        left: 8px;
+        z-index: 2;
+    }
+
+    .distance-band-chip {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        z-index: 2;
+    }
+
+    .featured-badge {
+        position: absolute;
+        top: 44px;
+        left: 8px;
+        z-index: 2;
+    }
+
+    .item-name {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.3;
+        max-height: 2.6em;
+    }
+
+    .item-description {
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        line-height: 1.4;
+        max-height: 2.8em;
+    }
+
+    .item-type-filter {
+        width: 100%;
+    }
+
+    .item-type-filter .mud-button-group {
+        width: 100%;
+        display: flex;
+    }
+
+    .item-type-filter .mud-button-group > .mud-button {
+        flex: 1;
+        min-width: 0;
+    }
+</style>
+
+@code {
+    [Parameter] public List<NearbyToolDto> Tools { get; set; } = new();
+    [Parameter] public List<NearbyBundleDto> Bundles { get; set; } = new();
+    [Parameter] public string Title { get; set; } = "Nearby Items";
+    [Parameter] public bool ShowHeader { get; set; } = true;
+    [Parameter] public Typo HeaderTypography { get; set; } = Typo.h6;
+    [Parameter] public bool ShowResultsCount { get; set; } = true;
+    [Parameter] public bool ShowFilters { get; set; } = true;
+    [Parameter] public bool ShowQuickActions { get; set; } = true;
+    [Parameter] public bool ShowPagination { get; set; } = true;
+    [Parameter] public bool ShowLoadMore { get; set; } = false;
+    [Parameter] public bool IsLoading { get; set; } = false;
+    [Parameter] public bool Compact { get; set; } = false;
+    [Parameter] public int CardElevation { get; set; } = 4;
+    [Parameter] public string CardStyle { get; set; } = "";
+    [Parameter] public int ItemsPerPage { get; set; } = 12;
+    [Parameter] public string EmptyStateMessage { get; set; } = "Try expanding your search radius or choosing a different location.";
+
+    // Events
+    [Parameter] public EventCallback<UnifiedItem> ItemClicked { get; set; }
+    [Parameter] public EventCallback<UnifiedItem> FavoriteClicked { get; set; }
+    [Parameter] public EventCallback<int> PageChanged { get; set; }
+    [Parameter] public EventCallback LoadMoreRequested { get; set; }
+
+    // Enums
+    public enum ItemTypeFilter
+    {
+        All,
+        ToolsOnly,
+        BundlesOnly
+    }
+
+    public enum ItemType
+    {
+        Tool,
+        Bundle
+    }
+
+    // Unified Item Model
+    public class UnifiedItem
+    {
+        public string Id { get; set; } = "";
+        public ItemType ItemType { get; set; }
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string Category { get; set; } = "";
+        public string OwnerName { get; set; } = "";
+        public string OwnerId { get; set; } = "";
+        public decimal Price { get; set; }
+        public decimal OriginalPrice { get; set; }
+        public bool IsAvailable { get; set; }
+        public string ImageUrl { get; set; } = "";
+        public DistanceBand DistanceBand { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public double? Rating { get; set; }
+        public bool IsFeatured { get; set; }
+        
+        // Tool-specific properties
+        public string? ToolCondition { get; set; }
+        
+        // Bundle-specific properties
+        public int ToolCount { get; set; }
+        public decimal BundleDiscount { get; set; }
+    }
+
+    // Internal state
+    private ItemTypeFilter itemTypeFilter = ItemTypeFilter.All;
+    private string sortBy = "distance";
+    private string categoryFilter = "";
+    private DistanceBand? distanceFilter = null;
+    private bool availableOnlyFilter = false;
+    private int currentPage = 1;
+    private bool isLoadingMore = false;
+    private bool hasMoreItems = true;
+    private Dictionary<string, bool> imageLoadErrors = new();
+
+    // Computed properties
+    private List<UnifiedItem> allItems => GetUnifiedItems();
+    private List<UnifiedItem> filteredItems => GetFilteredAndSortedItems();
+    private int totalPages => (int)Math.Ceiling((double)filteredItems.Count / ItemsPerPage);
+
+    private List<UnifiedItem> GetUnifiedItems()
+    {
+        var items = new List<UnifiedItem>();
+
+        // Add tools if not filtered out
+        if (itemTypeFilter == ItemTypeFilter.All || itemTypeFilter == ItemTypeFilter.ToolsOnly)
+        {
+            items.AddRange(Tools.Select(tool => new UnifiedItem
+            {
+                Id = tool.Id.ToString(),
+                ItemType = ItemType.Tool,
+                Name = tool.Name,
+                Description = tool.Description,
+                Category = tool.Category,
+                OwnerName = tool.OwnerName,
+                OwnerId = tool.OwnerId,
+                Price = tool.DailyRate,
+                OriginalPrice = tool.DailyRate,
+                IsAvailable = tool.IsAvailable,
+                ImageUrl = tool.ImageUrls.Any() ? tool.ImageUrls.First() : null,
+                DistanceBand = tool.DistanceBand,
+                CreatedAt = tool.CreatedAt,
+                Rating = (double?)tool.AverageRating,
+                IsFeatured = tool.IsFeatured,
+                ToolCondition = tool.Condition
+            }));
+        }
+
+        // Add bundles if not filtered out
+        if (itemTypeFilter == ItemTypeFilter.All || itemTypeFilter == ItemTypeFilter.BundlesOnly)
+        {
+            items.AddRange(Bundles.Select(bundle => new UnifiedItem
+            {
+                Id = bundle.Id.ToString(),
+                ItemType = ItemType.Bundle,
+                Name = bundle.Name,
+                Description = bundle.Description,
+                Category = bundle.Category,
+                OwnerName = bundle.OwnerName,
+                OwnerId = bundle.OwnerId,
+                Price = bundle.DiscountedCost,
+                OriginalPrice = bundle.OriginalCost,
+                IsAvailable = bundle.IsAvailable,
+                ImageUrl = bundle.ImageUrl,
+                DistanceBand = bundle.DistanceBand,
+                CreatedAt = bundle.CreatedAt,
+                Rating = null,
+                IsFeatured = bundle.IsFeatured,
+                ToolCount = bundle.ToolCount,
+                BundleDiscount = bundle.DiscountPercentage
+            }));
+        }
+
+        return items;
+    }
+
+    private List<UnifiedItem> GetFilteredAndSortedItems()
+    {
+        var filtered = allItems.AsEnumerable();
+
+        // Apply filters
+        if (!string.IsNullOrEmpty(categoryFilter))
+        {
+            filtered = filtered.Where(i => i.Category.Equals(categoryFilter, StringComparison.OrdinalIgnoreCase));
+        }
+
+        if (distanceFilter.HasValue)
+        {
+            filtered = filtered.Where(i => (int)i.DistanceBand <= (int)distanceFilter.Value);
+        }
+
+        if (availableOnlyFilter)
+        {
+            filtered = filtered.Where(i => i.IsAvailable);
+        }
+
+        // Apply sorting
+        filtered = sortBy switch
+        {
+            "distance" => filtered.OrderBy(i => (int)i.DistanceBand),
+            "price-low" => filtered.OrderBy(i => i.Price),
+            "price-high" => filtered.OrderByDescending(i => i.Price),
+            "name" => filtered.OrderBy(i => i.Name),
+            "rating" => filtered.OrderByDescending(i => i.Rating ?? 0),
+            "newest" => filtered.OrderByDescending(i => i.CreatedAt),
+            "relevance" => filtered.OrderByDescending(i => i.IsFeatured).ThenBy(i => (int)i.DistanceBand),
+            _ => filtered.OrderBy(i => (int)i.DistanceBand)
+        };
+
+        return filtered.ToList();
+    }
+
+    private List<UnifiedItem> GetDisplayedItems()
+    {
+        if (ShowPagination)
+        {
+            var startIndex = (currentPage - 1) * ItemsPerPage;
+            return filteredItems.Skip(startIndex).Take(ItemsPerPage).ToList();
+        }
+
+        return filteredItems;
+    }
+
+    private List<string> GetAvailableCategories()
+    {
+        var toolCategories = Tools.Select(t => t.Category);
+        var bundleCategories = Bundles.Select(b => b.Category);
+        return toolCategories.Concat(bundleCategories).Distinct().OrderBy(c => c).ToList();
+    }
+
+    private string GetResultsCountText()
+    {
+        var toolCount = itemTypeFilter == ItemTypeFilter.BundlesOnly ? 0 : Tools.Count;
+        var bundleCount = itemTypeFilter == ItemTypeFilter.ToolsOnly ? 0 : Bundles.Count;
+        var total = toolCount + bundleCount;
+        
+        if (total == 0) return "0 items";
+        
+        var parts = new List<string>();
+        if (toolCount > 0) parts.Add($"{toolCount} tool{(toolCount != 1 ? "s" : "")}");
+        if (bundleCount > 0) parts.Add($"{bundleCount} bundle{(bundleCount != 1 ? "s" : "")}");
+        
+        return string.Join(", ", parts);
+    }
+
+    private bool HasActiveFilters()
+    {
+        return !string.IsNullOrEmpty(categoryFilter) ||
+               distanceFilter.HasValue ||
+               availableOnlyFilter ||
+               itemTypeFilter != ItemTypeFilter.All;
+    }
+
+    private async Task SetItemTypeFilter(ItemTypeFilter filter)
+    {
+        itemTypeFilter = filter;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private async Task ApplyFilters()
+    {
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private async Task ApplySorting()
+    {
+        StateHasChanged();
+    }
+
+    private async Task ClearFilters()
+    {
+        itemTypeFilter = ItemTypeFilter.All;
+        categoryFilter = "";
+        distanceFilter = null;
+        availableOnlyFilter = false;
+        currentPage = 1;
+        StateHasChanged();
+    }
+
+    private async Task OnPageChanged(int page)
+    {
+        currentPage = page;
+        await PageChanged.InvokeAsync(page);
+        StateHasChanged();
+    }
+
+    private async Task OnLoadMore()
+    {
+        isLoadingMore = true;
+        await LoadMoreRequested.InvokeAsync();
+        isLoadingMore = false;
+    }
+
+    private async Task OnItemClick(UnifiedItem item)
+    {
+        await ItemClicked.InvokeAsync(item);
+        
+        var route = item.ItemType == ItemType.Tool ? $"/tools/{item.Id}" : $"/bundles/{item.Id}";
+        Navigation.NavigateTo(route);
+    }
+
+    private async Task OnFavoriteClick(UnifiedItem item)
+    {
+        await FavoriteClicked.InvokeAsync(item);
+        Snackbar.Add("Added to favorites", Severity.Success);
+    }
+
+    private Color GetDistanceBandColor(DistanceBand band)
+    {
+        return band switch
+        {
+            DistanceBand.VeryClose => Color.Success,
+            DistanceBand.Nearby => Color.Info,
+            DistanceBand.Moderate => Color.Primary,
+            DistanceBand.Far => Color.Warning,
+            DistanceBand.VeryFar => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetConditionColor(string condition)
+    {
+        return condition.ToLowerInvariant() switch
+        {
+            "excellent" => Color.Success,
+            "very good" => Color.Info,
+            "good" => Color.Primary,
+            "fair" => Color.Warning,
+            "poor" => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private string GetTruncatedDescription(string description)
+    {
+        if (string.IsNullOrWhiteSpace(description))
+            return "No description available";
+
+        return description.Length > 100 
+            ? description.Substring(0, 100) + "..." 
+            : description;
+    }
+
+    private bool GetImageLoadError(string itemId)
+    {
+        return imageLoadErrors.GetValueOrDefault(itemId, false);
+    }
+
+    private void HandleImageError(string itemId)
+    {
+        imageLoadErrors[itemId] = true;
+        StateHasChanged();
+    }
+
+    private void HandleImageLoad(string itemId)
+    {
+        imageLoadErrors[itemId] = false;
+        StateHasChanged();
+    }
+}

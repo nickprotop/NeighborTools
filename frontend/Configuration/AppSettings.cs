@@ -32,6 +32,7 @@ namespace ToolsSharing.Frontend.Configuration
 
     public class MapSettings
     {
+        public string Provider { get; set; } = "OpenStreetMap";
         public string MapTileUrl { get; set; } = "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png";
         public string MapAttribution { get; set; } = "© OpenStreetMap contributors";
         public int DefaultZoom { get; set; } = 13;
@@ -42,6 +43,33 @@ namespace ToolsSharing.Frontend.Configuration
         public bool EnableGeolocation { get; set; } = true;
         public int LocationTimeout { get; set; } = 10000;
         public int MaxLocationAge { get; set; } = 300000;
+        public OpenStreetMapSettings OpenStreetMap { get; set; } = new();
+        public GoogleMapsSettings GoogleMaps { get; set; } = new();
+        public MapboxSettings Mapbox { get; set; } = new();
+    }
+
+    public class OpenStreetMapSettings
+    {
+        public string BaseUrl { get; set; } = "https://{s}.tile.openstreetmap.org";
+        public string TilePattern { get; set; } = "{z}/{x}/{y}.png";
+        public string[] Subdomains { get; set; } = new[] { "a", "b", "c" };
+        public string Attribution { get; set; } = "© OpenStreetMap contributors";
+        public int MaxZoom { get; set; } = 19;
+    }
+
+    public class GoogleMapsSettings
+    {
+        public string ApiKey { get; set; } = "";
+        public string MapType { get; set; } = "roadmap";
+        public string Language { get; set; } = "en";
+        public string Region { get; set; } = "US";
+    }
+
+    public class MapboxSettings
+    {
+        public string AccessToken { get; set; } = "";
+        public string StyleUrl { get; set; } = "mapbox://styles/mapbox/streets-v11";
+        public string Attribution { get; set; } = "© Mapbox © OpenStreetMap";
     }
 
     public class MapCenter

@@ -18,11 +18,9 @@ public class LocationService : ILocationService
     private readonly IJSRuntime _jsRuntime;
     private readonly ILogger<LocationService> _logger;
 
-    // Cache keys and expiration times
+    // Cache keys and expiration times (only for popular locations)
     private const string PopularLocationsCacheKey = "popular_locations";
-    private const string LocationSuggestionsCacheKeyPrefix = "location_suggestions_";
     private static readonly TimeSpan PopularLocationsCacheDuration = TimeSpan.FromMinutes(30);
-    private static readonly TimeSpan LocationSuggestionsCacheDuration = TimeSpan.FromMinutes(10);
 
     // API endpoints
     private const string SearchEndpoint = "/api/location/search";
@@ -176,27 +174,16 @@ public class LocationService : ILocationService
                 return new List<LocationOption>();
             }
 
-            // Check cache first
-            var cacheKey = $"{LocationSuggestionsCacheKeyPrefix}{query.ToLowerInvariant()}_{maxResults}";
-            if (_cache.TryGetValue(cacheKey, out List<LocationOption>? cachedResults) && cachedResults != null)
-            {
-                _logger.LogDebug("Returning cached location suggestions: query='{Query}', count={Count}", query, cachedResults.Count);
-                return cachedResults;
-            }
-
             // Validate maxResults range
             maxResults = Math.Max(1, Math.Min(maxResults, 20));
 
             var url = $"{SuggestionsEndpoint}?query={Uri.EscapeDataString(query)}&maxResults={maxResults}";
 
-            // Make API call
+            // Make API call - backend has 30-minute caching
             var response = await MakeApiCallWithRetryAsync(url);
             if (response != null && response.Success && response.Data != null)
             {
-                // Cache the results
-                _cache.Set(cacheKey, response.Data, LocationSuggestionsCacheDuration);
-                
-                _logger.LogInformation("Location suggestions fetched and cached: query='{Query}', count={Count}", 
+                _logger.LogInformation("Location suggestions completed: query='{Query}', results={ResultCount}", 
                     query, response.Data.Count);
                 return response.Data;
             }
@@ -372,8 +359,7 @@ public class LocationService : ILocationService
             if (cacheField?.GetValue(_cache) is IDictionary<object, object> cacheDict)
             {
                 var keysToRemove = cacheDict.Keys
-                    .Where(key => key.ToString()?.StartsWith(PopularLocationsCacheKey) == true ||
-                                  key.ToString()?.StartsWith(LocationSuggestionsCacheKeyPrefix) == true)
+                    .Where(key => key.ToString()?.StartsWith(PopularLocationsCacheKey) == true)
                     .ToList();
 
                 foreach (var key in keysToRemove)
@@ -381,7 +367,7 @@ public class LocationService : ILocationService
                     _cache.Remove(key);
                 }
 
-                _logger.LogInformation("Cleared {Count} location cache entries", keysToRemove.Count);
+                _logger.LogInformation("Cleared {Count} popular location cache entries", keysToRemove.Count);
             }
         }
         catch (Exception ex)

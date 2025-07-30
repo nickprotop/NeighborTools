@@ -18,8 +18,9 @@
     "HomePageUrl": "https://localhost"
   },
   "MapSettings": {
-    "_comment": "Map display configuration for location features",
-    "_instructions": "Configure map settings for displaying tool and bundle locations. MapTileUrl supports OpenStreetMap, Google Maps, or other tile providers.",
+    "_comment": "Multi-provider map configuration for location features",
+    "_instructions": "Choose map provider: OpenStreetMap (free), GoogleMaps (API key required), Mapbox (access token required)",
+    "Provider": "OpenStreetMap",
     "MapTileUrl": "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
     "MapAttribution": "© OpenStreetMap contributors",
     "DefaultZoom": 13,
@@ -33,6 +34,29 @@
     "ShowLocationControls": true,
     "EnableGeolocation": true,
     "LocationTimeout": 10000,
-    "MaxLocationAge": 300000
+    "MaxLocationAge": 300000,
+    "OpenStreetMap": {
+      "_comment": "OpenStreetMap configuration (free, no API key required)",
+      "BaseUrl": "https://{s}.tile.openstreetmap.org",
+      "TilePattern": "{z}/{x}/{y}.png",
+      "Subdomains": ["a", "b", "c"],
+      "Attribution": "© OpenStreetMap contributors",
+      "MaxZoom": 19
+    },
+    "GoogleMaps": {
+      "_comment": "Google Maps configuration (requires API key from Google Cloud Console)",
+      "_instructions": "Get API key from https://console.cloud.google.com/apis/credentials",
+      "ApiKey": "",
+      "MapType": "roadmap",
+      "Language": "en",
+      "Region": "US"
+    },
+    "Mapbox": {
+      "_comment": "Mapbox configuration (requires access token from Mapbox account)",
+      "_instructions": "Get access token from https://account.mapbox.com/access-tokens/",
+      "AccessToken": "",
+      "StyleUrl": "mapbox://styles/mapbox/streets-v11",
+      "Attribution": "© Mapbox © OpenStreetMap"
+    }
   }
 }

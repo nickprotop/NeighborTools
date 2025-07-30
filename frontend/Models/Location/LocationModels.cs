@@ -1,61 +1,95 @@
 namespace ToolsSharing.Frontend.Models.Location;
 
 /// <summary>
-/// Represents a location option from geocoding or database (mirrors backend)
+/// Represents a location option from geocoding or database (mirrors backend exactly)
 /// </summary>
 public class LocationOption
 {
     public string DisplayName { get; set; } = "";
-    public string Area { get; set; } = "";
-    public string City { get; set; } = "";
-    public string State { get; set; } = "";
-    public string Country { get; set; } = "";
+    public string? Area { get; set; }
+    public string? City { get; set; }
+    public string? State { get; set; }
+    public string? Country { get; set; }
+    public string? CountryCode { get; set; }
+    public string? PostalCode { get; set; }
     public decimal? Lat { get; set; }
     public decimal? Lng { get; set; }
-    public int? PrecisionRadius { get; set; }
-    public LocationSource Source { get; set; }
-    public decimal? Confidence { get; set; }
+    public int PrecisionRadius { get; set; } = 1000;
+    public LocationSource Source { get; set; } = LocationSource.Manual;
+    public decimal Confidence { get; set; } = 1.0m;
+    public LocationBounds? Bounds { get; set; }
+
+    // Required for MudBlazor 8 object-based autocomplete
+    public override bool Equals(object? obj)
+    {
+        if (obj is not LocationOption other) return false;
+        return DisplayName == other.DisplayName && 
+               Lat == other.Lat && 
+               Lng == other.Lng &&
+               Source == other.Source;
+    }
+
+    public override int GetHashCode()
+    {
+        return HashCode.Combine(DisplayName, Lat, Lng, Source);
+    }
 }
 
 /// <summary>
-/// Nearby tool search result with distance bands (mirrors backend)
+/// Nearby tool search result with distance bands (mirrors backend exactly)
 /// </summary>
 public class NearbyToolDto
 {
     public Guid Id { get; set; }
+    public string OwnerId { get; set; } = "";
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public decimal DailyRate { get; set; }
-    public string Category { get; set; } = "";
     public string Condition { get; set; } = "";
+    public string Category { get; set; } = "";
+    public string RequiredSkillLevel { get; set; } = "";
+    public string EstimatedProjectDuration { get; set; } = "";
+    public List<string> ImageUrls { get; set; } = new();
+    public string? ImageUrl { get; set; }
     public string OwnerName { get; set; } = "";
     public string LocationDisplay { get; set; } = "";
     public DistanceBand DistanceBand { get; set; }
     public string DistanceText { get; set; } = "";
-    public List<string> ImageUrls { get; set; } = new();
     public bool IsAvailable { get; set; }
-    public decimal? Rating { get; set; }
+    public decimal AverageRating { get; set; }
     public int ReviewCount { get; set; }
+    public int RentalCount { get; set; }
+    public bool IsFeatured { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 /// <summary>
-/// Nearby bundle search result with distance bands (mirrors backend)
+/// Nearby bundle search result with distance bands (mirrors backend exactly)
 /// </summary>
 public class NearbyBundleDto
 {
     public Guid Id { get; set; }
+    public string OwnerId { get; set; } = "";
     public string Name { get; set; } = "";
     public string Description { get; set; } = "";
     public string Category { get; set; } = "";
+    public string RequiredSkillLevel { get; set; } = "";
+    public string EstimatedProjectDuration { get; set; } = "";
+    public string? ImageUrl { get; set; }
+    public int ToolCount { get; set; }
+    public decimal OriginalCost { get; set; }
+    public decimal DiscountedCost { get; set; }
+    public decimal DiscountPercentage { get; set; }
     public string OwnerName { get; set; } = "";
     public string LocationDisplay { get; set; } = "";
     public DistanceBand DistanceBand { get; set; }
     public string DistanceText { get; set; } = "";
-    public string? ImageUrl { get; set; }
-    public decimal BundleDiscount { get; set; }
-    public int ToolCount { get; set; }
-    public decimal EstimatedValue { get; set; }
-    public bool IsPublished { get; set; }
+    public bool IsAvailable { get; set; }
+    public decimal AverageRating { get; set; }
+    public int ReviewCount { get; set; }
+    public int RentalCount { get; set; }
+    public bool IsFeatured { get; set; }
+    public DateTime CreatedAt { get; set; }
 }
 
 /// <summary>
@@ -120,4 +154,15 @@ public class LocationSuggestionsRequest
 {
     public string Query { get; set; } = "";
     public int MaxResults { get; set; } = 8;
+}
+
+/// <summary>
+/// Geographic bounding box (mirrors backend exactly)
+/// </summary>
+public class LocationBounds
+{
+    public decimal NorthLat { get; set; }
+    public decimal SouthLat { get; set; }
+    public decimal EastLng { get; set; }
+    public decimal WestLng { get; set; }
 }

@@ -1,0 +1,729 @@
+@using ToolsSharing.Frontend.Models.Location
+@using ToolsSharing.Frontend.Services.Location
+@using MudBlazor
+@inject ILocationService LocationService
+@inject ISnackbar Snackbar
+
+<MudPaper Class="@($"pa-6 {Class}")" Elevation="@Elevation" Style="@Style">
+    <MudStack Spacing="4">
+        <!-- Header -->
+        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <div>
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    <MudIcon Icon="@Icons.Material.Filled.NearMe" Class="mr-2" />
+                    @Title
+                </MudText>
+                @if (!string.IsNullOrEmpty(Subtitle))
+                {
+                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-1">
+                        @Subtitle
+                    </MudText>
+                }
+            </div>
+            
+            @if (ShowResultsCount && (toolResults.Any() || bundleResults.Any()))
+            {
+                <MudChip Color="Color.Primary" 
+                         Size="Size.Small" 
+                         Text="@GetResultsCountText()" 
+                         T="string" />
+            }
+        </MudStack>
+
+        <!-- Location Input -->
+        <MudStack Spacing="3">
+            <MudAutocomplete T="string"
+                             @bind-Value="selectedLocationText"
+                             @bind-Value:after="@OnLocationSelected"
+                             SearchFunc="@SearchLocationStrings"
+                             Label="Search Location"
+                             Placeholder="Enter a city, address, or landmark..."
+                             Variant="Variant.Outlined"
+                             FullWidth="true"
+                             Adornment="Adornment.End"
+                             AdornmentIcon="@Icons.Material.Filled.MyLocation"
+                             OnAdornmentClick="@OnCurrentLocationClick"
+                             Clearable="true"
+                             Required="@RequiredLocation"
+                             RequiredError="Location is required"
+                             MaxItems="8"
+                             MinCharacters="2"
+                             DebounceInterval="500"
+                             ResetValueOnEmptyText="false"
+                             CoerceText="false" 
+                             CoerceValue="true">
+                             
+                <ItemTemplate Context="locationText">
+                    <div class="d-flex align-center">
+                        <MudIcon Icon="@GetLocationIconFromText(locationText)" 
+                                 Size="Size.Small" 
+                                 Color="Color.Secondary" 
+                                 Class="mr-3" />
+                        <div>
+                            <MudText Typo="Typo.body2">@locationText</MudText>
+                            @{
+                                var locationDetails = GetLocationDetailsFromText(locationText);
+                            }
+                            @if (!string.IsNullOrEmpty(locationDetails))
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">@locationDetails</MudText>
+                            }
+                        </div>
+                    </div>
+                </ItemTemplate>
+                
+                <NoItemsTemplate>
+                    @if (!string.IsNullOrEmpty(currentSearchText) && currentSearchText.Length >= 2)
+                    {
+                        <MudText Align="Align.Center" Class="px-4 py-1">
+                            @if (isSearchingLocations)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                <span>Searching...</span>
+                            }
+                            else
+                            {
+                                <span>No locations found for "@currentSearchText"</span>
+                            }
+                        </MudText>
+                    }
+                    else
+                    {
+                        <MudText Align="Align.Center" Class="px-4 py-1" Color="Color.Secondary">
+                            Start typing to search locations...
+                        </MudText>
+                    }
+                </NoItemsTemplate>
+            </MudAutocomplete>
+
+            <!-- Search Controls -->
+            <MudGrid>
+                <!-- Radius Slider -->
+                <MudItem xs="12" sm="6">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.body2">
+                            <MudIcon Icon="@Icons.Material.Filled.RadioButtonUnchecked" Size="Size.Small" Class="mr-1" />
+                            Search Radius: @searchRadius km
+                        </MudText>
+                        <MudSlider @bind-Value="searchRadius"
+                                   Min="1"
+                                   Max="100"
+                                   Step="1"
+                                   Color="Color.Primary"
+                                   @bind-Value:after="OnSearchParametersChanged" />
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">1 km</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">100 km</MudText>
+                        </div>
+                    </MudStack>
+                </MudItem>
+
+                <!-- Search Type Toggle -->
+                <MudItem xs="12" sm="6">
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.body2">
+                            <MudIcon Icon="@Icons.Material.Filled.Category" Size="Size.Small" Class="mr-1" />
+                            Search For:
+                        </MudText>
+                        <MudButtonGroup OverrideStyles="false" Class="search-type-toggle">
+                            <MudButton Variant="@(searchType == SearchType.Tools ? Variant.Filled : Variant.Outlined)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => SetSearchType(SearchType.Tools))"
+                                       StartIcon="@Icons.Material.Filled.Build"
+                                       FullWidth="true">
+                                Tools
+                            </MudButton>
+                            <MudButton Variant="@(searchType == SearchType.Bundles ? Variant.Filled : Variant.Outlined)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => SetSearchType(SearchType.Bundles))"
+                                       StartIcon="@Icons.Material.Filled.Inventory"
+                                       FullWidth="true">
+                                Bundles
+                            </MudButton>
+                            <MudButton Variant="@(searchType == SearchType.Both ? Variant.Filled : Variant.Outlined)"
+                                       Color="Color.Primary"
+                                       OnClick="@(() => SetSearchType(SearchType.Both))"
+                                       StartIcon="@Icons.Material.Filled.Apps"
+                                       FullWidth="true">
+                                Both
+                            </MudButton>
+                        </MudButtonGroup>
+                    </MudStack>
+                </MudItem>
+            </MudGrid>
+
+            <!-- Search Actions -->
+            <MudStack Row Spacing="2" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudButton Variant="Variant.Filled"
+                           Color="Color.Primary"
+                           OnClick="@OnSearch"
+                           Disabled="@(string.IsNullOrEmpty(selectedLocationText) || isSearching)"
+                           StartIcon="@(isSearching ? null : Icons.Material.Filled.Search)"
+                           Size="Size.Large">
+                    @if (isSearching)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ml-2">Searching...</MudText>
+                    }
+                    else
+                    {
+                        <MudText>Search Nearby</MudText>
+                    }
+                </MudButton>
+
+                <MudButton Variant="Variant.Text"
+                           Color="Color.Secondary"
+                           OnClick="@OnCurrentLocationClick"
+                           Disabled="@isGettingCurrentLocation"
+                           StartIcon="@(isGettingCurrentLocation ? null : Icons.Material.Filled.MyLocation)">
+                    @if (isGettingCurrentLocation)
+                    {
+                        <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        <MudText Class="ml-2">Getting Location...</MudText>
+                    }
+                    else
+                    {
+                        <MudText>Near Me</MudText>
+                    }
+                </MudButton>
+
+                @if (hasSearched && (toolResults.Any() || bundleResults.Any()))
+                {
+                    <MudButton Variant="Variant.Text"
+                               Color="Color.Error"
+                               OnClick="@OnClearResults"
+                               StartIcon="@Icons.Material.Filled.Clear">
+                        Clear Results
+                    </MudButton>
+                }
+            </MudStack>
+        </MudStack>
+
+        <!-- Status Messages -->
+        @if (isGettingCurrentLocation)
+        {
+            <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.MyLocation">
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                    <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                    <MudText Typo="Typo.body2">Getting your current location...</MudText>
+                </MudStack>
+            </MudAlert>
+        }
+
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <MudAlert Severity="Severity.Error" ShowCloseIcon="true" CloseIconClicked="@(() => errorMessage = string.Empty)">
+                @errorMessage
+            </MudAlert>
+        }
+
+        @if (hasSearched && !toolResults.Any() && !bundleResults.Any() && !isSearching)
+        {
+            <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.SearchOff">
+                <MudText Typo="Typo.body2">
+                    No @(searchType == SearchType.Tools ? "tools" : searchType == SearchType.Bundles ? "bundles" : "items") found within @searchRadius km of @selectedLocation?.DisplayName.
+                    Try expanding your search radius or choosing a different location.
+                </MudText>
+            </MudAlert>
+        }
+
+        <!-- Search Results -->
+        @if (ResultsContent != null)
+        {
+            @ResultsContent
+        }
+        else if (hasSearched && (toolResults.Any() || bundleResults.Any()))
+        {
+            <MudDivider />
+            
+            <!-- Results Header -->
+            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                <MudText Typo="Typo.h6" Color="Color.Primary">
+                    Search Results
+                </MudText>
+                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                    Found @GetResultsCountText() within @searchRadius km
+                </MudText>
+            </MudStack>
+
+            <!-- Tool Results -->
+            @if (toolResults.Any() && (searchType == SearchType.Tools || searchType == SearchType.Both))
+            {
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                        <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Class="mr-2" />
+                        Tools (@toolResults.Count)
+                    </MudText>
+                    
+                    @foreach (var tool in toolResults.Take(MaxResultsPerType))
+                    {
+                        <MudCard Elevation="2" Class="result-card">
+                            <MudCardContent>
+                                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle2">@tool.Name</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@tool.Description</MudText>
+                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" />
+                                            @tool.OwnerName
+                                        </MudText>
+                                    </div>
+                                    <div class="text-right">
+                                        <MudChip Size="Size.Small" 
+                                                 Color="@GetDistanceBandColor(tool.DistanceBand)" 
+                                                 Text="@GetDistanceBandText(tool.DistanceBand)" 
+                                                 T="string" />
+                                        <MudText Typo="Typo.body2" Color="Color.Primary" Class="mt-1">
+                                            $@tool.DailyRate.ToString("F2")/day
+                                        </MudText>
+                                    </div>
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    }
+                    
+                    @if (toolResults.Count > MaxResultsPerType)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                            Showing @MaxResultsPerType of @toolResults.Count tools
+                        </MudText>
+                    }
+                </MudStack>
+            }
+
+            <!-- Bundle Results -->
+            @if (bundleResults.Any() && (searchType == SearchType.Bundles || searchType == SearchType.Both))
+            {
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                        <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Small" Class="mr-2" />
+                        Bundles (@bundleResults.Count)
+                    </MudText>
+                    
+                    @foreach (var bundle in bundleResults.Take(MaxResultsPerType))
+                    {
+                        <MudCard Elevation="2" Class="result-card">
+                            <MudCardContent>
+                                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
+                                    <div>
+                                        <MudText Typo="Typo.subtitle2">@bundle.Name</MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">@bundle.Description</MudText>
+                                        <MudStack Row Spacing="1" AlignItems="AlignItems.Center" Class="mt-1">
+                                            <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Small" Color="Color.Secondary" />
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @bundle.ToolCount tools included
+                                            </MudText>
+                                            <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Color="Color.Secondary" />
+                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                @bundle.OwnerName
+                                            </MudText>
+                                        </MudStack>
+                                    </div>
+                                    <div class="text-right">
+                                        <MudChip Size="Size.Small" 
+                                                 Color="@GetDistanceBandColor(bundle.DistanceBand)" 
+                                                 Text="@GetDistanceBandText(bundle.DistanceBand)" 
+                                                 T="string" />
+                                        <MudStack AlignItems="AlignItems.End" Class="mt-1">
+                                            @if (bundle.DiscountPercentage > 0)
+                                            {
+                                                <MudText Typo="Typo.caption" Color="Color.Secondary" Style="text-decoration: line-through;">
+                                                    $@bundle.OriginalCost.ToString("F2")/day
+                                                </MudText>
+                                            }
+                                            <MudText Typo="Typo.body2" Color="Color.Primary">
+                                                $@bundle.DiscountedCost.ToString("F2")/day
+                                            </MudText>
+                                            @if (bundle.DiscountPercentage > 0)
+                                            {
+                                                <MudChip Size="Size.Small" Color="Color.Success" Text="@($"-{bundle.DiscountPercentage:F0}%")" T="string" />
+                                            }
+                                        </MudStack>
+                                    </div>
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    }
+                    
+                    @if (bundleResults.Count > MaxResultsPerType)
+                    {
+                        <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                            Showing @MaxResultsPerType of @bundleResults.Count bundles
+                        </MudText>
+                    }
+                </MudStack>
+            }
+        }
+    </MudStack>
+</MudPaper>
+
+<style>
+    .search-type-toggle {
+        width: 100%;
+    }
+    
+    .search-type-toggle .mud-button-group {
+        width: 100%;
+        display: flex;
+    }
+    
+    .search-type-toggle .mud-button-group > .mud-button {
+        flex: 1;
+        min-width: 0;
+    }
+    
+    .result-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        cursor: pointer;
+    }
+    
+    .result-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+</style>
+
+@code {
+    // Component Parameters
+    [Parameter] public string Title { get; set; } = "Search Nearby";
+    [Parameter] public string Subtitle { get; set; } = "Find tools and bundles in your area";
+    [Parameter] public bool RequiredLocation { get; set; } = true;
+    [Parameter] public bool AutoSearchOnLocationChange { get; set; } = false;
+    [Parameter] public int DefaultRadius { get; set; } = 10;
+    [Parameter] public int MaxResultsPerType { get; set; } = 5;
+    [Parameter] public bool ShowResultsCount { get; set; } = true;
+    [Parameter] public int Elevation { get; set; } = 1;
+    [Parameter] public string Class { get; set; } = "";
+    [Parameter] public string Style { get; set; } = "";
+    
+    // Events
+    [Parameter] public EventCallback<LocationOption?> LocationChanged { get; set; }
+    [Parameter] public EventCallback<SearchType> SearchTypeChanged { get; set; }
+    [Parameter] public EventCallback<int> RadiusChanged { get; set; }
+    [Parameter] public EventCallback<List<NearbyToolDto>> ToolResultsChanged { get; set; }
+    [Parameter] public EventCallback<List<NearbyBundleDto>> BundleResultsChanged { get; set; }
+    [Parameter] public EventCallback<bool> SearchStateChanged { get; set; }
+    [Parameter] public EventCallback CurrentLocationRequested { get; set; }
+    
+    // Custom Results Content
+    [Parameter] public RenderFragment? ResultsContent { get; set; }
+    
+    // Enums
+    public enum SearchType
+    {
+        Tools,
+        Bundles,
+        Both
+    }
+    
+    // Internal State
+    private LocationOption? selectedLocation;
+    private string selectedLocationText = "";
+    private List<LocationOption> cachedLocationResults = new();
+    private SearchType searchType = SearchType.Both;
+    private int searchRadius = 10;
+    private bool isSearching = false;
+    private bool isSearchingLocations = false;
+    private bool isGettingCurrentLocation = false;
+    private bool hasSearched = false;
+    private string currentSearchText = "";
+    private string errorMessage = "";
+    private List<NearbyToolDto> toolResults = new();
+    private List<NearbyBundleDto> bundleResults = new();
+    
+    protected override void OnInitialized()
+    {
+        searchRadius = DefaultRadius;
+    }
+    
+    // Location search functionality (string-based like LocationAutocomplete)
+    private async Task<IEnumerable<string>> SearchLocationStrings(string searchText, CancellationToken cancellationToken)
+    {
+        currentSearchText = searchText ?? "";
+        
+        if (string.IsNullOrWhiteSpace(searchText) || searchText.Length < 2)
+        {
+            cachedLocationResults.Clear(); // Clear cache for empty search
+            return Array.Empty<string>();
+        }
+        
+        isSearchingLocations = true;
+        StateHasChanged();
+        
+        try
+        {
+            var response = await LocationService.GetLocationSuggestionsAsync(searchText);
+            cachedLocationResults = response ?? new List<LocationOption>(); // Cache the full objects
+            
+            // Return just the display names for the autocomplete
+            return cachedLocationResults.Select(loc => loc.DisplayName).Where(name => !string.IsNullOrEmpty(name)).Distinct();
+        }
+        catch (OperationCanceledException)
+        {
+            cachedLocationResults.Clear();
+            return Array.Empty<string>();
+        }
+        catch (Exception)
+        {
+            cachedLocationResults.Clear();
+            return Array.Empty<string>();
+        }
+        finally
+        {
+            isSearchingLocations = false;
+            StateHasChanged();
+        }
+    }
+    
+    // Location selection handler
+    private async Task OnLocationSelected()
+    {
+        // Find the matching LocationOption object from cache using the selected text
+        selectedLocation = cachedLocationResults.FirstOrDefault(loc => loc.DisplayName == selectedLocationText);
+        
+        if (selectedLocation != null)
+        {
+            await LocationChanged.InvokeAsync(selectedLocation);
+        }
+    }
+    
+    // Search type management
+    private async Task SetSearchType(SearchType newType)
+    {
+        if (searchType != newType)
+        {
+            searchType = newType;
+            await SearchTypeChanged.InvokeAsync(searchType);
+            
+            // Auto-search if we have a location and auto-search is enabled
+            if (AutoSearchOnLocationChange && selectedLocation != null)
+            {
+                await OnSearch();
+            }
+        }
+    }
+    
+    // Search parameters change handler
+    private async Task OnSearchParametersChanged()
+    {
+        await RadiusChanged.InvokeAsync(searchRadius);
+        
+        if (AutoSearchOnLocationChange && selectedLocation != null)
+        {
+            await OnSearch();
+        }
+    }
+    
+    // Main search functionality
+    private async Task OnSearch()
+    {
+        if (selectedLocation == null || !selectedLocation.Lat.HasValue || !selectedLocation.Lng.HasValue || isSearching) return;
+        
+        isSearching = true;
+        errorMessage = "";
+        toolResults.Clear();
+        bundleResults.Clear();
+        
+        await SearchStateChanged.InvokeAsync(true);
+        StateHasChanged();
+        
+        try
+        {
+            // Search for tools if needed
+            if (searchType == SearchType.Tools || searchType == SearchType.Both)
+            {
+                var toolResponse = await LocationService.FindNearbyToolsAsync(
+                    selectedLocation.Lat.Value,
+                    selectedLocation.Lng.Value,
+                    searchRadius);
+                
+                toolResults = toolResponse ?? new List<NearbyToolDto>();
+                await ToolResultsChanged.InvokeAsync(toolResults);
+            }
+            
+            // Search for bundles if needed
+            if (searchType == SearchType.Bundles || searchType == SearchType.Both)
+            {
+                var bundleResponse = await LocationService.FindNearbyBundlesAsync(
+                    selectedLocation.Lat.Value,
+                    selectedLocation.Lng.Value,
+                    searchRadius);
+                
+                bundleResults = bundleResponse ?? new List<NearbyBundleDto>();
+                await BundleResultsChanged.InvokeAsync(bundleResults);
+            }
+            
+            hasSearched = true;
+            
+            // Show success message if we found results
+            if (toolResults.Any() || bundleResults.Any())
+            {
+                var resultCount = toolResults.Count + bundleResults.Count;
+                Snackbar.Add($"Found {resultCount} item{(resultCount != 1 ? "s" : "")} nearby", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Search failed: {ex.Message}";
+            Console.WriteLine($"NearbySearch: Search failed: {ex.Message}");
+        }
+        finally
+        {
+            isSearching = false;
+            await SearchStateChanged.InvokeAsync(false);
+            StateHasChanged();
+        }
+    }
+    
+    // Current location functionality
+    private async Task OnCurrentLocationClick()
+    {
+        if (isGettingCurrentLocation) return;
+        
+        isGettingCurrentLocation = true;
+        StateHasChanged();
+        
+        try
+        {
+            await CurrentLocationRequested.InvokeAsync();
+            
+            var locationResult = await LocationService.GetCurrentLocationAsync();
+            
+            if (locationResult.Success && locationResult.Latitude.HasValue && locationResult.Longitude.HasValue)
+            {
+                // Try to reverse geocode the coordinates
+                var reverseResponse = await LocationService.ReverseGeocodeAsync(
+                    locationResult.Latitude.Value, 
+                    locationResult.Longitude.Value);
+                
+                if (reverseResponse != null)
+                {
+                    selectedLocation = reverseResponse;
+                    selectedLocationText = reverseResponse.DisplayName;
+                    // Add to cache for consistency
+                    if (!cachedLocationResults.Any(loc => loc.DisplayName == reverseResponse.DisplayName))
+                    {
+                        cachedLocationResults.Add(reverseResponse);
+                    }
+                }
+                else
+                {
+                    // Create a basic location option from coordinates
+                    selectedLocation = new LocationOption
+                    {
+                        DisplayName = $"Current Location ({locationResult.Latitude:F4}, {locationResult.Longitude:F4})",
+                        Lat = locationResult.Latitude,
+                        Lng = locationResult.Longitude,
+                        Source = LocationSource.Browser
+                    };
+                    selectedLocationText = selectedLocation.DisplayName;
+                    // Add to cache for consistency
+                    cachedLocationResults.Clear();
+                    cachedLocationResults.Add(selectedLocation);
+                }
+                
+                await LocationChanged.InvokeAsync(selectedLocation);
+                Snackbar.Add("Current location detected successfully", Severity.Success);
+                
+                // Auto-search after getting current location
+                await OnSearch();
+            }
+            else
+            {
+                var errorMessage = locationResult.ErrorMessage ?? "Unable to get current location";
+                Snackbar.Add(errorMessage, Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to get current location: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isGettingCurrentLocation = false;
+            StateHasChanged();
+        }
+    }
+    
+    // Clear results
+    private async Task OnClearResults()
+    {
+        toolResults.Clear();
+        bundleResults.Clear();
+        hasSearched = false;
+        errorMessage = "";
+        
+        await ToolResultsChanged.InvokeAsync(toolResults);
+        await BundleResultsChanged.InvokeAsync(bundleResults);
+        
+        StateHasChanged();
+    }
+    
+    // Helper methods
+    private string GetLocationIconFromText(string locationText)
+    {
+        var locationOption = cachedLocationResults.FirstOrDefault(loc => loc.DisplayName == locationText);
+        return GetLocationIcon(locationOption);
+    }
+    
+    private string GetLocationDetailsFromText(string locationText)
+    {
+        var locationOption = cachedLocationResults.FirstOrDefault(loc => loc.DisplayName == locationText);
+        if (locationOption != null && (locationOption.City != null || locationOption.State != null))
+        {
+            return $"{locationOption.City}, {locationOption.State}";
+        }
+        return "";
+    }
+    
+    private string GetLocationIcon(LocationOption? option)
+    {
+        if (option == null) return Icons.Material.Filled.LocationOn;
+        
+        return option.Source switch
+        {
+            LocationSource.Browser => Icons.Material.Filled.MyLocation,
+            LocationSource.OpenStreetMap => Icons.Material.Filled.Map,
+            LocationSource.HERE => Icons.Material.Filled.LocationOn,
+            _ => Icons.Material.Filled.Place
+        };
+    }
+    
+    private string GetResultsCountText()
+    {
+        var total = toolResults.Count + bundleResults.Count;
+        if (total == 0) return "0 items";
+        
+        var parts = new List<string>();
+        if (toolResults.Any()) parts.Add($"{toolResults.Count} tool{(toolResults.Count != 1 ? "s" : "")}");
+        if (bundleResults.Any()) parts.Add($"{bundleResults.Count} bundle{(bundleResults.Count != 1 ? "s" : "")}");
+        
+        return string.Join(", ", parts);
+    }
+    
+    private Color GetDistanceBandColor(DistanceBand band)
+    {
+        return band switch
+        {
+            DistanceBand.VeryClose => Color.Success,
+            DistanceBand.Nearby => Color.Info,
+            DistanceBand.Moderate => Color.Primary,
+            DistanceBand.Far => Color.Warning,
+            DistanceBand.VeryFar => Color.Error,
+            _ => Color.Default
+        };
+    }
+    
+    private string GetDistanceBandText(DistanceBand band)
+    {
+        return band switch
+        {
+            DistanceBand.VeryClose => "Very Close",
+            DistanceBand.Nearby => "Nearby",
+            DistanceBand.Moderate => "Moderate",
+            DistanceBand.Far => "Far",
+            DistanceBand.VeryFar => "Very Far",
+            _ => "Unknown"
+        };
+    }
+}

@@ -1,0 +1,115 @@
+@page "/testing/location-minimal"
+@using ToolsSharing.Frontend.Services.Location
+@using ToolsSharing.Frontend.Models.Location
+@inject ILocationService LocationService
+@inject ISnackbar Snackbar
+
+<MudContainer MaxWidth="MaxWidth.Medium">
+    <MudStack Spacing="3">
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h5">🔍 Minimal Component Test</MudText>
+            <MudText Typo="Typo.body2">Testing one component at a time to identify the issue</MudText>
+        </MudPaper>
+
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.h6" Class="mb-3">Test Selection</MudText>
+            <MudStack Row Spacing="2">
+                <MudButton Variant="Variant.Filled" Color="Color.Primary" OnClick="@(() => testMode = 1)">
+                    Test 1: Basic UI
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Secondary" OnClick="@(() => testMode = 2)">
+                    Test 2: Privacy Component
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Info" OnClick="@(() => testMode = 3)">
+                    Test 3: Autocomplete
+                </MudButton>
+                <MudButton Variant="Variant.Filled" Color="Color.Warning" OnClick="@(() => testMode = 4)">
+                    Test 4: Nearby Search
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+
+        @if (testMode == 1)
+        {
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6">✅ Basic UI Test</MudText>
+                <MudText>If you can see this, basic Blazor rendering works!</MudText>
+                <MudTextField @bind-Value="testText" Label="Test Input" />
+                <MudText>You typed: @testText</MudText>
+            </MudPaper>
+        }
+        else if (testMode == 2)
+        {
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6">🔒 Privacy Component Test</MudText>
+                @try
+                {
+                    <frontend.Components.Location.LocationPrivacyEducation 
+                        ShowTitle="true"
+                        ShowOverview="true"
+                        ShowPrivacyLevels="false"
+                        ShowDistanceBands="false"
+                        ShowTriangulationProtection="false"
+                        ShowBestPractices="false"
+                        Compact="true" />
+                }
+                catch (Exception ex)
+                {
+                    <MudAlert Severity="Severity.Error">Error: @ex.Message</MudAlert>
+                }
+            </MudPaper>
+        }
+        else if (testMode == 3)
+        {
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6">📝 Autocomplete Test</MudText>
+                @try
+                {
+                    <frontend.Components.Location.LocationAutocomplete 
+                        Label="Test Location"
+                        Value="@autocompleteValue"
+                        ValueChanged="@((string val) => autocompleteValue = val)"
+                        ShowPopular="false"
+                        Required="false" />
+                    
+                    @if (!string.IsNullOrEmpty(autocompleteValue))
+                    {
+                        <MudText Class="mt-2">Selected: @autocompleteValue</MudText>
+                    }
+                }
+                catch (Exception ex)
+                {
+                    <MudAlert Severity="Severity.Error">Error: @ex.Message</MudAlert>
+                }
+            </MudPaper>
+        }
+        else if (testMode == 4)
+        {
+            <MudPaper Class="pa-4">
+                <MudText Typo="Typo.h6">📡 Nearby Search Test</MudText>
+                @try
+                {
+                    <frontend.Components.Location.NearbySearch 
+                        Title="Test Search"
+                        DefaultRadius="10"
+                        MaxResultsPerType="3" />
+                }
+                catch (Exception ex)
+                {
+                    <MudAlert Severity="Severity.Error">Error: @ex.Message</MudAlert>
+                }
+            </MudPaper>
+        }
+
+        <MudPaper Class="pa-4">
+            <MudText Typo="Typo.subtitle1">Status: Test @testMode active</MudText>
+            <MudText Typo="Typo.body2">If you see rendering errors, the issue is with that specific component.</MudText>
+        </MudPaper>
+    </MudStack>
+</MudContainer>
+
+@code {
+    private int testMode = 1;
+    private string testText = "";
+    private string autocompleteValue = "";
+}

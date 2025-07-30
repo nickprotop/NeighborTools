@@ -1,0 +1,360 @@
+@using ToolsSharing.Frontend.Models.Location
+@using ToolsSharing.Frontend.Utilities
+
+<MudPaper Class="@($"pa-4 {Class}")" Elevation="@Elevation" Style="@Style">
+    @if (ShowTitle)
+    {
+        <MudStack Row AlignItems="AlignItems.Center" Class="mb-3">
+            <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Primary" />
+            <MudText Typo="Typo.h6" Color="Color.Primary">
+                @Title
+            </MudText>
+        </MudStack>
+    }
+
+    @if (ShowOverview)
+    {
+        <MudAlert Severity="Severity.Info" Class="mb-4" Icon="@Icons.Material.Filled.Info">
+            <MudText Typo="Typo.body2">
+                Your privacy is important. We use distance bands instead of exact locations to protect your privacy while helping you find nearby tools and bundles.
+            </MudText>
+        </MudAlert>
+    }
+
+    @if (ShowPrivacyLevels)
+    {
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Color="Color.Primary">
+            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Size="Size.Small" Class="mr-2" />
+            Privacy Levels
+        </MudText>
+
+        <MudGrid>
+            @foreach (var level in GetPrivacyLevels())
+            {
+                <MudItem xs="12" sm="6" md="@(Compact ? 6 : 3)">
+                    <MudCard Class="privacy-level-card" Style="@($"border-left: 4px solid {GetPrivacyLevelColor(level.Level)}")">
+                        <MudCardContent Class="pa-3">
+                            <MudStack Spacing="2">
+                                <MudStack Row AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudText Typo="Typo.subtitle2" Color="Color.Primary">
+                                        @level.Name
+                                    </MudText>
+                                    <MudChip Size="Size.Small" 
+                                             Color="@GetPrivacyLevelChipColor(level.Level)" 
+                                             Text="@($"Level {level.Level}")" 
+                                             T="string" />
+                                </MudStack>
+                                
+                                <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                    @level.Description
+                                </MudText>
+                                
+                                <MudStack Row AlignItems="AlignItems.Center" Spacing="1">
+                                    <MudIcon Icon="@Icons.Material.Filled.RadioButtonChecked" 
+                                             Size="Size.Small" 
+                                             Style="@($"color: {GetPrivacyLevelColor(level.Level)}")" />
+                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                        ~@level.ApproximateArea area
+                                    </MudText>
+                                </MudStack>
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                </MudItem>
+            }
+        </MudGrid>
+    }
+
+    @if (ShowDistanceBands)
+    {
+        <MudDivider Class="my-4" />
+        
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Color="Color.Primary">
+            <MudIcon Icon="@Icons.Material.Filled.Straighten" Size="Size.Small" Class="mr-2" />
+            Distance Bands
+        </MudText>
+
+        <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-3">
+            Instead of showing exact distances, we use privacy-friendly distance bands:
+        </MudText>
+
+        <MudSimpleTable Dense="true" Class="distance-bands-table">
+            <thead>
+                <tr>
+                    <th>Distance Band</th>
+                    <th>Approximate Range</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var band in GetDistanceBands())
+                {
+                    <tr>
+                        <td>
+                            <MudChip Size="Size.Small" 
+                                     Color="@GetDistanceBandColor(band.Band)" 
+                                     Text="@band.Name" 
+                                     T="string" />
+                        </td>
+                        <td>
+                            <MudText Typo="Typo.body2">@band.Range</MudText>
+                        </td>
+                        <td>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">@band.Description</MudText>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </MudSimpleTable>
+    }
+
+    @if (ShowTriangulationProtection)
+    {
+        <MudDivider Class="my-4" />
+        
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Color="Color.Primary">
+            <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Small" Class="mr-2" />
+            Triangulation Protection
+        </MudText>
+
+        <MudAlert Severity="Severity.Warning" Class="mb-3" Icon="@Icons.Material.Filled.Warning">
+            <MudText Typo="Typo.body2">
+                <strong>Advanced Privacy Protection:</strong> Our system detects and prevents triangulation attempts that could reveal exact locations through multiple searches.
+            </MudText>
+        </MudAlert>
+
+        <MudList T="string" Dense="true">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Search" IconColor="Color.Secondary">
+                <MudText Typo="Typo.body2">
+                    <strong>Search Pattern Analysis:</strong> We monitor for geometric search patterns that could indicate triangulation attempts.
+                </MudText>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Speed" IconColor="Color.Secondary">
+                <MudText Typo="Typo.body2">
+                    <strong>Rate Limiting:</strong> Maximum 50 searches per hour, 5 searches per target to prevent abuse.
+                </MudText>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Shield" IconColor="Color.Secondary">
+                <MudText Typo="Typo.body2">
+                    <strong>Location Fuzzing:</strong> Coordinates are slightly randomized to prevent exact location determination.
+                </MudText>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.History" IconColor="Color.Secondary">
+                <MudText Typo="Typo.body2">
+                    <strong>Audit Logging:</strong> All location searches are logged for security analysis and pattern detection.
+                </MudText>
+            </MudListItem>
+        </MudList>
+    }
+
+    @if (ShowBestPractices)
+    {
+        <MudDivider Class="my-4" />
+        
+        <MudText Typo="Typo.subtitle1" Class="mb-3" Color="Color.Success">
+            <MudIcon Icon="@Icons.Material.Filled.Lightbulb" Size="Size.Small" Class="mr-2" />
+            Privacy Best Practices
+        </MudText>
+
+        <MudList T="string" Dense="true">
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                <MudText Typo="Typo.body2">
+                    Choose the lowest privacy level that still helps you find what you need.
+                </MudText>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                <MudText Typo="Typo.body2">
+                    Use general area descriptions (like "Downtown Athens") instead of specific addresses.
+                </MudText>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                <MudText Typo="Typo.body2">
+                    Remember you can update your privacy settings anytime in your profile.
+                </MudText>
+            </MudListItem>
+            <MudListItem T="string" Icon="@Icons.Material.Filled.Check" IconColor="Color.Success">
+                <MudText Typo="Typo.body2">
+                    Contact us if you notice any suspicious search activity.
+                </MudText>
+            </MudListItem>
+        </MudList>
+    }
+</MudPaper>
+
+<style>
+    .privacy-level-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        height: 100%;
+    }
+    
+    .privacy-level-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    }
+    
+    .distance-bands-table {
+        background: var(--mud-palette-surface);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    
+    .distance-bands-table th {
+        background: var(--mud-palette-primary);
+        color: white;
+        font-weight: 600;
+        padding: 12px 16px;
+    }
+    
+    .distance-bands-table td {
+        padding: 12px 16px;
+        border-bottom: 1px solid var(--mud-palette-divider);
+    }
+    
+    .distance-bands-table tr:last-child td {
+        border-bottom: none;
+    }
+</style>
+
+@code {
+    [Parameter] public string Title { get; set; } = "Location Privacy & Security";
+    [Parameter] public bool ShowTitle { get; set; } = true;
+    [Parameter] public bool ShowOverview { get; set; } = true;
+    [Parameter] public bool ShowPrivacyLevels { get; set; } = true;
+    [Parameter] public bool ShowDistanceBands { get; set; } = true;
+    [Parameter] public bool ShowTriangulationProtection { get; set; } = true;
+    [Parameter] public bool ShowBestPractices { get; set; } = true;
+    [Parameter] public bool Compact { get; set; } = false;
+    [Parameter] public int Elevation { get; set; } = 1;
+    [Parameter] public string Class { get; set; } = "";
+    [Parameter] public string Style { get; set; } = "";
+
+    private class PrivacyLevelInfo
+    {
+        public PrivacyLevel Level { get; set; }
+        public string Name { get; set; } = "";
+        public string Description { get; set; } = "";
+        public string ApproximateArea { get; set; } = "";
+    }
+
+    private class DistanceBandInfo
+    {
+        public DistanceBand Band { get; set; }
+        public string Name { get; set; } = "";
+        public string Range { get; set; } = "";
+        public string Description { get; set; } = "";
+    }
+
+    private List<PrivacyLevelInfo> GetPrivacyLevels()
+    {
+        return new List<PrivacyLevelInfo>
+        {
+            new PrivacyLevelInfo
+            {
+                Level = PrivacyLevel.Neighborhood,
+                Name = "Neighborhood",
+                Description = "Shows your general neighborhood area. Good balance of privacy and utility for most users.",
+                ApproximateArea = "0.3 mile radius"
+            },
+            new PrivacyLevelInfo
+            {
+                Level = PrivacyLevel.ZipCode,
+                Name = "Zip Code",
+                Description = "Shows your zip code area. Provides more privacy while still being useful for local searches.",
+                ApproximateArea = "1 mile radius"
+            },
+            new PrivacyLevelInfo
+            {
+                Level = PrivacyLevel.District,
+                Name = "District",
+                Description = "Shows your general district or city area. Maximum privacy with broader search capability.",
+                ApproximateArea = "3 mile radius"
+            },
+            new PrivacyLevelInfo
+            {
+                Level = PrivacyLevel.Exact,
+                Name = "Exact",
+                Description = "Shows your precise location. Use only when exact location is necessary.",
+                ApproximateArea = "300 feet radius"
+            }
+        };
+    }
+
+    private List<DistanceBandInfo> GetDistanceBands()
+    {
+        return new List<DistanceBandInfo>
+        {
+            new DistanceBandInfo
+            {
+                Band = DistanceBand.VeryClose,
+                Name = LocationUtilities.GetDistanceBandText(DistanceBand.VeryClose),
+                Range = "< 1 km",
+                Description = "Very close to your location"
+            },
+            new DistanceBandInfo
+            {
+                Band = DistanceBand.Nearby,
+                Name = LocationUtilities.GetDistanceBandText(DistanceBand.Nearby),
+                Range = "1-5 km",
+                Description = "Walking or short bike ride distance"
+            },
+            new DistanceBandInfo
+            {
+                Band = DistanceBand.Moderate,
+                Name = LocationUtilities.GetDistanceBandText(DistanceBand.Moderate),
+                Range = "5-15 km", 
+                Description = "Short drive or bike ride distance"
+            },
+            new DistanceBandInfo
+            {
+                Band = DistanceBand.Far,
+                Name = LocationUtilities.GetDistanceBandText(DistanceBand.Far),
+                Range = "15-50 km",
+                Description = "Longer drive but still accessible"
+            },
+            new DistanceBandInfo
+            {
+                Band = DistanceBand.VeryFar,
+                Name = LocationUtilities.GetDistanceBandText(DistanceBand.VeryFar),
+                Range = "> 50 km",
+                Description = "Significant travel distance required"
+            }
+        };
+    }
+
+    private string GetPrivacyLevelColor(PrivacyLevel level)
+    {
+        return level switch
+        {
+            PrivacyLevel.Neighborhood => "#22c55e", // Green
+            PrivacyLevel.ZipCode => "#f59e0b",      // Amber
+            PrivacyLevel.District => "#f97316",     // Orange
+            PrivacyLevel.Exact => "#ef4444",        // Red
+            _ => "#6b7280"                          // Gray
+        };
+    }
+
+    private Color GetPrivacyLevelChipColor(PrivacyLevel level)
+    {
+        return level switch
+        {
+            PrivacyLevel.Neighborhood => Color.Success,
+            PrivacyLevel.ZipCode => Color.Warning,
+            PrivacyLevel.District => Color.Warning,
+            PrivacyLevel.Exact => Color.Error,
+            _ => Color.Default
+        };
+    }
+
+    private Color GetDistanceBandColor(DistanceBand band)
+    {
+        return band switch
+        {
+            DistanceBand.VeryClose => Color.Success,
+            DistanceBand.Nearby => Color.Info,
+            DistanceBand.Moderate => Color.Primary,
+            DistanceBand.Far => Color.Warning,
+            DistanceBand.VeryFar => Color.Error,
+            _ => Color.Default
+        };
+    }
+}
