@@ -551,3 +551,120 @@ public class NearbySearchRequest
     /// </summary>
     public int Skip { get; set; } = 0;
 }
+
+/// <summary>
+/// User with distance information for proximity searches
+/// </summary>
+public class NearbyUserDto
+{
+    /// <summary>
+    /// User ID
+    /// </summary>
+    public string Id { get; set; } = string.Empty;
+
+    /// <summary>
+    /// User display name
+    /// </summary>
+    public string Name { get; set; } = string.Empty;
+
+    /// <summary>
+    /// User bio/description
+    /// </summary>
+    public string? Bio { get; set; }
+
+    /// <summary>
+    /// Avatar image URL
+    /// </summary>
+    public string? AvatarUrl { get; set; }
+
+    /// <summary>
+    /// Location display text
+    /// </summary>
+    public string LocationDisplay { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Distance band for privacy
+    /// </summary>
+    public DistanceBand DistanceBand { get; set; }
+
+    /// <summary>
+    /// Human-readable distance text
+    /// </summary>
+    public string DistanceText { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Number of tools owned
+    /// </summary>
+    public int ToolCount { get; set; }
+
+    /// <summary>
+    /// Number of bundles owned
+    /// </summary>
+    public int BundleCount { get; set; }
+
+    /// <summary>
+    /// Average rating as tool owner
+    /// </summary>
+    public decimal AverageRating { get; set; }
+
+    /// <summary>
+    /// Number of reviews received
+    /// </summary>
+    public int ReviewCount { get; set; }
+
+    /// <summary>
+    /// Whether the user is currently active
+    /// </summary>
+    public bool IsActive { get; set; }
+
+    /// <summary>
+    /// When the user was last seen
+    /// </summary>
+    public DateTime? LastSeen { get; set; }
+}
+
+/// <summary>
+/// Geographic cluster of locations for analysis
+/// </summary>
+public class LocationCluster
+{
+    /// <summary>
+    /// Center latitude of the cluster
+    /// </summary>
+    public decimal CenterLat { get; set; }
+
+    /// <summary>
+    /// Center longitude of the cluster
+    /// </summary>
+    public decimal CenterLng { get; set; }
+
+    /// <summary>
+    /// Radius of the cluster in kilometers
+    /// </summary>
+    public decimal RadiusKm { get; set; }
+
+    /// <summary>
+    /// Number of locations in this cluster
+    /// </summary>
+    public int LocationCount { get; set; }
+
+    /// <summary>
+    /// Locations belonging to this cluster
+    /// </summary>
+    public List<LocationOption> Locations { get; set; } = new();
+
+    /// <summary>
+    /// Representative location name for the cluster
+    /// </summary>
+    public string ClusterName { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Density score (locations per square km)
+    /// </summary>
+    public decimal DensityScore { get; set; }
+
+    /// <summary>
+    /// Bounding box of the cluster
+    /// </summary>
+    public LocationBounds? Bounds { get; set; }
+}

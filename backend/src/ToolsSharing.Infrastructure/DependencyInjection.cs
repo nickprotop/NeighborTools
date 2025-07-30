@@ -199,6 +199,9 @@ public static class DependencyInjection
         // Location Security Service
         services.AddScoped<ILocationSecurityService, LocationSecurityService>();
 
+        // Comprehensive Location Service (Phase 3)
+        services.AddScoped<ILocationService, LocationService>();
+
         // Geocoding Services - Provider-based registration
         var geocodingConfig = configuration.GetSection("Geocoding").Get<GeocodingConfiguration>();
         if (geocodingConfig != null)
