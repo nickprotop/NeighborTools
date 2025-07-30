@@ -94,6 +94,9 @@ builder.Services.AddScoped<ISecurityManagementService, SecurityManagementService
 builder.Services.AddScoped<IDeviceDetectionService, DeviceDetectionService>();
 builder.Services.AddScoped<IBrowserCacheService, BrowserCacheService>();
 
+// Add location services
+builder.Services.AddScoped<ToolsSharing.Frontend.Services.Location.ILocationService, ToolsSharing.Frontend.Services.Location.LocationService>();
+
 var app = builder.Build();
 
 // Restore authentication state on app startup
