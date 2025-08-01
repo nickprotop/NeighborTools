@@ -86,10 +86,6 @@ public class AuthService : IAuthService
                 LastName = command.LastName,
                 PhoneNumber = command.PhoneNumber,
                 DateOfBirth = command.DateOfBirth,
-                Address = command.Address,
-                City = command.City,
-                PostalCode = command.PostalCode,
-                Country = command.Country,
                 CreatedAt = currentTime,
                 UpdatedAt = currentTime,
                 

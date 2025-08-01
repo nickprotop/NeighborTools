@@ -29,6 +29,9 @@ public class Tool : BaseEntity
     public LocationSource? LocationSource { get; set; } // How location was obtained
     public PrivacyLevel LocationPrivacyLevel { get; set; } = PrivacyLevel.Neighborhood; // User's privacy preference
     public DateTime? LocationUpdatedAt { get; set; } // Track location changes
+    
+    // Phase 7 - Location Inheritance System
+    public LocationInheritanceOption LocationInheritanceOption { get; set; } = LocationInheritanceOption.InheritFromProfile;
     public string OwnerId { get; set; } = string.Empty;
     
     // New feature fields

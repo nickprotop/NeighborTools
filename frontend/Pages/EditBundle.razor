@@ -4,6 +4,7 @@
 @using ToolsSharing.Frontend.Services
 @using frontend.Services
 @using System.ComponentModel.DataAnnotations
+@using ToolsSharing.Frontend.Models.Location
 @inject BundleService BundleService
 @inject IToolService ToolService
 @inject UserService UserService
@@ -279,24 +280,15 @@ else
 
                                 <!-- Location -->
                                 <MudItem xs="12">
-                                    <MudTextField @bind-Value="editBundle.Location"
-                                                Label="Bundle Location (Optional)"
-                                                MaxLength="500"
-                                                Counter="500"
-                                                HelperText="Where is this bundle available? Leave empty to use your profile location. For security, keep it general (e.g., 'Downtown Toronto', 'Berlin Mitte')."
-                                                Variant="Variant.Outlined"
-                                                Adornment="Adornment.Start"
-                                                AdornmentIcon="@Icons.Material.Filled.LocationOn"
-                                                For="@(() => editBundle.Location)" />
-                                    
-                                    @if (ShowLocationWarning)
-                                    {
-                                        <MudAlert Severity="Severity.Warning" Icon="@Icons.Material.Filled.LocationOff" Class="mt-2">
-                                            <strong>Location Warning:</strong> No location specified and your profile has no public location set. 
-                                            This may prevent your bundle from appearing in location-based searches and could reduce rental opportunities.
-                                            <MudLink Href="/profile" Class="ml-2">Update your profile location</MudLink>
-                                        </MudAlert>
-                                    }
+                                    <LocationInheritanceSection 
+                                        ItemType="Bundle"
+                                        UserProfileLocation="userProfileLocation"
+                                        UserHasProfileLocation="userHasProfileLocation"
+                                        LocationSource="locationInheritanceOption"
+                                        LocationSourceChanged="@(EventCallback.Factory.Create<LocationInheritanceOption>(this, (option) => { locationInheritanceOption = option; }))"
+                                        CustomLocation="customLocation"
+                                        CustomLocationChanged="@(EventCallback.Factory.Create<UserLocationModel>(this, (location) => { customLocation = location; }))"
+                                        OnLocationChange="HandleLocationChange" />
                                 </MudItem>
 
                                 <!-- Description -->
@@ -932,7 +924,11 @@ else
     private bool isUploadingImage = false;
     private bool hasImageChanged = false;
     private bool removeImageAndUploadNew = false;
-    private string? userLocationDisplay = null;
+    // Phase 7: Location inheritance system
+    private UserLocationModel? userProfileLocation = null;
+    private bool userHasProfileLocation = false;
+    private LocationInheritanceOption locationInheritanceOption = LocationInheritanceOption.InheritFromProfile;
+    private UserLocationModel customLocation = new();
     
     // For delayed upload pattern
     private IBrowserFile? pendingImageFile = null;
@@ -942,7 +938,6 @@ else
     private string? pendingImageFileName = null;
     
     // Show warning when both bundle location and user public location are empty
-    private bool ShowLocationWarning => string.IsNullOrEmpty(editBundle.Location) && string.IsNullOrEmpty(userLocationDisplay);
     
     // Bundle approval status
     private BundleApprovalStatusDto? approvalStatus = null;
@@ -1016,6 +1011,7 @@ else
                     ImageUrl = bundle.ImageUrl,
                     BundleDiscount = bundle.BundleDiscount,
                     Location = bundle.Location, // Bundle location field
+                    LocationSource = bundle.LocationInheritanceOption,
                     Category = bundle.Category,
                     Tags = string.Join(", ", bundle.Tags),
                     IsPublished = bundle.IsPublished,
@@ -1028,6 +1024,17 @@ else
                         QuantityNeeded = t.QuantityNeeded
                     }).ToList()
                 };
+                
+                // Phase 7: Set inheritance system variables based on current bundle
+                locationInheritanceOption = bundle.LocationInheritanceOption;
+                if (locationInheritanceOption == LocationInheritanceOption.CustomLocation)
+                {
+                    // Initialize custom location from bundle's current location
+                    customLocation = new UserLocationModel
+                    {
+                        LocationDisplay = bundle.Location ?? ""
+                    };
+                }
                 
                 // Create a copy for change tracking
                 originalBundle = CloneModel(editBundle);
@@ -1110,6 +1117,14 @@ else
         StateHasChanged();
     }
 
+    // Phase 7: Handle location inheritance change
+    private void HandleLocationChange()
+    {
+        // This method is called when the LocationInheritanceSection reports a location change
+        // The actual location resolution happens at runtime on the backend
+        StateHasChanged();
+    }
+
     private async Task LoadUserLocation()
     {
         try
@@ -1117,8 +1132,24 @@ else
             var response = await UserService.GetProfileAsync();
             if (response?.Success == true && response.Data != null)
             {
-                // Store user's location display for warning logic
-                userLocationDisplay = response.Data.LocationDisplay;
+                // Phase 7: Map user profile to UserLocationModel
+                userProfileLocation = new UserLocationModel
+                {
+                    LocationDisplay = response.Data.LocationDisplay ?? "",
+                    LocationCity = response.Data.LocationCity ?? "",
+                    LocationState = response.Data.LocationState ?? "",
+                    LocationCountry = response.Data.LocationCountry ?? "",
+                    LocationLat = response.Data.LocationLat,
+                    LocationLng = response.Data.LocationLng,
+                    LocationPrivacyLevel = response.Data.LocationPrivacyLevel != null ? 
+                        Enum.Parse<ToolsSharing.Frontend.Models.Location.PrivacyLevel>(response.Data.LocationPrivacyLevel) : 
+                        ToolsSharing.Frontend.Models.Location.PrivacyLevel.District
+                };
+                
+                // Check if user has location data
+                userHasProfileLocation = !string.IsNullOrEmpty(response.Data.LocationDisplay) || 
+                                       !string.IsNullOrEmpty(response.Data.LocationCity) || 
+                                       (response.Data.LocationLat.HasValue && response.Data.LocationLng.HasValue);
             }
         }
         catch (Exception ex)
@@ -1398,6 +1429,19 @@ else
                 return;
             }
 
+            // Phase 7: Update bundle location based on inheritance choice (align with backend DTOs)
+            editBundle.LocationSource = locationInheritanceOption;
+            if (locationInheritanceOption == LocationInheritanceOption.CustomLocation)
+            {
+                // Use custom location object
+                editBundle.CustomLocation = customLocation;
+            }
+            else
+            {
+                // Clear custom location when inheriting from profile - backend will resolve at runtime
+                editBundle.CustomLocation = null;
+            }
+
             // Upload image if there's pending image data
             if (pendingImageData != null && !string.IsNullOrEmpty(pendingImageContentType) && !string.IsNullOrEmpty(pendingImageFileName))
             {
@@ -1496,6 +1540,8 @@ else
             EstimatedProjectDuration = model.EstimatedProjectDuration,
             ImageUrl = model.ImageUrl,
             BundleDiscount = model.BundleDiscount,
+            Location = model.Location, // Bundle location field
+            LocationSource = model.LocationSource, // Phase 7: Inheritance system
             Category = model.Category,
             Tags = model.Tags,
             IsPublished = model.IsPublished,
@@ -1520,6 +1566,7 @@ else
                model1.ImageUrl == model2.ImageUrl &&
                model1.BundleDiscount == model2.BundleDiscount &&
                model1.Location == model2.Location && // Bundle location comparison
+               model1.LocationSource == model2.LocationSource && // Phase 7: Inheritance system comparison
                model1.Category == model2.Category &&
                model1.Tags == model2.Tags &&
                model1.IsPublished == model2.IsPublished &&

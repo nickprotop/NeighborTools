@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using ToolsSharing.Core.DTOs.Location;
+using ToolsSharing.Core.Enums;
 
 namespace ToolsSharing.Core.DTOs.Bundle
 {
@@ -16,8 +17,9 @@ namespace ToolsSharing.Core.DTOs.Bundle
         public string Tags { get; set; } = ""; // Comma-separated
         public bool IsPublished { get; set; } = false;
         
-        // Enhanced location fields (Phase 1)
-        public UpdateLocationRequest? EnhancedLocation { get; set; }
+        // Location inheritance options (Phase 7)
+        public LocationInheritanceOption LocationSource { get; set; } = LocationInheritanceOption.InheritFromProfile;
+        public UpdateLocationRequest? CustomLocation { get; set; }
         
         public List<CreateBundleToolRequest> Tools { get; set; } = new();
     }

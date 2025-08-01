@@ -4,6 +4,7 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using ToolsSharing.Frontend.Models.Location
 @inject ISnackbar Snackbar
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UserService UserService
@@ -112,46 +113,13 @@
                                                   Adornment="Adornment.Start"
                                                   AdornmentIcon="@Icons.Material.Filled.Phone" />
                                 </MudItem>
-                                <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="updateRequest.Address"
-                                                  Label="Address"
-                                                  Variant="Variant.Outlined"
-                                                  FullWidth
-                                                  Adornment="Adornment.Start"
-                                                  AdornmentIcon="@Icons.Material.Filled.LocationOn" />
-                                </MudItem>
-                                <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="updateRequest.City"
-                                                  Label="City"
-                                                  Variant="Variant.Outlined"
-                                                  FullWidth
-                                                  Adornment="Adornment.Start"
-                                                  AdornmentIcon="@Icons.Material.Filled.LocationCity" />
-                                </MudItem>
-                                <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="updateRequest.PostalCode"
-                                                  Label="Postal Code"
-                                                  Variant="Variant.Outlined"
-                                                  FullWidth
-                                                  Adornment="Adornment.Start"
-                                                  AdornmentIcon="@Icons.Material.Filled.MarkunreadMailbox" />
-                                </MudItem>
-                                <MudItem xs="12" sm="6">
-                                    <MudTextField @bind-Value="updateRequest.Country"
-                                                  Label="Country"
-                                                  Variant="Variant.Outlined"
-                                                  FullWidth
-                                                  Adornment="Adornment.Start"
-                                                  AdornmentIcon="@Icons.Material.Filled.Public" />
-                                </MudItem>
                                 <MudItem xs="12">
-                                    <MudTextField @bind-Value="updateRequest.LocationDisplay"
-                                                  Label="Public Location"
-                                                  Variant="Variant.Outlined"
-                                                  FullWidth
-                                                  Adornment="Adornment.Start"
-                                                  AdornmentIcon="@Icons.Material.Filled.LocationOn"
-                                                  HelperText="This location will be visible to other users and used for tool searches. For security, keep it general (e.g., 'Downtown Toronto', 'Berlin Mitte')." />
+                                    <UserProfileLocationSettings 
+                                        UserLocation="profileLocation"
+                                        UserLocationChanged="@(EventCallback.Factory.Create<UserLocationModel>(this, (location) => { profileLocation = location; }))"
+                                        HasLocationEnabled="locationEnabled"
+                                        HasLocationEnabledChanged="@(EventCallback.Factory.Create<bool>(this, (enabled) => { locationEnabled = enabled; }))"
+                                        OnLocationChanged="HandleLocationChanged" />
                                 </MudItem>
                                 <MudItem xs="12" sm="6">
                                     <MudDatePicker @bind-Date="updateRequest.DateOfBirth"
@@ -374,6 +342,10 @@
     private bool isLoading = false;
     private bool isPageLoading = true;
     private bool isUploadingProfilePicture = false;
+    
+    // Phase 7: Location inheritance system
+    private UserLocationModel profileLocation = new();
+    private bool locationEnabled = false;
 
     protected override async Task OnInitializedAsync()
     {
@@ -408,14 +380,28 @@
                     FirstName = userProfile.FirstName ?? "",
                     LastName = userProfile.LastName ?? "",
                     PhoneNumber = userProfile.PhoneNumber,
-                    Address = userProfile.Address,
-                    City = userProfile.City,
-                    PostalCode = userProfile.PostalCode,
-                    Country = userProfile.Country,
-                    LocationDisplay = userProfile.LocationDisplay,
                     DateOfBirth = userProfile.DateOfBirth,
                     ProfilePictureUrl = userProfile.ProfilePictureUrl
                 };
+                
+                // Phase 7: Map location data to UserLocationModel
+                profileLocation = new UserLocationModel
+                {
+                    LocationDisplay = userProfile.LocationDisplay ?? "",
+                    LocationCity = userProfile.LocationCity ?? "",
+                    LocationState = userProfile.LocationState ?? "",
+                    LocationCountry = userProfile.LocationCountry ?? "",
+                    LocationLat = userProfile.LocationLat,
+                    LocationLng = userProfile.LocationLng,
+                    LocationPrivacyLevel = userProfile.LocationPrivacyLevel != null ? 
+                        Enum.Parse<ToolsSharing.Frontend.Models.Location.PrivacyLevel>(userProfile.LocationPrivacyLevel) : 
+                        ToolsSharing.Frontend.Models.Location.PrivacyLevel.District
+                };
+                
+                // Enable location if user has any location data
+                locationEnabled = !string.IsNullOrEmpty(userProfile.LocationDisplay) || 
+                                !string.IsNullOrEmpty(userProfile.LocationCity) || 
+                                (userProfile.LocationLat.HasValue && userProfile.LocationLng.HasValue);
             }
             else
             {
@@ -432,6 +418,13 @@
         {
             Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
         }
+    }
+
+    private async Task HandleLocationChanged()
+    {
+        // Location data is automatically updated via binding
+        // We could add additional logic here if needed
+        StateHasChanged();
     }
 
     private async Task LoadUserStatistics()
@@ -481,8 +474,8 @@
         }
         
         var parts = new List<string>();
-        if (!string.IsNullOrEmpty(userProfile.City)) parts.Add(userProfile.City);
-        if (!string.IsNullOrEmpty(userProfile.Country)) parts.Add(userProfile.Country);
+        if (!string.IsNullOrEmpty(userProfile.LocationCity)) parts.Add(userProfile.LocationCity);
+        if (!string.IsNullOrEmpty(userProfile.LocationCountry)) parts.Add(userProfile.LocationCountry);
         
         return parts.Count > 0 ? string.Join(", ", parts) : "Location not specified";
     }
@@ -493,6 +486,37 @@
         
         try
         {
+            // Phase 7: Update location data in the request based on UserProfileLocationSettings
+            if (locationEnabled && profileLocation != null)
+            {
+                updateRequest.LocationDisplay = profileLocation.LocationDisplay;
+                updateRequest.LocationArea = profileLocation.LocationArea;
+                updateRequest.LocationCity = profileLocation.LocationCity;
+                updateRequest.LocationState = profileLocation.LocationState;
+                updateRequest.LocationCountry = profileLocation.LocationCountry;
+                updateRequest.LocationLat = profileLocation.LocationLat;
+                updateRequest.LocationLng = profileLocation.LocationLng;
+                updateRequest.LocationPrecisionRadius = profileLocation.LocationPrecisionRadius;
+                updateRequest.LocationSource = profileLocation.LocationSource?.ToString();
+                updateRequest.LocationPrivacyLevel = profileLocation.LocationPrivacyLevel.ToString();
+                updateRequest.LocationUpdatedAt = DateTime.UtcNow;
+            }
+            else
+            {
+                // Clear location data if location is disabled
+                updateRequest.LocationDisplay = null;
+                updateRequest.LocationArea = null;
+                updateRequest.LocationCity = null;
+                updateRequest.LocationState = null;
+                updateRequest.LocationCountry = null;
+                updateRequest.LocationLat = null;
+                updateRequest.LocationLng = null;
+                updateRequest.LocationPrecisionRadius = null;
+                updateRequest.LocationSource = null;
+                updateRequest.LocationPrivacyLevel = null;
+                updateRequest.LocationUpdatedAt = null;
+            }
+            
             var response = await UserService.UpdateProfileAsync(updateRequest);
             if (response?.Success == true)
             {

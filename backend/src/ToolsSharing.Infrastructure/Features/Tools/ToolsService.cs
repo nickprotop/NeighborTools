@@ -311,7 +311,6 @@ public class ToolsService : IToolsService
                 MonthlyRate = command.MonthlyRate,
                 DepositRequired = command.DepositRequired,
                 Condition = command.Condition,
-                LocationDisplay = command.EnhancedLocation?.LocationDisplay,
                 IsAvailable = true,
                 LeadTimeHours = command.LeadTimeHours,
                 OwnerId = command.OwnerId,
@@ -323,6 +322,27 @@ public class ToolsService : IToolsService
                 IsApproved = false,
                 PendingApproval = true
             };
+
+            // Handle location inheritance (Phase 7 - TRUE INHERITANCE)
+            // Store the inheritance choice, location will be resolved at query time
+            tool.LocationInheritanceOption = command.LocationSource;
+            
+            if (command.LocationSource == Core.Enums.LocationInheritanceOption.CustomLocation && command.CustomLocation != null)
+            {
+                // Only store location data for custom locations
+                tool.LocationDisplay = command.CustomLocation.LocationDisplay;
+                tool.LocationArea = command.CustomLocation.LocationArea;
+                tool.LocationCity = command.CustomLocation.LocationCity;
+                tool.LocationState = command.CustomLocation.LocationState;
+                tool.LocationCountry = command.CustomLocation.LocationCountry;
+                tool.LocationLat = command.CustomLocation.LocationLat;
+                tool.LocationLng = command.CustomLocation.LocationLng;
+                tool.LocationPrecisionRadius = command.CustomLocation.LocationPrecisionRadius;
+                tool.LocationSource = command.CustomLocation.LocationSource ?? Core.Enums.LocationSource.Manual;
+                tool.LocationPrivacyLevel = command.CustomLocation.LocationPrivacyLevel;
+                tool.LocationUpdatedAt = DateTime.UtcNow;
+            }
+            // For InheritFromProfile: leave location fields null/empty, will be resolved at query time from User profile
 
             // Add images if provided
             if (command.ImageUrls != null && command.ImageUrls.Any())

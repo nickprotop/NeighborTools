@@ -3,6 +3,7 @@
 @using MudBlazor
 @using frontend.Models
 @using frontend.Services
+@using ToolsSharing.Frontend.Models.Location
 @inject IToolService ToolService
 @inject UserService UserService
 @inject ISnackbar Snackbar
@@ -219,23 +220,15 @@
                                                   Class="mb-4" />
                                 </MudItem>
                                 <MudItem xs="12">
-                                    <MudTextField @bind-Value="updateToolRequest.Location"
-                                                  Label="Location (Optional)"
-                                                  Variant="Variant.Outlined"
-                                                  FullWidth="true"
-                                                  Adornment="Adornment.Start"
-                                                  AdornmentIcon="@Icons.Material.Filled.LocationOn"
-                                                  HelperText="Location where the tool is available. Leave empty to use your public profile location."
-                                                  Class="mb-4" />
-                                    
-                                    @if (ShowLocationWarning)
-                                    {
-                                        <MudAlert Severity="Severity.Warning" Icon="@Icons.Material.Filled.LocationOff" Class="mb-4">
-                                            <strong>Location Warning:</strong> No location specified and your profile has no public location set. 
-                                            This may prevent your tool from appearing in location-based searches and could reduce rental opportunities.
-                                            <MudLink Href="/profile" Class="ml-2">Update your profile location</MudLink>
-                                        </MudAlert>
-                                    }
+                                    <LocationInheritanceSection 
+                                        ItemType="Tool"
+                                        UserProfileLocation="userProfileLocation"
+                                        UserHasProfileLocation="userHasProfileLocation"
+                                        LocationSource="locationInheritanceOption"
+                                        LocationSourceChanged="@(EventCallback.Factory.Create<LocationInheritanceOption>(this, (option) => { locationInheritanceOption = option; }))"
+                                        CustomLocation="customLocation"
+                                        CustomLocationChanged="@(EventCallback.Factory.Create<UserLocationModel>(this, (location) => { customLocation = location; }))"
+                                        OnLocationChange="HandleLocationChange" />
                                 </MudItem>
                                 <MudItem xs="12">
                                     <MudTextField @bind-Value="updateToolRequest.Tags"
@@ -494,16 +487,17 @@
     private bool isLoading = true;
     private bool isSubmitting = false;
     private bool isUploadingImages = false;
-    private string? userLocationDisplay = null;
+    // Phase 7: Location inheritance system
+    private UserLocationModel? userProfileLocation = null;
+    private bool userHasProfileLocation = false;
+    private LocationInheritanceOption locationInheritanceOption = LocationInheritanceOption.InheritFromProfile;
+    private UserLocationModel customLocation = new();
     
     // For delayed upload pattern
     private List<IBrowserFile> pendingFiles = new();
     private List<string> previewUrls = new();
     private List<string> existingImageUrls = new(); // Track existing images separately
     private List<frontend.Models.BreadcrumbItem> breadcrumbItems = new();
-    
-    // Show warning when both tool location and user public location are empty
-    private bool ShowLocationWarning => string.IsNullOrEmpty(updateToolRequest.Location) && string.IsNullOrEmpty(userLocationDisplay);
 
     protected override async Task OnInitializedAsync()
     {
@@ -551,11 +545,23 @@
                     DepositRequired = tool.DepositRequired,
                     Condition = tool.Condition ?? string.Empty,
                     Location = tool.Location ?? string.Empty,
+                    LocationInheritanceOption = tool.LocationInheritanceOption,
                     IsAvailable = tool.IsAvailable,
                     LeadTimeHours = tool.LeadTimeHours,
                     ImageUrls = tool.ImageUrls?.ToList() ?? new List<string>(),
                     Tags = tool.Tags ?? string.Empty
                 };
+                
+                // Phase 7: Set inheritance system variables based on current tool
+                locationInheritanceOption = tool.LocationInheritanceOption;
+                if (locationInheritanceOption == LocationInheritanceOption.CustomLocation)
+                {
+                    // Initialize custom location from tool's current location
+                    customLocation = new UserLocationModel
+                    {
+                        LocationDisplay = tool.Location ?? ""
+                    };
+                }
                 
                 // Initialize existing images for display
                 existingImageUrls = tool.ImageUrls?.ToList() ?? new List<string>();
@@ -585,14 +591,37 @@
             var response = await UserService.GetProfileAsync();
             if (response?.Success == true && response.Data != null)
             {
-                // Store user's location display for warning logic
-                userLocationDisplay = response.Data.LocationDisplay;
+                // Phase 7: Map user profile to UserLocationModel
+                userProfileLocation = new UserLocationModel
+                {
+                    LocationDisplay = response.Data.LocationDisplay ?? "",
+                    LocationCity = response.Data.LocationCity ?? "",
+                    LocationState = response.Data.LocationState ?? "",
+                    LocationCountry = response.Data.LocationCountry ?? "",
+                    LocationLat = response.Data.LocationLat,
+                    LocationLng = response.Data.LocationLng,
+                    LocationPrivacyLevel = response.Data.LocationPrivacyLevel != null ? 
+                        Enum.Parse<ToolsSharing.Frontend.Models.Location.PrivacyLevel>(response.Data.LocationPrivacyLevel) : 
+                        ToolsSharing.Frontend.Models.Location.PrivacyLevel.District
+                };
+                
+                // Check if user has location data
+                userHasProfileLocation = !string.IsNullOrEmpty(response.Data.LocationDisplay) || 
+                                       !string.IsNullOrEmpty(response.Data.LocationCity) || 
+                                       (response.Data.LocationLat.HasValue && response.Data.LocationLng.HasValue);
             }
         }
         catch (Exception ex)
         {
             // Don't show error for location loading failure, just continue without user location
         }
+    }
+
+    private async Task HandleLocationChange()
+    {
+        // Location data is automatically updated via binding
+        // We could add additional logic here if needed
+        StateHasChanged();
     }
 
     private async Task HandleUpdateTool()
@@ -632,6 +661,21 @@
             {
                 // No new images, just use existing ones
                 updateToolRequest.ImageUrls = existingImageUrls;
+            }
+
+            // Phase 7: Set location data based on inheritance choice (align with backend DTOs)
+            updateToolRequest.LocationSource = locationInheritanceOption;
+            
+            if (locationInheritanceOption == LocationInheritanceOption.CustomLocation)
+            {
+                // Use custom location object from LocationInheritanceSection
+                // Note: UpdateToolRequest uses EnhancedLocation field name in backend
+                updateToolRequest.EnhancedLocation = customLocation;
+            }
+            else
+            {
+                // InheritFromProfile - clear any custom location data
+                updateToolRequest.EnhancedLocation = null;
             }
 
             // Update the tool with the combined image URLs

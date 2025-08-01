@@ -6,6 +6,7 @@ using ToolsSharing.Core.DTOs.Messaging;
 using ToolsSharing.Core.DTOs.Dispute;
 using ToolsSharing.Core.DTOs.Bundle;
 using ToolsSharing.Core.DTOs.Tools;
+using ToolsSharing.Core.DTOs.Location;
 
 namespace ToolsSharing.Infrastructure.Mappings;
 
@@ -46,7 +47,37 @@ public static class MappingConfig
             .Map(dest => dest.ViewCount, src => src.ViewCount)
             .Map(dest => dest.AverageRating, src => src.AverageRating)
             .Map(dest => dest.ReviewCount, src => src.ReviewCount)
-            .Map(dest => dest.IsFeatured, src => src.IsFeatured);
+            .Map(dest => dest.IsFeatured, src => src.IsFeatured)
+            // Phase 7 - Location Inheritance System: Runtime location resolution
+            .Map(dest => dest.EnhancedLocation, src => src.LocationInheritanceOption == Core.Enums.LocationInheritanceOption.InheritFromProfile && src.Owner != null
+                ? new LocationDto
+                {
+                    LocationDisplay = src.Owner.LocationDisplay ?? "",
+                    LocationArea = src.Owner.LocationArea ?? "",
+                    LocationCity = src.Owner.LocationCity ?? "",
+                    LocationState = src.Owner.LocationState ?? "",
+                    LocationCountry = src.Owner.LocationCountry ?? "",
+                    LocationLat = src.Owner.LocationLat,
+                    LocationLng = src.Owner.LocationLng,
+                    LocationPrecisionRadius = src.Owner.LocationPrecisionRadius,
+                    LocationSource = src.Owner.LocationSource,
+                    LocationPrivacyLevel = src.Owner.LocationPrivacyLevel,
+                    LocationUpdatedAt = src.Owner.LocationUpdatedAt
+                }
+                : new LocationDto
+                {
+                    LocationDisplay = src.LocationDisplay ?? "",
+                    LocationArea = src.LocationArea ?? "",
+                    LocationCity = src.LocationCity ?? "",
+                    LocationState = src.LocationState ?? "",
+                    LocationCountry = src.LocationCountry ?? "",
+                    LocationLat = src.LocationLat,
+                    LocationLng = src.LocationLng,
+                    LocationPrecisionRadius = src.LocationPrecisionRadius,
+                    LocationSource = src.LocationSource,
+                    LocationPrivacyLevel = src.LocationPrivacyLevel,
+                    LocationUpdatedAt = src.LocationUpdatedAt
+                });
 
         TypeAdapterConfig<ToolDto, Tool>
             .NewConfig()

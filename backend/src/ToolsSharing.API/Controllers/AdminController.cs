@@ -245,8 +245,6 @@ public class AdminController : ControllerBase
                     u.PhoneNumber,
                     u.EmailConfirmed,
                     u.CreatedAt,
-                    u.City,
-                    u.Country,
                     IsDeleted = u.IsDeleted,
                     ToolCount = u.OwnedTools.Count(t => !t.IsDeleted),
                     RentalCount = u.RentalsAsRenter.Count()
@@ -479,8 +477,6 @@ public class AdminController : ControllerBase
                     u.PhoneNumber,
                     u.EmailConfirmed,
                     u.CreatedAt,
-                    u.City,
-                    u.Country,
                     IsDeleted = u.IsDeleted,
                     IsSuspended = u.IsDeleted,
                     ToolCount = u.OwnedTools.Count(t => !t.IsDeleted),
@@ -1233,10 +1229,6 @@ public class AdminController : ControllerBase
                 user.EmailConfirmed,
                 user.CreatedAt,
                 user.UpdatedAt,
-                user.City,
-                user.Country,
-                user.Address,
-                user.PostalCode,
                 user.LocationDisplay,
                 user.DateOfBirth,
                 user.ProfilePictureUrl,
@@ -1300,10 +1292,6 @@ public class AdminController : ControllerBase
             user.FirstName = request.FirstName;
             user.LastName = request.LastName;
             user.PhoneNumber = request.PhoneNumber;
-            user.City = request.City;
-            user.Country = request.Country;
-            user.Address = request.Address;
-            user.PostalCode = request.PostalCode;
             user.LocationDisplay = request.LocationDisplay;
             if (request.DateOfBirth.HasValue)
                 user.DateOfBirth = request.DateOfBirth.Value;

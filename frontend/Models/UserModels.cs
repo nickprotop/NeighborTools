@@ -10,11 +10,19 @@ public class UserProfileDto
     public string FirstName { get; set; } = "";
     public string LastName { get; set; } = "";
     public string? PhoneNumber { get; set; }
-    public string? Address { get; set; }
-    public string? City { get; set; }
-    public string? PostalCode { get; set; }
-    public string? Country { get; set; }
+    
+    // Phase 7: Comprehensive location system
     public string? LocationDisplay { get; set; }
+    public string? LocationArea { get; set; }
+    public string? LocationCity { get; set; }
+    public string? LocationState { get; set; }
+    public string? LocationCountry { get; set; }
+    public decimal? LocationLat { get; set; }
+    public decimal? LocationLng { get; set; }
+    public int? LocationPrecisionRadius { get; set; }
+    public string? LocationSource { get; set; }
+    public string? LocationPrivacyLevel { get; set; }
+    public DateTime? LocationUpdatedAt { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public string? ProfilePictureUrl { get; set; }
     public DateTime CreatedAt { get; set; }
@@ -38,20 +46,33 @@ public class UpdateUserProfileRequest
     [StringLength(20)]
     public string? PhoneNumber { get; set; }
 
+    // Phase 7: Comprehensive location system
     [StringLength(200)]
-    public string? Address { get; set; }
-
-    [StringLength(100)]
-    public string? City { get; set; }
-
-    [StringLength(10)]
-    public string? PostalCode { get; set; }
-
-    [StringLength(100)]
-    public string? Country { get; set; }
-
-    [StringLength(100)]
     public string? LocationDisplay { get; set; }
+    
+    [StringLength(100)]
+    public string? LocationArea { get; set; }
+    
+    [StringLength(100)]
+    public string? LocationCity { get; set; }
+    
+    [StringLength(100)]
+    public string? LocationState { get; set; }
+    
+    [StringLength(100)]
+    public string? LocationCountry { get; set; }
+    
+    public decimal? LocationLat { get; set; }
+    
+    public decimal? LocationLng { get; set; }
+    
+    public int? LocationPrecisionRadius { get; set; }
+    
+    public string? LocationSource { get; set; }
+    
+    public string? LocationPrivacyLevel { get; set; }
+    
+    public DateTime? LocationUpdatedAt { get; set; }
 
     public DateTime? DateOfBirth { get; set; }
 

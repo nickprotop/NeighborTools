@@ -1,0 +1,136 @@
+@using ToolsSharing.Frontend.Models.Location
+@using ToolsSharing.Frontend.Services.Location
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-4 mb-4">
+    <MudStack Spacing="3">
+        <MudText Typo="Typo.h6">📍 Your Location</MudText>
+        
+        <MudSwitch 
+            @bind-Value="HasLocationEnabled"
+            Label="Set my location" 
+            Color="Color.Primary"
+            ThumbIcon="@(HasLocationEnabled ? Icons.Material.Filled.LocationOn : Icons.Material.Filled.LocationOff)" />
+        
+        @if (HasLocationEnabled)
+        {
+            <MudAlert Severity="Severity.Info" Variant="Variant.Text">
+                <MudText Typo="Typo.body2">
+                    Your location will be used to help others find your tools and bundles nearby. 
+                    When creating tools or bundles, you can choose to inherit this location or set a custom one for each item.
+                </MudText>
+            </MudAlert>
+            
+            <LocationMapSelector 
+                Value="currentLocationOption"
+                ValueChanged="OnLocationOptionChanged"
+                @bind-PrivacyLevel="UserLocation.LocationPrivacyLevel"
+                Label="Your Location"
+                Required="false" />
+                
+            <MudText Typo="Typo.caption" Class="text-muted">
+                💡 Your location privacy settings control how much detail others can see when viewing your tools and bundles.
+            </MudText>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Normal" Variant="Variant.Text">
+                <MudText Typo="Typo.body2">
+                    Location not set. You'll need to specify a location for each tool or bundle individually.
+                </MudText>
+            </MudAlert>
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter] public UserLocationModel UserLocation { get; set; } = new();
+    [Parameter] public EventCallback<UserLocationModel> UserLocationChanged { get; set; }
+    
+    [Parameter] public bool HasLocationEnabled { get; set; } = false;
+    [Parameter] public EventCallback<bool> HasLocationEnabledChanged { get; set; }
+    
+    [Parameter] public EventCallback OnLocationChanged { get; set; }
+    
+    private LocationOption? currentLocationOption;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Convert UserLocationModel to LocationOption for the component
+        SyncLocationOptionFromUserLocation();
+        
+        // Initialize HasLocationEnabled based on whether UserLocation has data
+        if (!HasLocationEnabled && HasLocationData())
+        {
+            HasLocationEnabled = true;
+            await HasLocationEnabledChanged.InvokeAsync(HasLocationEnabled);
+        }
+        
+        await base.OnParametersSetAsync();
+    }
+    
+    private void SyncLocationOptionFromUserLocation()
+    {
+        if (HasLocationData())
+        {
+            currentLocationOption = new LocationOption
+            {
+                DisplayName = UserLocation.LocationDisplay ?? "",
+                Area = UserLocation.LocationArea,
+                City = UserLocation.LocationCity,
+                State = UserLocation.LocationState,
+                Country = UserLocation.LocationCountry,
+                Lat = UserLocation.LocationLat ?? 0,
+                Lng = UserLocation.LocationLng ?? 0
+            };
+        }
+        else
+        {
+            currentLocationOption = null;
+        }
+    }
+    
+    private async Task OnLocationOptionChanged(LocationOption? locationOption)
+    {
+        currentLocationOption = locationOption;
+        
+        // Convert LocationOption back to UserLocationModel
+        if (locationOption != null)
+        {
+            UserLocation.LocationDisplay = locationOption.DisplayName;
+            UserLocation.LocationArea = locationOption.Area;
+            UserLocation.LocationCity = locationOption.City;
+            UserLocation.LocationState = locationOption.State;
+            UserLocation.LocationCountry = locationOption.Country;
+            UserLocation.LocationLat = locationOption.Lat;
+            UserLocation.LocationLng = locationOption.Lng;
+        }
+        else
+        {
+            // Clear location data
+            UserLocation = new UserLocationModel();
+        }
+        
+        await UserLocationChanged.InvokeAsync(UserLocation);
+        await OnLocationChanged.InvokeAsync();
+    }
+
+    private bool HasLocationData()
+    {
+        return !string.IsNullOrEmpty(UserLocation.LocationDisplay) ||
+               !string.IsNullOrEmpty(UserLocation.LocationCity) ||
+               (UserLocation.LocationLat.HasValue && UserLocation.LocationLng.HasValue);
+    }
+
+    private async Task HandleLocationToggleChanged()
+    {
+        if (!HasLocationEnabled)
+        {
+            // Clear location data when disabled
+            UserLocation = new UserLocationModel();
+            await UserLocationChanged.InvokeAsync(UserLocation);
+        }
+        
+        await OnLocationChanged.InvokeAsync();
+    }
+}

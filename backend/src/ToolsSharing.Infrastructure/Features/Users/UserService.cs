@@ -67,16 +67,42 @@ public class UserService : IUserService
         user.FirstName = command.FirstName;
         user.LastName = command.LastName;
         user.PhoneNumber = command.PhoneNumber;
-        user.Address = command.Address;
-        user.City = command.City;
-        user.PostalCode = command.PostalCode;
-        user.Country = command.Country;
         user.LocationDisplay = command.LocationDisplay;
         user.ProfilePictureUrl = command.ProfilePictureUrl;
         user.UpdatedAt = DateTime.UtcNow;
 
         if (command.DateOfBirth.HasValue)
             user.DateOfBirth = command.DateOfBirth.Value;
+
+        // Phase 7: Update enhanced location fields for inheritance system
+        if (command.LocationArea != null)
+            user.LocationArea = command.LocationArea;
+        if (command.LocationCity != null)
+            user.LocationCity = command.LocationCity;
+        if (command.LocationState != null)
+            user.LocationState = command.LocationState;
+        if (command.LocationCountry != null)
+            user.LocationCountry = command.LocationCountry;
+        if (command.LocationLat.HasValue)
+            user.LocationLat = command.LocationLat.Value;
+        if (command.LocationLng.HasValue)
+            user.LocationLng = command.LocationLng.Value;
+        if (command.LocationPrecisionRadius.HasValue)
+            user.LocationPrecisionRadius = command.LocationPrecisionRadius.Value;
+        if (command.LocationSource.HasValue)
+            user.LocationSource = command.LocationSource.Value;
+        if (command.LocationPrivacyLevel.HasValue)
+            user.LocationPrivacyLevel = command.LocationPrivacyLevel.Value;
+        
+        // Update location timestamp if any location field was changed
+        if (command.LocationArea != null || command.LocationCity != null || 
+            command.LocationState != null || command.LocationCountry != null ||
+            command.LocationLat.HasValue || command.LocationLng.HasValue ||
+            command.LocationPrecisionRadius.HasValue || command.LocationSource.HasValue ||
+            command.LocationPrivacyLevel.HasValue || command.LocationDisplay != null)
+        {
+            user.LocationUpdatedAt = DateTime.UtcNow;
+        }
 
         await _userManager.UpdateAsync(user);
 

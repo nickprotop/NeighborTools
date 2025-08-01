@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
+using ToolsSharing.Frontend.Models.Location;
 
 namespace ToolsSharing.Frontend.Models
 {
@@ -21,6 +22,16 @@ namespace ToolsSharing.Frontend.Models
         
         // Location
         public string Location { get; set; } = ""; // Bundle location (independent or falls back to owner's PublicLocation)
+        
+        // Phase 7: Location inheritance system - align with backend DTOs
+        public LocationInheritanceOption LocationSource { get; set; } = LocationInheritanceOption.InheritFromProfile;
+        
+        // Legacy field name for backward compatibility with existing code
+        public LocationInheritanceOption LocationInheritanceOption 
+        { 
+            get => LocationSource; 
+            set => LocationSource = value; 
+        }
         
         // Pricing
         public decimal BundleDiscount { get; set; }
@@ -98,7 +109,13 @@ namespace ToolsSharing.Frontend.Models
         public decimal BundleDiscount { get; set; } = 0;
 
         [StringLength(500)]
-        public string Location { get; set; } = ""; // Bundle location, falls back to owner's PublicLocation if empty
+        public string Location { get; set; } = ""; // Legacy location field (deprecated)
+
+        // Phase 7: Location inheritance system - align with backend DTOs
+        public LocationInheritanceOption LocationSource { get; set; } = LocationInheritanceOption.InheritFromProfile;
+        
+        // Custom location object for inheritance system (only used when LocationSource = CustomLocation)
+        public UserLocationModel? CustomLocation { get; set; }
 
         [Required]
         public string Category { get; set; } = "";

@@ -1,0 +1,182 @@
+@using ToolsSharing.Frontend.Models.Location
+@using ToolsSharing.Frontend.Services.Location
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-4 mb-4">
+    <MudStack Spacing="3">
+        <MudText Typo="Typo.h6">📍 Location</MudText>
+        
+        <MudRadioGroup @bind-Value="LocationSource" @bind-Value:after="HandleLocationSourceChanged">
+            <MudRadio Value="LocationInheritanceOption.InheritFromProfile" Color="Color.Primary">
+                <MudText>Use my profile location</MudText>
+                @if (UserHasProfileLocation)
+                {
+                    <MudText Typo="Typo.caption" Class="text-muted ml-6">
+                        📍 @UserProfileLocation.LocationDisplay
+                    </MudText>
+                }
+                else
+                {
+                    <MudText Typo="Typo.caption" Class="text-warning ml-6">
+                        ⚠️ No profile location set
+                    </MudText>
+                }
+            </MudRadio>
+            <MudRadio Value="LocationInheritanceOption.CustomLocation" Color="Color.Primary">
+                <MudText>Set a custom location for this @ItemType.ToLower()</MudText>
+            </MudRadio>
+        </MudRadioGroup>
+        
+        <!-- Warning when inheriting empty profile location -->
+        @if (LocationSource == LocationInheritanceOption.InheritFromProfile && !UserHasProfileLocation)
+        {
+            <MudAlert Severity="Severity.Warning" Variant="Variant.Filled">
+                <MudText Typo="Typo.body2">
+                    <strong>No location will be set for this @ItemType.ToLower()</strong>
+                </MudText>
+                <MudText Typo="Typo.body2" Class="mt-2">
+                    You haven't set a location in your profile yet. This @ItemType.ToLower() won't have a location until you either:
+                </MudText>
+                <MudList T="string" Dense="true" Class="ml-3">
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Person">
+                        <MudText Typo="Typo.body2">Add a location to your profile, or</MudText>
+                    </MudListItem>
+                    <MudListItem T="string" Icon="@Icons.Material.Filled.Edit">
+                        <MudText Typo="Typo.body2">Change this @ItemType.ToLower() to use a custom location</MudText>
+                    </MudListItem>
+                </MudList>
+                <MudText Typo="Typo.body2" Class="mt-2">
+                    <strong>Impact:</strong> Others won't be able to find this @ItemType.ToLower() in location-based searches.
+                </MudText>
+            </MudAlert>
+        }
+        
+        <!-- Success message when inheriting valid profile location -->
+        @if (LocationSource == LocationInheritanceOption.InheritFromProfile && UserHasProfileLocation)
+        {
+            <MudAlert Severity="Severity.Success" Variant="Variant.Text">
+                <MudText Typo="Typo.body2">
+                    ✅ This @ItemType.ToLower() will use your profile location: <strong>@UserProfileLocation.LocationDisplay</strong>
+                </MudText>
+                <MudText Typo="Typo.caption" Class="text-muted">
+                    You can change this to a custom location anytime by editing this @ItemType.ToLower().
+                </MudText>
+            </MudAlert>
+        }
+        
+        <!-- Custom location input -->
+        @if (LocationSource == LocationInheritanceOption.CustomLocation)
+        {
+            <LocationMapSelector 
+                Value="currentCustomLocationOption"
+                ValueChanged="OnCustomLocationOptionChanged"
+                @bind-PrivacyLevel="CustomLocation.LocationPrivacyLevel"
+                Label="@($"{ItemType} Location")"
+                Required="true" />
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    [Parameter] public string ItemType { get; set; } = "Item";
+    [Parameter] public UserLocationModel? UserProfileLocation { get; set; }
+    [Parameter] public bool UserHasProfileLocation { get; set; } = false;
+    
+    [Parameter] public LocationInheritanceOption LocationSource { get; set; } = LocationInheritanceOption.InheritFromProfile;
+    [Parameter] public EventCallback<LocationInheritanceOption> LocationSourceChanged { get; set; }
+    
+    [Parameter] public UserLocationModel CustomLocation { get; set; } = new();
+    [Parameter] public EventCallback<UserLocationModel> CustomLocationChanged { get; set; }
+    
+    [Parameter] public EventCallback OnLocationChange { get; set; }
+    
+    private LocationOption? currentCustomLocationOption;
+
+    protected override void OnParametersSet()
+    {
+        // Convert CustomLocation to LocationOption for the component
+        SyncCustomLocationOption();
+        
+        // Auto-detect if user has profile location data
+        if (UserProfileLocation != null)
+        {
+            UserHasProfileLocation = !string.IsNullOrEmpty(UserProfileLocation.LocationDisplay) ||
+                                   !string.IsNullOrEmpty(UserProfileLocation.LocationCity) ||
+                                   (UserProfileLocation.LocationLat.HasValue && UserProfileLocation.LocationLng.HasValue);
+        }
+        
+        // Defensive: Ensure LocationSource retains its value during parameter updates
+        // This prevents the radio button from resetting when parent components re-render
+        
+        base.OnParametersSet();
+    }
+    
+    private void SyncCustomLocationOption()
+    {
+        if (HasCustomLocationData())
+        {
+            currentCustomLocationOption = new LocationOption
+            {
+                DisplayName = CustomLocation.LocationDisplay ?? "",
+                Area = CustomLocation.LocationArea,
+                City = CustomLocation.LocationCity,
+                State = CustomLocation.LocationState,
+                Country = CustomLocation.LocationCountry,
+                Lat = CustomLocation.LocationLat ?? 0,
+                Lng = CustomLocation.LocationLng ?? 0
+            };
+        }
+        else
+        {
+            currentCustomLocationOption = null;
+        }
+    }
+    
+    private bool HasCustomLocationData()
+    {
+        return !string.IsNullOrEmpty(CustomLocation.LocationDisplay) ||
+               !string.IsNullOrEmpty(CustomLocation.LocationCity) ||
+               (CustomLocation.LocationLat.HasValue && CustomLocation.LocationLng.HasValue);
+    }
+    
+    private async Task OnCustomLocationOptionChanged(LocationOption? locationOption)
+    {
+        currentCustomLocationOption = locationOption;
+        
+        // Convert LocationOption back to UserLocationModel
+        if (locationOption != null)
+        {
+            CustomLocation.LocationDisplay = locationOption.DisplayName;
+            CustomLocation.LocationArea = locationOption.Area;
+            CustomLocation.LocationCity = locationOption.City;
+            CustomLocation.LocationState = locationOption.State;
+            CustomLocation.LocationCountry = locationOption.Country;
+            CustomLocation.LocationLat = locationOption.Lat;
+            CustomLocation.LocationLng = locationOption.Lng;
+        }
+        else
+        {
+            // Clear custom location data
+            CustomLocation = new UserLocationModel();
+        }
+        
+        // Only notify parent of custom location data changes, not full location change
+        // This prevents unnecessary re-renders that could reset the radio button state
+        await CustomLocationChanged.InvokeAsync(CustomLocation);
+        
+        // Don't call OnLocationChange here - it causes unnecessary re-renders that reset radio state
+        // await OnLocationChange.InvokeAsync();
+    }
+
+    private async Task HandleLocationSourceChanged()
+    {
+        await LocationSourceChanged.InvokeAsync(LocationSource);
+        await OnLocationChange.InvokeAsync();
+    }
+
+    private async Task HandleCustomLocationChanged()
+    {
+        await CustomLocationChanged.InvokeAsync(CustomLocation);
+        await OnLocationChange.InvokeAsync();
+    }
+}

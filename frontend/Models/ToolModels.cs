@@ -1,5 +1,7 @@
 namespace frontend.Models;
 
+using ToolsSharing.Frontend.Models.Location;
+
 public class Tool
 {
     public string Id { get; set; } = string.Empty;
@@ -14,6 +16,10 @@ public class Tool
     public decimal DepositRequired { get; set; }
     public string Condition { get; set; } = string.Empty;
     public string Location { get; set; } = string.Empty;
+    
+    // Phase 7: Location inheritance system
+    public LocationInheritanceOption LocationInheritanceOption { get; set; } = LocationInheritanceOption.InheritFromProfile;
+    
     public bool IsAvailable { get; set; }
     public int? LeadTimeHours { get; set; }
     public string OwnerId { get; set; } = string.Empty;
@@ -50,7 +56,13 @@ public class ToolRequestBase
     public decimal? MonthlyRate { get; set; }
     public decimal DepositRequired { get; set; }
     public string Condition { get; set; } = string.Empty;
-    public string Location { get; set; } = string.Empty;
+    
+    // Phase 7: Location inheritance system - align with backend DTOs
+    public LocationInheritanceOption LocationSource { get; set; } = LocationInheritanceOption.InheritFromProfile;
+    
+    // Custom location object for inheritance system (only used when LocationSource = CustomLocation)
+    public UserLocationModel? CustomLocation { get; set; }
+    
     public int? LeadTimeHours { get; set; }
     public List<string> ImageUrls { get; set; } = new();
     public string? Tags { get; set; }
@@ -63,6 +75,24 @@ public class CreateToolRequest : ToolRequestBase
 public class UpdateToolRequest : ToolRequestBase
 {
     public bool IsAvailable { get; set; } = true;
+    
+    // Phase 7: UpdateToolRequest has different field name in backend for custom location
+    public UserLocationModel? EnhancedLocation { get; set; }
+    
+    // Legacy field names for backward compatibility with existing code
+    public string Location 
+    { 
+        get => EnhancedLocation?.LocationDisplay ?? ""; 
+        set => EnhancedLocation = string.IsNullOrEmpty(value) ? null : new UserLocationModel { LocationDisplay = value }; 
+    }
+    
+    public LocationInheritanceOption LocationInheritanceOption 
+    { 
+        get => LocationSource; 
+        set => LocationSource = value; 
+    }
+    
+    // Note: Backend UpdateToolRequest doesn't have LocationSource field - using inheritance from base
 }
 
 public class ToolRentalPreferences

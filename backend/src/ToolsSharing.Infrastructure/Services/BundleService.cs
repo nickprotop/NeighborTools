@@ -7,6 +7,7 @@ using Microsoft.Extensions.Logging;
 using Mapster;
 using ToolsSharing.Core.Common.Models;
 using ToolsSharing.Core.DTOs.Bundle;
+using ToolsSharing.Core.DTOs.Location;
 using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Interfaces;
 using ToolsSharing.Infrastructure.Data;
@@ -36,6 +37,13 @@ namespace ToolsSharing.Infrastructure.Services
         {
             try
             {
+                // Get the user for location inheritance
+                var user = await _context.Users.FindAsync(userId);
+                if (user == null)
+                {
+                    return ApiResponse<BundleDto>.CreateFailure("User not found");
+                }
+
                 // SECURITY: Validate that all tools exist and belong to the user
                 var toolIds = request.Tools.Select(t => t.ToolId).ToList();
                 var tools = await _context.Tools
@@ -58,7 +66,6 @@ namespace ToolsSharing.Infrastructure.Services
                     RequiredSkillLevel = request.RequiredSkillLevel,
                     EstimatedProjectDuration = request.EstimatedProjectDuration,
                     ImageUrl = request.ImageUrl,
-                    LocationDisplay = request.EnhancedLocation?.LocationDisplay, // Bundle-specific location
                     UserId = userId,
                     BundleDiscount = request.BundleDiscount,
                     IsPublished = request.IsPublished,
@@ -68,6 +75,27 @@ namespace ToolsSharing.Infrastructure.Services
                     IsApproved = false,
                     PendingApproval = true
                 };
+
+                // Handle location inheritance (Phase 7 - TRUE INHERITANCE)
+                // Store the inheritance choice, location will be resolved at query time
+                bundle.LocationInheritanceOption = request.LocationSource;
+                
+                if (request.LocationSource == Core.Enums.LocationInheritanceOption.CustomLocation && request.CustomLocation != null)
+                {
+                    // Only store location data for custom locations
+                    bundle.LocationDisplay = request.CustomLocation.LocationDisplay;
+                    bundle.LocationArea = request.CustomLocation.LocationArea;
+                    bundle.LocationCity = request.CustomLocation.LocationCity;
+                    bundle.LocationState = request.CustomLocation.LocationState;
+                    bundle.LocationCountry = request.CustomLocation.LocationCountry;
+                    bundle.LocationLat = request.CustomLocation.LocationLat;
+                    bundle.LocationLng = request.CustomLocation.LocationLng;
+                    bundle.LocationPrecisionRadius = request.CustomLocation.LocationPrecisionRadius;
+                    bundle.LocationSource = request.CustomLocation.LocationSource ?? Core.Enums.LocationSource.Manual;
+                    bundle.LocationPrivacyLevel = request.CustomLocation.LocationPrivacyLevel;
+                    bundle.LocationUpdatedAt = DateTime.UtcNow;
+                }
+                // For InheritFromProfile: leave location fields null/empty, will be resolved at query time from User profile
 
                 _context.Bundles.Add(bundle);
 
@@ -547,10 +575,49 @@ namespace ToolsSharing.Infrastructure.Services
             
             // Map owner information
             bundleDto.OwnerName = bundle.User.UserName ?? bundle.User.Email ?? "";
-            bundleDto.OwnerLocation = bundle.User.LocationDisplay ?? "";
             
-            // Bundle location is now handled through EnhancedLocation in the DTO
-            // The location display will be populated from bundle.LocationDisplay or fall back to owner's location in the service layer
+            // Phase 7 - Location Inheritance System: Runtime location resolution
+            LocationDto enhancedLocation;
+            if (bundle.LocationInheritanceOption == Core.Enums.LocationInheritanceOption.InheritFromProfile && bundle.User != null)
+            {
+                // TRUE INHERITANCE: Resolve location from User profile at runtime
+                enhancedLocation = new LocationDto
+                {
+                    LocationDisplay = bundle.User.LocationDisplay ?? "",
+                    LocationArea = bundle.User.LocationArea ?? "",
+                    LocationCity = bundle.User.LocationCity ?? "",
+                    LocationState = bundle.User.LocationState ?? "",
+                    LocationCountry = bundle.User.LocationCountry ?? "",
+                    LocationLat = bundle.User.LocationLat,
+                    LocationLng = bundle.User.LocationLng,
+                    LocationPrecisionRadius = bundle.User.LocationPrecisionRadius,
+                    LocationSource = bundle.User.LocationSource,
+                    LocationPrivacyLevel = bundle.User.LocationPrivacyLevel,
+                    LocationUpdatedAt = bundle.User.LocationUpdatedAt
+                };
+            }
+            else
+            {
+                // CUSTOM LOCATION: Use Bundle's own location fields
+                enhancedLocation = new LocationDto
+                {
+                    LocationDisplay = bundle.LocationDisplay ?? "",
+                    LocationArea = bundle.LocationArea ?? "",
+                    LocationCity = bundle.LocationCity ?? "",
+                    LocationState = bundle.LocationState ?? "",
+                    LocationCountry = bundle.LocationCountry ?? "",
+                    LocationLat = bundle.LocationLat,
+                    LocationLng = bundle.LocationLng,
+                    LocationPrecisionRadius = bundle.LocationPrecisionRadius,
+                    LocationSource = bundle.LocationSource,
+                    LocationPrivacyLevel = bundle.LocationPrivacyLevel,
+                    LocationUpdatedAt = bundle.LocationUpdatedAt
+                };
+            }
+            
+            // Set location fields in DTO
+            bundleDto.OwnerLocation = enhancedLocation.LocationDisplay;
+            bundleDto.EnhancedLocation = enhancedLocation;
             
             // Parse tags from string to List<string>
             if (!string.IsNullOrEmpty(bundle.Tags))
@@ -698,7 +765,7 @@ namespace ToolsSharing.Infrastructure.Services
                 existingBundle.RequiredSkillLevel = request.RequiredSkillLevel;
                 existingBundle.EstimatedProjectDuration = request.EstimatedProjectDuration;
                 existingBundle.ImageUrl = request.ImageUrl;
-                existingBundle.LocationDisplay = request.EnhancedLocation?.LocationDisplay; // Update bundle location
+                // TODO: Implement location inheritance logic for bundle updates (Phase 7)
                 existingBundle.BundleDiscount = request.BundleDiscount;
                 existingBundle.IsPublished = request.IsPublished;
                 existingBundle.Category = request.Category;
@@ -1715,5 +1782,6 @@ namespace ToolsSharing.Infrastructure.Services
 
             return "";
         }
+
     }
 }

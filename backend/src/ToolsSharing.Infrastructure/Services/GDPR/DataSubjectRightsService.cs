@@ -142,10 +142,6 @@ public class DataSubjectRightsService : IDataSubjectRightsService
         user.LastName = "User";
         user.Email = $"anonymized_{userId}@deleted.local";
         user.PhoneNumber = null;
-        user.Address = null;
-        user.City = null;
-        user.PostalCode = null;
-        user.Country = null;
         user.ProfilePictureUrl = null;
         user.AnonymizationDate = DateTime.UtcNow;
         user.IsDeleted = true;

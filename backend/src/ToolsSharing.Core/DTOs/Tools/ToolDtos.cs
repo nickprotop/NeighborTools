@@ -50,8 +50,9 @@ public class CreateToolRequest
     [MaxLength(500)]
     public string? Tags { get; set; }
     
-    // Enhanced location fields (Phase 1)
-    public UpdateLocationRequest? EnhancedLocation { get; set; }
+    // Location inheritance options (Phase 7)
+    public LocationInheritanceOption LocationSource { get; set; } = LocationInheritanceOption.InheritFromProfile;
+    public UpdateLocationRequest? CustomLocation { get; set; }
 }
 
 public class UpdateToolRequest

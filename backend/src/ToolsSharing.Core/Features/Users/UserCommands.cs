@@ -13,7 +13,17 @@ public record UpdateUserProfileCommand(
     string? Country = null,
     string? LocationDisplay = null,
     DateTime? DateOfBirth = null,
-    string? ProfilePictureUrl = null
+    string? ProfilePictureUrl = null,
+    // Phase 7: Enhanced location fields for inheritance system
+    string? LocationArea = null,
+    string? LocationCity = null,
+    string? LocationState = null,
+    string? LocationCountry = null,
+    decimal? LocationLat = null,
+    decimal? LocationLng = null,
+    int? LocationPrecisionRadius = null,
+    Core.Enums.LocationSource? LocationSource = null,
+    Core.Enums.PrivacyLevel? LocationPrivacyLevel = null
 );
 
 public record GetUserStatisticsQuery(string UserId);
@@ -39,6 +49,18 @@ public class UserProfileDto
     public bool IsVerified { get; set; }
     public double AverageRating { get; set; }
     public int ReviewCount { get; set; }
+    
+    // Phase 7: Enhanced location fields for inheritance system
+    public string? LocationArea { get; set; }
+    public string? LocationCity { get; set; }
+    public string? LocationState { get; set; }
+    public string? LocationCountry { get; set; }
+    public decimal? LocationLat { get; set; }
+    public decimal? LocationLng { get; set; }
+    public int? LocationPrecisionRadius { get; set; }
+    public Core.Enums.LocationSource? LocationSource { get; set; }
+    public Core.Enums.PrivacyLevel LocationPrivacyLevel { get; set; }
+    public DateTime? LocationUpdatedAt { get; set; }
 }
 
 public class UserStatisticsDto

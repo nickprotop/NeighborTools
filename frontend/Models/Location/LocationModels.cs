@@ -166,3 +166,21 @@ public class LocationBounds
     public decimal EastLng { get; set; }
     public decimal WestLng { get; set; }
 }
+
+/// <summary>
+/// User location model for profile settings (mirrors enhanced location fields)
+/// </summary>
+public class UserLocationModel
+{
+    public string? LocationDisplay { get; set; }
+    public string? LocationArea { get; set; }
+    public string? LocationCity { get; set; }
+    public string? LocationState { get; set; }
+    public string? LocationCountry { get; set; }
+    public decimal? LocationLat { get; set; }
+    public decimal? LocationLng { get; set; }
+    public int? LocationPrecisionRadius { get; set; }
+    public LocationSource? LocationSource { get; set; }
+    public PrivacyLevel LocationPrivacyLevel { get; set; } = PrivacyLevel.Neighborhood;
+    public DateTime? LocationUpdatedAt { get; set; }
+}

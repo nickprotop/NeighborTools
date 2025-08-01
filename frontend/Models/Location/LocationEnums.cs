@@ -56,3 +56,12 @@ public enum GeolocationError
     Timeout = 3,                // Request timed out
     NotSupported = 4            // Geolocation not supported by browser
 }
+
+/// <summary>
+/// Location inheritance options for Tool/Bundle creation (matches backend)
+/// </summary>
+public enum LocationInheritanceOption
+{
+    InheritFromProfile = 1,     // Inherit location from user profile
+    CustomLocation = 2          // Set custom location for this item
+}
