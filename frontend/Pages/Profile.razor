@@ -393,9 +393,7 @@
                     LocationCountry = userProfile.LocationCountry ?? "",
                     LocationLat = userProfile.LocationLat,
                     LocationLng = userProfile.LocationLng,
-                    LocationPrivacyLevel = userProfile.LocationPrivacyLevel != null ? 
-                        Enum.Parse<ToolsSharing.Frontend.Models.Location.PrivacyLevel>(userProfile.LocationPrivacyLevel) : 
-                        ToolsSharing.Frontend.Models.Location.PrivacyLevel.District
+                    LocationPrivacyLevel = userProfile.LocationPrivacyLevel
                 };
                 
                 // Enable location if user has any location data
@@ -405,7 +403,30 @@
             }
             else
             {
-                Snackbar.Add("Failed to load profile data.", Severity.Error);
+                // Enhanced error logging - show actual error details
+                string errorMessage = "Failed to load profile data.";
+                if (response != null)
+                {
+                    if (!response.Success && !string.IsNullOrEmpty(response.Message))
+                    {
+                        errorMessage = $"Profile loading failed: {response.Message}";
+                    }
+                    else if (response.Errors?.Any() == true)
+                    {
+                        errorMessage = $"Profile loading errors: {string.Join(", ", response.Errors)}";
+                    }
+                    else if (response.Data == null)
+                    {
+                        errorMessage = "Profile loading failed: No profile data returned from server.";
+                    }
+                }
+                else
+                {
+                    errorMessage = "Profile loading failed: No response received from server.";
+                }
+                
+                Snackbar.Add(errorMessage, Severity.Error);
+                
                 // Initialize with empty values to prevent null reference errors
                 updateRequest = new UpdateUserProfileRequest
                 {
@@ -416,7 +437,13 @@
         }
         catch (Exception ex)
         {
-            Snackbar.Add($"Error loading profile: {ex.Message}", Severity.Error);
+            string detailedError = $"Exception loading profile: {ex.Message}";
+            if (ex.InnerException != null)
+            {
+                detailedError += $" (Inner: {ex.InnerException.Message})";
+            }
+            
+            Snackbar.Add(detailedError, Severity.Error);
         }
     }
 

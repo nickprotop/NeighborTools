@@ -1,5 +1,6 @@
 using System.ComponentModel.DataAnnotations;
 using Microsoft.AspNetCore.Components.Forms;
+using ToolsSharing.Frontend.Models.Location;
 
 namespace frontend.Models;
 
@@ -21,7 +22,7 @@ public class UserProfileDto
     public decimal? LocationLng { get; set; }
     public int? LocationPrecisionRadius { get; set; }
     public string? LocationSource { get; set; }
-    public string? LocationPrivacyLevel { get; set; }
+    public PrivacyLevel LocationPrivacyLevel { get; set; } = PrivacyLevel.Neighborhood;
     public DateTime? LocationUpdatedAt { get; set; }
     public DateTime? DateOfBirth { get; set; }
     public string? ProfilePictureUrl { get; set; }

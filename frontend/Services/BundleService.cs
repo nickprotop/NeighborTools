@@ -23,7 +23,8 @@ namespace ToolsSharing.Frontend.Services
         // Bundle browsing and retrieval
         public async Task<ApiResponse<PagedResult<BundleModel>>> GetBundlesAsync(
             int page = 1, int pageSize = 20, string? category = null, 
-            string? searchTerm = null, bool featuredOnly = false, string? tags = null)
+            string? searchTerm = null, bool featuredOnly = false, string? tags = null,
+            string? locationQuery = null, decimal? lat = null, decimal? lng = null, int? radiusKm = null, bool? includeRemoteTools = null)
         {
             try
             {
@@ -45,8 +46,87 @@ namespace ToolsSharing.Frontend.Services
                 if (!string.IsNullOrEmpty(tags))
                     queryParams.Add($"tags={Uri.EscapeDataString(tags)}");
 
+                // Add location search parameters using consistent LocationSearch structure
+                if (!string.IsNullOrEmpty(locationQuery))
+                    queryParams.Add($"LocationSearch.LocationQuery={Uri.EscapeDataString(locationQuery)}");
+
+                if (lat.HasValue)
+                    queryParams.Add($"LocationSearch.Lat={lat.Value}");
+
+                if (lng.HasValue)
+                    queryParams.Add($"LocationSearch.Lng={lng.Value}");
+
+                if (radiusKm.HasValue)
+                    queryParams.Add($"LocationSearch.RadiusKm={radiusKm.Value}");
+
+                if (includeRemoteTools.HasValue)
+                    queryParams.Add($"LocationSearch.IncludeItemsWithoutLocation={includeRemoteTools.Value}");
+
                 var queryString = string.Join("&", queryParams);
                 var response = await _httpClient.GetAsync($"api/bundles?{queryString}");
+                var json = await response.Content.ReadAsStringAsync();
+
+                if (response.IsSuccessStatusCode)
+                {
+                    var result = JsonSerializer.Deserialize<ApiResponse<PagedResult<BundleModel>>>(json, _jsonOptions);
+                    return result ?? ApiResponse<PagedResult<BundleModel>>.CreateFailure("Failed to deserialize response");
+                }
+
+                var errorResult = JsonSerializer.Deserialize<ApiResponse<PagedResult<BundleModel>>>(json, _jsonOptions);
+                return errorResult ?? ApiResponse<PagedResult<BundleModel>>.CreateFailure("Request failed");
+            }
+            catch (Exception ex)
+            {
+                return ApiResponse<PagedResult<BundleModel>>.CreateFailure($"Network error: {ex.Message}");
+            }
+        }
+
+        // Bundle search using standardized /search endpoint (consistent with tools)
+        public async Task<ApiResponse<PagedResult<BundleModel>>> SearchBundlesAsync(BundleSearchRequest request)
+        {
+            try
+            {
+                var queryParams = new List<string>();
+                
+                if (!string.IsNullOrEmpty(request.Query))
+                    queryParams.Add($"Query={Uri.EscapeDataString(request.Query)}");
+                if (!string.IsNullOrEmpty(request.Category))
+                    queryParams.Add($"Category={Uri.EscapeDataString(request.Category)}");
+                if (!string.IsNullOrEmpty(request.Tags))
+                    queryParams.Add($"Tags={Uri.EscapeDataString(request.Tags)}");
+                if (request.MinPrice.HasValue)
+                    queryParams.Add($"MinPrice={request.MinPrice}");
+                if (request.MaxPrice.HasValue)
+                    queryParams.Add($"MaxPrice={request.MaxPrice}");
+                if (request.IsAvailable.HasValue)
+                    queryParams.Add($"IsAvailable={request.IsAvailable}");
+                if (request.IsFeatured.HasValue)
+                    queryParams.Add($"IsFeatured={request.IsFeatured}");
+                if (request.MinRating.HasValue)
+                    queryParams.Add($"MinRating={request.MinRating}");
+                if (!string.IsNullOrEmpty(request.SortBy))
+                    queryParams.Add($"SortBy={Uri.EscapeDataString(request.SortBy)}");
+                
+                queryParams.Add($"Page={request.Page}");
+                queryParams.Add($"PageSize={request.PageSize}");
+
+                // Add location search parameters using consistent LocationSearch structure
+                if (request.LocationSearch != null)
+                {
+                    if (!string.IsNullOrEmpty(request.LocationSearch.LocationQuery))
+                        queryParams.Add($"LocationSearch.LocationQuery={Uri.EscapeDataString(request.LocationSearch.LocationQuery)}");
+                    if (request.LocationSearch.Lat.HasValue)
+                        queryParams.Add($"LocationSearch.Lat={request.LocationSearch.Lat.Value}");
+                    if (request.LocationSearch.Lng.HasValue)
+                        queryParams.Add($"LocationSearch.Lng={request.LocationSearch.Lng.Value}");
+                    if (request.LocationSearch.RadiusKm.HasValue)
+                        queryParams.Add($"LocationSearch.RadiusKm={request.LocationSearch.RadiusKm.Value}");
+                    if (request.LocationSearch.IncludeItemsWithoutLocation.HasValue)
+                        queryParams.Add($"LocationSearch.IncludeItemsWithoutLocation={request.LocationSearch.IncludeItemsWithoutLocation.Value}");
+                }
+                
+                var queryString = string.Join("&", queryParams);
+                var response = await _httpClient.GetAsync($"api/bundles/search?{queryString}");
                 var json = await response.Content.ReadAsStringAsync();
 
                 if (response.IsSuccessStatusCode)

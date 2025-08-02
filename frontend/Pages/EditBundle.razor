@@ -1141,9 +1141,7 @@ else
                     LocationCountry = response.Data.LocationCountry ?? "",
                     LocationLat = response.Data.LocationLat,
                     LocationLng = response.Data.LocationLng,
-                    LocationPrivacyLevel = response.Data.LocationPrivacyLevel != null ? 
-                        Enum.Parse<ToolsSharing.Frontend.Models.Location.PrivacyLevel>(response.Data.LocationPrivacyLevel) : 
-                        ToolsSharing.Frontend.Models.Location.PrivacyLevel.District
+                    LocationPrivacyLevel = response.Data.LocationPrivacyLevel
                 };
                 
                 // Check if user has location data

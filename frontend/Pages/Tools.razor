@@ -5,6 +5,8 @@
 @using frontend.Services
 @using frontend.Components
 @using frontend.Components.Common
+@using frontend.Components.Location
+@using ToolsSharing.Frontend.Models.Location
 @inject IToolService ToolService
 @inject ISnackbar Snackbar
 @inject NavigationManager Navigation
@@ -102,6 +104,38 @@
                                          Color="Color.Primary" 
                                          @bind-Value:after="ApplyFilters" />
                             </div>
+                            
+                            <!-- Location Search Section (Phase 8 Enhancement) -->
+                            <div style="min-width: 250px;">
+                                <MudText Typo="Typo.body2" Class="mb-2">Location Search</MudText>
+                                <LocationAutocomplete @bind-Value="locationFilter"
+                                                     LocationSelectedWithCoordinates="OnLocationSelectedWithCoordinates"
+                                                     Label="Search near..."
+                                                     Placeholder="Enter city, neighborhood, or address"
+                                                     Clearable="true"
+                                                     ShowPopular="false"
+                                                     MinCharacters="2"
+                                                     Dense="true"
+                                                     Variant="Variant.Outlined" />
+                                
+                                @if (!string.IsNullOrEmpty(locationFilter))
+                                {
+                                    <div class="mt-2">
+                                        <MudText Typo="Typo.body2" Class="mb-2">Distance: @distanceKm km</MudText>
+                                        <MudSlider @bind-Value="distanceKm" 
+                                                 Min="1" 
+                                                 Max="100" 
+                                                 Step="5" 
+                                                 Color="Color.Primary" 
+                                                 @bind-Value:after="OnDistanceChanged" />
+                                        
+                                        <MudCheckBox @bind-Value="includeRemoteTools" 
+                                                    Label="Include tools without location" 
+                                                    Dense="true"
+                                                    @bind-Value:after="OnIncludeRemoteChanged" />
+                                    </div>
+                                }
+                            </div>
                         </MudStack>
                         
                         <!-- Active Filters Display -->
@@ -152,6 +186,26 @@
                                                  OnClose="() => RemoveTag(tag)"
                                                  CloseIcon="@Icons.Material.Filled.Close" />
                                     }
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(locationFilter))
+                                {
+                                    <MudChip T="string" 
+                                             Text="@($"Near: {locationFilter} ({distanceKm}km)")"
+                                             Color="Color.Info"
+                                             Size="Size.Small"
+                                             OnClose="ClearLocationFilter"
+                                             CloseIcon="@Icons.Material.Filled.Close" />
+                                }
+                                
+                                @if (!string.IsNullOrEmpty(locationFilter) && !includeRemoteTools)
+                                {
+                                    <MudChip T="string" 
+                                             Text="Location Required"
+                                             Color="Color.Warning"
+                                             Size="Size.Small"
+                                             OnClose="() => { includeRemoteTools = true; OnIncludeRemoteChanged(); }"
+                                             CloseIcon="@Icons.Material.Filled.Close" />
                                 }
                                 
                                 <MudButton Variant="Variant.Text" 
@@ -448,6 +502,13 @@
     private double maxDailyRate = 200;
     private string sortBy = "name";
     private string selectedTags = string.Empty;
+    
+    // Location filter properties (Phase 8 Enhancement)
+    private string locationFilter = string.Empty;
+    private decimal? locationLat = null;
+    private decimal? locationLng = null;
+    private int distanceKm = 25;
+    private bool includeRemoteTools = true;
 
     protected override async Task OnInitializedAsync()
     {
@@ -572,6 +633,30 @@
             selectedTags = string.Empty;
         }
         
+        // Handle location parameters (Phase 8 Enhancement)
+        var location = query["location"];
+        if (!string.IsNullOrEmpty(location))
+        {
+            locationFilter = location;
+        }
+        else
+        {
+            locationFilter = string.Empty;
+        }
+        
+        var radius = query["radius"];
+        if (int.TryParse(radius, out int radiusValue) && radiusValue > 0)
+        {
+            distanceKm = Math.Min(radiusValue, 100); // Cap at 100km
+        }
+        else
+        {
+            distanceKm = 25; // Default
+        }
+        
+        var excludeRemote = query["excludeRemote"];
+        includeRemoteTools = !bool.TryParse(excludeRemote, out bool exclude) || !exclude;
+        
         // Update breadcrumbs when parameters change
         SetupBreadcrumbs();
     }
@@ -598,7 +683,12 @@
                 ["sort"] = sortBy,
                 ["maxRate"] = maxDailyRate == 200 ? null : maxDailyRate.ToString(),
                 ["available"] = availableOnly?.ToString(),
-                ["tags"] = string.IsNullOrEmpty(selectedTags) ? null : selectedTags
+                ["tags"] = string.IsNullOrEmpty(selectedTags) ? null : selectedTags,
+                ["location"] = string.IsNullOrEmpty(locationFilter) ? null : locationFilter,
+                ["lat"] = locationLat?.ToString(),
+                ["lng"] = locationLng?.ToString(),
+                ["distance"] = string.IsNullOrEmpty(locationFilter) ? null : distanceKm.ToString(),
+                ["includeRemote"] = string.IsNullOrEmpty(locationFilter) ? null : includeRemoteTools.ToString()
             };
             var cacheKey = BrowserCacheService.GeneratePageCacheKey("tools", currentPage, pageSize, cacheParams);
             
@@ -609,11 +699,11 @@
                 cachedResult = await BrowserCacheService.GetCachedPageAsync<Tool>(cacheKey);
             }
             
-            ApiResponse<PagedResult<Tool>> result;
+            frontend.Models.ApiResponse<PagedResult<Tool>> result;
             if (cachedResult != null)
             {
                 // Use cached data
-                result = new ApiResponse<PagedResult<Tool>>
+                result = new frontend.Models.ApiResponse<PagedResult<Tool>>
                 {
                     Success = true,
                     Data = cachedResult,
@@ -631,7 +721,12 @@
                     sortBy: sortBy,
                     maxDailyRate: maxDailyRate == 200 ? null : (decimal)maxDailyRate,
                     availableOnly: availableOnly,
-                    tags: string.IsNullOrEmpty(selectedTags) ? null : selectedTags
+                    tags: string.IsNullOrEmpty(selectedTags) ? null : selectedTags,
+                    locationQuery: string.IsNullOrEmpty(locationFilter) ? null : locationFilter,
+                    lat: locationLat,
+                    lng: locationLng,
+                    radiusKm: string.IsNullOrEmpty(locationFilter) ? null : distanceKm,
+                    includeRemoteTools: string.IsNullOrEmpty(locationFilter) ? null : includeRemoteTools
                 );
                 
                 // Cache the result if successful
@@ -771,6 +866,18 @@
             
         if (!string.IsNullOrEmpty(selectedTags))
             queryParams.Add($"tags={Uri.EscapeDataString(selectedTags)}");
+            
+        // Add location parameters (Phase 8 Enhancement)
+        if (!string.IsNullOrEmpty(locationFilter))
+        {
+            queryParams.Add($"location={Uri.EscapeDataString(locationFilter)}");
+            queryParams.Add($"radius={distanceKm}");
+            
+            if (!includeRemoteTools)
+            {
+                queryParams.Add("excludeRemote=true");
+            }
+        }
         
         var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
         var newUrl = $"/tools{queryString}";
@@ -797,7 +904,8 @@
         return !string.IsNullOrEmpty(selectedCategory) ||
                availableOnly.HasValue ||
                maxDailyRate < 200 ||
-               !string.IsNullOrEmpty(selectedTags);
+               !string.IsNullOrEmpty(selectedTags) ||
+               !string.IsNullOrEmpty(locationFilter);
     }
     
     private List<string> GetActiveTagList()
@@ -843,6 +951,43 @@
         availableOnly = null;
         maxDailyRate = 200;
         selectedTags = string.Empty;
+        locationFilter = string.Empty;
+        distanceKm = 25;
+        includeRemoteTools = true;
+        await ApplyFilters();
+    }
+    
+    // Location filter event handlers (Phase 8 Enhancement)
+    private async Task OnLocationSelectedWithCoordinates(LocationAutocompleteResult result)
+    {
+        locationFilter = result.DisplayName ?? string.Empty;
+        locationLat = result.Latitude;
+        locationLng = result.Longitude;
+        
+        Console.WriteLine($"Tools page: Location selected - {result.DisplayName}, Has coordinates: {result.HasCoordinates}");
+        if (result.HasCoordinates)
+        {
+            Console.WriteLine($"Tools page: Using coordinates for search - Lat: {result.Latitude}, Lng: {result.Longitude}");
+        }
+        
+        await ApplyFilters();
+    }
+    
+    private async Task OnDistanceChanged()
+    {
+        await ApplyFilters();
+    }
+    
+    private async Task OnIncludeRemoteChanged()
+    {
+        await ApplyFilters();
+    }
+    
+    private async Task ClearLocationFilter()
+    {
+        locationFilter = string.Empty;
+        distanceKm = 25;
+        includeRemoteTools = true;
         await ApplyFilters();
     }
 

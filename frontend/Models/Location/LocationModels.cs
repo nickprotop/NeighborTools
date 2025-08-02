@@ -123,8 +123,72 @@ public class ApiResponse<T>
 public class LocationSearchRequest
 {
     public string Query { get; set; } = "";
+    public decimal? Lat { get; set; }
+    public decimal? Lng { get; set; }
     public int MaxResults { get; set; } = 5;
     public string? CountryCode { get; set; }
+}
+
+/// <summary>
+/// Enhanced location search parameters for tools/bundles filtering
+/// </summary>
+public class LocationFilterRequest
+{
+    /// <summary>
+    /// Text-based location query (e.g., "near Atlanta") - used when Lat/Lng are null
+    /// </summary>
+    public string? LocationQuery { get; set; }
+    
+    /// <summary>
+    /// Direct latitude coordinate for proximity search - takes priority over LocationQuery
+    /// </summary>
+    public decimal? Lat { get; set; }
+    
+    /// <summary>
+    /// Direct longitude coordinate for proximity search - takes priority over LocationQuery
+    /// </summary>
+    public decimal? Lng { get; set; }
+    
+    /// <summary>
+    /// Search radius in kilometers
+    /// </summary>
+    public int? RadiusKm { get; set; } = 25;
+    
+    /// <summary>
+    /// Include items that don't have location data
+    /// </summary>
+    public bool IncludeItemsWithoutLocation { get; set; } = true;
+}
+
+/// <summary>
+/// Result from LocationAutocomplete containing both display text and coordinates
+/// </summary>
+public class LocationAutocompleteResult
+{
+    /// <summary>
+    /// Display name for the location (e.g., "Athens, GA, USA")
+    /// </summary>
+    public string DisplayName { get; set; } = "";
+    
+    /// <summary>
+    /// Latitude coordinate (null if geocoding failed)
+    /// </summary>
+    public decimal? Latitude { get; set; }
+    
+    /// <summary>
+    /// Longitude coordinate (null if geocoding failed)
+    /// </summary>
+    public decimal? Longitude { get; set; }
+    
+    /// <summary>
+    /// Whether coordinates were successfully obtained
+    /// </summary>
+    public bool HasCoordinates => Latitude.HasValue && Longitude.HasValue;
+    
+    /// <summary>
+    /// Source of the coordinates (geocoded, user_location, etc.)
+    /// </summary>
+    public string? Source { get; set; }
 }
 
 /// <summary>

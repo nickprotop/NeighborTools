@@ -1,0 +1,331 @@
+@using ToolsSharing.Frontend.Models.Location
+@using ToolsSharing.Frontend.Services.Location
+@inject ILocationService LocationService
+@inject ISnackbar Snackbar
+
+<MudPaper Class="pa-4 mb-4" Elevation="2" Style="border-radius: 16px;">
+    <MudStack Spacing="3">
+        <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+            <MudIcon Icon="@Icons.Material.Filled.LocationOn" Color="Color.Primary" />
+            <MudText Typo="Typo.subtitle1" Color="Color.Primary">
+                Location Search @(IsOptional ? "(Optional)" : "")
+            </MudText>
+            @if (HasActiveLocationFilter)
+            {
+                <MudSpacer />
+                <MudButton Size="Size.Small" 
+                          Variant="Variant.Text" 
+                          Color="Color.Error"
+                          OnClick="ClearLocationFilter"
+                          StartIcon="@Icons.Material.Filled.Clear">
+                    Clear
+                </MudButton>
+            }
+        </MudStack>
+        
+        <MudGrid AlignItems="AlignItems.End" Spacing="2">
+            <MudItem xs="12" sm="6" md="4">
+                @if (UseAdvancedLocationSelector)
+                {
+                    <!-- Advanced: Map-based selection -->
+                    <LocationMapSelector @bind-Value="selectedLocationOption"
+                                        @bind-Value:after="() => OnLocationOptionChanged(selectedLocationOption)"
+                                        Label="Search location"
+                                        ShowMap="true"
+                                        MapHeight="200"
+                                        ShowPopular="true"
+                                        Required="@(!IsOptional)"
+                                        Clearable="true" />
+                }
+                else
+                {
+                    <!-- Standard: Autocomplete selection -->
+                    <LocationAutocomplete @bind-Value="selectedLocationText"
+                                         @bind-Value:after="() => OnLocationTextChanged(selectedLocationText)"
+                                         Label="Search near..."
+                                         Placeholder="Enter city, neighborhood, or address"
+                                         Clearable="true"
+                                         ShowPopular="true"
+                                         Required="@(!IsOptional)"
+                                         MinCharacters="2" />
+                }
+            </MudItem>
+            
+            <MudItem xs="12" sm="3" md="2">
+                <MudSelect @bind-Value="RadiusKm" 
+                          Label="Radius" 
+                          Dense="true"
+                          Variant="Variant.Outlined"
+                          Disabled="@(!HasLocationInput)">
+                    <MudSelectItem Value="5">5 km</MudSelectItem>
+                    <MudSelectItem Value="10">10 km</MudSelectItem>
+                    <MudSelectItem Value="15">15 km</MudSelectItem>
+                    <MudSelectItem Value="25">25 km</MudSelectItem>
+                    <MudSelectItem Value="50">50 km</MudSelectItem>
+                    <MudSelectItem Value="100">100 km</MudSelectItem>
+                </MudSelect>
+            </MudItem>
+            
+            <MudItem xs="12" sm="3" md="2">
+                <MudStack Row Spacing="1">
+                    <MudButton Variant="Variant.Outlined" 
+                              Color="Color.Primary"
+                              OnClick="UseMyLocation" 
+                              StartIcon="@Icons.Material.Filled.MyLocation"
+                              Size="Size.Small"
+                              Disabled="@isGettingCurrentLocation"
+                              FullWidth="true">
+                        @if (isGettingCurrentLocation)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                        }
+                        else
+                        {
+                            <span>Near Me</span>
+                        }
+                    </MudButton>
+                </MudStack>
+            </MudItem>
+            
+            <MudItem xs="12" sm="12" md="4">
+                <MudStack Row Spacing="1" Justify="Justify.FlexEnd">
+                    @if (ShowAdvancedToggle)
+                    {
+                        <MudButton Variant="Variant.Text" 
+                                  Color="Color.Secondary"
+                                  OnClick="ToggleAdvancedMode"
+                                  StartIcon="@(UseAdvancedLocationSelector ? Icons.Material.Filled.TextFields : Icons.Material.Filled.Map)"
+                                  Size="Size.Small">
+                            @(UseAdvancedLocationSelector ? "Simple" : "Map")
+                        </MudButton>
+                    }
+                    
+                    @if (ShowSearchButton)
+                    {
+                        <MudButton Variant="Variant.Filled" 
+                                  Color="Color.Primary"
+                                  OnClick="HandleSearchClick"
+                                  StartIcon="@Icons.Material.Filled.Search"
+                                  Disabled="@(!HasLocationInput)"
+                                  Size="Size.Small">
+                            Search
+                        </MudButton>
+                    }
+                </MudStack>
+            </MudItem>
+        </MudGrid>
+        
+        @if (HasActiveLocationFilter)
+        {
+            <MudAlert Severity="Severity.Info" Dense="true" Icon="@Icons.Material.Filled.LocationOn">
+                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                    <MudText Typo="Typo.body2">
+                        Searching within @RadiusKm km of <strong>@CurrentLocationDisplay</strong>
+                    </MudText>
+                </MudStack>
+            </MudAlert>
+        }
+        
+        @if (ShowIncludeRemoteOption && HasActiveLocationFilter)
+        {
+            <MudCheckBox @bind-Value="IncludeItemsWithoutLocation" 
+                        Label="Include items without location data"
+                        Dense="true" />
+        }
+    </MudStack>
+</MudPaper>
+
+@code {
+    // Component Parameters - External Interface
+    [Parameter] public string? LocationFilter { get; set; }
+    [Parameter] public EventCallback<string?> LocationFilterChanged { get; set; }
+    
+    [Parameter] public int RadiusKm { get; set; } = 25;
+    [Parameter] public EventCallback<int> RadiusKmChanged { get; set; }
+    
+    [Parameter] public bool IncludeItemsWithoutLocation { get; set; } = true;
+    [Parameter] public EventCallback<bool> IncludeItemsWithoutLocationChanged { get; set; }
+    
+    [Parameter] public EventCallback OnLocationChanged { get; set; }
+    [Parameter] public EventCallback OnSearchRequested { get; set; }
+    [Parameter] public EventCallback OnLocationCleared { get; set; }
+    
+    // UI Configuration Parameters
+    [Parameter] public bool IsOptional { get; set; } = true;
+    [Parameter] public bool ShowAdvancedToggle { get; set; } = true;
+    [Parameter] public bool ShowSearchButton { get; set; } = false;
+    [Parameter] public bool ShowIncludeRemoteOption { get; set; } = true;
+    [Parameter] public bool UseAdvancedLocationSelector { get; set; } = false;
+    
+    // Internal State
+    private string selectedLocationText = string.Empty;
+    private LocationOption? selectedLocationOption;
+    private bool isGettingCurrentLocation = false;
+    
+    // Computed Properties
+    private bool HasLocationInput => !string.IsNullOrEmpty(selectedLocationText) || selectedLocationOption != null;
+    private bool HasActiveLocationFilter => !string.IsNullOrEmpty(LocationFilter);
+    private string CurrentLocationDisplay => LocationFilter ?? "Unknown Location";
+
+    protected override void OnParametersSet()
+    {
+        // Sync internal state with external LocationFilter parameter
+        if (!string.IsNullOrEmpty(LocationFilter) && selectedLocationText != LocationFilter)
+        {
+            selectedLocationText = LocationFilter;
+        }
+        else if (string.IsNullOrEmpty(LocationFilter))
+        {
+            selectedLocationText = string.Empty;
+            selectedLocationOption = null;
+        }
+        
+        base.OnParametersSet();
+    }
+
+    private async Task OnLocationTextChanged(string? locationText)
+    {
+        selectedLocationText = locationText ?? string.Empty;
+        
+        // Update external parameter
+        LocationFilter = string.IsNullOrEmpty(selectedLocationText) ? null : selectedLocationText;
+        await LocationFilterChanged.InvokeAsync(LocationFilter);
+        
+        // Notify parent of location change
+        await OnLocationChanged.InvokeAsync();
+    }
+
+    private async Task OnLocationOptionChanged(LocationOption? locationOption)
+    {
+        selectedLocationOption = locationOption;
+        
+        // Convert LocationOption to string for external interface
+        if (locationOption != null)
+        {
+            selectedLocationText = locationOption.DisplayName;
+            LocationFilter = locationOption.DisplayName;
+        }
+        else
+        {
+            selectedLocationText = string.Empty;
+            LocationFilter = null;
+        }
+        
+        await LocationFilterChanged.InvokeAsync(LocationFilter);
+        await OnLocationChanged.InvokeAsync();
+    }
+
+    private async Task UseMyLocation()
+    {
+        if (isGettingCurrentLocation) return;
+        
+        isGettingCurrentLocation = true;
+        StateHasChanged();
+        
+        try
+        {
+            var locationResult = await LocationService.GetCurrentLocationAsync();
+            
+            if (locationResult.Success && locationResult.Latitude.HasValue && locationResult.Longitude.HasValue)
+            {
+                // Try to reverse geocode the coordinates
+                var reverseResponse = await LocationService.ReverseGeocodeAsync(
+                    locationResult.Latitude!.Value, 
+                    locationResult.Longitude!.Value);
+                
+                if (reverseResponse != null)
+                {
+                    if (UseAdvancedLocationSelector)
+                    {
+                        selectedLocationOption = reverseResponse;
+                        await OnLocationOptionChanged(reverseResponse);
+                    }
+                    else
+                    {
+                        selectedLocationText = reverseResponse.DisplayName;
+                        await OnLocationTextChanged(reverseResponse.DisplayName);
+                    }
+                    
+                    Snackbar.Add("Current location detected successfully", Severity.Success);
+                }
+                else
+                {
+                    // Create basic location from coordinates
+                    var basicLocation = $"Current Location ({locationResult.Latitude:F4}, {locationResult.Longitude:F4})";
+                    
+                    if (UseAdvancedLocationSelector)
+                    {
+                        selectedLocationOption = new LocationOption
+                        {
+                            DisplayName = basicLocation,
+                            Lat = locationResult.Latitude.Value,
+                            Lng = locationResult.Longitude.Value,
+                            Source = LocationSource.Browser
+                        };
+                        await OnLocationOptionChanged(selectedLocationOption);
+                    }
+                    else
+                    {
+                        selectedLocationText = basicLocation;
+                        await OnLocationTextChanged(basicLocation);
+                    }
+                    
+                    Snackbar.Add("Location detected, but address lookup failed", Severity.Warning);
+                }
+            }
+            else
+            {
+                var errorMessage = locationResult.ErrorMessage ?? "Unable to get current location";
+                Snackbar.Add(errorMessage, Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to get current location: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isGettingCurrentLocation = false;
+            StateHasChanged();
+        }
+    }
+
+    private void ToggleAdvancedMode()
+    {
+        UseAdvancedLocationSelector = !UseAdvancedLocationSelector;
+        
+        // Try to preserve location selection when switching modes
+        if (UseAdvancedLocationSelector && !string.IsNullOrEmpty(selectedLocationText))
+        {
+            // Convert text to LocationOption (best effort)
+            selectedLocationOption = new LocationOption
+            {
+                DisplayName = selectedLocationText,
+                Source = LocationSource.Manual
+            };
+        }
+        else if (!UseAdvancedLocationSelector && selectedLocationOption != null)
+        {
+            // Convert LocationOption to text
+            selectedLocationText = selectedLocationOption.DisplayName;
+        }
+    }
+
+    private async Task HandleSearchClick()
+    {
+        await OnSearchRequested.InvokeAsync();
+    }
+
+    private async Task ClearLocationFilter()
+    {
+        selectedLocationText = string.Empty;
+        selectedLocationOption = null;
+        LocationFilter = null;
+        
+        await LocationFilterChanged.InvokeAsync(LocationFilter);
+        await OnLocationCleared.InvokeAsync();
+        await OnLocationChanged.InvokeAsync();
+        
+        Snackbar.Add("Location filter cleared", Severity.Info);
+    }
+}

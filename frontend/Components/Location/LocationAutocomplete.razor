@@ -160,6 +160,7 @@
     [Parameter] public string Value { get; set; } = "";
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public EventCallback<string> LocationSelected { get; set; }
+    [Parameter] public EventCallback<LocationAutocompleteResult> LocationSelectedWithCoordinates { get; set; }
     [Parameter] public EventCallback<string> SearchTextChanged { get; set; }
     [Parameter] public EventCallback CurrentLocationRequested { get; set; }
     [Parameter] public EventCallback<List<string>> ValidationErrorsChanged { get; set; }
@@ -167,8 +168,25 @@
     // After value changed handler for MudBlazor 8's @bind-Value:after
     private async Task OnAfterValueChanged()
     {
-        // Trigger location selected event
+        // Trigger location selected event (legacy)
         await LocationSelected.InvokeAsync(Value);
+        
+        // Create LocationAutocompleteResult with coordinates if available
+        var result = new LocationAutocompleteResult
+        {
+            DisplayName = Value ?? ""
+        };
+        
+        // Try to get coordinates from the lookup if user selected from suggestions
+        if (!string.IsNullOrEmpty(Value) && locationLookup.TryGetValue(Value, out var locationOption))
+        {
+            result.Latitude = locationOption.Lat;
+            result.Longitude = locationOption.Lng;
+            result.Source = locationOption.Source.ToString() ?? "suggestion";
+        }
+        
+        // Trigger enhanced location selected event with coordinates
+        await LocationSelectedWithCoordinates.InvokeAsync(result);
         
         // Clear validation errors when value changes
         if (validationErrors.Any())
@@ -192,6 +210,10 @@
     private List<string> popularLocations = new();
     private List<string> validationErrors = new();
     private List<string> searchCache = new();
+    
+    // Store LocationOptions with coordinates for selected results
+    private List<LocationOption> searchResults = new();
+    private Dictionary<string, LocationOption> locationLookup = new();
     
     protected override async Task OnInitializedAsync()
     {
@@ -222,7 +244,20 @@
             
             if (searchResponse != null && searchResponse.Any())
             {
-                // Deduplicate results to prevent duplicate key errors
+                // Store the full LocationOption results
+                searchResults = searchResponse;
+                
+                // Build lookup dictionary for coordinate access
+                locationLookup.Clear();
+                foreach (var locationOption in searchResponse)
+                {
+                    if (!string.IsNullOrEmpty(locationOption.DisplayName))
+                    {
+                        locationLookup[locationOption.DisplayName] = locationOption;
+                    }
+                }
+                
+                // Extract display names for the autocomplete
                 var locations = searchResponse
                     .Select(loc => loc.DisplayName)
                     .Where(name => !string.IsNullOrEmpty(name))
@@ -287,6 +322,25 @@
         // Update the value directly - MudBlazor will handle the binding
         Value = location;
         await ValueChanged.InvokeAsync(Value);
+        
+        // Try to get coordinates for popular location by doing a quick search
+        try
+        {
+            var searchResponse = await LocationService.GetLocationSuggestionsAsync(location, 1);
+            if (searchResponse != null && searchResponse.Any())
+            {
+                var locationOption = searchResponse.First();
+                if (!string.IsNullOrEmpty(locationOption.DisplayName))
+                {
+                    locationLookup[locationOption.DisplayName] = locationOption;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"LocationAutocomplete: Failed to get coordinates for popular location '{location}': {ex.Message}");
+        }
+        
         await OnAfterValueChanged();
     }
     
@@ -315,14 +369,30 @@
                 {
                     Value = reverseResponse.DisplayName;
                     await ValueChanged.InvokeAsync(Value);
+                    
+                    // Store the location with coordinates in the lookup
+                    locationLookup[reverseResponse.DisplayName] = reverseResponse;
+                    
                     await OnAfterValueChanged();
                     Snackbar.Add("Current location detected successfully", Severity.Success);
                 }
                 else
                 {
                     // Fallback to coordinates if reverse geocoding fails
-                    Value = $"Current Location ({locationResult.Latitude:F4}, {locationResult.Longitude:F4})";
+                    var coordsDisplay = $"Current Location ({locationResult.Latitude:F4}, {locationResult.Longitude:F4})";
+                    Value = coordsDisplay;
                     await ValueChanged.InvokeAsync(Value);
+                    
+                    // Create a LocationOption for the coordinates
+                    var coordsLocation = new LocationOption
+                    {
+                        DisplayName = coordsDisplay,
+                        Lat = locationResult.Latitude.Value,
+                        Lng = locationResult.Longitude.Value,
+                        Source = LocationSource.Browser
+                    };
+                    locationLookup[coordsDisplay] = coordsLocation;
+                    
                     await OnAfterValueChanged();
                     Snackbar.Add("Location detected, but address lookup failed", Severity.Warning);
                 }

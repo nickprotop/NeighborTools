@@ -32,69 +32,16 @@
 
         <!-- Location Input -->
         <MudStack Spacing="3">
-            <MudAutocomplete T="string"
-                             @bind-Value="selectedLocationText"
-                             @bind-Value:after="@OnLocationSelected"
-                             SearchFunc="@SearchLocationStrings"
-                             Label="Search Location"
-                             Placeholder="Enter a city, address, or landmark..."
-                             Variant="Variant.Outlined"
-                             FullWidth="true"
-                             Adornment="Adornment.End"
-                             AdornmentIcon="@Icons.Material.Filled.MyLocation"
-                             OnAdornmentClick="@OnCurrentLocationClick"
-                             Clearable="true"
-                             Required="@RequiredLocation"
-                             RequiredError="Location is required"
-                             MaxItems="8"
-                             MinCharacters="2"
-                             DebounceInterval="500"
-                             ResetValueOnEmptyText="false"
-                             CoerceText="false" 
-                             CoerceValue="true">
-                             
-                <ItemTemplate Context="locationText">
-                    <div class="d-flex align-center">
-                        <MudIcon Icon="@GetLocationIconFromText(locationText)" 
-                                 Size="Size.Small" 
-                                 Color="Color.Secondary" 
-                                 Class="mr-3" />
-                        <div>
-                            <MudText Typo="Typo.body2">@locationText</MudText>
-                            @{
-                                var locationDetails = GetLocationDetailsFromText(locationText);
-                            }
-                            @if (!string.IsNullOrEmpty(locationDetails))
-                            {
-                                <MudText Typo="Typo.caption" Color="Color.Secondary">@locationDetails</MudText>
-                            }
-                        </div>
-                    </div>
-                </ItemTemplate>
-                
-                <NoItemsTemplate>
-                    @if (!string.IsNullOrEmpty(currentSearchText) && currentSearchText.Length >= 2)
-                    {
-                        <MudText Align="Align.Center" Class="px-4 py-1">
-                            @if (isSearchingLocations)
-                            {
-                                <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
-                                <span>Searching...</span>
-                            }
-                            else
-                            {
-                                <span>No locations found for "@currentSearchText"</span>
-                            }
-                        </MudText>
-                    }
-                    else
-                    {
-                        <MudText Align="Align.Center" Class="px-4 py-1" Color="Color.Secondary">
-                            Start typing to search locations...
-                        </MudText>
-                    }
-                </NoItemsTemplate>
-            </MudAutocomplete>
+            <LocationAutocomplete @bind-Value="selectedLocationText"
+                                 LocationSelectedWithCoordinates="OnLocationSelectedWithCoordinates"
+                                 Label="Search Location"
+                                 Placeholder="Enter a city, address, or landmark..."
+                                 Clearable="true"
+                                 Required="@RequiredLocation"
+                                 RequiredError="Location is required"
+                                 ShowPopular="false"
+                                 MinCharacters="2"
+                                 Variant="Variant.Outlined" />
 
             <!-- Search Controls -->
             <MudGrid>
@@ -419,14 +366,11 @@
     // Internal State
     private LocationOption? selectedLocation;
     private string selectedLocationText = "";
-    private List<LocationOption> cachedLocationResults = new();
     private SearchType searchType = SearchType.Both;
     private int searchRadius = 10;
     private bool isSearching = false;
-    private bool isSearchingLocations = false;
     private bool isGettingCurrentLocation = false;
     private bool hasSearched = false;
-    private string currentSearchText = "";
     private string errorMessage = "";
     private List<NearbyToolDto> toolResults = new();
     private List<NearbyBundleDto> bundleResults = new();
@@ -436,54 +380,35 @@
         searchRadius = DefaultRadius;
     }
     
-    // Location search functionality (string-based like LocationAutocomplete)
-    private async Task<IEnumerable<string>> SearchLocationStrings(string searchText, CancellationToken cancellationToken)
-    {
-        currentSearchText = searchText ?? "";
-        
-        if (string.IsNullOrWhiteSpace(searchText) || searchText.Length < 2)
-        {
-            cachedLocationResults.Clear(); // Clear cache for empty search
-            return Array.Empty<string>();
-        }
-        
-        isSearchingLocations = true;
-        StateHasChanged();
-        
-        try
-        {
-            var response = await LocationService.GetLocationSuggestionsAsync(searchText);
-            cachedLocationResults = response ?? new List<LocationOption>(); // Cache the full objects
-            
-            // Return just the display names for the autocomplete
-            return cachedLocationResults.Select(loc => loc.DisplayName).Where(name => !string.IsNullOrEmpty(name)).Distinct();
-        }
-        catch (OperationCanceledException)
-        {
-            cachedLocationResults.Clear();
-            return Array.Empty<string>();
-        }
-        catch (Exception)
-        {
-            cachedLocationResults.Clear();
-            return Array.Empty<string>();
-        }
-        finally
-        {
-            isSearchingLocations = false;
-            StateHasChanged();
-        }
-    }
     
-    // Location selection handler
-    private async Task OnLocationSelected()
+    // Location selection handler with coordinates
+    private async Task OnLocationSelectedWithCoordinates(LocationAutocompleteResult result)
     {
-        // Find the matching LocationOption object from cache using the selected text
-        selectedLocation = cachedLocationResults.FirstOrDefault(loc => loc.DisplayName == selectedLocationText);
+        selectedLocationText = result.DisplayName ?? string.Empty;
         
-        if (selectedLocation != null)
+        // Create LocationOption from the result
+        selectedLocation = new LocationOption
         {
-            await LocationChanged.InvokeAsync(selectedLocation);
+            DisplayName = result.DisplayName ?? "",
+            Lat = result.Latitude,
+            Lng = result.Longitude,
+            Source = !string.IsNullOrEmpty(result.Source) ? 
+                     Enum.TryParse<LocationSource>(result.Source, out var source) ? source : LocationSource.Manual 
+                     : LocationSource.Manual
+        };
+        
+        Console.WriteLine($"NearbySearch: Location selected - {result.DisplayName}, Has coordinates: {result.HasCoordinates}");
+        if (result.HasCoordinates)
+        {
+            Console.WriteLine($"NearbySearch: Using coordinates for search - Lat: {result.Latitude}, Lng: {result.Longitude}");
+        }
+        
+        await LocationChanged.InvokeAsync(selectedLocation);
+        
+        // Auto-search if enabled and we have coordinates
+        if (AutoSearchOnLocationChange && selectedLocation != null && selectedLocation.Lat.HasValue && selectedLocation.Lng.HasValue)
+        {
+            await OnSearch();
         }
     }
     
@@ -600,11 +525,6 @@
                 {
                     selectedLocation = reverseResponse;
                     selectedLocationText = reverseResponse.DisplayName;
-                    // Add to cache for consistency
-                    if (!cachedLocationResults.Any(loc => loc.DisplayName == reverseResponse.DisplayName))
-                    {
-                        cachedLocationResults.Add(reverseResponse);
-                    }
                 }
                 else
                 {
@@ -617,9 +537,6 @@
                         Source = LocationSource.Browser
                     };
                     selectedLocationText = selectedLocation.DisplayName;
-                    // Add to cache for consistency
-                    cachedLocationResults.Clear();
-                    cachedLocationResults.Add(selectedLocation);
                 }
                 
                 await LocationChanged.InvokeAsync(selectedLocation);
@@ -660,22 +577,6 @@
     }
     
     // Helper methods
-    private string GetLocationIconFromText(string locationText)
-    {
-        var locationOption = cachedLocationResults.FirstOrDefault(loc => loc.DisplayName == locationText);
-        return GetLocationIcon(locationOption);
-    }
-    
-    private string GetLocationDetailsFromText(string locationText)
-    {
-        var locationOption = cachedLocationResults.FirstOrDefault(loc => loc.DisplayName == locationText);
-        if (locationOption != null && (locationOption.City != null || locationOption.State != null))
-        {
-            return $"{locationOption.City}, {locationOption.State}";
-        }
-        return "";
-    }
-    
     private string GetLocationIcon(LocationOption? option)
     {
         if (option == null) return Icons.Material.Filled.LocationOn;

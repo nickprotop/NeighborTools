@@ -251,4 +251,31 @@ namespace ToolsSharing.Frontend.Models
     {
         public string? Message { get; set; }
     }
+
+    // Location search models (consistent with backend)
+    public class LocationSearchRequest
+    {
+        public string? LocationQuery { get; set; }
+        public decimal? Lat { get; set; }
+        public decimal? Lng { get; set; }
+        public int? RadiusKm { get; set; }
+        public bool? IncludeItemsWithoutLocation { get; set; }
+    }
+
+    // Bundle search models (consistent with tools search)
+    public class BundleSearchRequest
+    {
+        public string? Query { get; set; }
+        public string? Category { get; set; }
+        public string? Tags { get; set; }
+        public decimal? MinPrice { get; set; }
+        public decimal? MaxPrice { get; set; }
+        public bool? IsAvailable { get; set; }
+        public bool? IsFeatured { get; set; }
+        public decimal? MinRating { get; set; }
+        public string? SortBy { get; set; } = "relevance";
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 12;
+        public LocationSearchRequest? LocationSearch { get; set; }
+    }
 }

@@ -9,6 +9,7 @@
 @using ToolsSharing.Frontend.Services
 @using frontend.Components
 @using frontend.Components.Bundles
+@using frontend.Components.Location
 @implements IDisposable
 @inject IToolService ToolService
 @inject BundleService BundleService
@@ -267,23 +268,38 @@
                 Discover thousands of quality tools and curated bundles from your neighbors
             </MudText>
             
-            <!-- Hero Search Bar -->
-            <MudPaper Class="pa-2" Style="max-width: 600px; width: 100%; border-radius: 50px;">
-                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-                    <MudTextField @bind-Value="heroSearchTerm"
-                                  Placeholder="Search tools and bundles for your next project..."
-                                  Variant="Variant.Text"
-                                  @onkeypress="HandleHeroKeyPress"
-                                  Style="flex: 1;"
-                                  DisableUnderLine="true" />
-                    <MudButton Variant="Variant.Filled" 
-                             Color="Color.Primary" 
-                             Size="Size.Large"
-                             OnClick="HandleHeroSearch"
-                             StartIcon="@Icons.Material.Filled.Search"
-                             Style="border-radius: 50px; min-width: 120px;">
-                        Search
-                    </MudButton>
+            <!-- Enhanced Hero Search Bar with Location -->
+            <MudPaper Class="pa-4" Style="max-width: 800px; width: 100%; border-radius: 20px;">
+                <MudStack Spacing="3">
+                    <!-- Main Search Row -->
+                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
+                        <MudTextField @bind-Value="heroSearchTerm"
+                                      Placeholder="Search tools and bundles for your next project..."
+                                      Variant="Variant.Text"
+                                      @onkeypress="HandleHeroKeyPress"
+                                      Style="flex: 1;"
+                                      DisableUnderLine="true" />
+                        <MudButton Variant="Variant.Filled" 
+                                 Color="Color.Primary" 
+                                 Size="Size.Large"
+                                 OnClick="HandleHeroSearch"
+                                 StartIcon="@Icons.Material.Filled.Search"
+                                 Style="border-radius: 50px; min-width: 120px;">
+                            Search
+                        </MudButton>
+                    </MudStack>
+                    
+                    <!-- Location Search Enhancement (Progressive Enhancement) -->
+                    <LocationSearchBar @bind-LocationFilter="heroLocationFilter"
+                                       @bind-RadiusKm="heroRadiusKm"
+                                       @bind-IncludeItemsWithoutLocation="heroIncludeRemoteItems"
+                                       OnLocationChanged="OnHeroLocationChanged"
+                                       OnSearchRequested="HandleHeroSearch"
+                                       IsOptional="true"
+                                       ShowAdvancedToggle="false"
+                                       ShowSearchButton="false"
+                                       ShowIncludeRemoteOption="true"
+                                       UseAdvancedLocationSelector="false" />
                 </MudStack>
             </MudPaper>
         </MudStack>
@@ -627,6 +643,11 @@
     // Search
     private string heroSearchTerm = string.Empty;
     
+    // Location Search Parameters
+    private string? heroLocationFilter;
+    private int heroRadiusKm = 25;
+    private bool heroIncludeRemoteItems = true;
+    
     // Categories
     private readonly string[] popularToolCategories = { "Power Tools", "Hand Tools", "Garden Tools", "Automotive", "Construction", "Home Improvement", "Cleaning", "Other" };
 
@@ -787,16 +808,38 @@
 
     private async Task HandleHeroSearch()
     {
+        // Build search URL with progressive enhancement for location
+        var queryParams = new List<string>();
+        
+        // Add search term if provided
         if (!string.IsNullOrWhiteSpace(heroSearchTerm))
         {
-            // For now, redirect to tools page with search term
-            // In the future, we could implement a unified search
-            Navigation.NavigateTo($"/tools?search={Uri.EscapeDataString(heroSearchTerm)}");
+            queryParams.Add($"search={Uri.EscapeDataString(heroSearchTerm)}");
         }
-        else
+        
+        // Add location parameters if provided (progressive enhancement)
+        if (!string.IsNullOrWhiteSpace(heroLocationFilter))
         {
-            Navigation.NavigateTo("/tools");
+            queryParams.Add($"location={Uri.EscapeDataString(heroLocationFilter)}");
+            queryParams.Add($"radius={heroRadiusKm}");
+            
+            if (!heroIncludeRemoteItems)
+            {
+                queryParams.Add("excludeRemote=true");
+            }
         }
+        
+        var queryString = queryParams.Any() ? "?" + string.Join("&", queryParams) : "";
+        
+        // Redirect to unified search or tools page with enhanced parameters
+        Navigation.NavigateTo($"/tools{queryString}");
+        await Task.CompletedTask;
+    }
+
+    private async Task OnHeroLocationChanged()
+    {
+        // Optional: Auto-trigger search or provide visual feedback
+        // For now, just let the user click search when ready
         await Task.CompletedTask;
     }
 

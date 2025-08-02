@@ -8,7 +8,7 @@ namespace frontend.Services;
 public interface IToolService
 {
     Task<ApiResponse<List<Tool>>> GetToolsAsync();
-    Task<ApiResponse<PagedResult<Tool>>> GetToolsPagedAsync(int page = 1, int pageSize = 24, string? category = null, string? searchTerm = null, string? sortBy = null, decimal? maxDailyRate = null, bool? availableOnly = null, string? tags = null);
+    Task<ApiResponse<PagedResult<Tool>>> GetToolsPagedAsync(int page = 1, int pageSize = 24, string? category = null, string? searchTerm = null, string? sortBy = null, decimal? maxDailyRate = null, bool? availableOnly = null, string? tags = null, string? locationQuery = null, decimal? lat = null, decimal? lng = null, int? radiusKm = null, bool? includeRemoteTools = null);
     Task<ApiResponse<List<Tool>>> GetMyToolsAsync();
     Task<ApiResponse<Tool>> GetToolAsync(string id);
     Task<ApiResponse<Tool>> CreateToolAsync(CreateToolRequest request);
@@ -64,7 +64,7 @@ public class ToolService : IToolService
         }
     }
 
-    public async Task<ApiResponse<PagedResult<Tool>>> GetToolsPagedAsync(int page = 1, int pageSize = 24, string? category = null, string? searchTerm = null, string? sortBy = null, decimal? maxDailyRate = null, bool? availableOnly = null, string? tags = null)
+    public async Task<ApiResponse<PagedResult<Tool>>> GetToolsPagedAsync(int page = 1, int pageSize = 24, string? category = null, string? searchTerm = null, string? sortBy = null, decimal? maxDailyRate = null, bool? availableOnly = null, string? tags = null, string? locationQuery = null, decimal? lat = null, decimal? lng = null, int? radiusKm = null, bool? includeRemoteTools = null)
     {
         try
         {
@@ -91,6 +91,22 @@ public class ToolService : IToolService
 
             if (!string.IsNullOrEmpty(tags))
                 queryParams.Add($"Tags={Uri.EscapeDataString(tags)}");
+
+            // Add location search parameters
+            if (!string.IsNullOrEmpty(locationQuery))
+                queryParams.Add($"LocationSearch.LocationQuery={Uri.EscapeDataString(locationQuery)}");
+
+            if (lat.HasValue)
+                queryParams.Add($"LocationSearch.Lat={lat.Value}");
+
+            if (lng.HasValue)
+                queryParams.Add($"LocationSearch.Lng={lng.Value}");
+
+            if (radiusKm.HasValue)
+                queryParams.Add($"LocationSearch.RadiusKm={radiusKm.Value}");
+
+            if (includeRemoteTools.HasValue)
+                queryParams.Add($"LocationSearch.IncludeItemsWithoutLocation={includeRemoteTools.Value}");
 
             var queryString = string.Join("&", queryParams);
             var response = await _httpClient.GetAsync($"/api/tools/paged?{queryString}");

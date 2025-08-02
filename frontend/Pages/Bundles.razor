@@ -6,6 +6,7 @@
 @using System.Web
 @using frontend.Services
 @using frontend.Components.Common
+@using frontend.Components.Location
 @inject BundleService BundleService
 @inject NavigationManager Navigation
 @inject ISnackbar Snackbar
@@ -55,211 +56,262 @@
                 </MudStack>
             </MudItem>
 
-            <!-- Filters Section -->
+            <!-- Filters and Results Section -->
             <MudItem xs="12">
-                <MudPaper Class="pa-4" Elevation="1">
-                    <MudStack Spacing="3">
-                        <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-                            <!-- Category Filter -->
-                            <MudSelect @bind-Value="selectedCategory" 
-                                     Label="Category" 
-                                     Variant="Variant.Outlined"
-                                     AnchorOrigin="Origin.BottomCenter"
-                                     @bind-Value:after="ApplyFilters">
-                                <MudSelectItem Value="@("")">All Categories</MudSelectItem>
-                                @foreach (var category in availableCategories)
-                                {
-                                    <MudSelectItem Value="@category.Key">@category.Key (@category.Value)</MudSelectItem>
-                                }
-                            </MudSelect>
+                        <!-- Filters Section -->
+                        <MudPaper Class="pa-4 mb-4" Elevation="1">
+                            <MudStack Spacing="3">
+                                <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                                    <!-- Category Filter -->
+                                    <MudSelect @bind-Value="selectedCategory" 
+                                             Label="Category" 
+                                             Variant="Variant.Outlined"
+                                             AnchorOrigin="Origin.BottomCenter"
+                                             @bind-Value:after="ApplyFilters">
+                                        <MudSelectItem Value="@("")">All Categories</MudSelectItem>
+                                        @foreach (var category in availableCategories)
+                                        {
+                                            <MudSelectItem Value="@category.Key">@category.Key (@category.Value)</MudSelectItem>
+                                        }
+                                    </MudSelect>
 
-                            <!-- Featured Filter -->
-                            <MudSwitch @bind-Value="featuredOnly" Label="Featured Only" Color="Color.Primary" @bind-Value:after="ApplyFilters" />
-                        </MudStack>
-                        
-                        <!-- Active Filters Display -->
-                        @if (HasActiveFilters())
-                        {
-                            <MudDivider />
-                            <MudStack Row Spacing="2" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">Active filters:</MudText>
+                                    <!-- Featured Filter -->
+                                    <MudSwitch @bind-Value="featuredOnly" Label="Featured Only" Color="Color.Primary" @bind-Value:after="ApplyFilters" />
+                                    
+                                    <!-- Location Search Section -->
+                                    <div style="min-width: 250px;">
+                                        <MudText Typo="Typo.body2" Class="mb-2">Location Search</MudText>
+                                        <LocationAutocomplete @bind-Value="locationFilter"
+                                                             LocationSelectedWithCoordinates="OnLocationSelectedWithCoordinates"
+                                                             Label="Search near..."
+                                                             Placeholder="Enter city, neighborhood, or address"
+                                                             Clearable="true"
+                                                             ShowPopular="false"
+                                                             MinCharacters="2"
+                                                             Dense="true"
+                                                             Variant="Variant.Outlined" />
+                                        
+                                        @if (!string.IsNullOrEmpty(locationFilter))
+                                        {
+                                            <div class="mt-2">
+                                                <MudText Typo="Typo.body2" Class="mb-2">Distance: @distanceKm km</MudText>
+                                                <MudSlider @bind-Value="distanceKm" 
+                                                         Min="1" 
+                                                         Max="100" 
+                                                         Step="5" 
+                                                         Color="Color.Primary" 
+                                                         @bind-Value:after="OnDistanceChanged" />
+                                                
+                                                <MudCheckBox @bind-Value="includeRemoteTools" 
+                                                            Label="Include bundles without location" 
+                                                            Dense="true"
+                                                            @bind-Value:after="OnIncludeRemoteChanged" />
+                                            </div>
+                                        }
+                                    </div>
+                                </MudStack>
                                 
-                                @if (!string.IsNullOrEmpty(selectedCategory))
+                                <!-- Active Filters Display -->
+                                @if (HasActiveFilters())
                                 {
-                                    <MudChip T="string" 
-                                             Text="@($"Category: {selectedCategory}")"
-                                             Color="Color.Primary"
-                                             Size="Size.Small"
-                                             OnClose="() => ClearCategoryFilter()"
-                                             CloseIcon="@Icons.Material.Filled.Close" />
+                                    <MudDivider />
+                                    <MudStack Row Spacing="2" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary">Active filters:</MudText>
+                                        
+                                        @if (!string.IsNullOrEmpty(selectedCategory))
+                                        {
+                                            <MudChip T="string" 
+                                                     Text="@($"Category: {selectedCategory}")"
+                                                     Color="Color.Primary"
+                                                     Size="Size.Small"
+                                                     OnClose="() => ClearCategoryFilter()"
+                                                     CloseIcon="@Icons.Material.Filled.Close" />
+                                        }
+                                        
+                                        @if (featuredOnly)
+                                        {
+                                            <MudChip T="string" 
+                                                     Text="Featured Only" 
+                                                     Color="Color.Primary"
+                                                     Size="Size.Small"
+                                                     OnClose="() => ClearFeaturedFilter()"
+                                                     CloseIcon="@Icons.Material.Filled.Close" />
+                                        }
+                                        
+                                        @if (!string.IsNullOrEmpty(selectedTags))
+                                        {
+                                            @foreach (var tag in GetActiveTagList())
+                                            {
+                                                <MudChip T="string" 
+                                                         Text="@($"Tag: {tag}")"
+                                                         Color="Color.Secondary"
+                                                         Size="Size.Small"
+                                                         OnClose="() => RemoveTag(tag)"
+                                                         CloseIcon="@Icons.Material.Filled.Close" />
+                                            }
+                                        }
+                                        
+                                        @if (!string.IsNullOrEmpty(locationFilter))
+                                        {
+                                            <MudChip T="string" 
+                                                     Text="@($"Near: {locationFilter} ({distanceKm}km)")"
+                                                     Color="Color.Info"
+                                                     Size="Size.Small"
+                                                     OnClose="ClearLocationFilter"
+                                                     CloseIcon="@Icons.Material.Filled.Close" />
+                                        }
+                                        
+                                        @if (!string.IsNullOrEmpty(locationFilter) && !includeRemoteTools)
+                                        {
+                                            <MudChip T="string" 
+                                                     Text="Location Required"
+                                                     Color="Color.Warning"
+                                                     Size="Size.Small"
+                                                     OnClose="() => { includeRemoteTools = true; OnIncludeRemoteChanged(); }"
+                                                     CloseIcon="@Icons.Material.Filled.Close" />
+                                        }
+                                        
+                                        <MudButton Variant="Variant.Text" 
+                                                   Color="Color.Error" 
+                                                   Size="Size.Small"
+                                                   OnClick="ClearAllFilters"
+                                                   StartIcon="@Icons.Material.Filled.Clear">
+                                            Clear All
+                                        </MudButton>
+                                    </MudStack>
                                 }
-                                
-                                @if (featuredOnly)
-                                {
-                                    <MudChip T="string" 
-                                             Text="Featured Only" 
-                                             Color="Color.Primary"
-                                             Size="Size.Small"
-                                             OnClose="() => ClearFeaturedFilter()"
-                                             CloseIcon="@Icons.Material.Filled.Close" />
-                                }
-                                
-                                @if (!string.IsNullOrEmpty(selectedTags))
-                                {
-                                    @foreach (var tag in GetActiveTagList())
-                                    {
-                                        <MudChip T="string" 
-                                                 Text="@($"Tag: {tag}")"
-                                                 Color="Color.Secondary"
-                                                 Size="Size.Small"
-                                                 OnClose="() => RemoveTag(tag)"
-                                                 CloseIcon="@Icons.Material.Filled.Close" />
-                                    }
-                                }
-                                
-                                <MudButton Variant="Variant.Text" 
-                                           Color="Color.Error" 
-                                           Size="Size.Small"
-                                           OnClick="ClearAllFilters"
-                                           StartIcon="@Icons.Material.Filled.Clear">
-                                    Clear All
-                                </MudButton>
                             </MudStack>
-                        }
-                    </MudStack>
-                </MudPaper>
-            </MudItem>
+                        </MudPaper>
 
-            <!-- Results Section -->
-            <MudItem xs="12">
-                @if (isLoading)
-                {
-                    <MudGrid>
-                        @for (int i = 0; i < 6; i++)
-                        {
-                            <MudItem xs="12" sm="6" md="4">
-                                <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
-                            </MudItem>
-                        }
-                    </MudGrid>
-                }
-                else if ((isMobile && allLoadedBundles.Any()) || (!isMobile && bundles?.Items?.Any() == true))
-                {
-                    <!-- Results Header -->
-                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
-                        <MudText Typo="Typo.body1" Color="Color.Secondary">
-                            @if (isMobile && allLoadedBundles.Any())
+                        <!-- Results Section -->
+                            @if (isLoading)
                             {
-                                @($"Showing {allLoadedBundles.Count} of {bundles?.TotalCount ?? 0} bundles")
+                                <MudGrid>
+                                    @for (int i = 0; i < 6; i++)
+                                    {
+                                        <MudItem xs="12" sm="6" md="4">
+                                            <MudSkeleton SkeletonType="SkeletonType.Rectangle" Height="300px" />
+                                        </MudItem>
+                                    }
+                                </MudGrid>
                             }
-                            else if (!isMobile && bundles != null)
+                            else if ((isMobile && allLoadedBundles.Any()) || (!isMobile && bundles?.Items?.Any() == true))
                             {
-                                var startItem = (currentPage - 1) * pageSize + 1;
-                                var endItem = Math.Min(currentPage * pageSize, bundles.TotalCount);
-                                @($"Showing {startItem}-{endItem} of {bundles.TotalCount} bundles")
+                                <!-- Results Header -->
+                                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                                    <MudText Typo="Typo.body1" Color="Color.Secondary">
+                                        @if (isMobile && allLoadedBundles.Any())
+                                        {
+                                            @($"Showing {allLoadedBundles.Count} of {bundles?.TotalCount ?? 0} bundles")
+                                        }
+                                        else if (!isMobile && bundles != null)
+                                        {
+                                            var startItem = (currentPage - 1) * pageSize + 1;
+                                            var endItem = Math.Min(currentPage * pageSize, bundles.TotalCount);
+                                            @($"Showing {startItem}-{endItem} of {bundles.TotalCount} bundles")
+                                        }
+                                        else
+                                        {
+                                            @("No bundles found")
+                                        }
+                                    </MudText>
+                                    
+                                    <!-- Sort Options -->
+                                    <MudSelect @bind-Value="sortBy" 
+                                             Label="Sort by" 
+                                             Variant="Variant.Outlined"
+                                             AnchorOrigin="Origin.BottomCenter"
+                                             @bind-Value:after="OnSortChanged">
+                                        <MudSelectItem Value="@("featured")">Featured First</MudSelectItem>
+                                        <MudSelectItem Value="@("newest")">Newest First</MudSelectItem>
+                                        <MudSelectItem Value="@("popular")">Most Popular</MudSelectItem>
+                                        <MudSelectItem Value="@("price-low")">Price: Low to High</MudSelectItem>
+                                        <MudSelectItem Value="@("price-high")">Price: High to Low</MudSelectItem>
+                                    </MudSelect>
+                                </MudStack>
+
+                                <!-- Bundle Cards -->
+                                <MudGrid>
+                                    @if (isMobile)
+                                    {
+                                        @foreach (var bundle in allLoadedBundles)
+                                        {
+                                            <MudItem xs="12" sm="6" md="4">
+                                                <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
+                                            </MudItem>
+                                        }
+                                    }
+                                    else if (bundles?.Items != null)
+                                    {
+                                        @foreach (var bundle in bundles.Items)
+                                        {
+                                            <MudItem xs="12" sm="6" md="4">
+                                                <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
+                                            </MudItem>
+                                        }
+                                    }
+                                </MudGrid>
+
+                                <!-- Desktop Pagination -->
+                                @if (!isMobile && bundles != null && bundles.TotalPages > 1)
+                                {
+                                    <div class="d-flex justify-center mt-6">
+                                        <MudPagination Count="@bundles.TotalPages" 
+                                                      Selected="@currentPage" 
+                                                      SelectedChanged="OnPageChanged"
+                                                      Color="Color.Primary"
+                                                      Variant="Variant.Filled"
+                                                      ShowFirstButton="true"
+                                                      ShowLastButton="true"
+                                                      ShowPreviousButton="true"
+                                                      ShowNextButton="true"
+                                                      BoundaryCount="1"
+                                                      MiddleCount="3" />
+                                    </div>
+                                }
+                                
+                                <!-- Mobile Load More -->
+                                @if (isMobile && hasMoreItems && allLoadedBundles.Any())
+                                {
+                                    <div class="d-flex justify-center mt-6">
+                                        <MudButton Variant="Variant.Outlined"
+                                                  Color="Color.Primary"
+                                                  OnClick="LoadMoreItems"
+                                                  Disabled="@isLoadingMore"
+                                                  StartIcon="@(isLoadingMore ? Icons.Material.Filled.HourglassEmpty : Icons.Material.Filled.ExpandMore)"
+                                                  Size="Size.Large"
+                                                  Class="load-more-btn">
+                                            @if (isLoadingMore)
+                                            {
+                                                @("Loading...")
+                                            }
+                                            else
+                                            {
+                                                @($"Load More ({Math.Min(pageSize, (bundles?.TotalCount ?? 0) - allLoadedBundles.Count)} more items)")
+                                            }
+                                        </MudButton>
+                                    </div>
+                                }
                             }
                             else
                             {
-                                @("No bundles found")
+                                <MudStack AlignItems="AlignItems.Center" Class="pa-8">
+                                    <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" />
+                                    <MudText Typo="Typo.h6" Class="mt-4">No bundles found</MudText>
+                                    <MudText Typo="Typo.body1" Color="Color.Secondary">
+                                        Try adjusting your search criteria or explore different categories.
+                                    </MudText>
+                                    @if (hasFiltersApplied)
+                                    {
+                                        <MudButton Variant="Variant.Text" 
+                                                 Color="Color.Primary" 
+                                                 OnClick="ClearFilters" 
+                                                 Class="mt-2">
+                                            Clear Filters
+                                        </MudButton>
+                                    }
+                                </MudStack>
                             }
-                        </MudText>
-                        
-                        <!-- Sort Options -->
-                        <MudSelect @bind-Value="sortBy" 
-                                 Label="Sort by" 
-                                 Variant="Variant.Outlined"
-                                 AnchorOrigin="Origin.BottomCenter"
-                                 @bind-Value:after="OnSortChanged">
-                            <MudSelectItem Value="@("featured")">Featured First</MudSelectItem>
-                            <MudSelectItem Value="@("newest")">Newest First</MudSelectItem>
-                            <MudSelectItem Value="@("popular")">Most Popular</MudSelectItem>
-                            <MudSelectItem Value="@("price-low")">Price: Low to High</MudSelectItem>
-                            <MudSelectItem Value="@("price-high")">Price: High to Low</MudSelectItem>
-                        </MudSelect>
-                    </MudStack>
-
-                    <!-- Bundle Cards -->
-                    <MudGrid>
-                        @if (isMobile)
-                        {
-                            @foreach (var bundle in allLoadedBundles)
-                            {
-                                <MudItem xs="12" sm="6" md="4">
-                                    <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
-                                </MudItem>
-                            }
-                        }
-                        else if (bundles?.Items != null)
-                        {
-                            @foreach (var bundle in bundles.Items)
-                            {
-                                <MudItem xs="12" sm="6" md="4">
-                                    <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
-                                </MudItem>
-                            }
-                        }
-                    </MudGrid>
-
-                    <!-- Desktop Pagination -->
-                    @if (!isMobile && bundles != null && bundles.TotalPages > 1)
-                    {
-                        <div class="d-flex justify-center mt-6">
-                            <MudPagination Count="@bundles.TotalPages" 
-                                          Selected="@currentPage" 
-                                          SelectedChanged="OnPageChanged"
-                                          Color="Color.Primary"
-                                          Variant="Variant.Filled"
-                                          ShowFirstButton="true"
-                                          ShowLastButton="true"
-                                          ShowPreviousButton="true"
-                                          ShowNextButton="true"
-                                          BoundaryCount="1"
-                                          MiddleCount="3" />
-                        </div>
-                    }
-                    
-                    <!-- Mobile Load More -->
-                    @if (isMobile && hasMoreItems && allLoadedBundles.Any())
-                    {
-                        <div class="d-flex justify-center mt-6">
-                            <MudButton Variant="Variant.Outlined"
-                                      Color="Color.Primary"
-                                      OnClick="LoadMoreItems"
-                                      Disabled="@isLoadingMore"
-                                      StartIcon="@(isLoadingMore ? Icons.Material.Filled.HourglassEmpty : Icons.Material.Filled.ExpandMore)"
-                                      Size="Size.Large"
-                                      Class="load-more-btn">
-                                @if (isLoadingMore)
-                                {
-                                    @("Loading...")
-                                }
-                                else
-                                {
-                                    @($"Load More ({Math.Min(pageSize, (bundles?.TotalCount ?? 0) - allLoadedBundles.Count)} more items)")
-                                }
-                            </MudButton>
-                        </div>
-                    }
-                }
-                else
-                {
-                    <MudStack AlignItems="AlignItems.Center" Class="pa-8">
-                        <MudIcon Icon="@Icons.Material.Filled.SearchOff" Size="Size.Large" Color="Color.Secondary" />
-                        <MudText Typo="Typo.h6" Class="mt-4">No bundles found</MudText>
-                        <MudText Typo="Typo.body1" Color="Color.Secondary">
-                            Try adjusting your search criteria or explore different categories.
-                        </MudText>
-                        @if (hasFiltersApplied)
-                        {
-                            <MudButton Variant="Variant.Text" 
-                                     Color="Color.Primary" 
-                                     OnClick="ClearFilters" 
-                                     Class="mt-2">
-                                Clear Filters
-                            </MudButton>
-                        }
-                    </MudStack>
-                }
             </MudItem>
         </MudGrid>
     </MudPaper>
@@ -308,12 +360,21 @@
     private string selectedTags = "";
     private int currentPage = 1;
     private const int pageSize = 24;
+    
+    // Location filter properties
+    private string locationFilter = string.Empty;
+    private decimal? locationLat = null;
+    private decimal? locationLng = null;
+    private int distanceKm = 25;
+    private bool includeRemoteTools = true;
 
     private bool hasFiltersApplied => 
         !string.IsNullOrWhiteSpace(searchTerm) || 
         !string.IsNullOrWhiteSpace(selectedCategory) || 
         !string.IsNullOrWhiteSpace(selectedTags) || 
+        !string.IsNullOrWhiteSpace(locationFilter) ||
         featuredOnly;
+        
 
     protected override async Task OnInitializedAsync()
     {
@@ -412,7 +473,12 @@
             ["search"] = searchTerm,
             ["sort"] = sortBy,
             ["featured"] = featuredOnly.ToString(),
-            ["tags"] = string.IsNullOrEmpty(selectedTags) ? null : selectedTags
+            ["tags"] = string.IsNullOrEmpty(selectedTags) ? null : selectedTags,
+            ["location"] = string.IsNullOrEmpty(locationFilter) ? null : locationFilter,
+            ["lat"] = locationLat?.ToString(),
+            ["lng"] = locationLng?.ToString(),
+            ["distance"] = string.IsNullOrEmpty(locationFilter) ? null : distanceKm.ToString(),
+            ["includeRemote"] = string.IsNullOrEmpty(locationFilter) ? null : includeRemoteTools.ToString()
         };
         var cacheKey = BrowserCacheService.GeneratePageCacheKey("bundles", currentPage, pageSize, cacheParams);
         
@@ -436,15 +502,33 @@
         }
         else
         {
-            // Fetch from API
-            result = await BundleService.GetBundlesAsync(
-                page: currentPage,
-                pageSize: pageSize,
-                category: string.IsNullOrWhiteSpace(selectedCategory) ? null : selectedCategory,
-                searchTerm: string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
-                featuredOnly: featuredOnly,
-                tags: string.IsNullOrWhiteSpace(selectedTags) ? null : selectedTags
-            );
+            // Fetch from API using standardized search endpoint
+            var searchRequest = new BundleSearchRequest
+            {
+                Page = currentPage,
+                PageSize = pageSize,
+                Query = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
+                Category = string.IsNullOrWhiteSpace(selectedCategory) ? null : selectedCategory,
+                Tags = string.IsNullOrWhiteSpace(selectedTags) ? null : selectedTags,
+                IsFeatured = featuredOnly ? true : null,
+                SortBy = sortBy switch 
+                {
+                    "featured" => "relevance",
+                    "newest" => "newest", 
+                    "popular" => "popular",
+                    _ => "relevance"
+                },
+                LocationSearch = string.IsNullOrEmpty(locationFilter) ? null : new LocationSearchRequest
+                {
+                    LocationQuery = locationFilter,
+                    Lat = locationLat,
+                    Lng = locationLng,
+                    RadiusKm = distanceKm,
+                    IncludeItemsWithoutLocation = includeRemoteTools
+                }
+            };
+            
+            result = await BundleService.SearchBundlesAsync(searchRequest);
             
             // Cache the result if successful
             if (result.Success && result.Data != null && !append)
@@ -657,7 +741,8 @@
     {
         return !string.IsNullOrEmpty(selectedCategory) ||
                featuredOnly ||
-               !string.IsNullOrEmpty(selectedTags);
+               !string.IsNullOrEmpty(selectedTags) ||
+               !string.IsNullOrEmpty(locationFilter);
     }
     
     private List<string> GetActiveTagList()
@@ -697,6 +782,47 @@
         selectedCategory = "";
         featuredOnly = false;
         selectedTags = "";
+        locationFilter = string.Empty;
+        locationLat = null;
+        locationLng = null;
+        distanceKm = 25;
+        includeRemoteTools = true;
+        await ApplyFilters();
+    }
+    
+    // Location filter event handlers
+    private async Task OnLocationSelectedWithCoordinates(ToolsSharing.Frontend.Models.Location.LocationAutocompleteResult result)
+    {
+        locationFilter = result.DisplayName ?? string.Empty;
+        locationLat = result.Latitude;
+        locationLng = result.Longitude;
+        
+        Console.WriteLine($"Bundles page: Location selected - {result.DisplayName}, Has coordinates: {result.HasCoordinates}");
+        if (result.HasCoordinates)
+        {
+            Console.WriteLine($"Bundles page: Using coordinates for search - Lat: {result.Latitude}, Lng: {result.Longitude}");
+        }
+        
+        await ApplyFilters();
+    }
+    
+    private async Task OnDistanceChanged()
+    {
+        await ApplyFilters();
+    }
+    
+    private async Task OnIncludeRemoteChanged()
+    {
+        await ApplyFilters();
+    }
+    
+    private async Task ClearLocationFilter()
+    {
+        locationFilter = string.Empty;
+        locationLat = null;
+        locationLng = null;
+        distanceKm = 25;
+        includeRemoteTools = true;
         await ApplyFilters();
     }
 
@@ -733,6 +859,7 @@
     {
         await ApplyFilters();
     }
+    
 
     public void Dispose()
     {

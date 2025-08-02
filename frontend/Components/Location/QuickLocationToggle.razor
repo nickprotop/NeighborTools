@@ -1,0 +1,520 @@
+@using ToolsSharing.Frontend.Models.Location
+@using ToolsSharing.Frontend.Services.Location
+@inject ILocationService LocationService
+@inject ILocalStorageService LocalStorage
+@inject ISnackbar Snackbar
+@inject IJSRuntime JSRuntime
+
+<!-- Quick Location Toggle (Phase 8 Enhancement) -->
+<MudMenu Icon="@GetLocationIcon()" 
+         Color="@GetLocationColor()" 
+         AnchorOrigin="Origin.BottomCenter" 
+         TransformOrigin="Origin.TopCenter"
+         Dense="@Dense"
+         Size="@Size"
+         Variant="@Variant"
+         Class="@($"quick-location-toggle {Class}")"
+         Style="@Style">
+    
+    <ActivatorContent>
+        <div class="d-flex align-center">
+            <MudIcon Icon="@GetLocationIcon()" />
+            @if (ShowLocationText && !string.IsNullOrEmpty(GetLocationDisplayText()))
+            {
+                <MudText Class="ml-2" Typo="Typo.body2" Style="max-width: 120px; overflow: hidden; text-overflow: ellipsis;">
+                    @GetLocationDisplayText()
+                </MudText>
+            }
+        </div>
+    </ActivatorContent>
+    
+    <ChildContent>
+        <MudPaper Class="pa-4" Style="min-width: 300px; max-width: 400px;">
+            <MudStack Spacing="3">
+                <!-- Header -->
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudText Typo="Typo.h6" Color="Color.Primary">
+                        <MudIcon Icon="@Icons.Material.Filled.LocationOn" Class="mr-2" />
+                        Location Context
+                    </MudText>
+                    
+                    @if (isLocationEnabled)
+                    {
+                        <MudChip Color="Color.Success" 
+                                 Size="Size.Small" 
+                                 Text="Active"
+                                 T="string" />
+                    }
+                </MudStack>
+                
+                <!-- Location Mode Toggle -->
+                <MudStack Spacing="2">
+                    <MudText Typo="Typo.body2" Color="Color.Secondary">
+                        Enable location-based features across the app
+                    </MudText>
+                    
+                    <MudSwitch @bind-Value="isLocationEnabled"
+                               @bind-Value:after="OnLocationModeChanged"
+                               Label="@(isLocationEnabled ? "Location Mode On" : "Location Mode Off")"
+                               Color="Color.Primary"
+                               ThumbIcon="@(isLocationEnabled ? Icons.Material.Filled.LocationOn : Icons.Material.Filled.LocationOff)" />
+                </MudStack>
+                
+                <!-- Location Selection (when enabled) -->
+                @if (isLocationEnabled)
+                {
+                    <MudDivider />
+                    
+                    <MudStack Spacing="2">
+                        <MudText Typo="Typo.subtitle2" Color="Color.Primary">
+                            Current Location Context
+                        </MudText>
+                        
+                        <!-- Location Input -->
+                        <MudAutocomplete T="string"
+                                         @bind-Value="selectedLocationText"
+                                         @bind-Value:after="OnLocationTextChanged"
+                                         SearchFunc="@SearchLocationStrings"
+                                         Label="Set your location context"
+                                         Placeholder="Enter city, neighborhood, or address..."
+                                         Variant="Variant.Outlined"
+                                         Dense="true"
+                                         Adornment="Adornment.End"
+                                         AdornmentIcon="@Icons.Material.Filled.MyLocation"
+                                         OnAdornmentClick="@OnCurrentLocationClick"
+                                         Clearable="true"
+                                         MaxItems="6"
+                                         MinCharacters="2"
+                                         DebounceInterval="500"
+                                         ResetValueOnEmptyText="false"
+                                         CoerceText="false" 
+                                         CoerceValue="true">
+                                         
+                            <ItemTemplate Context="locationText">
+                                <div class="d-flex align-center">
+                                    <MudIcon Icon="@GetLocationIconFromText(locationText)" 
+                                             Size="Size.Small" 
+                                             Color="Color.Secondary" 
+                                             Class="mr-2" />
+                                    <MudText Typo="Typo.body2">@locationText</MudText>
+                                </div>
+                            </ItemTemplate>
+                            
+                            <NoItemsTemplate>
+                                @if (!string.IsNullOrEmpty(currentSearchText) && currentSearchText.Length >= 2)
+                                {
+                                    <MudText Align="Align.Center" Class="px-4 py-1">
+                                        @if (isSearchingLocations)
+                                        {
+                                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Class="mr-2" />
+                                            <span>Searching...</span>
+                                        }
+                                        else
+                                        {
+                                            <span>No locations found</span>
+                                        }
+                                    </MudText>
+                                }
+                                else
+                                {
+                                    <MudText Align="Align.Center" Class="px-4 py-1" Color="Color.Secondary">
+                                        Start typing to search...
+                                    </MudText>
+                                }
+                            </NoItemsTemplate>
+                        </MudAutocomplete>
+                        
+                        <!-- Default Radius -->
+                        @if (!string.IsNullOrEmpty(selectedLocationText))
+                        {
+                            <MudStack Row Spacing="2" AlignItems="AlignItems.Center">
+                                <MudText Typo="Typo.body2" Style="min-width: 80px;">
+                                    Range: @defaultRadius km
+                                </MudText>
+                                <MudSlider @bind-Value="defaultRadius"
+                                           @bind-Value:after="OnRadiusChanged"
+                                           Min="5"
+                                           Max="100"
+                                           Step="5"
+                                           Color="Color.Primary"
+                                           Dense="true" />
+                            </MudStack>
+                        }
+                    </MudStack>
+                    
+                    <!-- Quick Actions -->
+                    <MudDivider />
+                    
+                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                        <MudButton Variant="Variant.Text"
+                                   Color="Color.Secondary"
+                                   OnClick="OnCurrentLocationClick"
+                                   Disabled="@isGettingCurrentLocation"
+                                   StartIcon="@(isGettingCurrentLocation ? null : Icons.Material.Filled.MyLocation)"
+                                   Size="Size.Small">
+                            @if (isGettingCurrentLocation)
+                            {
+                                <MudProgressCircular Size="Size.Small" Indeterminate="true" />
+                                <span class="ml-1">Getting...</span>
+                            }
+                            else
+                            {
+                                <span>Use Current</span>
+                            }
+                        </MudButton>
+                        
+                        @if (!string.IsNullOrEmpty(selectedLocationText))
+                        {
+                            <MudButton Variant="Variant.Text"
+                                       Color="Color.Error"
+                                       OnClick="OnClearLocation"
+                                       StartIcon="@Icons.Material.Filled.Clear"
+                                       Size="Size.Small">
+                                Clear
+                            </MudButton>
+                        }
+                    </MudStack>
+                }
+                
+                <!-- Info Text -->
+                <MudDivider />
+                
+                <MudText Typo="Typo.caption" Color="Color.Secondary" Align="Align.Center">
+                    @if (isLocationEnabled && !string.IsNullOrEmpty(selectedLocationText))
+                    {
+                        <span>Location context active across all searches and results</span>
+                    }
+                    else if (isLocationEnabled)
+                    {
+                        <span>Set a location to enable proximity features</span>
+                    }
+                    else
+                    {
+                        <span>Enable location mode to see nearby tools and bundles</span>
+                    }
+                </MudText>
+            </MudStack>
+        </MudPaper>
+    </ChildContent>
+</MudMenu>
+
+<style>
+    .quick-location-toggle .mud-button-root {
+        min-height: 40px;
+    }
+    
+    .quick-location-toggle .mud-menu-activator {
+        transition: all 0.2s ease;
+    }
+    
+    .quick-location-toggle .mud-menu-activator:hover {
+        transform: scale(1.05);
+    }
+</style>
+
+@code {
+    // Component Parameters
+    [Parameter] public bool ShowLocationText { get; set; } = true;
+    [Parameter] public bool Dense { get; set; } = false;
+    [Parameter] public Size Size { get; set; } = Size.Medium;
+    [Parameter] public Variant Variant { get; set; } = Variant.Text;
+    [Parameter] public string Class { get; set; } = "";
+    [Parameter] public string Style { get; set; } = "";
+    
+    // Events
+    [Parameter] public EventCallback<bool> LocationModeChanged { get; set; }
+    [Parameter] public EventCallback<LocationOption?> LocationContextChanged { get; set; }
+    [Parameter] public EventCallback<int> DefaultRadiusChanged { get; set; }
+    
+    // State
+    private bool isLocationEnabled = false;
+    private LocationOption? selectedLocation;
+    private string selectedLocationText = "";
+    private int defaultRadius = 25;
+    private List<LocationOption> cachedLocationResults = new();
+    private bool isSearchingLocations = false;
+    private bool isGettingCurrentLocation = false;
+    private string currentSearchText = "";
+    
+    // Storage keys
+    private const string LOCATION_ENABLED_KEY = "quick-location-enabled";
+    private const string LOCATION_CONTEXT_KEY = "quick-location-context";
+    private const string DEFAULT_RADIUS_KEY = "quick-location-radius";
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPersistedState();
+    }
+    
+    private async Task LoadPersistedState()
+    {
+        try
+        {
+            // Load enabled state
+            var enabledState = await LocalStorage.GetItemAsync<bool?>(LOCATION_ENABLED_KEY);
+            isLocationEnabled = enabledState ?? false;
+            
+            // Load location context
+            if (isLocationEnabled)
+            {
+                var locationJson = await LocalStorage.GetItemAsync<string>(LOCATION_CONTEXT_KEY);
+                if (!string.IsNullOrEmpty(locationJson))
+                {
+                    selectedLocation = System.Text.Json.JsonSerializer.Deserialize<LocationOption>(locationJson);
+                    selectedLocationText = selectedLocation?.DisplayName ?? "";
+                }
+                
+                // Load default radius
+                var radiusValue = await LocalStorage.GetItemAsync<int?>(DEFAULT_RADIUS_KEY);
+                defaultRadius = radiusValue ?? 25;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"QuickLocationToggle: Failed to load persisted state: {ex.Message}");
+        }
+    }
+    
+    private async Task SavePersistedState()
+    {
+        try
+        {
+            await LocalStorage.SetItemAsync(LOCATION_ENABLED_KEY, isLocationEnabled);
+            
+            if (isLocationEnabled && selectedLocation != null)
+            {
+                var locationJson = System.Text.Json.JsonSerializer.Serialize(selectedLocation);
+                await LocalStorage.SetItemAsync(LOCATION_CONTEXT_KEY, locationJson);
+                await LocalStorage.SetItemAsync(DEFAULT_RADIUS_KEY, defaultRadius);
+            }
+            else
+            {
+                await LocalStorage.RemoveItemAsync(LOCATION_CONTEXT_KEY);
+                await LocalStorage.RemoveItemAsync(DEFAULT_RADIUS_KEY);
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"QuickLocationToggle: Failed to save persisted state: {ex.Message}");
+        }
+    }
+    
+    // Location search functionality
+    private async Task<IEnumerable<string>> SearchLocationStrings(string searchText, CancellationToken cancellationToken)
+    {
+        currentSearchText = searchText ?? "";
+        
+        if (string.IsNullOrWhiteSpace(searchText) || searchText.Length < 2)
+        {
+            cachedLocationResults.Clear();
+            return Array.Empty<string>();
+        }
+        
+        isSearchingLocations = true;
+        StateHasChanged();
+        
+        try
+        {
+            var response = await LocationService.GetLocationSuggestionsAsync(searchText);
+            cachedLocationResults = response ?? new List<LocationOption>();
+            
+            return cachedLocationResults.Select(loc => loc.DisplayName).Where(name => !string.IsNullOrEmpty(name)).Distinct();
+        }
+        catch (OperationCanceledException)
+        {
+            cachedLocationResults.Clear();
+            return Array.Empty<string>();
+        }
+        catch (Exception)
+        {
+            cachedLocationResults.Clear();
+            return Array.Empty<string>();
+        }
+        finally
+        {
+            isSearchingLocations = false;
+            StateHasChanged();
+        }
+    }
+    
+    // Event handlers
+    private async Task OnLocationModeChanged()
+    {
+        if (!isLocationEnabled)
+        {
+            // Clear location when disabling
+            selectedLocation = null;
+            selectedLocationText = "";
+        }
+        
+        await SavePersistedState();
+        await LocationModeChanged.InvokeAsync(isLocationEnabled);
+        await LocationContextChanged.InvokeAsync(isLocationEnabled ? selectedLocation : null);
+        
+        var message = isLocationEnabled ? "Location mode enabled" : "Location mode disabled";
+        var severity = isLocationEnabled ? Severity.Success : Severity.Info;
+        Snackbar.Add(message, severity);
+        
+        StateHasChanged();
+    }
+    
+    private async Task OnLocationTextChanged()
+    {
+        if (!isLocationEnabled) return;
+        
+        // Find the matching LocationOption object from cache
+        selectedLocation = cachedLocationResults.FirstOrDefault(loc => loc.DisplayName == selectedLocationText);
+        
+        await SavePersistedState();
+        await LocationContextChanged.InvokeAsync(selectedLocation);
+        
+        if (selectedLocation != null)
+        {
+            Snackbar.Add($"Location context set to {selectedLocation.DisplayName}", Severity.Success);
+        }
+        
+        StateHasChanged();
+    }
+    
+    private async Task OnRadiusChanged()
+    {
+        if (!isLocationEnabled) return;
+        
+        await SavePersistedState();
+        await DefaultRadiusChanged.InvokeAsync(defaultRadius);
+        
+        StateHasChanged();
+    }
+    
+    private async Task OnCurrentLocationClick()
+    {
+        if (!isLocationEnabled || isGettingCurrentLocation) return;
+        
+        isGettingCurrentLocation = true;
+        StateHasChanged();
+        
+        try
+        {
+            var locationResult = await LocationService.GetCurrentLocationAsync();
+            
+            if (locationResult.Success && locationResult.Latitude.HasValue && locationResult.Longitude.HasValue)
+            {
+                // Try to reverse geocode the coordinates
+                var reverseResponse = await LocationService.ReverseGeocodeAsync(
+                    locationResult.Latitude.Value, 
+                    locationResult.Longitude.Value);
+                
+                if (reverseResponse != null)
+                {
+                    selectedLocation = reverseResponse;
+                    selectedLocationText = reverseResponse.DisplayName;
+                    
+                    // Add to cache for consistency
+                    if (!cachedLocationResults.Any(loc => loc.DisplayName == reverseResponse.DisplayName))
+                    {
+                        cachedLocationResults.Add(reverseResponse);
+                    }
+                }
+                else
+                {
+                    // Create a basic location option from coordinates
+                    selectedLocation = new LocationOption
+                    {
+                        DisplayName = $"Current Location ({locationResult.Latitude:F4}, {locationResult.Longitude:F4})",
+                        Lat = locationResult.Latitude,
+                        Lng = locationResult.Longitude,
+                        Source = LocationSource.Browser
+                    };
+                    selectedLocationText = selectedLocation.DisplayName;
+                    
+                    // Add to cache for consistency
+                    cachedLocationResults.Clear();
+                    cachedLocationResults.Add(selectedLocation);
+                }
+                
+                await SavePersistedState();
+                await LocationContextChanged.InvokeAsync(selectedLocation);
+                
+                Snackbar.Add("Current location detected and set as context", Severity.Success);
+            }
+            else
+            {
+                var errorMessage = locationResult.ErrorMessage ?? "Unable to get current location";
+                Snackbar.Add(errorMessage, Severity.Warning);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Failed to get current location: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isGettingCurrentLocation = false;
+            StateHasChanged();
+        }
+    }
+    
+    private async Task OnClearLocation()
+    {
+        if (!isLocationEnabled) return;
+        
+        selectedLocation = null;
+        selectedLocationText = "";
+        
+        await SavePersistedState();
+        await LocationContextChanged.InvokeAsync(null);
+        
+        Snackbar.Add("Location context cleared", Severity.Info);
+        StateHasChanged();
+    }
+    
+    // Helper methods
+    private string GetLocationIcon()
+    {
+        if (!isLocationEnabled)
+            return Icons.Material.Filled.LocationOff;
+            
+        if (!string.IsNullOrEmpty(selectedLocationText))
+            return Icons.Material.Filled.LocationOn;
+            
+        return Icons.Material.Filled.LocationSearching;
+    }
+    
+    private Color GetLocationColor()
+    {
+        if (!isLocationEnabled)
+            return Color.Secondary;
+            
+        if (!string.IsNullOrEmpty(selectedLocationText))
+            return Color.Success;
+            
+        return Color.Primary;
+    }
+    
+    private string GetLocationDisplayText()
+    {
+        if (!isLocationEnabled || string.IsNullOrEmpty(selectedLocationText))
+            return "";
+            
+        return selectedLocationText.Length > 15 ? selectedLocationText.Substring(0, 12) + "..." : selectedLocationText;
+    }
+    
+    private string GetLocationIconFromText(string locationText)
+    {
+        var locationOption = cachedLocationResults.FirstOrDefault(loc => loc.DisplayName == locationText);
+        return GetLocationIconFromOption(locationOption);
+    }
+    
+    private string GetLocationIconFromOption(LocationOption? option)
+    {
+        if (option == null) return Icons.Material.Filled.LocationOn;
+        
+        return option.Source switch
+        {
+            LocationSource.Browser => Icons.Material.Filled.MyLocation,
+            LocationSource.OpenStreetMap => Icons.Material.Filled.Map,
+            LocationSource.HERE => Icons.Material.Filled.LocationOn,
+            _ => Icons.Material.Filled.Place
+        };
+    }
+}

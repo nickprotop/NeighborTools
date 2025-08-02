@@ -1,0 +1,325 @@
+@using ToolsSharing.Frontend.Models.Location
+@using frontend.Models
+@using ToolsSharing.Frontend.Models
+@using MudBlazor
+@typeparam TItem
+
+<!-- Results Display with Distance Enhancement -->
+<div class="results-with-distance">
+    @if (Results?.Any() == true)
+    {
+        @foreach (var item in Results)
+        {
+            <div class="result-item-wrapper">
+                @if (ItemTemplate != null)
+                {
+                    <!-- Custom item template with distance badge overlay -->
+                    <div class="result-item-container">
+                        @ItemTemplate(item)
+                        
+                        @if (ShowDistance && HasDistanceInfo(item))
+                        {
+                            <div class="distance-badge-overlay">
+                                <MudChip T="string" Color="Color.Primary" 
+                                        Icon="@Icons.Material.Filled.LocationOn" 
+                                        Size="Size.Small"
+                                        Class="distance-badge">
+                                    @GetDistanceText(item)
+                                </MudChip>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <!-- Default card layout with distance integration -->
+                    <MudCard Class="result-card mb-3" Elevation="@CardElevation">
+                        <MudCardContent Class="pa-4">
+                            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start" Spacing="3">
+                                <div style="flex: 1;">
+                                    <!-- Item Content -->
+                                    <MudText Typo="Typo.h6" Class="mb-2">
+                                        @GetItemTitle(item)
+                                    </MudText>
+                                    
+                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2">
+                                        @GetItemDescription(item)
+                                    </MudText>
+                                    
+                                    <MudStack Row AlignItems="AlignItems.Center" Spacing="2" Class="mb-2">
+                                        <MudChip Size="Size.Small" Color="Color.Secondary" T="string">
+                                            @GetItemCategory(item)
+                                        </MudChip>
+                                        
+                                        @if (!string.IsNullOrEmpty(GetItemPrice(item)))
+                                        {
+                                            <MudText Typo="Typo.subtitle2" Color="Color.Primary" Style="font-weight: 600;">
+                                                @GetItemPrice(item)
+                                            </MudText>
+                                        }
+                                    </MudStack>
+                                    
+                                    @if (ShowItemActions)
+                                    {
+                                        <MudStack Row Spacing="1">
+                                            <MudButton Size="Size.Small" 
+                                                      Variant="Variant.Outlined" 
+                                                      Color="Color.Primary"
+                                                      OnClick="() => OnItemClick.InvokeAsync(item)"
+                                                      StartIcon="@Icons.Material.Filled.Visibility">
+                                                View Details
+                                            </MudButton>
+                                            
+                                            @if (ShowFavoriteButton)
+                                            {
+                                                <MudIconButton Size="Size.Small" 
+                                                              Icon="@Icons.Material.Filled.FavoriteBorder" 
+                                                              Color="Color.Secondary"
+                                                              OnClick="() => OnFavoriteClick.InvokeAsync(item)" />
+                                            }
+                                        </MudStack>
+                                    }
+                                </div>
+                                
+                                <!-- Distance Badge -->
+                                @if (ShowDistance && HasDistanceInfo(item))
+                                {
+                                    <div class="distance-info-section">
+                                        <MudStack AlignItems="AlignItems.End" Spacing="1">
+                                            <MudChip T="string" Color="Color.Primary" 
+                                                    Icon="@Icons.Material.Filled.LocationOn" 
+                                                    Size="Size.Small"
+                                                    Class="distance-badge-prominent">
+                                                @GetDistanceText(item)
+                                            </MudChip>
+                                            
+                                            @if (ShowLocationDetails && !string.IsNullOrEmpty(GetItemLocation(item)))
+                                            {
+                                                <MudText Typo="Typo.caption" 
+                                                        Color="Color.Secondary" 
+                                                        Align="Align.Right"
+                                                        Style="max-width: 120px; word-wrap: break-word;">
+                                                    @GetItemLocation(item)
+                                                </MudText>
+                                            }
+                                        </MudStack>
+                                    </div>
+                                }
+                                else if (!ShowDistance && ShowLocationDetails && !string.IsNullOrEmpty(GetItemLocation(item)))
+                                {
+                                    <!-- Show location info even without distance -->
+                                    <div class="location-info-section">
+                                        <MudStack AlignItems="AlignItems.End" Spacing="1">
+                                            <MudChip T="string" Color="Color.Secondary" 
+                                                    Icon="@Icons.Material.Filled.Place" 
+                                                    Size="Size.Small">
+                                                Location
+                                            </MudChip>
+                                            <MudText Typo="Typo.caption" 
+                                                    Color="Color.Secondary" 
+                                                    Align="Align.Right"
+                                                    Style="max-width: 120px; word-wrap: break-word;">
+                                                @GetItemLocation(item)
+                                            </MudText>
+                                        </MudStack>
+                                    </div>
+                                }
+                            </MudStack>
+                        </MudCardContent>
+                    </MudCard>
+                }
+            </div>
+        }
+    }
+    else if (ShowEmptyState)
+    {
+        <!-- Empty State -->
+        <MudPaper Class="pa-8 text-center" Elevation="0">
+            <MudIcon Icon="@Icons.Material.Filled.SearchOff" 
+                    Size="Size.Large" 
+                    Color="Color.Secondary" 
+                    Style="font-size: 4rem; opacity: 0.5;" />
+            <MudText Typo="Typo.h6" Color="Color.Secondary" Class="mt-4 mb-2">
+                @EmptyStateTitle
+            </MudText>
+            <MudText Typo="Typo.body1" Color="Color.Secondary" Style="opacity: 0.7;">
+                @EmptyStateMessage
+            </MudText>
+            
+            @if (ShowDistance && !string.IsNullOrEmpty(CurrentLocationFilter))
+            {
+                <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mt-2" Style="opacity: 0.6;">
+                    Try expanding your search radius or clearing the location filter
+                </MudText>
+            }
+        </MudPaper>
+    }
+</div>
+
+<style>
+    .results-with-distance {
+        width: 100%;
+    }
+    
+    .result-item-wrapper {
+        position: relative;
+        width: 100%;
+    }
+    
+    .result-item-container {
+        position: relative;
+    }
+    
+    .distance-badge-overlay {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        z-index: 10;
+    }
+    
+    .distance-badge {
+        background: rgba(25, 118, 210, 0.95);
+        color: white;
+        backdrop-filter: blur(4px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+    }
+    
+    .distance-badge-prominent {
+        background: linear-gradient(45deg, var(--mud-palette-primary), var(--mud-palette-primary-lighten));
+        color: white;
+        font-weight: 600;
+        box-shadow: 0 2px 8px rgba(25, 118, 210, 0.3);
+    }
+    
+    .result-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+        border-radius: 12px;
+    }
+    
+    .result-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+    }
+    
+    .distance-info-section {
+        min-width: 120px;
+        flex-shrink: 0;
+    }
+    
+    .location-info-section {
+        min-width: 120px;
+        flex-shrink: 0;
+    }
+</style>
+
+@code {
+    // Data Parameters
+    [Parameter] public IEnumerable<TItem>? Results { get; set; }
+    [Parameter] public RenderFragment<TItem>? ItemTemplate { get; set; }
+    
+    // Distance Display Parameters
+    [Parameter] public bool ShowDistance { get; set; } = false;
+    [Parameter] public string? CurrentLocationFilter { get; set; }
+    [Parameter] public bool ShowLocationDetails { get; set; } = true;
+    
+    // UI Configuration Parameters
+    [Parameter] public bool ShowItemActions { get; set; } = true;
+    [Parameter] public bool ShowFavoriteButton { get; set; } = true;
+    [Parameter] public bool ShowEmptyState { get; set; } = true;
+    [Parameter] public int CardElevation { get; set; } = 2;
+    
+    // Empty State Parameters
+    [Parameter] public string EmptyStateTitle { get; set; } = "No results found";
+    [Parameter] public string EmptyStateMessage { get; set; } = "Try adjusting your search criteria or location filters";
+    
+    // Event Callbacks
+    [Parameter] public EventCallback<TItem> OnItemClick { get; set; }
+    [Parameter] public EventCallback<TItem> OnFavoriteClick { get; set; }
+    
+    // Item Property Accessors (must be overridden for specific item types)
+    [Parameter] public Func<TItem, string> GetItemTitle { get; set; } = item => "Untitled Item";
+    [Parameter] public Func<TItem, string> GetItemDescription { get; set; } = item => "No description available";
+    [Parameter] public Func<TItem, string> GetItemCategory { get; set; } = item => "Uncategorized";
+    [Parameter] public Func<TItem, string> GetItemPrice { get; set; } = item => "";
+    [Parameter] public Func<TItem, string> GetItemLocation { get; set; } = item => "";
+    [Parameter] public Func<TItem, decimal?> GetItemDistance { get; set; } = item => null;
+    [Parameter] public Func<TItem, DistanceBand?> GetItemDistanceBand { get; set; } = item => null;
+
+    protected override void OnParametersSet()
+    {
+        // Set default property accessors if not provided
+        if (typeof(TItem) == typeof(Tool))
+        {
+            SetupToolAccessors();
+        }
+        else if (typeof(TItem) == typeof(BundleModel))
+        {
+            SetupBundleAccessors();
+        }
+        
+        base.OnParametersSet();
+    }
+    
+    private void SetupToolAccessors()
+    {
+        GetItemTitle = item => ((Tool)(object)item!).Name;
+        GetItemDescription = item => ((Tool)(object)item!).Description;
+        GetItemCategory = item => ((Tool)(object)item!).Category;
+        GetItemPrice = item => $"${((Tool)(object)item!).DailyRate:F2}/day";
+        GetItemLocation = item => ((Tool)(object)item!).Location ?? "";
+        // Distance would come from search results - not available in base Tool entity
+    }
+    
+    private void SetupBundleAccessors()
+    {
+        GetItemTitle = item => ((BundleModel)(object)item!).Name;
+        GetItemDescription = item => ((BundleModel)(object)item!).Description;
+        GetItemCategory = item => ((BundleModel)(object)item!).Category;
+        GetItemPrice = item => 
+        {
+            var bundle = (BundleModel)(object)item!;
+            var discountText = bundle.BundleDiscount > 0 ? $" ({bundle.BundleDiscount:F0}% off)" : "";
+            return $"${bundle.TotalCost:F2}/day{discountText}";
+        };
+        GetItemLocation = item => ((BundleModel)(object)item!).Location ?? "";
+        // Distance would come from search results - not available in base Bundle entity
+    }
+
+    private bool HasDistanceInfo(TItem item)
+    {
+        var distance = GetItemDistance(item);
+        var distanceBand = GetItemDistanceBand(item);
+        return distance.HasValue || distanceBand.HasValue;
+    }
+
+    private string GetDistanceText(TItem item)
+    {
+        var distanceBand = GetItemDistanceBand(item);
+        var distance = GetItemDistance(item);
+        
+        // Priority: Use distance band for privacy, fallback to exact distance
+        if (distanceBand.HasValue)
+        {
+            return GetDistanceBandText(distanceBand.Value);
+        }
+        else if (distance.HasValue)
+        {
+            return $"{distance.Value:F1} km away";
+        }
+        
+        return "Near you";
+    }
+    
+    private string GetDistanceBandText(DistanceBand distanceBand)
+    {
+        return distanceBand switch
+        {
+            DistanceBand.VeryClose => "Very close",
+            DistanceBand.Nearby => "Nearby", 
+            DistanceBand.Moderate => "Moderate distance",
+            DistanceBand.Far => "Far",
+            DistanceBand.VeryFar => "Very far",
+            _ => "Near you"
+        };
+    }
+}
