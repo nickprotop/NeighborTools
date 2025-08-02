@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using System.Security.Claims;
 using ToolsSharing.Core.DTOs.Bundle;
+using ToolsSharing.Core.DTOs.Location;
 using ToolsSharing.Core.Interfaces;
 using ToolsSharing.Core.Common.Models;
 
@@ -30,9 +31,11 @@ namespace ToolsSharing.API.Controllers
             [FromQuery] string? category = null,
             [FromQuery] string? searchTerm = null,
             [FromQuery] bool featuredOnly = false,
-            [FromQuery] string? tags = null)
+            [FromQuery] string? tags = null,
+            [FromQuery] LocationSearchRequest? locationSearch = null)
         {
-            var result = await _bundleService.GetBundlesAsync(page, pageSize, category, searchTerm, featuredOnly, tags);
+
+            var result = await _bundleService.GetBundlesAsync(page, pageSize, category, searchTerm, featuredOnly, tags, locationSearch);
             return result.Success ? Ok(result) : BadRequest(result);
         }
 
@@ -86,6 +89,16 @@ namespace ToolsSharing.API.Controllers
         public async Task<IActionResult> GetBundleCategories()
         {
             var result = await _bundleService.GetBundleCategoryCountsAsync();
+            return result.Success ? Ok(result) : BadRequest(result);
+        }
+
+        /// <summary>
+        /// Search bundles with advanced filtering (consistent with tools search)
+        /// </summary>
+        [HttpGet("search")]
+        public async Task<IActionResult> SearchBundles([FromQuery] SearchBundlesQuery query)
+        {
+            var result = await _bundleService.SearchBundlesAsync(query);
             return result.Success ? Ok(result) : BadRequest(result);
         }
 

@@ -7,6 +7,7 @@ using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Features.Tools;
 using ToolsSharing.Core.Interfaces;
 using ToolsSharing.Core.DTOs.Tools;
+using ToolsSharing.Core.DTOs.Location;
 using ToolsSharing.Infrastructure.Data;
 
 namespace ToolsSharing.Infrastructure.Features.Tools;
@@ -17,6 +18,7 @@ public class ToolsService : IToolsService
     private readonly IMapper _mapper;
     private readonly ApplicationDbContext _context;
     private readonly IFileStorageService _fileStorageService;
+    private readonly IGeocodingService _geocodingService;
     private readonly ILogger<ToolsService> _logger;
 
     public ToolsService(
@@ -24,12 +26,14 @@ public class ToolsService : IToolsService
         IMapper mapper, 
         ApplicationDbContext context,
         IFileStorageService fileStorageService,
+        IGeocodingService geocodingService,
         ILogger<ToolsService> logger)
     {
         _unitOfWork = unitOfWork;
         _mapper = mapper;
         _context = context;
         _fileStorageService = fileStorageService;
+        _geocodingService = geocodingService;
         _logger = logger;
     }
 
@@ -42,37 +46,8 @@ public class ToolsService : IToolsService
                 .Include(t => t.Images)
                 .Where(t => !t.IsDeleted && t.IsApproved);
 
-            // Apply filters
-            if (!string.IsNullOrEmpty(query.Category))
-            {
-                toolsQuery = toolsQuery.Where(t => t.Category.ToLower() == query.Category.ToLower());
-            }
-
-            if (!string.IsNullOrEmpty(query.LocationSearch?.LocationQuery))
-            {
-                toolsQuery = toolsQuery.Where(t => t.LocationDisplay.ToLower().Contains(query.LocationSearch.LocationQuery.ToLower()));
-            }
-
-            if (query.MaxDailyRate.HasValue)
-            {
-                toolsQuery = toolsQuery.Where(t => t.DailyRate <= query.MaxDailyRate.Value);
-            }
-
-            if (query.AvailableOnly)
-            {
-                toolsQuery = toolsQuery.Where(t => t.IsAvailable);
-            }
-
-            // Apply search
-            if (!string.IsNullOrEmpty(query.SearchTerm))
-            {
-                var searchTerm = query.SearchTerm.ToLower();
-                toolsQuery = toolsQuery.Where(t => 
-                    t.Name.ToLower().Contains(searchTerm) ||
-                    t.Description.ToLower().Contains(searchTerm) ||
-                    t.Brand.ToLower().Contains(searchTerm) ||
-                    t.Model.ToLower().Contains(searchTerm));
-            }
+            // Apply common filters
+            toolsQuery = await ApplyCommonFiltersAsync(toolsQuery, query);
 
             // Apply sorting
             toolsQuery = query.SortBy?.ToLower() switch
@@ -111,51 +86,8 @@ public class ToolsService : IToolsService
                 .Include(t => t.Images)
                 .Where(t => !t.IsDeleted && t.IsApproved);
 
-            // Apply filters
-            if (!string.IsNullOrEmpty(query.Category))
-            {
-                toolsQuery = toolsQuery.Where(t => t.Category.ToLower() == query.Category.ToLower());
-            }
-
-            if (!string.IsNullOrEmpty(query.LocationSearch?.LocationQuery))
-            {
-                toolsQuery = toolsQuery.Where(t => t.LocationDisplay.ToLower().Contains(query.LocationSearch.LocationQuery.ToLower()));
-            }
-
-            if (query.MaxDailyRate.HasValue)
-            {
-                toolsQuery = toolsQuery.Where(t => t.DailyRate <= query.MaxDailyRate.Value);
-            }
-
-            if (query.AvailableOnly)
-            {
-                toolsQuery = toolsQuery.Where(t => t.IsAvailable);
-            }
-
-            if (!string.IsNullOrEmpty(query.SearchTerm))
-            {
-                var searchTerm = query.SearchTerm.ToLower();
-                toolsQuery = toolsQuery.Where(t => 
-                    t.Name.ToLower().Contains(searchTerm) ||
-                    t.Description.ToLower().Contains(searchTerm) ||
-                    t.Brand.ToLower().Contains(searchTerm) ||
-                    t.Model.ToLower().Contains(searchTerm));
-            }
-
-            // Apply tags filter
-            if (!string.IsNullOrEmpty(query.Tags))
-            {
-                var tags = query.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries)
-                    .Select(tag => tag.Trim().ToLower())
-                    .Where(tag => !string.IsNullOrEmpty(tag))
-                    .ToList();
-
-                if (tags.Any())
-                {
-                    toolsQuery = toolsQuery.Where(t => 
-                        tags.All(tag => t.Tags.ToLower().Contains(tag)));
-                }
-            }
+            // Apply common filters
+            toolsQuery = await ApplyCommonFiltersAsync(toolsQuery, query);
 
             // Get total count before applying pagination
             var totalCount = await toolsQuery.CountAsync();
@@ -204,44 +136,13 @@ public class ToolsService : IToolsService
                 .Include(t => t.Images)
                 .Where(t => !t.IsDeleted && t.OwnerId == userId);
 
-            // Apply filters (same as GetToolsAsync but with user filter)
-            if (!string.IsNullOrEmpty(query.Category))
-            {
-                toolsQuery = toolsQuery.Where(t => t.Category.ToLower() == query.Category.ToLower());
-            }
-
-            if (!string.IsNullOrEmpty(query.LocationSearch?.LocationQuery))
-            {
-                toolsQuery = toolsQuery.Where(t => t.LocationDisplay.ToLower().Contains(query.LocationSearch.LocationQuery.ToLower()));
-            }
-
-            if (query.MaxDailyRate.HasValue)
-            {
-                toolsQuery = toolsQuery.Where(t => t.DailyRate <= query.MaxDailyRate.Value);
-            }
-
-            if (query.AvailableOnly)
-            {
-                toolsQuery = toolsQuery.Where(t => t.IsAvailable);
-            }
-
-            // Apply search
-            if (!string.IsNullOrEmpty(query.SearchTerm))
-            {
-                var searchTerm = query.SearchTerm.ToLower();
-                toolsQuery = toolsQuery.Where(t => 
-                    t.Name.ToLower().Contains(searchTerm) ||
-                    t.Description.ToLower().Contains(searchTerm) ||
-                    t.Brand.ToLower().Contains(searchTerm) ||
-                    t.Model.ToLower().Contains(searchTerm));
-            }
-
-            // Apply sorting
+            // Simple sorting only (like BundleService.GetUserBundlesAsync)
             toolsQuery = query.SortBy?.ToLower() switch
             {
                 "price" => toolsQuery.OrderBy(t => t.DailyRate),
                 "created" => toolsQuery.OrderByDescending(t => t.CreatedAt),
-                _ => toolsQuery.OrderBy(t => t.Name)
+                _ => toolsQuery.OrderByDescending(t => t.IsAvailable)
+                    .ThenByDescending(t => t.UpdatedAt)
             };
 
             // Apply pagination
@@ -1048,5 +949,314 @@ public class ToolsService : IToolsService
     private List<ToolDto> MapToolsToDto(List<Tool> tools)
     {
         return tools.Select(MapToolToDto).ToList();
+    }
+
+    private async Task<IQueryable<Tool>> ApplyLocationFilterAsync(IQueryable<Tool> toolsQuery, LocationSearchRequest locationSearch)
+    {
+        try
+        {
+            _logger.LogDebug("🔍 DEBUG: Starting ApplyLocationFilterAsync for Tools");
+            
+            // Early return if no location search criteria
+            if (!locationSearch.Lat.HasValue && !locationSearch.Lng.HasValue && 
+                string.IsNullOrEmpty(locationSearch.LocationQuery))
+            {
+                _logger.LogDebug("🔍 DEBUG: No location criteria provided, returning original query");
+                return toolsQuery; // No location filtering
+            }
+            
+            _logger.LogDebug("🔍 DEBUG: Location criteria found - Lat: {Lat}, Lng: {Lng}, Query: '{Query}'", 
+                locationSearch.Lat, locationSearch.Lng, locationSearch.LocationQuery);
+
+            // If only coordinates provided, reverse geocode them first to get location string
+            if ((locationSearch.Lat.HasValue && locationSearch.Lng.HasValue) && 
+                string.IsNullOrEmpty(locationSearch.LocationQuery))
+            {
+                try 
+                {
+                    _logger.LogDebug("Starting reverse geocoding for coordinates ({Lat}, {Lng})", 
+                        locationSearch.Lat, locationSearch.Lng);
+                    
+                    var reverseGeocodedLocation = await _geocodingService.ReverseGeocodeAsync(
+                        locationSearch.Lat.Value, locationSearch.Lng.Value);
+                    
+                    if (reverseGeocodedLocation != null && !string.IsNullOrEmpty(reverseGeocodedLocation.DisplayName))
+                    {
+                        locationSearch.LocationQuery = reverseGeocodedLocation.DisplayName;
+                        _logger.LogDebug("Reverse geocoding successful: '{LocationName}'", 
+                            reverseGeocodedLocation.DisplayName);
+                    }
+                    else
+                    {
+                        _logger.LogDebug("Reverse geocoding returned no results for coordinates ({Lat}, {Lng})", 
+                            locationSearch.Lat, locationSearch.Lng);
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Failed to reverse geocode coordinates ({Lat}, {Lng})", 
+                        locationSearch.Lat, locationSearch.Lng);
+                    // Continue with proximity search if reverse geocoding fails
+                }
+            }
+
+            // Set default radius if coordinates provided but no radius specified
+            if ((locationSearch.Lat.HasValue && locationSearch.Lng.HasValue) && !locationSearch.RadiusKm.HasValue)
+            {
+                locationSearch.RadiusKm = 5; // Default 5km radius
+                _logger.LogDebug("Applied default radius of 5km for coordinate search");
+            }
+
+            // Determine search input type (after potential reverse geocoding)
+            bool queryHasCoords = locationSearch.Lat.HasValue && locationSearch.Lng.HasValue;
+            bool queryHasLocation = !string.IsNullOrEmpty(locationSearch.LocationQuery);
+
+            _logger.LogDebug("Location search: QueryHasCoords={QueryHasCoords}, QueryHasLocation={QueryHasLocation}, Radius={Radius}km", 
+                queryHasCoords, queryHasLocation, locationSearch.RadiusKm);
+
+            // Step 3: Combined location search - proximity + text search for items without coordinates
+            var combinedLocationToolIds = new List<Guid>();
+
+            // Step 3a: Proximity search for items with coordinates
+            if (queryHasCoords)
+            {
+                _logger.LogDebug("🔍 DEBUG: Starting proximity search for coordinates");
+                var centerLat = locationSearch.Lat.Value;
+                var centerLng = locationSearch.Lng.Value;
+                var radiusKm = locationSearch.RadiusKm.Value;
+
+                // Proximity search for tools with coordinates
+                _logger.LogDebug("🔍 DEBUG: About to execute proximity search database query");
+                var proximityToolIds = (from t in _context.Tools
+                                       join u in _context.Users on t.OwnerId equals u.Id into userJoin
+                                       from user in userJoin.DefaultIfEmpty()
+                                       where 
+                                           // Direct tool coordinates within radius
+                                           (t.LocationLat.HasValue && t.LocationLng.HasValue &&
+                                            (6371 * Math.Acos(
+                                                Math.Cos(Math.PI * (double)centerLat / 180.0) *
+                                                Math.Cos(Math.PI * (double)t.LocationLat.Value / 180.0) *
+                                                Math.Cos(Math.PI * ((double)t.LocationLng.Value - (double)centerLng) / 180.0) +
+                                                Math.Sin(Math.PI * (double)centerLat / 180.0) *
+                                                Math.Sin(Math.PI * (double)t.LocationLat.Value / 180.0)
+                                            )) <= radiusKm) ||
+                                           // OR inherited coordinates from owner within radius
+                                           (t.LocationInheritanceOption == Core.Enums.LocationInheritanceOption.InheritFromProfile &&
+                                            user != null && user.LocationLat.HasValue && user.LocationLng.HasValue &&
+                                            (6371 * Math.Acos(
+                                                Math.Cos(Math.PI * (double)centerLat / 180.0) *
+                                                Math.Cos(Math.PI * (double)user.LocationLat.Value / 180.0) *
+                                                Math.Cos(Math.PI * ((double)user.LocationLng.Value - (double)centerLng) / 180.0) +
+                                                Math.Sin(Math.PI * (double)centerLat / 180.0) *
+                                                Math.Sin(Math.PI * (double)user.LocationLat.Value / 180.0)
+                                            )) <= radiusKm)
+                                       select t.Id).Distinct();
+
+                _logger.LogDebug("🔍 DEBUG: Executing ToList() on proximity search query");
+                var proximityResults = proximityToolIds.ToList();
+                _logger.LogDebug("🔍 DEBUG: Proximity search completed, found {Count} results", proximityResults.Count);
+                
+                if (proximityResults.Any())
+                {
+                    _logger.LogDebug("Proximity search found {Count} tools within {Radius}km", proximityResults.Count, radiusKm);
+                    combinedLocationToolIds.AddRange(proximityResults);
+                }
+                else
+                {
+                    _logger.LogDebug("No tools found within {Radius}km of coordinates", radiusKm);
+                }
+            }
+
+            // Step 3b: Text-based search for items without coordinates but with location text
+            if (queryHasLocation)
+            {
+                var locationQuery = locationSearch.LocationQuery.ToLower();
+                _logger.LogDebug("Applying text-based tool location filter for items without coordinates: '{Query}'", locationQuery);
+
+                var textMatchingToolIds = (from t in _context.Tools
+                                          join u in _context.Users on t.OwnerId equals u.Id into userJoin
+                                          from user in userJoin.DefaultIfEmpty()
+                                          where 
+                                              // Items without coordinates but with location text that matches
+                                              (
+                                                  // Direct tool has no coordinates but has location text that matches
+                                                  (!t.LocationLat.HasValue || !t.LocationLng.HasValue) &&
+                                                  (
+                                                      (t.LocationDisplay != null && t.LocationDisplay.ToLower().Contains(locationQuery)) ||
+                                                      (t.LocationCity != null && t.LocationCity.ToLower().Contains(locationQuery)) ||
+                                                      (t.LocationState != null && t.LocationState.ToLower().Contains(locationQuery)) ||
+                                                      (t.LocationCountry != null && t.LocationCountry.ToLower().Contains(locationQuery))
+                                                  )
+                                              ) ||
+                                              // OR inherited location: tool inherits from user without coordinates but with location text
+                                              (
+                                                  t.LocationInheritanceOption == Core.Enums.LocationInheritanceOption.InheritFromProfile &&
+                                                  user != null &&
+                                                  (!user.LocationLat.HasValue || !user.LocationLng.HasValue) &&
+                                                  (
+                                                      (user.LocationDisplay != null && user.LocationDisplay.ToLower().Contains(locationQuery)) ||
+                                                      (user.LocationCity != null && user.LocationCity.ToLower().Contains(locationQuery)) ||
+                                                      (user.LocationState != null && user.LocationState.ToLower().Contains(locationQuery)) ||
+                                                      (user.LocationCountry != null && user.LocationCountry.ToLower().Contains(locationQuery))
+                                                  )
+                                              )
+                                          select t.Id).Distinct();
+
+                var textResults = textMatchingToolIds.ToList();
+                
+                if (textResults.Any())
+                {
+                    _logger.LogDebug("Text search found {Count} tools without coordinates matching '{Query}'", textResults.Count, locationQuery);
+                    combinedLocationToolIds.AddRange(textResults);
+                }
+                else
+                {
+                    _logger.LogDebug("No tools without coordinates found matching text query: '{Query}'", locationQuery);
+                }
+            }
+
+            // Step 3c: Apply combined location filtering if we have any location-based results
+            if (combinedLocationToolIds.Any())
+            {
+                var uniqueLocationToolIds = combinedLocationToolIds.Distinct().ToList();
+                _logger.LogDebug("Combined location search found {Count} total tools (proximity + text without coordinates)", uniqueLocationToolIds.Count);
+                toolsQuery = toolsQuery.Where(t => uniqueLocationToolIds.Contains(t.Id));
+            }
+            else if (queryHasCoords || queryHasLocation)
+            {
+                _logger.LogDebug("No tools found matching location criteria - returning empty result set");
+                // If location search was requested but no results found, return empty set
+                toolsQuery = toolsQuery.Where(t => false);
+            }
+
+            // Step 4: Apply structured location filters if provided using explicit joins
+            if (locationSearch.Cities?.Any() == true)
+            {
+                var cities = locationSearch.Cities.Select(c => c.ToLower()).ToList();
+                
+                var toolIdsWithDirectCity = _context.Tools
+                    .Where(t => t.LocationCity != null && cities.Contains(t.LocationCity.ToLower()))
+                    .Select(t => t.Id);
+
+                var toolIdsWithInheritedCity = (from t in _context.Tools
+                                               join u in _context.Users on t.OwnerId equals u.Id
+                                               where t.LocationInheritanceOption == Core.Enums.LocationInheritanceOption.InheritFromProfile
+                                                     && u.LocationCity != null && cities.Contains(u.LocationCity.ToLower())
+                                               select t.Id);
+
+                var matchingCityToolIds = toolIdsWithDirectCity.Union(toolIdsWithInheritedCity);
+                toolsQuery = toolsQuery.Where(t => matchingCityToolIds.Contains(t.Id));
+            }
+
+            if (locationSearch.States?.Any() == true)
+            {
+                var states = locationSearch.States.Select(s => s.ToLower()).ToList();
+                
+                var toolIdsWithDirectState = _context.Tools
+                    .Where(t => t.LocationState != null && states.Contains(t.LocationState.ToLower()))
+                    .Select(t => t.Id);
+
+                var toolIdsWithInheritedState = (from t in _context.Tools
+                                                join u in _context.Users on t.OwnerId equals u.Id
+                                                where t.LocationInheritanceOption == Core.Enums.LocationInheritanceOption.InheritFromProfile
+                                                      && u.LocationState != null && states.Contains(u.LocationState.ToLower())
+                                                select t.Id);
+
+                var matchingStateToolIds = toolIdsWithDirectState.Union(toolIdsWithInheritedState);
+                toolsQuery = toolsQuery.Where(t => matchingStateToolIds.Contains(t.Id));
+            }
+
+            if (locationSearch.Countries?.Any() == true)
+            {
+                var countries = locationSearch.Countries.Select(c => c.ToLower()).ToList();
+                
+                var toolIdsWithDirectCountry = _context.Tools
+                    .Where(t => t.LocationCountry != null && countries.Contains(t.LocationCountry.ToLower()))
+                    .Select(t => t.Id);
+
+                var toolIdsWithInheritedCountry = (from t in _context.Tools
+                                                  join u in _context.Users on t.OwnerId equals u.Id
+                                                  where t.LocationInheritanceOption == Core.Enums.LocationInheritanceOption.InheritFromProfile
+                                                        && u.LocationCountry != null && countries.Contains(u.LocationCountry.ToLower())
+                                                  select t.Id);
+
+                var matchingCountryToolIds = toolIdsWithDirectCountry.Union(toolIdsWithInheritedCountry);
+                toolsQuery = toolsQuery.Where(t => matchingCountryToolIds.Contains(t.Id));
+            }
+
+            return toolsQuery;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error applying location filter for query: {Query}", locationSearch.LocationQuery);
+            // Fall back to simple text search if geocoding fails
+            if (!string.IsNullOrEmpty(locationSearch.LocationQuery))
+            {
+                var locationQuery = locationSearch.LocationQuery.ToLower();
+                return toolsQuery.Where(t => t.LocationDisplay != null && t.LocationDisplay.ToLower().Contains(locationQuery));
+            }
+            return toolsQuery;
+        }
+    }
+
+    /// <summary>
+    /// Applies common filtering logic shared across all GetTools methods
+    /// </summary>
+    private async Task<IQueryable<Tool>> ApplyCommonFiltersAsync(IQueryable<Tool> toolsQuery, GetToolsQuery query)
+    {
+        // Apply category filter
+        if (!string.IsNullOrEmpty(query.Category))
+        {
+            toolsQuery = toolsQuery.Where(t => t.Category.ToLower() == query.Category.ToLower());
+        }
+
+        // Apply location-based filtering
+        if (query.LocationSearch != null && 
+            (!string.IsNullOrEmpty(query.LocationSearch.LocationQuery) || 
+             query.LocationSearch.Lat.HasValue || 
+             query.LocationSearch.Lng.HasValue))
+        {
+            toolsQuery = await ApplyLocationFilterAsync(toolsQuery, query.LocationSearch);
+        }
+
+        // Apply price filter
+        if (query.MaxDailyRate.HasValue)
+        {
+            toolsQuery = toolsQuery.Where(t => t.DailyRate <= query.MaxDailyRate.Value);
+        }
+
+        // Apply availability filter
+        if (query.AvailableOnly)
+        {
+            toolsQuery = toolsQuery.Where(t => t.IsAvailable);
+        }
+
+        // Apply search term filter
+        if (!string.IsNullOrEmpty(query.SearchTerm))
+        {
+            var searchTerm = query.SearchTerm.ToLower();
+            toolsQuery = toolsQuery.Where(t => 
+                t.Name.ToLower().Contains(searchTerm) ||
+                t.Description.ToLower().Contains(searchTerm) ||
+                t.Brand.ToLower().Contains(searchTerm) ||
+                t.Model.ToLower().Contains(searchTerm));
+        }
+
+        // Apply tags filter
+        if (!string.IsNullOrEmpty(query.Tags))
+        {
+            var tags = query.Tags.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(tag => tag.Trim().ToLower())
+                .Where(tag => !string.IsNullOrEmpty(tag))
+                .ToList();
+
+            if (tags.Any())
+            {
+                toolsQuery = toolsQuery.Where(t => 
+                    tags.All(tag => t.Tags.ToLower().Contains(tag)));
+            }
+        }
+
+        return toolsQuery;
     }
 }

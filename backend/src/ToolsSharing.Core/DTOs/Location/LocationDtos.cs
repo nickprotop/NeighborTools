@@ -104,18 +104,30 @@ public class UpdateLocationRequest
 public class LocationSearchRequest
 {
     /// <summary>
-    /// Text-based location query (e.g., "near Atlanta")
+    /// Text-based location query (e.g., "near Atlanta") - used when Lat/Lng are null
     /// </summary>
     public string? LocationQuery { get; set; }
     
     /// <summary>
-    /// Center point latitude for proximity search
+    /// Direct latitude coordinate for proximity search - takes priority over LocationQuery
+    /// </summary>
+    [Range(-90.0, 90.0)]
+    public decimal? Lat { get; set; }
+    
+    /// <summary>
+    /// Direct longitude coordinate for proximity search - takes priority over LocationQuery
+    /// </summary>
+    [Range(-180.0, 180.0)]
+    public decimal? Lng { get; set; }
+    
+    /// <summary>
+    /// Center point latitude for proximity search (legacy field, use Lat instead)
     /// </summary>
     [Range(-90.0, 90.0)]
     public decimal? CenterLat { get; set; }
     
     /// <summary>
-    /// Center point longitude for proximity search
+    /// Center point longitude for proximity search (legacy field, use Lng instead)
     /// </summary>
     [Range(-180.0, 180.0)]
     public decimal? CenterLng { get; set; }
@@ -145,6 +157,11 @@ public class LocationSearchRequest
     /// Filter by specific countries
     /// </summary>
     public List<string>? Countries { get; set; }
+    
+    /// <summary>
+    /// Include items that don't have location data (Phase 8 Enhancement)
+    /// </summary>
+    public bool IncludeItemsWithoutLocation { get; set; } = true;
 }
 
 /// <summary>
