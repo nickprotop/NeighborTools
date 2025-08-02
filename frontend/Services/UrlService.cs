@@ -1,4 +1,4 @@
-using Microsoft.Extensions.Configuration;
+using ToolsSharing.Frontend.Configuration;
 
 namespace ToolsSharing.Frontend.Services;
 
@@ -10,18 +10,15 @@ public interface IUrlService
 
 public class UrlService : IUrlService
 {
-    private readonly IConfiguration _configuration;
+    private readonly AppSettings _appSettings;
     private readonly string _apiBaseUrl;
 
-    public UrlService(IConfiguration configuration)
+    public UrlService(AppSettings appSettings)
     {
-        _configuration = configuration;
+        _appSettings = appSettings;
         
-        // Get API base URL from configuration with fallback
-        _apiBaseUrl = _configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5002";
-        
-        // Ensure no trailing slash
-        _apiBaseUrl = _apiBaseUrl.TrimEnd('/');
+        // Get API base URL from AppSettings
+        _apiBaseUrl = _appSettings.ApiSettings.BaseUrl.TrimEnd('/');
     }
 
     /// <summary>
