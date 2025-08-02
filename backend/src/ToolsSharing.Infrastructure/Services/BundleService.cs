@@ -282,24 +282,73 @@ namespace ToolsSharing.Infrastructure.Services
                     if (tagList.Any())
                     {
                         bundleQuery = bundleQuery.Where(b => 
-                            tagList.All(tag => b.Tags.ToLower().Contains(tag)));
+                            tagList.Any(tag => b.Tags.ToLower().Contains(tag)));
                     }
                 }
 
-                // Note: Bundle availability is calculated from constituent tools availability
-                // We'll implement this as a post-processing filter if needed
+                // Apply availability filtering based on constituent tools
+                if (query.IsAvailable.HasValue)
+                {
+                    if (query.IsAvailable.Value)
+                    {
+                        // Bundle is available only if ALL constituent tools are available
+                        var availableBundleIds = (from b in _context.Bundles
+                                                where b.BundleTools.Any() && // Only bundles with tools
+                                                      b.BundleTools.All(bt => bt.Tool.IsAvailable && bt.Tool.IsApproved && !bt.Tool.IsDeleted)
+                                                select b.Id);
+
+                        bundleQuery = bundleQuery.Where(b => availableBundleIds.Contains(b.Id));
+                    }
+                    else
+                    {
+                        // Bundle is NOT available if ANY constituent tool is unavailable
+                        var unavailableBundleIds = (from b in _context.Bundles
+                                                   where b.BundleTools.Any() && // Only bundles with tools
+                                                         b.BundleTools.Any(bt => !bt.Tool.IsAvailable || !bt.Tool.IsApproved || bt.Tool.IsDeleted)
+                                                   select b.Id);
+
+                        bundleQuery = bundleQuery.Where(b => unavailableBundleIds.Contains(b.Id));
+                    }
+                }
                 
                 if (query.IsFeatured.HasValue)
                 {
                     bundleQuery = bundleQuery.Where(b => b.IsFeatured == query.IsFeatured.Value);
                 }
 
-                // Note: Rating filtering will be implemented once review aggregation is available
-                // For now, we'll skip this filter
-                
-                // Note: Price filtering will be implemented once bundle cost calculation is integrated
-                // This would require calculating total cost of all tools in bundle minus discount
-                // For now, we'll skip price filters
+                // Apply price filtering based on discounted bundle cost
+                if (query.MinPrice.HasValue || query.MaxPrice.HasValue)
+                {
+                    // Calculate effective bundle price: sum of tool daily rates with bundle discount applied
+                    var bundleIdsWithPriceFilter = (from b in _context.Bundles
+                                                   where b.BundleTools.Any() // Only bundles with tools
+                                                   let totalToolCost = b.BundleTools.Sum(bt => bt.Tool.DailyRate * bt.QuantityNeeded)
+                                                   let discountAmount = totalToolCost * (b.BundleDiscount / 100m)
+                                                   let finalCost = totalToolCost - discountAmount
+                                                   where (!query.MinPrice.HasValue || finalCost >= query.MinPrice.Value) &&
+                                                         (!query.MaxPrice.HasValue || finalCost <= query.MaxPrice.Value)
+                                                   select b.Id);
+
+                    bundleQuery = bundleQuery.Where(b => bundleIdsWithPriceFilter.Contains(b.Id));
+                }
+
+                // Apply rating filtering based on bundle reviews
+                if (query.MinRating.HasValue)
+                {
+                    // Calculate average bundle rating from reviews
+                    var bundleIdsWithRatingFilter = (from b in _context.Bundles
+                                                    join r in _context.Reviews on b.Id equals r.BundleId into reviews
+                                                    from review in reviews.DefaultIfEmpty()
+                                                    where review == null || review.Type == Core.Entities.ReviewType.BundleReview
+                                                    group review by b.Id into bundleReviews
+                                                    let averageRating = bundleReviews.Where(r => r != null).Any() 
+                                                        ? bundleReviews.Where(r => r != null).Average(r => r.Rating) 
+                                                        : 0
+                                                    where averageRating >= (double)query.MinRating.Value
+                                                    select bundleReviews.Key);
+
+                    bundleQuery = bundleQuery.Where(b => bundleIdsWithRatingFilter.Contains(b.Id));
+                }
 
                 // Apply location-based filtering
                 if (query.LocationSearch != null && 
@@ -310,26 +359,71 @@ namespace ToolsSharing.Infrastructure.Services
                     bundleQuery = await ApplyBundleLocationFilterAsync(bundleQuery, query.LocationSearch);
                 }
 
-                // Apply sorting
-                bundleQuery = query.SortBy?.ToLower() switch
-                {
-                    // Note: Price sorting will be implemented once bundle cost calculation is integrated
-                    "price_low" => bundleQuery.OrderByDescending(b => b.CreatedAt), // Fallback to newest for now
-                    "price_high" => bundleQuery.OrderByDescending(b => b.CreatedAt), // Fallback to newest for now
-                    // Note: Rating sorting will be implemented once review aggregation is available
-                    "rating" => bundleQuery.OrderByDescending(b => b.ViewCount), // Fallback to popular for now
-                    "newest" => bundleQuery.OrderByDescending(b => b.CreatedAt),
-                    "popular" => bundleQuery.OrderByDescending(b => b.ViewCount),
-                    _ => bundleQuery.OrderByDescending(b => b.IsFeatured)
-                                   .ThenByDescending(b => b.ViewCount)
-                                   .ThenByDescending(b => b.CreatedAt)
-                };
-
+                // Get bundle IDs list for potential sorting after materialization  
                 var totalCount = await bundleQuery.CountAsync();
                 var bundles = await bundleQuery
                     .Skip((query.Page - 1) * query.PageSize)
                     .Take(query.PageSize)
                     .ToListAsync();
+
+                // Apply client-side sorting for complex calculations that can't be translated to SQL
+                switch (query.SortBy?.ToLower())
+                {
+                    case "price_low":
+                        bundles = bundles
+                            .Where(b => b.BundleTools.Any())
+                            .OrderBy(b => {
+                                var totalToolCost = b.BundleTools.Sum(bt => bt.Tool.DailyRate * bt.QuantityNeeded);
+                                var discountAmount = totalToolCost * (b.BundleDiscount / 100m);
+                                return totalToolCost - discountAmount;
+                            })
+                            .ToList();
+                        break;
+
+                    case "price_high":
+                        bundles = bundles
+                            .Where(b => b.BundleTools.Any())
+                            .OrderByDescending(b => {
+                                var totalToolCost = b.BundleTools.Sum(bt => bt.Tool.DailyRate * bt.QuantityNeeded);
+                                var discountAmount = totalToolCost * (b.BundleDiscount / 100m);
+                                return totalToolCost - discountAmount;
+                            })
+                            .ToList();
+                        break;
+
+                    case "rating":
+                        // Calculate rating on client side - this could be optimized with a computed column
+                        bundles = bundles
+                            .OrderByDescending(b => {
+                                var reviews = _context.Reviews
+                                    .Where(r => r.BundleId == b.Id && r.Type == Core.Entities.ReviewType.BundleReview)
+                                    .ToList();
+                                return reviews.Any() ? reviews.Average(r => r.Rating) : 0;
+                            })
+                            .ThenByDescending(b => {
+                                var reviewCount = _context.Reviews
+                                    .Count(r => r.BundleId == b.Id && r.Type == Core.Entities.ReviewType.BundleReview);
+                                return reviewCount;
+                            })
+                            .ToList();
+                        break;
+
+                    case "newest":
+                        bundles = bundles.OrderByDescending(b => b.CreatedAt).ToList();
+                        break;
+
+                    case "popular":
+                        bundles = bundles.OrderByDescending(b => b.ViewCount).ToList();
+                        break;
+
+                    default:
+                        bundles = bundles
+                            .OrderByDescending(b => b.IsFeatured)
+                            .ThenByDescending(b => b.ViewCount)
+                            .ThenByDescending(b => b.CreatedAt)
+                            .ToList();
+                        break;
+                }
 
                 var bundleDtos = new List<BundleDto>();
                 foreach (var bundle in bundles)
@@ -1967,14 +2061,19 @@ namespace ToolsSharing.Infrastructure.Services
                 _logger.LogDebug("Bundle location search: QueryHasCoords={QueryHasCoords}, QueryHasLocation={QueryHasLocation}, Radius={Radius}km", 
                     queryHasCoords, queryHasLocation, locationSearch.RadiusKm);
 
-                // Step 3: Proximity search for coordinates (Priority 1: Most accurate)
+                // Step 3: Combined location search - proximity + text search for items without coordinates
+                var combinedLocationBundleIds = new List<Guid>();
+
+                // Step 3a: Proximity search for items with coordinates
                 if (queryHasCoords)
                 {
+                    _logger.LogDebug("🔍 DEBUG: Starting proximity search for bundles with coordinates");
                     var centerLat = locationSearch.Lat.Value;
                     var centerLng = locationSearch.Lng.Value;
                     var radiusKm = locationSearch.RadiusKm.Value;
 
-                    // Try proximity search for bundles with coordinates
+                    // Proximity search for bundles with coordinates
+                    _logger.LogDebug("🔍 DEBUG: About to execute proximity search database query for bundles");
                     var proximityBundleIds = (from b in _context.Bundles
                                              join u in _context.Users on b.UserId equals u.Id into userJoin
                                              from user in userJoin.DefaultIfEmpty()
@@ -2000,13 +2099,14 @@ namespace ToolsSharing.Infrastructure.Services
                                                   )) <= radiusKm)
                                              select b.Id).Distinct();
 
+                    _logger.LogDebug("🔍 DEBUG: Executing ToList() on bundle proximity search query");
                     var proximityResults = proximityBundleIds.ToList();
+                    _logger.LogDebug("🔍 DEBUG: Bundle proximity search completed, found {Count} results", proximityResults.Count);
                     
                     if (proximityResults.Any())
                     {
                         _logger.LogDebug("Proximity search found {Count} bundles within {Radius}km", proximityResults.Count, radiusKm);
-                        bundlesQuery = bundlesQuery.Where(b => proximityResults.Contains(b.Id));
-                        return bundlesQuery; // Return early with proximity results
+                        combinedLocationBundleIds.AddRange(proximityResults);
                     }
                     else
                     {
@@ -2014,41 +2114,66 @@ namespace ToolsSharing.Infrastructure.Services
                     }
                 }
 
-                // Step 4: Text-based fallback search (if no proximity results or no coordinates)
+                // Step 3b: Text-based search for items without coordinates but with location text
                 if (queryHasLocation)
                 {
                     var locationQuery = locationSearch.LocationQuery.ToLower();
-                    _logger.LogDebug("Applying text-based bundle location filter: '{Query}'", locationQuery);
+                    _logger.LogDebug("Applying text-based bundle location filter for items without coordinates: '{Query}'", locationQuery);
 
                     var textMatchingBundleIds = (from b in _context.Bundles
                                                join u in _context.Users on b.UserId equals u.Id into userJoin
                                                from user in userJoin.DefaultIfEmpty()
                                                where 
-                                                   // Direct bundle location match
-                                                   (b.LocationDisplay != null && b.LocationDisplay.ToLower().Contains(locationQuery)) ||
-                                                   (b.LocationCity != null && b.LocationCity.ToLower().Contains(locationQuery)) ||
-                                                   (b.LocationState != null && b.LocationState.ToLower().Contains(locationQuery)) ||
-                                                   (b.LocationCountry != null && b.LocationCountry.ToLower().Contains(locationQuery)) ||
-                                                   // Inherited location match
-                                                   (b.LocationInheritanceOption == Core.Enums.LocationInheritanceOption.InheritFromProfile &&
-                                                    user != null &&
-                                                    ((user.LocationDisplay != null && user.LocationDisplay.ToLower().Contains(locationQuery)) ||
-                                                     (user.LocationCity != null && user.LocationCity.ToLower().Contains(locationQuery)) ||
-                                                     (user.LocationState != null && user.LocationState.ToLower().Contains(locationQuery)) ||
-                                                     (user.LocationCountry != null && user.LocationCountry.ToLower().Contains(locationQuery))))
+                                                   // Items without coordinates but with location text that matches
+                                                   (
+                                                       // Direct bundle has no coordinates but has location text that matches
+                                                       (!b.LocationLat.HasValue || !b.LocationLng.HasValue) &&
+                                                       (
+                                                           (b.LocationDisplay != null && b.LocationDisplay.ToLower().Contains(locationQuery)) ||
+                                                           (b.LocationCity != null && b.LocationCity.ToLower().Contains(locationQuery)) ||
+                                                           (b.LocationState != null && b.LocationState.ToLower().Contains(locationQuery)) ||
+                                                           (b.LocationCountry != null && b.LocationCountry.ToLower().Contains(locationQuery))
+                                                       )
+                                                   ) ||
+                                                   // OR inherited location: bundle inherits from user without coordinates but with location text
+                                                   (
+                                                       b.LocationInheritanceOption == Core.Enums.LocationInheritanceOption.InheritFromProfile &&
+                                                       user != null &&
+                                                       (!user.LocationLat.HasValue || !user.LocationLng.HasValue) &&
+                                                       (
+                                                           (user.LocationDisplay != null && user.LocationDisplay.ToLower().Contains(locationQuery)) ||
+                                                           (user.LocationCity != null && user.LocationCity.ToLower().Contains(locationQuery)) ||
+                                                           (user.LocationState != null && user.LocationState.ToLower().Contains(locationQuery)) ||
+                                                           (user.LocationCountry != null && user.LocationCountry.ToLower().Contains(locationQuery))
+                                                       )
+                                                   )
                                                select b.Id).Distinct();
 
                     var textResults = textMatchingBundleIds.ToList();
                     
                     if (textResults.Any())
                     {
-                        _logger.LogDebug("Text search found {Count} bundles matching '{Query}'", textResults.Count, locationQuery);
-                        bundlesQuery = bundlesQuery.Where(b => textResults.Contains(b.Id));
+                        _logger.LogDebug("Text search found {Count} bundles without coordinates matching '{Query}'", textResults.Count, locationQuery);
+                        combinedLocationBundleIds.AddRange(textResults);
                     }
                     else
                     {
-                        _logger.LogDebug("No bundles found matching text query: '{Query}'", locationQuery);
+                        _logger.LogDebug("No bundles without coordinates found matching text query: '{Query}'", locationQuery);
                     }
+                }
+
+                // Step 3c: Apply combined location filtering if we have any location-based results
+                if (combinedLocationBundleIds.Any())
+                {
+                    var uniqueLocationBundleIds = combinedLocationBundleIds.Distinct().ToList();
+                    _logger.LogDebug("Combined location search found {Count} total bundles (proximity + text without coordinates)", uniqueLocationBundleIds.Count);
+                    bundlesQuery = bundlesQuery.Where(b => uniqueLocationBundleIds.Contains(b.Id));
+                }
+                else if (queryHasCoords || queryHasLocation)
+                {
+                    _logger.LogDebug("No bundles found matching location criteria - returning empty result set");
+                    // If location search was requested but no results found, return empty set
+                    bundlesQuery = bundlesQuery.Where(b => false);
                 }
 
                 // Step 4: Apply structured location filters if provided using explicit joins
