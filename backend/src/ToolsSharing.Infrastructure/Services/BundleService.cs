@@ -2114,37 +2114,38 @@ namespace ToolsSharing.Infrastructure.Services
                     }
                 }
 
-                // Step 3b: Text-based search for items without coordinates but with location text
+                // Step 3b: Text-based search for ALL items with matching location text (with or without coordinates)
                 if (queryHasLocation)
                 {
                     var locationQuery = locationSearch.LocationQuery.ToLower();
-                    _logger.LogDebug("Applying text-based bundle location filter for items without coordinates: '{Query}'", locationQuery);
+                    _logger.LogDebug("Applying text-based bundle location filter for ALL items with matching text: '{Query}'", locationQuery);
 
                     var textMatchingBundleIds = (from b in _context.Bundles
                                                join u in _context.Users on b.UserId equals u.Id into userJoin
                                                from user in userJoin.DefaultIfEmpty()
                                                where 
-                                                   // Items without coordinates but with location text that matches
+                                                   // All items with location text that matches (regardless of coordinates)
+                                                   // Enhanced partial matching: split query into words and match any word
                                                    (
-                                                       // Direct bundle has no coordinates but has location text that matches
-                                                       (!b.LocationLat.HasValue || !b.LocationLng.HasValue) &&
-                                                       (
-                                                           (b.LocationDisplay != null && b.LocationDisplay.ToLower().Contains(locationQuery)) ||
-                                                           (b.LocationCity != null && b.LocationCity.ToLower().Contains(locationQuery)) ||
-                                                           (b.LocationState != null && b.LocationState.ToLower().Contains(locationQuery)) ||
-                                                           (b.LocationCountry != null && b.LocationCountry.ToLower().Contains(locationQuery))
+                                                       // Direct bundle has location text that matches
+                                                       locationQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(word =>
+                                                           (b.LocationDisplay != null && b.LocationDisplay.ToLower().Contains(word)) ||
+                                                           (b.LocationCity != null && b.LocationCity.ToLower().Contains(word)) ||
+                                                           (b.LocationState != null && b.LocationState.ToLower().Contains(word)) ||
+                                                           (b.LocationCountry != null && b.LocationCountry.ToLower().Contains(word)) ||
+                                                           (b.LocationArea != null && b.LocationArea.ToLower().Contains(word))
                                                        )
                                                    ) ||
-                                                   // OR inherited location: bundle inherits from user without coordinates but with location text
+                                                   // OR inherited location: bundle inherits from user with matching location text
                                                    (
                                                        b.LocationInheritanceOption == Core.Enums.LocationInheritanceOption.InheritFromProfile &&
                                                        user != null &&
-                                                       (!user.LocationLat.HasValue || !user.LocationLng.HasValue) &&
-                                                       (
-                                                           (user.LocationDisplay != null && user.LocationDisplay.ToLower().Contains(locationQuery)) ||
-                                                           (user.LocationCity != null && user.LocationCity.ToLower().Contains(locationQuery)) ||
-                                                           (user.LocationState != null && user.LocationState.ToLower().Contains(locationQuery)) ||
-                                                           (user.LocationCountry != null && user.LocationCountry.ToLower().Contains(locationQuery))
+                                                       locationQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(word =>
+                                                           (user.LocationDisplay != null && user.LocationDisplay.ToLower().Contains(word)) ||
+                                                           (user.LocationCity != null && user.LocationCity.ToLower().Contains(word)) ||
+                                                           (user.LocationState != null && user.LocationState.ToLower().Contains(word)) ||
+                                                           (user.LocationCountry != null && user.LocationCountry.ToLower().Contains(word)) ||
+                                                           (user.LocationArea != null && user.LocationArea.ToLower().Contains(word))
                                                        )
                                                    )
                                                select b.Id).Distinct();
@@ -2153,12 +2154,12 @@ namespace ToolsSharing.Infrastructure.Services
                     
                     if (textResults.Any())
                     {
-                        _logger.LogDebug("Text search found {Count} bundles without coordinates matching '{Query}'", textResults.Count, locationQuery);
+                        _logger.LogDebug("Text search found {Count} bundles with matching location text '{Query}'", textResults.Count, locationQuery);
                         combinedLocationBundleIds.AddRange(textResults);
                     }
                     else
                     {
-                        _logger.LogDebug("No bundles without coordinates found matching text query: '{Query}'", locationQuery);
+                        _logger.LogDebug("No bundles found matching text query: '{Query}'", locationQuery);
                     }
                 }
 
@@ -2166,7 +2167,7 @@ namespace ToolsSharing.Infrastructure.Services
                 if (combinedLocationBundleIds.Any())
                 {
                     var uniqueLocationBundleIds = combinedLocationBundleIds.Distinct().ToList();
-                    _logger.LogDebug("Combined location search found {Count} total bundles (proximity + text without coordinates)", uniqueLocationBundleIds.Count);
+                    _logger.LogDebug("Combined location search found {Count} total bundles (proximity + text matching)", uniqueLocationBundleIds.Count);
                     bundlesQuery = bundlesQuery.Where(b => uniqueLocationBundleIds.Contains(b.Id));
                 }
                 else if (queryHasCoords || queryHasLocation)

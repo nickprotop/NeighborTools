@@ -61,168 +61,226 @@
                 </MudStack>
             </MudItem>
 
-            <!-- Filters Section -->
+            <!-- Filter Sidebar (Desktop) and Results Section -->
             <MudItem xs="12">
-                <MudPaper Class="pa-4" Elevation="1">
-                    <MudStack Spacing="3">
-                        <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-                            <!-- Category Filter -->
-                            <MudSelect @bind-Value="selectedCategory" 
-                                     Label="Category" 
-                                     Variant="Variant.Outlined"
-                                     AnchorOrigin="Origin.BottomCenter"
-                                     @bind-Value:after="ApplyFilters">
-                                <MudSelectItem Value="@(string.Empty)">All Categories</MudSelectItem>
-                                <MudSelectItem Value="@("Power Tools")">Power Tools</MudSelectItem>
-                                <MudSelectItem Value="@("Hand Tools")">Hand Tools</MudSelectItem>
-                                <MudSelectItem Value="@("Garden Tools")">Garden Tools</MudSelectItem>
-                                <MudSelectItem Value="@("Automotive")">Automotive</MudSelectItem>
-                                <MudSelectItem Value="@("Construction")">Construction</MudSelectItem>
-                                <MudSelectItem Value="@("Home Improvement")">Home Improvement</MudSelectItem>
-                                <MudSelectItem Value="@("Cleaning")">Cleaning</MudSelectItem>
-                                <MudSelectItem Value="@("Other")">Other</MudSelectItem>
-                            </MudSelect>
+                <MudStack Row Spacing="4" Class="position-relative">
+                    <!-- Mobile Filter Button -->
+                    <div class="d-md-none mb-3 w-100">
+                        <MudButton Variant="Variant.Outlined" 
+                                   Color="Color.Primary" 
+                                   FullWidth="true"
+                                   StartIcon="@Icons.Material.Filled.FilterList"
+                                   OnClick="OpenMobileFilters">
+                            Filters @if (GetActiveFilterCount() > 0) { <MudChip T="string" Size="Size.Small" Color="Color.Primary" Text="@GetActiveFilterCount().ToString()" Class="ml-2" /> }
+                        </MudButton>
+                    </div>
 
-                            <!-- Availability Filter -->
-                            <MudSelect @bind-Value="availableOnly" 
-                                     Label="Availability" 
-                                     Variant="Variant.Outlined"
-                                     AnchorOrigin="Origin.BottomCenter"
-                                     @bind-Value:after="ApplyFilters">
-                                <MudSelectItem T="bool?" Value="@((bool?)null)">All Tools</MudSelectItem>
-                                <MudSelectItem T="bool?" Value="@((bool?)true)">Available Only</MudSelectItem>
-                                <MudSelectItem T="bool?" Value="@((bool?)false)">Unavailable</MudSelectItem>
-                            </MudSelect>
+                    <!-- Desktop Filter Sidebar -->
+                    <div class="d-none d-md-block filter-sidebar">
+                        <MudPaper Class="pa-4 filter-panel" Elevation="2" Style="width: 280px; position: sticky; top: 20px;">
+                            <MudStack Spacing="4">
+                                <!-- Quick Filters -->
+                                <div>
+                                    <MudText Typo="Typo.h6" Class="mb-3">
+                                        <MudIcon Icon="@Icons.Material.Filled.Tune" Class="mr-2" />
+                                        Quick Filters
+                                    </MudText>
+                                    <MudStack Row Spacing="2" Wrap="Wrap.Wrap">
+                                        <MudChip T="bool?" 
+                                                 Value="@(availableOnly == true)"
+                                                 OnClick="() => ToggleQuickFilter(true)" 
+                                                 Color="@(availableOnly == true ? Color.Success : Color.Default)"
+                                                 Variant="@(availableOnly == true ? Variant.Filled : Variant.Outlined)"
+                                                 Size="Size.Small"
+                                                 Icon="@Icons.Material.Filled.CheckCircle">
+                                            Available Now
+                                        </MudChip>
+                                        <MudChip T="bool?" 
+                                                 Value="@(!string.IsNullOrEmpty(locationFilter))"
+                                                 Color="@(!string.IsNullOrEmpty(locationFilter) ? Color.Info : Color.Default)"
+                                                 Variant="@(!string.IsNullOrEmpty(locationFilter) ? Variant.Filled : Variant.Outlined)"
+                                                 Size="Size.Small"
+                                                 Icon="@Icons.Material.Filled.LocationOn"
+                                                 Disabled="true">
+                                            @(!string.IsNullOrEmpty(locationFilter) ? "Near Me" : "Set Location")
+                                        </MudChip>
+                                    </MudStack>
+                                </div>
 
-                            <!-- Price Range -->
-                            <div style="min-width: 200px;">
-                                <MudText Typo="Typo.body2" Class="mb-2">Max Daily Rate: $@maxDailyRate</MudText>
-                                <MudSlider @bind-Value="maxDailyRate" 
-                                         Min="0" 
-                                         Max="200" 
-                                         Step="5" 
-                                         Color="Color.Primary" 
-                                         @bind-Value:after="ApplyFilters" />
-                            </div>
-                            
-                            <!-- Location Search Section (Phase 8 Enhancement) -->
-                            <div style="min-width: 250px;">
-                                <MudText Typo="Typo.body2" Class="mb-2">Location Search</MudText>
-                                <LocationAutocomplete @bind-Value="locationFilter"
-                                                     LocationSelectedWithCoordinates="OnLocationSelectedWithCoordinates"
-                                                     Label="Search near..."
-                                                     Placeholder="Enter city, neighborhood, or address"
-                                                     Clearable="true"
-                                                     ShowPopular="false"
-                                                     MinCharacters="2"
-                                                     Dense="true"
-                                                     Variant="Variant.Outlined" />
-                                
-                                @if (!string.IsNullOrEmpty(locationFilter))
+                                <MudDivider />
+
+                                <!-- Category Section -->
+                                <div>
+                                    <MudExpansionPanels MultiExpansion="true" Elevation="0">
+                                        <MudExpansionPanel IsInitiallyExpanded="true">
+                                            <TitleContent>
+                                                <div class="d-flex align-center">
+                                                    <MudIcon Icon="@Icons.Material.Filled.Category" Class="mr-3" />
+                                                    <MudText Typo="Typo.subtitle1">Category</MudText>
+                                                </div>
+                                            </TitleContent>
+                                            <ChildContent>
+                                                <MudSelect @bind-Value="selectedCategory" 
+                                                         Variant="Variant.Outlined"
+                                                         Dense="true"
+                                                         FullWidth="true"
+                                                         @bind-Value:after="ApplyFilters">
+                                                    <MudSelectItem Value="@(string.Empty)">All Categories</MudSelectItem>
+                                                    <MudSelectItem Value="@("Power Tools")">Power Tools</MudSelectItem>
+                                                    <MudSelectItem Value="@("Hand Tools")">Hand Tools</MudSelectItem>
+                                                    <MudSelectItem Value="@("Garden Tools")">Garden Tools</MudSelectItem>
+                                                    <MudSelectItem Value="@("Automotive")">Automotive</MudSelectItem>
+                                                    <MudSelectItem Value="@("Construction")">Construction</MudSelectItem>
+                                                    <MudSelectItem Value="@("Home Improvement")">Home Improvement</MudSelectItem>
+                                                    <MudSelectItem Value="@("Cleaning")">Cleaning</MudSelectItem>
+                                                    <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+                                                </MudSelect>
+                                            </ChildContent>
+                                        </MudExpansionPanel>
+                                    </MudExpansionPanels>
+                                </div>
+
+                                <!-- Location Section -->
+                                <div>
+                                    <MudExpansionPanels MultiExpansion="true" Elevation="0">
+                                        <MudExpansionPanel IsInitiallyExpanded="false">
+                                            <TitleContent>
+                                                <div class="d-flex align-center">
+                                                    <MudIcon Icon="@Icons.Material.Filled.LocationOn" Class="mr-3" />
+                                                    <MudText Typo="Typo.subtitle1">Location</MudText>
+                                                </div>
+                                            </TitleContent>
+                                            <ChildContent>
+                                                <MudStack Spacing="3">
+                                                    <LocationAutocomplete @bind-Value="locationFilter"
+                                                                         LocationSelectedWithCoordinates="OnLocationSelectedWithCoordinates"
+                                                                         Label="Search near..."
+                                                                         Placeholder="Enter city or address"
+                                                                         Clearable="true"
+                                                                         ShowPopular="false"
+                                                                         MinCharacters="2"
+                                                                         Dense="true"
+                                                                         Variant="Variant.Outlined" />
+                                                    
+                                                    @if (!string.IsNullOrEmpty(locationFilter))
+                                                    {
+                                                        <div>
+                                                            <MudText Typo="Typo.body2" Class="mb-2">Distance: @distanceKm km</MudText>
+                                                            <MudSlider @bind-Value="distanceKm" 
+                                                                     Min="1" 
+                                                                     Max="100" 
+                                                                     Step="5" 
+                                                                     Color="Color.Primary" 
+                                                                     @bind-Value:after="OnDistanceChanged" />
+                                                        </div>
+                                                        
+                                                        <MudCheckBox @bind-Value="includeRemoteTools" 
+                                                                    Label="Include tools without location" 
+                                                                    Dense="true"
+                                                                    @bind-Value:after="OnIncludeRemoteChanged" />
+                                                    }
+                                                </MudStack>
+                                            </ChildContent>
+                                        </MudExpansionPanel>
+                                    </MudExpansionPanels>
+                                </div>
+
+                                <!-- Price Range Section -->
+                                <div>
+                                    <MudExpansionPanels MultiExpansion="true" Elevation="0">
+                                        <MudExpansionPanel IsInitiallyExpanded="false">
+                                            <TitleContent>
+                                                <div class="d-flex align-center">
+                                                    <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Class="mr-3" />
+                                                    <MudText Typo="Typo.subtitle1">Price Range</MudText>
+                                                </div>
+                                            </TitleContent>
+                                            <ChildContent>
+                                                <MudStack Spacing="3">
+                                                    <div class="d-flex justify-space-between align-center">
+                                                        <MudText Typo="Typo.body2">Max Daily Rate</MudText>
+                                                        <MudText Typo="Typo.h6" Color="Color.Primary">${maxDailyRate:F0}</MudText>
+                                                    </div>
+                                                    <MudSlider @bind-Value="maxDailyRate" 
+                                                             Min="0" 
+                                                             Max="200" 
+                                                             Step="5" 
+                                                             Color="Color.Primary" 
+                                                             @bind-Value:after="ApplyFilters" />
+                                                    <div class="d-flex justify-space-between">
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">$0</MudText>
+                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">$200+</MudText>
+                                                    </div>
+                                                </MudStack>
+                                            </ChildContent>
+                                        </MudExpansionPanel>
+                                    </MudExpansionPanels>
+                                </div>
+
+                                <!-- Active Filters -->
+                                @if (HasActiveFilters())
                                 {
-                                    <div class="mt-2">
-                                        <MudText Typo="Typo.body2" Class="mb-2">Distance: @distanceKm km</MudText>
-                                        <MudSlider @bind-Value="distanceKm" 
-                                                 Min="1" 
-                                                 Max="100" 
-                                                 Step="5" 
-                                                 Color="Color.Primary" 
-                                                 @bind-Value:after="OnDistanceChanged" />
-                                        
-                                        <MudCheckBox @bind-Value="includeRemoteTools" 
-                                                    Label="Include tools without location" 
-                                                    Dense="true"
-                                                    @bind-Value:after="OnIncludeRemoteChanged" />
+                                    <MudDivider />
+                                    <div>
+                                        <div class="d-flex justify-space-between align-center mb-2">
+                                            <MudText Typo="Typo.subtitle1">Active Filters</MudText>
+                                            <MudButton Variant="Variant.Text" 
+                                                       Color="Color.Error" 
+                                                       Size="Size.Small"
+                                                       OnClick="ClearAllFilters"
+                                                       StartIcon="@Icons.Material.Filled.Clear">
+                                                Clear All
+                                            </MudButton>
+                                        </div>
+                                        <MudStack Spacing="1">
+                                            @if (!string.IsNullOrEmpty(selectedCategory))
+                                            {
+                                                <MudChip T="string" 
+                                                         Text="@selectedCategory"
+                                                         Color="Color.Primary"
+                                                         Size="Size.Small"
+                                                         OnClose="() => ClearCategoryFilter()"
+                                                         CloseIcon="@Icons.Material.Filled.Close" />
+                                            }
+                                            
+                                            @if (availableOnly.HasValue)
+                                            {
+                                                <MudChip T="string" 
+                                                         Text="@(availableOnly.Value ? "Available Only" : "Unavailable")" 
+                                                         Color="Color.Success"
+                                                         Size="Size.Small"
+                                                         OnClose="() => ClearAvailabilityFilter()"
+                                                         CloseIcon="@Icons.Material.Filled.Close" />
+                                            }
+                                            
+                                            @if (maxDailyRate < 200)
+                                            {
+                                                <MudChip T="string" 
+                                                         Text="@($"Under ${maxDailyRate:F0}/day")"
+                                                         Color="Color.Info"
+                                                         Size="Size.Small"
+                                                         OnClose="() => ClearPriceFilter()"
+                                                         CloseIcon="@Icons.Material.Filled.Close" />
+                                            }
+                                            
+                                            @if (!string.IsNullOrEmpty(locationFilter))
+                                            {
+                                                <MudChip T="string" 
+                                                         Text="@($"{locationFilter} ({distanceKm}km)")"
+                                                         Color="Color.Info"
+                                                         Size="Size.Small"
+                                                         OnClose="ClearLocationFilter"
+                                                         CloseIcon="@Icons.Material.Filled.Close" />
+                                            }
+                                        </MudStack>
                                     </div>
                                 }
-                            </div>
-                        </MudStack>
-                        
-                        <!-- Active Filters Display -->
-                        @if (HasActiveFilters())
-                        {
-                            <MudDivider />
-                            <MudStack Row Spacing="2" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap">
-                                <MudText Typo="Typo.body2" Color="Color.Secondary">Active filters:</MudText>
-                                
-                                @if (!string.IsNullOrEmpty(selectedCategory))
-                                {
-                                    <MudChip T="string" 
-                                             Text="@($"Category: {selectedCategory}")"
-                                             Color="Color.Primary"
-                                             Size="Size.Small"
-                                             OnClose="() => ClearCategoryFilter()"
-                                             CloseIcon="@Icons.Material.Filled.Close" />
-                                }
-                                
-                                @if (availableOnly.HasValue)
-                                {
-                                    <MudChip T="string" 
-                                             Text="@($"Availability: {(availableOnly.Value ? "Available Only" : "Unavailable")}")" 
-                                             Color="Color.Primary"
-                                             Size="Size.Small"
-                                             OnClose="() => ClearAvailabilityFilter()"
-                                             CloseIcon="@Icons.Material.Filled.Close" />
-                                }
-                                
-                                @if (maxDailyRate < 200)
-                                {
-                                    <MudChip T="string" 
-                                             Text="@($"Max Rate: ${maxDailyRate:F0}")"
-                                             Color="Color.Primary"
-                                             Size="Size.Small"
-                                             OnClose="() => ClearPriceFilter()"
-                                             CloseIcon="@Icons.Material.Filled.Close" />
-                                }
-                                
-                                @if (!string.IsNullOrEmpty(selectedTags))
-                                {
-                                    @foreach (var tag in GetActiveTagList())
-                                    {
-                                        <MudChip T="string" 
-                                                 Text="@($"Tag: {tag}")"
-                                                 Color="Color.Secondary"
-                                                 Size="Size.Small"
-                                                 OnClose="() => RemoveTag(tag)"
-                                                 CloseIcon="@Icons.Material.Filled.Close" />
-                                    }
-                                }
-                                
-                                @if (!string.IsNullOrEmpty(locationFilter))
-                                {
-                                    <MudChip T="string" 
-                                             Text="@($"Near: {locationFilter} ({distanceKm}km)")"
-                                             Color="Color.Info"
-                                             Size="Size.Small"
-                                             OnClose="ClearLocationFilter"
-                                             CloseIcon="@Icons.Material.Filled.Close" />
-                                }
-                                
-                                @if (!string.IsNullOrEmpty(locationFilter) && !includeRemoteTools)
-                                {
-                                    <MudChip T="string" 
-                                             Text="Location Required"
-                                             Color="Color.Warning"
-                                             Size="Size.Small"
-                                             OnClose="() => { includeRemoteTools = true; OnIncludeRemoteChanged(); }"
-                                             CloseIcon="@Icons.Material.Filled.Close" />
-                                }
-                                
-                                <MudButton Variant="Variant.Text" 
-                                           Color="Color.Error" 
-                                           Size="Size.Small"
-                                           OnClick="ClearAllFilters"
-                                           StartIcon="@Icons.Material.Filled.Clear">
-                                    Clear All
-                                </MudButton>
                             </MudStack>
-                        }
-                    </MudStack>
-                </MudPaper>
-            </MudItem>
+                        </MudPaper>
+                    </div>
 
-            <!-- Results Section -->
-            <MudItem xs="12">
+                    <!-- Results Content Area -->
+                    <div class="flex-1 results-content">
                 @if (isLoading)
     {
         <MudPaper Class="pa-8 text-center" Elevation="2" Style="border-radius: 12px;">
@@ -431,12 +489,123 @@
             <MudButton Variant="Variant.Filled" Color="Color.Primary" Href="/tools/create" StartIcon="@Icons.Material.Filled.Add">
                 Add Your Tool
             </MudButton>
-                </MudPaper>
-            }
+                        </MudPaper>
+                    }
+                    </div>
+                </MudStack>
             </MudItem>
         </MudGrid>
     </MudPaper>
 </MudContainer>
+
+<!-- Mobile Filter Dialog -->
+<MudDialog @bind-IsVisible="mobileFiltersOpen" Options="mobileDialogOptions">
+    <TitleContent>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="mr-3" />
+            Filter Tools
+        </MudText>
+    </TitleContent>
+    <DialogContent>
+        <div class="pa-4">
+            <MudStack Spacing="4">
+                <!-- Quick Filters -->
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">Quick Filters</MudText>
+                    <MudStack Row Spacing="2" Wrap="Wrap.Wrap">
+                        <MudChip T="bool?" 
+                                 Value="@(availableOnly == true)"
+                                 OnClick="() => ToggleQuickFilter(true)" 
+                                 Color="@(availableOnly == true ? Color.Success : Color.Default)"
+                                 Variant="@(availableOnly == true ? Variant.Filled : Variant.Outlined)"
+                                 Size="Size.Small"
+                                 Icon="@Icons.Material.Filled.CheckCircle">
+                            Available Now
+                        </MudChip>
+                    </MudStack>
+                </div>
+
+                <MudDivider />
+
+                <!-- Category -->
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">Category</MudText>
+                    <MudSelect @bind-Value="selectedCategory" 
+                             Variant="Variant.Outlined"
+                             FullWidth="true"
+                             @bind-Value:after="ApplyFilters">
+                        <MudSelectItem Value="@(string.Empty)">All Categories</MudSelectItem>
+                        <MudSelectItem Value="@("Power Tools")">Power Tools</MudSelectItem>
+                        <MudSelectItem Value="@("Hand Tools")">Hand Tools</MudSelectItem>
+                        <MudSelectItem Value="@("Garden Tools")">Garden Tools</MudSelectItem>
+                        <MudSelectItem Value="@("Automotive")">Automotive</MudSelectItem>
+                        <MudSelectItem Value="@("Construction")">Construction</MudSelectItem>
+                        <MudSelectItem Value="@("Home Improvement")">Home Improvement</MudSelectItem>
+                        <MudSelectItem Value="@("Cleaning")">Cleaning</MudSelectItem>
+                        <MudSelectItem Value="@("Other")">Other</MudSelectItem>
+                    </MudSelect>
+                </div>
+
+                <!-- Location -->
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">Location</MudText>
+                    <MudStack Spacing="3">
+                        <LocationAutocomplete @bind-Value="locationFilter"
+                                             LocationSelectedWithCoordinates="OnLocationSelectedWithCoordinates"
+                                             Label="Search near..."
+                                             Placeholder="Enter city or address"
+                                             Clearable="true"
+                                             ShowPopular="false"
+                                             MinCharacters="2"
+                                             Variant="Variant.Outlined" />
+                        
+                        @if (!string.IsNullOrEmpty(locationFilter))
+                        {
+                            <div>
+                                <MudText Typo="Typo.body2" Class="mb-2">Distance: @distanceKm km</MudText>
+                                <MudSlider @bind-Value="distanceKm" 
+                                         Min="1" 
+                                         Max="100" 
+                                         Step="5" 
+                                         Color="Color.Primary" 
+                                         @bind-Value:after="OnDistanceChanged" />
+                            </div>
+                            
+                            <MudCheckBox @bind-Value="includeRemoteTools" 
+                                        Label="Include tools without location" 
+                                        @bind-Value:after="OnIncludeRemoteChanged" />
+                        }
+                    </MudStack>
+                </div>
+
+                <!-- Price Range -->
+                <div>
+                    <MudText Typo="Typo.subtitle1" Class="mb-3">Price Range</MudText>
+                    <MudStack Spacing="3">
+                        <div class="d-flex justify-space-between align-center">
+                            <MudText Typo="Typo.body2">Max Daily Rate</MudText>
+                            <MudText Typo="Typo.h6" Color="Color.Primary">${maxDailyRate:F0}</MudText>
+                        </div>
+                        <MudSlider @bind-Value="maxDailyRate" 
+                                 Min="0" 
+                                 Max="200" 
+                                 Step="5" 
+                                 Color="Color.Primary" 
+                                 @bind-Value:after="ApplyFilters" />
+                        <div class="d-flex justify-space-between">
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">$0</MudText>
+                            <MudText Typo="Typo.caption" Color="Color.Secondary">$200+</MudText>
+                        </div>
+                    </MudStack>
+                </div>
+            </MudStack>
+        </div>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="ClearAllFilters" StartIcon="@Icons.Material.Filled.Clear">Clear All</MudButton>
+        <MudButton Color="Color.Primary" OnClick="CloseMobileFilters">Apply Filters</MudButton>
+    </DialogActions>
+</MudDialog>
 
 <style>
     .hover-card:hover {
@@ -456,19 +625,37 @@
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
     }
     
-    @@media (max-width: 768px) {
-        .load-more-btn {
-            width: 100%;
-            max-width: 300px;
-        }
-    }
-    
     .tool-image {
         background: linear-gradient(45deg, #f5f5f5 0%, #e0e0e0 100%);
         display: flex;
         align-items: center;
         justify-content: center;
         position: relative;
+    }
+
+    .filter-sidebar {
+        flex: 0 0 280px;
+    }
+
+    .results-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .filter-panel {
+        max-height: calc(100vh - 120px);
+        overflow-y: auto;
+    }
+
+    @@media (max-width: 768px) {
+        .load-more-btn {
+            width: 100%;
+            max-width: 300px;
+        }
+        
+        .filter-sidebar {
+            display: none !important;
+        }
     }
 </style>
 
@@ -509,6 +696,16 @@
     private decimal? locationLng = null;
     private int distanceKm = 25;
     private bool includeRemoteTools = true;
+    
+    // Mobile filter dialog
+    private bool mobileFiltersOpen = false;
+    private DialogOptions mobileDialogOptions = new()
+    {
+        FullWidth = true,
+        MaxWidth = MaxWidth.Small,
+        CloseOnEscapeKey = true,
+        CloseButton = true
+    };
 
     protected override async Task OnInitializedAsync()
     {
@@ -1034,6 +1231,41 @@
     {
         toolImageLoadErrors[toolId] = false;
         StateHasChanged();
+    }
+    
+    // New filter methods
+    private void OpenMobileFilters()
+    {
+        mobileFiltersOpen = true;
+    }
+    
+    private void CloseMobileFilters()
+    {
+        mobileFiltersOpen = false;
+    }
+    
+    private async Task ToggleQuickFilter(bool availability)
+    {
+        if (availableOnly == availability)
+        {
+            availableOnly = null; // Clear filter if already set
+        }
+        else
+        {
+            availableOnly = availability;
+        }
+        await ApplyFilters();
+    }
+    
+    private int GetActiveFilterCount()
+    {
+        int count = 0;
+        if (!string.IsNullOrEmpty(selectedCategory)) count++;
+        if (availableOnly.HasValue) count++;
+        if (maxDailyRate < 200) count++;
+        if (!string.IsNullOrEmpty(selectedTags)) count++;
+        if (!string.IsNullOrEmpty(locationFilter)) count++;
+        return count;
     }
 
     public void Dispose()

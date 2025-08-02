@@ -1067,37 +1067,38 @@ public class ToolsService : IToolsService
                 }
             }
 
-            // Step 3b: Text-based search for items without coordinates but with location text
+            // Step 3b: Text-based search for ALL items with matching location text (with or without coordinates)
             if (queryHasLocation)
             {
                 var locationQuery = locationSearch.LocationQuery.ToLower();
-                _logger.LogDebug("Applying text-based tool location filter for items without coordinates: '{Query}'", locationQuery);
+                _logger.LogDebug("Applying text-based tool location filter for ALL items with matching text: '{Query}'", locationQuery);
 
                 var textMatchingToolIds = (from t in _context.Tools
                                           join u in _context.Users on t.OwnerId equals u.Id into userJoin
                                           from user in userJoin.DefaultIfEmpty()
                                           where 
-                                              // Items without coordinates but with location text that matches
+                                              // All items with location text that matches (regardless of coordinates)
+                                              // Enhanced partial matching: split query into words and match any word
                                               (
-                                                  // Direct tool has no coordinates but has location text that matches
-                                                  (!t.LocationLat.HasValue || !t.LocationLng.HasValue) &&
-                                                  (
-                                                      (t.LocationDisplay != null && t.LocationDisplay.ToLower().Contains(locationQuery)) ||
-                                                      (t.LocationCity != null && t.LocationCity.ToLower().Contains(locationQuery)) ||
-                                                      (t.LocationState != null && t.LocationState.ToLower().Contains(locationQuery)) ||
-                                                      (t.LocationCountry != null && t.LocationCountry.ToLower().Contains(locationQuery))
+                                                  // Direct tool has location text that matches
+                                                  locationQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(word =>
+                                                      (t.LocationDisplay != null && t.LocationDisplay.ToLower().Contains(word)) ||
+                                                      (t.LocationCity != null && t.LocationCity.ToLower().Contains(word)) ||
+                                                      (t.LocationState != null && t.LocationState.ToLower().Contains(word)) ||
+                                                      (t.LocationCountry != null && t.LocationCountry.ToLower().Contains(word)) ||
+                                                      (t.LocationArea != null && t.LocationArea.ToLower().Contains(word))
                                                   )
                                               ) ||
-                                              // OR inherited location: tool inherits from user without coordinates but with location text
+                                              // OR inherited location: tool inherits from user with matching location text
                                               (
                                                   t.LocationInheritanceOption == Core.Enums.LocationInheritanceOption.InheritFromProfile &&
                                                   user != null &&
-                                                  (!user.LocationLat.HasValue || !user.LocationLng.HasValue) &&
-                                                  (
-                                                      (user.LocationDisplay != null && user.LocationDisplay.ToLower().Contains(locationQuery)) ||
-                                                      (user.LocationCity != null && user.LocationCity.ToLower().Contains(locationQuery)) ||
-                                                      (user.LocationState != null && user.LocationState.ToLower().Contains(locationQuery)) ||
-                                                      (user.LocationCountry != null && user.LocationCountry.ToLower().Contains(locationQuery))
+                                                  locationQuery.Split(' ', StringSplitOptions.RemoveEmptyEntries).Any(word =>
+                                                      (user.LocationDisplay != null && user.LocationDisplay.ToLower().Contains(word)) ||
+                                                      (user.LocationCity != null && user.LocationCity.ToLower().Contains(word)) ||
+                                                      (user.LocationState != null && user.LocationState.ToLower().Contains(word)) ||
+                                                      (user.LocationCountry != null && user.LocationCountry.ToLower().Contains(word)) ||
+                                                      (user.LocationArea != null && user.LocationArea.ToLower().Contains(word))
                                                   )
                                               )
                                           select t.Id).Distinct();
@@ -1106,12 +1107,12 @@ public class ToolsService : IToolsService
                 
                 if (textResults.Any())
                 {
-                    _logger.LogDebug("Text search found {Count} tools without coordinates matching '{Query}'", textResults.Count, locationQuery);
+                    _logger.LogDebug("Text search found {Count} tools with matching location text '{Query}'", textResults.Count, locationQuery);
                     combinedLocationToolIds.AddRange(textResults);
                 }
                 else
                 {
-                    _logger.LogDebug("No tools without coordinates found matching text query: '{Query}'", locationQuery);
+                    _logger.LogDebug("No tools found matching text query: '{Query}'", locationQuery);
                 }
             }
 
@@ -1119,7 +1120,7 @@ public class ToolsService : IToolsService
             if (combinedLocationToolIds.Any())
             {
                 var uniqueLocationToolIds = combinedLocationToolIds.Distinct().ToList();
-                _logger.LogDebug("Combined location search found {Count} total tools (proximity + text without coordinates)", uniqueLocationToolIds.Count);
+                _logger.LogDebug("Combined location search found {Count} total tools (proximity + text matching)", uniqueLocationToolIds.Count);
                 toolsQuery = toolsQuery.Where(t => uniqueLocationToolIds.Contains(t.Id));
             }
             else if (queryHasCoords || queryHasLocation)
