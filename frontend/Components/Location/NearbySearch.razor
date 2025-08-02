@@ -1,8 +1,14 @@
 @using ToolsSharing.Frontend.Models.Location
 @using ToolsSharing.Frontend.Services.Location
+@using ToolsSharing.Frontend.Models
+@using frontend.Models
+@using frontend.Services
 @using MudBlazor
 @inject ILocationService LocationService
+@inject IToolService ToolService
+@inject BundleService BundleService
 @inject ISnackbar Snackbar
+@inject NavigationManager Navigation
 
 <MudPaper Class="@($"pa-6 {Class}")" Elevation="@Elevation" Style="@Style">
     <MudStack Spacing="4">
@@ -30,8 +36,23 @@
             }
         </MudStack>
 
-        <!-- Location Input -->
+        <!-- Search Inputs -->
         <MudStack Spacing="3">
+            <!-- Search Term Input (conditionally displayed) -->
+            @if (ShowSearchTerm)
+            {
+                <MudTextField @bind-Value="searchTerm"
+                              @onkeypress="HandleSearchKeyPress"
+                              Label="Search for tools and bundles"
+                              Placeholder="Enter keywords, tool names, or project types..."
+                              Clearable="true"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.End"
+                              AdornmentIcon="@Icons.Material.Filled.Search"
+                              OnAdornmentClick="@OnSearch" />
+            }
+            
+            <!-- Location Input -->
             <LocationAutocomplete @bind-Value="selectedLocationText"
                                  LocationSelectedWithCoordinates="OnLocationSelectedWithCoordinates"
                                  Label="Search Location"
@@ -104,7 +125,7 @@
                 <MudButton Variant="Variant.Filled"
                            Color="Color.Primary"
                            OnClick="@OnSearch"
-                           Disabled="@(string.IsNullOrEmpty(selectedLocationText) || isSearching)"
+                           Disabled="@(isSearching || (!ShowSearchTerm && string.IsNullOrEmpty(selectedLocationText)) || (ShowSearchTerm && string.IsNullOrWhiteSpace(searchTerm) && string.IsNullOrEmpty(selectedLocationText)))"
                            StartIcon="@(isSearching ? null : Icons.Material.Filled.Search)"
                            Size="Size.Large">
                     @if (isSearching)
@@ -168,8 +189,26 @@
         {
             <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.SearchOff">
                 <MudText Typo="Typo.body2">
-                    No @(searchType == SearchType.Tools ? "tools" : searchType == SearchType.Bundles ? "bundles" : "items") found within @searchRadius km of @selectedLocation?.DisplayName.
-                    Try expanding your search radius or choosing a different location.
+                    @if (!string.IsNullOrEmpty(selectedLocation?.DisplayName))
+                    {
+                        @($"No {(searchType == SearchType.Tools ? "tools" : searchType == SearchType.Bundles ? "bundles" : "items")} found within {searchRadius} km of {selectedLocation?.DisplayName}.")
+                        @if (!string.IsNullOrWhiteSpace(searchTerm))
+                        {
+                            @($" matching \"{searchTerm}\".")
+                        }
+                        <br />
+                        @("Try expanding your search radius, choosing a different location, or adjusting your search terms.")
+                    }
+                    else if (!string.IsNullOrWhiteSpace(searchTerm))
+                    {
+                        @($"No {(searchType == SearchType.Tools ? "tools" : searchType == SearchType.Bundles ? "bundles" : "items")} found matching \"{searchTerm}\".")
+                        <br />
+                        @("Try different search terms or add a location to find nearby items.")
+                    }
+                    else
+                    {
+                        @("Please enter a search term or select a location to search.")
+                    }
                 </MudText>
             </MudAlert>
         }
@@ -204,7 +243,7 @@
                     
                     @foreach (var tool in toolResults.Take(MaxResultsPerType))
                     {
-                        <MudCard Elevation="2" Class="result-card">
+                        <MudCard Elevation="2" Class="result-card" @onclick="() => NavigateToTool(tool.Id)">
                             <MudCardContent>
                                 <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
                                     <div>
@@ -249,7 +288,7 @@
                     
                     @foreach (var bundle in bundleResults.Take(MaxResultsPerType))
                     {
-                        <MudCard Elevation="2" Class="result-card">
+                        <MudCard Elevation="2" Class="result-card" @onclick="() => NavigateToBundle(bundle.Id)">
                             <MudCardContent>
                                 <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Start">
                                     <div>
@@ -326,7 +365,12 @@
     
     .result-card:hover {
         transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        box-shadow: 0 6px 16px rgba(0,0,0,0.15);
+    }
+    
+    .result-card:active {
+        transform: translateY(0px);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
     }
 </style>
 
@@ -339,6 +383,8 @@
     [Parameter] public int DefaultRadius { get; set; } = 10;
     [Parameter] public int MaxResultsPerType { get; set; } = 5;
     [Parameter] public bool ShowResultsCount { get; set; } = true;
+    [Parameter] public bool ShowSearchTerm { get; set; } = true;
+    [Parameter] public string InitialSearchTerm { get; set; } = "";
     [Parameter] public int Elevation { get; set; } = 1;
     [Parameter] public string Class { get; set; } = "";
     [Parameter] public string Style { get; set; } = "";
@@ -366,6 +412,7 @@
     // Internal State
     private LocationOption? selectedLocation;
     private string selectedLocationText = "";
+    private string searchTerm = "";
     private SearchType searchType = SearchType.Both;
     private int searchRadius = 10;
     private bool isSearching = false;
@@ -378,8 +425,17 @@
     protected override void OnInitialized()
     {
         searchRadius = DefaultRadius;
+        searchTerm = InitialSearchTerm;
     }
     
+    // Search term key press handler
+    private async Task HandleSearchKeyPress(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter")
+        {
+            await OnSearch();
+        }
+    }
     
     // Location selection handler with coordinates
     private async Task OnLocationSelectedWithCoordinates(LocationAutocompleteResult result)
@@ -442,7 +498,11 @@
     // Main search functionality
     private async Task OnSearch()
     {
-        if (selectedLocation == null || !selectedLocation.Lat.HasValue || !selectedLocation.Lng.HasValue || isSearching) return;
+        // Allow search if we have either a location OR a search term
+        bool hasLocation = selectedLocation != null && selectedLocation.Lat.HasValue && selectedLocation.Lng.HasValue;
+        bool hasSearchTerm = !string.IsNullOrWhiteSpace(searchTerm);
+        
+        if ((!hasLocation && !hasSearchTerm) || isSearching) return;
         
         isSearching = true;
         errorMessage = "";
@@ -454,27 +514,86 @@
         
         try
         {
-            // Search for tools if needed
+            // Search for tools if needed using standardized search endpoint
             if (searchType == SearchType.Tools || searchType == SearchType.Both)
             {
-                var toolResponse = await LocationService.FindNearbyToolsAsync(
-                    selectedLocation.Lat.Value,
-                    selectedLocation.Lng.Value,
-                    searchRadius);
+                var toolResponse = await ToolService.GetToolsPagedAsync(
+                    page: 1,
+                    pageSize: MaxResultsPerType * 2, // Get more to filter for best results
+                    searchTerm: string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
+                    locationQuery: selectedLocation?.DisplayName,
+                    lat: selectedLocation?.Lat,
+                    lng: selectedLocation?.Lng,
+                    radiusKm: hasLocation ? (int)searchRadius : (int?)null,
+                    includeRemoteTools: !hasLocation || hasSearchTerm // Include remote if no location or if we have search terms
+                );
                 
-                toolResults = toolResponse ?? new List<NearbyToolDto>();
+                if (toolResponse.Success && toolResponse.Data?.Items != null)
+                {
+                    // Convert Tool results to NearbyToolDto
+                    toolResults = toolResponse.Data.Items.Take(MaxResultsPerType).Select(tool => new NearbyToolDto
+                    {
+                        Id = Guid.TryParse(tool.Id, out var toolGuid) ? toolGuid : Guid.NewGuid(),
+                        Name = tool.Name,
+                        Description = tool.Description,
+                        Category = tool.Category,
+                        DailyRate = tool.DailyRate,
+                        OwnerName = tool.OwnerName,
+                        ImageUrl = tool.ImageUrls.FirstOrDefault() ?? "",
+                        DistanceBand = CalculateDistanceBand(selectedLocation, tool)
+                    }).ToList();
+                }
+                else
+                {
+                    toolResults = new List<NearbyToolDto>();
+                }
+                
                 await ToolResultsChanged.InvokeAsync(toolResults);
             }
             
-            // Search for bundles if needed
+            // Search for bundles if needed using standardized search endpoint
             if (searchType == SearchType.Bundles || searchType == SearchType.Both)
             {
-                var bundleResponse = await LocationService.FindNearbyBundlesAsync(
-                    selectedLocation.Lat.Value,
-                    selectedLocation.Lng.Value,
-                    searchRadius);
+                var bundleSearchRequest = new BundleSearchRequest
+                {
+                    Page = 1,
+                    PageSize = MaxResultsPerType * 2, // Get more to filter for best results
+                    Query = string.IsNullOrWhiteSpace(searchTerm) ? null : searchTerm,
+                    LocationSearch = hasLocation ? new ToolsSharing.Frontend.Models.LocationSearchRequest
+                    {
+                        LocationQuery = selectedLocation?.DisplayName ?? "",
+                        Lat = selectedLocation?.Lat,
+                        Lng = selectedLocation?.Lng,
+                        RadiusKm = (int)searchRadius,
+                        IncludeItemsWithoutLocation = !hasLocation || hasSearchTerm // Include remote if no location or if we have search terms
+                    } : null
+                };
                 
-                bundleResults = bundleResponse ?? new List<NearbyBundleDto>();
+                var bundleResponse = await BundleService.SearchBundlesAsync(bundleSearchRequest);
+                
+                if (bundleResponse.Success && bundleResponse.Data?.Items != null)
+                {
+                    // Convert Bundle results to NearbyBundleDto
+                    bundleResults = bundleResponse.Data.Items.Take(MaxResultsPerType).Select(bundle => new NearbyBundleDto
+                    {
+                        Id = bundle.Id,
+                        Name = bundle.Name,
+                        Description = bundle.Description,
+                        Category = bundle.Category,
+                        OwnerName = bundle.OwnerName,
+                        ImageUrl = bundle.ImageUrl ?? "",
+                        ToolCount = bundle.Tools?.Count ?? 0,
+                        OriginalCost = CalculateOriginalCost(bundle),
+                        DiscountedCost = bundle.DiscountedCost,
+                        DiscountPercentage = bundle.BundleDiscount,
+                        DistanceBand = CalculateDistanceBand(selectedLocation, bundle)
+                    }).ToList();
+                }
+                else
+                {
+                    bundleResults = new List<NearbyBundleDto>();
+                }
+                
                 await BundleResultsChanged.InvokeAsync(bundleResults);
             }
             
@@ -626,5 +745,83 @@
             DistanceBand.VeryFar => "Very Far",
             _ => "Unknown"
         };
+    }
+    
+    // Helper methods for distance calculation and distance band determination
+    private DistanceBand CalculateDistanceBand(LocationOption? searchLocation, Tool tool)
+    {
+        if (searchLocation?.Lat == null || searchLocation?.Lng == null)
+            return DistanceBand.VeryFar; // Default to VeryFar instead of Unknown
+            
+        // For tools, we need to determine their location (either custom or inherited from owner)
+        // Since we don't have complete location data in the Tool model for this calculation,
+        // we'll use a simplified approach based on the search radius
+        var distance = CalculateDistance(searchLocation, tool);
+        
+        return GetDistanceBandFromDistance(distance);
+    }
+    
+    private DistanceBand CalculateDistanceBand(LocationOption? searchLocation, BundleModel bundle)
+    {
+        if (searchLocation?.Lat == null || searchLocation?.Lng == null)
+            return DistanceBand.VeryFar; // Default to VeryFar instead of Unknown
+            
+        var distance = CalculateDistance(searchLocation, bundle);
+        
+        return GetDistanceBandFromDistance(distance);
+    }
+    
+    private double CalculateDistance(LocationOption? searchLocation, Tool tool)
+    {
+        // Since we don't have exact tool coordinates in this context,
+        // we'll estimate based on the fact that the search returned this tool
+        // In a real implementation, this would use actual tool coordinates
+        return searchRadius / 2; // Approximate as mid-radius for now
+    }
+    
+    private double CalculateDistance(LocationOption? searchLocation, BundleModel bundle)
+    {
+        // Since we don't have exact bundle coordinates in this context,
+        // we'll estimate based on the fact that the search returned this bundle
+        // In a real implementation, this would use actual bundle coordinates  
+        return searchRadius / 2; // Approximate as mid-radius for now
+    }
+    
+    private decimal CalculateOriginalCost(BundleModel bundle)
+    {
+        // Calculate original cost from tools in bundle
+        if (bundle.Tools?.Any() == true)
+        {
+            return bundle.Tools.Sum(bt => bt.DailyRate * bt.QuantityNeeded);
+        }
+        // Fallback: calculate from discounted cost and discount percentage
+        if (bundle.BundleDiscount > 0)
+        {
+            return bundle.DiscountedCost / (1 - bundle.BundleDiscount / 100m);
+        }
+        return bundle.DiscountedCost;
+    }
+    
+    private DistanceBand GetDistanceBandFromDistance(double distance)
+    {
+        return distance switch
+        {
+            <= 2 => DistanceBand.VeryClose,
+            <= 5 => DistanceBand.Nearby,
+            <= 15 => DistanceBand.Moderate,
+            <= 30 => DistanceBand.Far,
+            _ => DistanceBand.VeryFar
+        };
+    }
+    
+    // Navigation methods
+    private void NavigateToTool(Guid toolId)
+    {
+        Navigation.NavigateTo($"/tools/{toolId}");
+    }
+    
+    private void NavigateToBundle(Guid bundleId)
+    {
+        Navigation.NavigateTo($"/bundles/{bundleId}");
     }
 }
