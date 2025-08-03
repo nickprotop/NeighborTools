@@ -420,6 +420,7 @@ public class ApiResponse<T>
 ## Database and Seeding
 
 ### Default Test Accounts
+- **Admin Account**: admin@neighbortools.com / Password123!
 - john.doe@email.com / Password123!
 - jane.smith@email.com / Password123!
 
