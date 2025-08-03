@@ -1,4 +1,5 @@
 using System.Net;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using Microsoft.Extensions.Caching.Distributed;
 using Microsoft.Extensions.Logging;
@@ -124,7 +125,35 @@ public class GeolocationService : IGeolocationService
                     return null;
                 }
                 
-                var apiResponse = System.Text.Json.JsonSerializer.Deserialize<IPWhoResponse>(json);
+                IPWhoResponse? apiResponse;
+                try 
+                {
+                    var options = new JsonSerializerOptions
+                    {
+                        PropertyNameCaseInsensitive = true,
+                        NumberHandling = JsonNumberHandling.AllowReadingFromString
+                    };
+                    apiResponse = System.Text.Json.JsonSerializer.Deserialize<IPWhoResponse>(json, options);
+                }
+                catch (JsonException ex)
+                {
+                    // Check if this is likely a rate limiting or API change issue
+                    if (json.Contains("rate") || json.Contains("limit") || json.Contains("quota"))
+                    {
+                        _logger.LogWarning("ipwho.is API rate limiting detected during JSON parsing for IP {IP}. Will return cached/fallback data.", ipAddress);
+                    }
+                    else if (json.Contains("asn") && ex.Message.Contains("Number"))
+                    {
+                        _logger.LogWarning("ipwho.is API schema change detected (ASN field type changed) for IP {IP}. Error: {Error}", 
+                            ipAddress, ex.Message);
+                    }
+                    else
+                    {
+                        _logger.LogError(ex, "Failed to deserialize ipwho.is response for IP {IP}. Response: {Response}", 
+                            ipAddress, json.Length > 500 ? json[..500] + "..." : json);
+                    }
+                    return null;
+                }
                 
                 if (apiResponse?.Success == true)
                 {
@@ -293,7 +322,7 @@ public class GeolocationService : IGeolocationService
     private class IPWhoConnection
     {
         [JsonPropertyName("asn")]
-        public string? Asn { get; set; }
+        public object? Asn { get; set; } // Can be string or number
         
         [JsonPropertyName("org")]
         public string? Org { get; set; }
