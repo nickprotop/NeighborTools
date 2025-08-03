@@ -77,6 +77,29 @@ public class AuthController : ControllerBase
         }
     }
 
+    [HttpPost("reauth")]
+    [Authorize]
+    public async Task<IActionResult> ReauthenticateUser([FromBody] ReauthCommand command)
+    {
+        try
+        {
+            var userId = GetCurrentUserId();
+            if (string.IsNullOrEmpty(userId))
+                return Unauthorized();
+
+            var result = await _authService.ReauthAsync(command, userId);
+            
+            if (!result.Success)
+                return BadRequest(result);
+                
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, new { Error = "Failed to re-authenticate user" });
+        }
+    }
+
     [HttpPost("forgot-password")]
     public async Task<IActionResult> ForgotPassword([FromBody] ForgotPasswordCommand command)
     {

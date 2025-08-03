@@ -45,6 +45,10 @@ public record ResendEmailVerificationCommand(
     string Email
 );
 
+public record ReauthCommand(
+    string Password
+);
+
 public class AuthResult
 {
     public string UserId { get; set; } = "";

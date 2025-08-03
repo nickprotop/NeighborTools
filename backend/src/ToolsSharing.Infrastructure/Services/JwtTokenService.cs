@@ -42,9 +42,20 @@ public class JwtTokenService : IJwtTokenService
 
     public async Task<string> GenerateAccessTokenAsync(User user, int timeoutMinutes)
     {
+        return await GenerateAccessTokenAsync(user, timeoutMinutes, updateReauth: false);
+    }
+
+    public async Task<string> GenerateAccessTokenWithReauthAsync(User user, int timeoutMinutes)
+    {
+        return await GenerateAccessTokenAsync(user, timeoutMinutes, updateReauth: true);
+    }
+
+    private async Task<string> GenerateAccessTokenAsync(User user, int timeoutMinutes, bool updateReauth)
+    {
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_secretKey);
 
+        var currentTime = DateTimeOffset.UtcNow.ToUnixTimeSeconds();
         var claims = new List<Claim>
         {
             new(ClaimTypes.NameIdentifier, user.Id),
@@ -53,8 +64,21 @@ public class JwtTokenService : IJwtTokenService
             new(ClaimTypes.GivenName, user.FirstName),
             new(ClaimTypes.Surname, user.LastName),
             new("UserId", user.Id),
-            new(JwtRegisteredClaimNames.Iat, DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(), ClaimValueTypes.Integer64)
+            new(JwtRegisteredClaimNames.Iat, currentTime.ToString(), ClaimValueTypes.Integer64)
         };
+
+        // Add last_reauth claim - either current time for new auth, or preserve from existing token
+        if (updateReauth)
+        {
+            claims.Add(new("last_reauth", currentTime.ToString(), ClaimValueTypes.Integer64));
+        }
+        else
+        {
+            // For regular token refresh, check if we can preserve existing last_reauth from current token
+            var existingReauth = await GetExistingReauthFromContextAsync();
+            var reauthTime = existingReauth ?? currentTime; // Use current time for new logins
+            claims.Add(new("last_reauth", reauthTime.ToString(), ClaimValueTypes.Integer64));
+        }
 
         // Add security-related claims from HTTP context
         await AddSecurityClaimsAsync(claims);
@@ -297,5 +321,39 @@ public class JwtTokenService : IJwtTokenService
         }
 
         return false;
+    }
+
+    private async Task<long?> GetExistingReauthFromContextAsync()
+    {
+        var context = _httpContextAccessor.HttpContext;
+        if (context?.User?.Identity?.IsAuthenticated == true)
+        {
+            var authHeader = context.Request.Headers["Authorization"].FirstOrDefault();
+            if (authHeader?.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase) == true)
+            {
+                var token = authHeader["Bearer ".Length..].Trim();
+                var tokenHandler = new JwtSecurityTokenHandler();
+                
+                try
+                {
+                    if (tokenHandler.CanReadToken(token))
+                    {
+                        var jwtToken = tokenHandler.ReadJwtToken(token);
+                        var lastReauthClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "last_reauth")?.Value;
+                        
+                        if (!string.IsNullOrEmpty(lastReauthClaim) && long.TryParse(lastReauthClaim, out var timestamp))
+                        {
+                            return timestamp;
+                        }
+                    }
+                }
+                catch
+                {
+                    // If token parsing fails, return null to use current time
+                }
+            }
+        }
+        
+        return null;
     }
 }

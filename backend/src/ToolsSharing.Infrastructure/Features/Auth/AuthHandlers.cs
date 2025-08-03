@@ -506,4 +506,60 @@ public class AuthService : IAuthService
             return ApiResponse<bool>.CreateSuccess(true, "If the email is registered and unverified, a verification email has been sent");
         }
     }
+
+    public async Task<ApiResponse<AuthResult>> ReauthAsync(ReauthCommand command, string userId)
+    {
+        try
+        {
+            // Find the user
+            var user = await _userManager.FindByIdAsync(userId);
+            if (user == null)
+            {
+                return ApiResponse<AuthResult>.CreateFailure("User not found");
+            }
+
+            // Verify the provided password
+            var isPasswordValid = await _userManager.CheckPasswordAsync(user, command.Password);
+            if (!isPasswordValid)
+            {
+                _logger.LogWarning("Re-authentication failed for user {UserId}: Invalid password", userId);
+                return ApiResponse<AuthResult>.CreateFailure("Invalid password");
+            }
+
+            // Get re-auth timeout from configuration (default 5 minutes for sensitive operations)
+            var reauthTimeoutMinutes = int.Parse(_configuration["SessionSecurity:ReauthTimeoutMinutes"] ?? "5");
+            _logger.LogInformation("Re-authentication successful for user {UserId}, generating token with {TimeoutMinutes} minute timeout", 
+                userId, reauthTimeoutMinutes);
+
+            // Generate new access token with updated last_reauth timestamp
+            var newAccessToken = await _jwtTokenService.GenerateAccessTokenWithReauthAsync(user, reauthTimeoutMinutes);
+            var newRefreshTokenString = _refreshTokenService.GenerateRefreshToken();
+            
+            // Store new refresh token in database
+            await _refreshTokenService.StoreRefreshTokenAsync(user.Id, newRefreshTokenString);
+
+            // Get user roles
+            var roles = await _userManager.GetRolesAsync(user);
+
+            var authResult = new AuthResult
+            {
+                UserId = user.Id,
+                Email = user.Email!,
+                FirstName = user.FirstName,
+                LastName = user.LastName,
+                AccessToken = newAccessToken,
+                RefreshToken = newRefreshTokenString,
+                ExpiresAt = DateTime.UtcNow.AddMinutes(reauthTimeoutMinutes),
+                Roles = roles.ToList(),
+                IsAdmin = roles.Contains("Admin")
+            };
+
+            return ApiResponse<AuthResult>.CreateSuccess(authResult, "Re-authentication successful");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Re-authentication failed for user {UserId}", userId);
+            return ApiResponse<AuthResult>.CreateFailure($"Re-authentication failed: {ex.Message}");
+        }
+    }
 }
