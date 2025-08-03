@@ -18,8 +18,8 @@ public class SecurityCleanupBackgroundService : BackgroundService
     // Bulk cleanup for data retention - runs every 30 minutes for efficiency
     private readonly TimeSpan _bulkCleanupInterval = TimeSpan.FromMinutes(30);
     
-    private DateTime _lastBulkCleanup = DateTime.MinValue;
-    private DateTime _lastActiveCleanup = DateTime.MinValue;
+    private DateTime _lastBulkCleanup = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
+    private DateTime _lastActiveCleanup = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
 
     public SecurityCleanupBackgroundService(
         IServiceProvider serviceProvider, 

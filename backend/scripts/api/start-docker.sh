@@ -19,8 +19,8 @@ echo "🔍 Checking storage services..."
 cd "$DOCKER_DIR"
 
 MISSING_SERVICES=""
-if ! docker-compose ps --services --filter "status=running" | grep -q "mysql"; then
-    MISSING_SERVICES="$MISSING_SERVICES MySQL"
+if ! docker-compose ps --services --filter "status=running" | grep -q "postgresql"; then
+    MISSING_SERVICES="$MISSING_SERVICES PostgreSQL"
 fi
 if ! docker-compose ps --services --filter "status=running" | grep -q "redis"; then
     MISSING_SERVICES="$MISSING_SERVICES Redis"

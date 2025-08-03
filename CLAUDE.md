@@ -234,45 +234,58 @@ context_checkpoint: name="before-payment-fix" description="Saving state before f
 ./start-services.sh
 
 # Alternative: Start services separately
-./backend/scripts/start-all.sh  # Backend only
-cd frontend && dotnet run       # Frontend only
+cd backend && ./scripts/start-dev.sh    # Backend only (stable development)
+cd frontend && dotnet run               # Frontend only
 ```
 
-### Backend Development
+### Backend Development - Service-Oriented Scripts
+
+#### Most Common Development Workflows
 ```bash
-# Start API with infrastructure (recommended for development)
-./scripts/api/start-local.sh
+# Active development with hot reload (most common)
+cd backend && ./scripts/start-watch.sh     # Storage + dotnet watch
 
-# Stop API
-./scripts/api/stop.sh
+# Stable development/debugging
+cd backend && ./scripts/start-dev.sh       # Storage + dotnet run
 
-# Infrastructure only (for manual API debugging)
-./backend/scripts/start-infrastructure.sh
+# Production-like testing
+cd backend && ./scripts/start-production.sh  # Storage + Docker API
+```
 
-# Start API manually after infrastructure is running
-cd backend && dotnet run --project src/ToolsSharing.API
+#### Granular Control
+```bash
+# Storage Services (Always Docker)
+cd backend && ./scripts/storage/start.sh   # Start MySQL, Redis, MinIO
+cd backend && ./scripts/storage/stop.sh    # Stop storage services
+cd backend && ./scripts/storage/status.sh  # Show storage status
 
+# API Modes (choose one)
+cd backend && ./scripts/api/start-local.sh   # dotnet run (stable)
+cd backend && ./scripts/api/start-watch.sh   # dotnet watch (hot reload)
+cd backend && ./scripts/api/start-docker.sh  # Docker (production-like)
+cd backend && ./scripts/api/stop.sh          # Stop API (any mode)
+```
+
+#### Database Operations
+```bash
 # Database migrations
-dotnet ef migrations add MigrationName --project src/ToolsSharing.Infrastructure --startup-project src/ToolsSharing.API
-dotnet ef database update --project src/ToolsSharing.Infrastructure --startup-project src/ToolsSharing.API
+cd backend && dotnet ef migrations add MigrationName --project src/ToolsSharing.Infrastructure --startup-project src/ToolsSharing.API
+cd backend && dotnet ef database update --project src/ToolsSharing.Infrastructure --startup-project src/ToolsSharing.API
 
-# Seed data only
-dotnet run --project src/ToolsSharing.API --seed-only
+# Seed data only (infrastructure must be running)
+cd backend && dotnet run --project src/ToolsSharing.API --seed-only
 ```
 
 ### Service Management
 ```bash
-# Stop API (recommended)
-./scripts/api/stop.sh
+# Stop API (any mode)
+cd backend && ./scripts/api/stop.sh
 
-# Legacy: Stop API (handles both Docker and dotnet processes)
-./backend/scripts/stop-api.sh
-
-# Stop all services, preserve data
-./backend/scripts/stop-all.sh
+# Stop storage services
+cd backend && ./scripts/storage/stop.sh
 
 # Complete removal (⚠️ deletes all data)
-./backend/scripts/uninstall.sh
+cd backend && ./scripts/uninstall.sh
 ```
 
 ### Testing

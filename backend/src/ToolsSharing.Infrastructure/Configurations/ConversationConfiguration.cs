@@ -24,7 +24,7 @@ public class ConversationConfiguration : IEntityTypeConfiguration<Conversation>
         // Indexes for performance
         builder.HasIndex(c => c.Participant1Id);
         builder.HasIndex(c => c.Participant2Id);
-        builder.HasIndex(c => new { c.Participant1Id, c.Participant2Id }).IsUnique();
+        builder.HasIndex(c => new { c.Participant1Id, c.Participant2Id }); // Removed .IsUnique() - users can have multiple conversations
         builder.HasIndex(c => c.LastMessageAt);
         builder.HasIndex(c => c.RentalId);
         builder.HasIndex(c => c.ToolId);

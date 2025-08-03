@@ -21,7 +21,7 @@ public class HereGeocodingService : IGeocodingService
     private readonly ILogger<HereGeocodingService> _logger;
     private readonly HereConfiguration _config;
     private readonly SemaphoreSlim _rateLimiter;
-    private DateTime _lastRequestTime = DateTime.MinValue;
+    private DateTime _lastRequestTime = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
 
     public string ProviderName => "HERE";
 

@@ -881,7 +881,7 @@ namespace ToolsSharing.Infrastructure.Services
             bundleDto.AverageRating = reviews.Any() ? reviews.Average(r => r.Rating) : 0;
 
             // Check availability for quick display (next 7 days)
-            var availabilityCheck = await CheckBundleAvailabilityForPeriod(bundle.Id, DateTime.Today, DateTime.Today.AddDays(7));
+            var availabilityCheck = await CheckBundleAvailabilityForPeriod(bundle.Id, DateTime.UtcNow.Date, DateTime.UtcNow.Date.AddDays(7));
             bundleDto.IsAvailable = availabilityCheck.IsAvailable;
             bundleDto.AvailableFromDate = availabilityCheck.EarliestAvailableDate;
 

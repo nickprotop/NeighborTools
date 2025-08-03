@@ -233,7 +233,7 @@ public class SessionSecurityMiddleware
             return new SessionSecurityValidation { IsValid = true };
         }
 
-        var loginTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(tokenLoginTime)).DateTime;
+        var loginTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(tokenLoginTime)).UtcDateTime;
         var timeSinceLogin = DateTime.UtcNow - loginTime;
 
         // If login was recent, allow some tolerance
@@ -384,7 +384,7 @@ public class SessionSecurityMiddleware
             };
         }
 
-        var lastReauthTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(lastReauth)).DateTime;
+        var lastReauthTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(lastReauth)).UtcDateTime;
         var timeSinceReauth = DateTime.UtcNow - lastReauthTime;
 
         if (timeSinceReauth.TotalMinutes > _options.ReauthTimeoutMinutes)

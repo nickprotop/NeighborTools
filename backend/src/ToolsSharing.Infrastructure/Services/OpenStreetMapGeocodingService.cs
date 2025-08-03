@@ -21,7 +21,7 @@ public class OpenStreetMapGeocodingService : IGeocodingService
     private readonly ILogger<OpenStreetMapGeocodingService> _logger;
     private readonly OpenStreetMapConfiguration _config;
     private readonly SemaphoreSlim _rateLimiter;
-    private DateTime _lastRequestTime = DateTime.MinValue;
+    private DateTime _lastRequestTime = DateTime.SpecifyKind(DateTime.MinValue, DateTimeKind.Utc);
 
     public string ProviderName => "OpenStreetMap";
 

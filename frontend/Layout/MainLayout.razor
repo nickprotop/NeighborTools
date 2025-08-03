@@ -44,6 +44,22 @@
                     
                     <AuthorizeView>
                         <Authorized>
+                            <!-- Messages Icon with Badge -->
+                            @if (unreadMessageCount > 0)
+                            {
+                                <MudTooltip Text="@($"{unreadMessageCount} unread messages")">
+                                    <MudBadge Content="@unreadMessageCount" 
+                                              Color="Color.Error" 
+                                              Overlap="true" 
+                                              Visible="true">
+                                        <MudIconButton Icon="@Icons.Material.Filled.Message"
+                                                       Href="/messages"
+                                                       Color="Color.Primary"
+                                                       Size="Size.Small" />
+                                    </MudBadge>
+                                </MudTooltip>
+                            }
+                            
                             <!-- User Profile Menu -->
                             <div class="user-info">
                                 <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
@@ -77,21 +93,6 @@
                                         </MudMenuItem>
                                     </ChildContent>
                                 </MudMenu>
-                                
-                                @if (unreadMessageCount > 0)
-                                {
-                                    <MudTooltip Text="@($"{unreadMessageCount} unread messages")">
-                                        <MudBadge Content="@unreadMessageCount" 
-                                                  Color="Color.Error" 
-                                                  Overlap="true" 
-                                                  Visible="true">
-                                            <MudIconButton Icon="@Icons.Material.Filled.Message"
-                                                           Href="/messages"
-                                                           Color="Color.Primary"
-                                                           Size="Size.Small" />
-                                        </MudBadge>
-                                    </MudTooltip>
-                                }
                             </div>
                         </Authorized>
                         <NotAuthorized>

@@ -4,7 +4,7 @@
 
 ### Option 1: Complete Stack (Recommended)
 ```bash
-# Start everything (MySQL, Redis, API)
+# Start everything (PostgreSQL, Redis, API)
 ./scripts/start-docker-full.sh
 
 # Or manually:
@@ -27,9 +27,9 @@ docker-compose up --build -d api
 cd docker
 
 # Start infrastructure only
-docker-compose up -d mysql redis
+docker-compose up -d postgresql redis
 
-# Wait for MySQL to be ready (15-30 seconds)
+# Wait for PostgreSQL to be ready (15-30 seconds)
 sleep 15
 
 # Start API
@@ -69,8 +69,8 @@ docker-compose logs -f
 # View API logs only
 docker-compose logs -f api
 
-# View MySQL logs
-docker-compose logs -f mysql
+# View PostgreSQL logs
+docker-compose logs -f postgresql
 
 # Check service status
 docker-compose ps
@@ -81,8 +81,8 @@ docker stats
 
 ### Database Operations
 ```bash
-# Connect to MySQL container
-docker-compose exec mysql mysql -u toolsuser -p toolssharing
+# Connect to PostgreSQL container
+docker-compose exec postgresql psql -U toolsuser -d toolssharing
 
 # Run migrations in API container
 docker-compose exec api dotnet ef database update
@@ -109,7 +109,7 @@ curl http://localhost:5000/health
 - **API HTTPS**: https://localhost:5001
 - **Swagger UI**: http://localhost:5000/swagger
 - **Health Check**: http://localhost:5000/health
-- **MySQL**: localhost:3306
+- **PostgreSQL**: localhost:5433
 - **Redis**: localhost:6379
 
 ## Troubleshooting
@@ -128,11 +128,11 @@ netstat -tulpn | grep :5000
 
 ### Database Connection Issues
 ```bash
-# Check MySQL status
-docker-compose ps mysql
+# Check PostgreSQL status
+docker-compose ps postgresql
 
-# Test MySQL connection
-docker-compose exec mysql mysql -u toolsuser -p -e "SHOW DATABASES;"
+# Test PostgreSQL connection
+docker-compose exec postgresql psql -U toolsuser -d toolssharing -c "\l"
 
 # Check API environment variables
 docker-compose exec api env | grep CONNECTION

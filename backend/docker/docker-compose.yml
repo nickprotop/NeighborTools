@@ -1,21 +1,18 @@
 version: '3.8'
 
 services:
-  mysql:
-    image: mysql:8.0
-    container_name: tools-sharing-mysql
+  postgresql:
+    image: postgres:16-alpine
+    container_name: tools-sharing-postgresql
     environment:
-      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: toolssharing
-      MYSQL_USER: toolsuser
-      MYSQL_PASSWORD: ${MYSQL_USER_PASSWORD}
+      POSTGRES_DB: toolssharing
+      POSTGRES_USER: toolsuser
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     ports:
-      - "3306:3306"
+      - "5433:5432"
     volumes:
-      - mysql_data:/var/lib/mysql
-      - ./init-scripts:/docker-entrypoint-initdb.d
+      - postgres_data:/var/lib/postgresql/data
     restart: unless-stopped
-    command: --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     profiles:
       - infrastructure
       - full
@@ -69,13 +66,13 @@ services:
       - "5002:5002"
       - "5003:5003"
     depends_on:
-      - mysql
+      - postgresql
       - redis
       - minio
     environment:
       - ASPNETCORE_ENVIRONMENT=Development
       - ASPNETCORE_URLS=https://+:5003;http://+:5002
-      - ConnectionStrings__DefaultConnection=server=mysql;port=3306;database=toolssharing;uid=toolsuser;pwd=${MYSQL_USER_PASSWORD}
+      - ConnectionStrings__DefaultConnection=Host=postgresql;Port=5432;Database=toolssharing;Username=toolsuser;Password=${POSTGRES_PASSWORD}
       - ConnectionStrings__Redis=redis:6379,password=${REDIS_PASSWORD}
       - MinIO__Endpoint=minio:9000
       - MinIO__AccessKey=${MINIO_ROOT_USER}
@@ -86,5 +83,5 @@ services:
       - full
 
 volumes:
-  mysql_data:
+  postgres_data:
   minio_data:

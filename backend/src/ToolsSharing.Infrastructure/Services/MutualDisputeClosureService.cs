@@ -711,7 +711,7 @@ public class MutualDisputeClosureService : IMutualDisputeClosureService
 
                 var responseTimes = await query
                     .Where(mc => mc.RespondedAt.HasValue)
-                    .Select(mc => EF.Functions.DateDiffHour(mc.CreatedAt, mc.RespondedAt.Value))
+                    .Select(mc => (int)(mc.RespondedAt.Value - mc.CreatedAt).TotalHours)
                     .ToListAsync();
 
                 if (responseTimes.Any())

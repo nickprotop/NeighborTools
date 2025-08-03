@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Stop storage services (MySQL, Redis, MinIO)
+# Stop storage services (PostgreSQL, Redis, MinIO)
 
 set -e  # Exit on any error
 
@@ -18,7 +18,7 @@ echo "==========================================="
 cd "$DOCKER_DIR"
 
 # Stop infrastructure services
-echo "🔄 Stopping MySQL, Redis, and MinIO..."
+echo "🔄 Stopping PostgreSQL, Redis, and MinIO..."
 docker-compose --profile infrastructure stop
 
 # Restore original directory

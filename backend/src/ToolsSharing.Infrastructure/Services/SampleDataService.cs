@@ -5,6 +5,7 @@ using ToolsSharing.Core.DTOs.Admin;
 using ToolsSharing.Core.Entities;
 using ToolsSharing.Core.Interfaces;
 using ToolsSharing.Infrastructure.Data;
+using ToolsSharing.Infrastructure.Extensions;
 
 namespace ToolsSharing.Infrastructure.Services;
 
@@ -198,7 +199,7 @@ public class SampleDataService : ISampleDataService
                 PhoneNumber = "+1234567890",
                 PhoneNumberConfirmed = true,
                 LocationDisplay = "Downtown San Francisco",
-                DateOfBirth = new DateTime(1985, 5, 15),
+                DateOfBirth = DateTimeExtensions.CreateUtcDate(1985, 5, 15),
                 ProfilePictureUrl = "/images/profiles/john-doe.jpg",
                 DataProcessingConsent = true,
                 MarketingConsent = true,
@@ -219,7 +220,7 @@ public class SampleDataService : ISampleDataService
                 PhoneNumber = "+1234567891",
                 PhoneNumberConfirmed = true,
                 LocationDisplay = "East Oakland",
-                DateOfBirth = new DateTime(1990, 8, 22),
+                DateOfBirth = DateTimeExtensions.CreateUtcDate(1990, 8, 22),
                 ProfilePictureUrl = "/images/profiles/jane-smith.jpg",
                 DataProcessingConsent = true,
                 MarketingConsent = false,

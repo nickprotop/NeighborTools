@@ -684,7 +684,7 @@ public class PaymentStatusService : IPaymentStatusService
         var nextMonth = from.AddMonths(1);
         var daysInMonth = DateTime.DaysInMonth(nextMonth.Year, nextMonth.Month);
         var targetDay = Math.Min(dayOfMonth, daysInMonth);
-        return new DateTime(nextMonth.Year, nextMonth.Month, targetDay);
+        return new DateTime(nextMonth.Year, nextMonth.Month, targetDay, 0, 0, 0, DateTimeKind.Utc);
     }
 
     private string GetPayoutScheduleDescription(PaymentSettings? settings) => settings?.PayoutSchedule switch

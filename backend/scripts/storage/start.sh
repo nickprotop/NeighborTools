@@ -1,6 +1,6 @@
 #!/bin/bash
 
-# Start storage services (MySQL, Redis, MinIO) in Docker
+# Start storage services (PostgreSQL, Redis, MinIO) in Docker
 # These services are always containerized for consistency
 
 set -e  # Exit on any error
@@ -38,18 +38,18 @@ fi
 cd "$DOCKER_DIR"
 
 # Start only infrastructure services
-echo "🔄 Starting MySQL, Redis, and MinIO..."
+echo "🔄 Starting PostgreSQL, Redis, and MinIO..."
 docker-compose --profile infrastructure up -d
 
 # Wait for services to be ready
 echo "⏳ Waiting for services to be ready..."
 sleep 5
 
-# Check MySQL
-if docker-compose exec -T mysql mysqladmin ping -h localhost --silent; then
-    echo "✅ MySQL is ready (localhost:3306)"
+# Check PostgreSQL
+if docker-compose exec -T postgresql pg_isready -h localhost -U toolsuser > /dev/null 2>&1; then
+    echo "✅ PostgreSQL is ready (localhost:5433)"
 else
-    echo "❌ MySQL is not ready. Check logs: docker-compose logs mysql"
+    echo "❌ PostgreSQL is not ready. Check logs: docker-compose logs postgresql"
     exit 1
 fi
 
@@ -85,7 +85,7 @@ echo ""
 echo "🎉 Storage services are ready!"
 echo "==============================="
 echo "Services available:"
-echo "  • MySQL: localhost:3306"
+echo "  • PostgreSQL: localhost:5433"
 echo "  • Redis: localhost:6379"
 echo "  • MinIO API: http://localhost:9000"
 echo "  • MinIO Console: http://localhost:9001"

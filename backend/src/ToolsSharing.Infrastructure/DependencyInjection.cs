@@ -32,13 +32,14 @@ public static class DependencyInjection
         if (!services.Any(service => service.ServiceType == typeof(DbContextOptions<ApplicationDbContext>)))
         {
             services.AddDbContext<ApplicationDbContext>(options =>
-                options.UseMySql(
+                options.UseNpgsql(
                     configuration.GetConnectionString("DefaultConnection"),
-                    ServerVersion.Parse("8.0.0-mysql"), // Fixed version instead of AutoDetect to prevent connection issues
                     b => {
                         b.MigrationsAssembly(typeof(ApplicationDbContext).Assembly.FullName);
                         b.EnableRetryOnFailure(3, TimeSpan.FromSeconds(5), null); // Add retry logic for transient failures
-                    }));
+                    })
+                .EnableSensitiveDataLogging(false) // Disable in production
+                .EnableDetailedErrors(false)); // Disable in production
         }
 
         // Memory Cache (required by location services)

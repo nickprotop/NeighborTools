@@ -905,7 +905,7 @@ public class RentalsService : IRentalsService
             overdueQuery = query.SortBy?.ToLower() switch
             {
                 "enddate" => overdueQuery.OrderBy(r => r.EndDate),
-                "overdue_days" => overdueQuery.OrderByDescending(r => EF.Functions.DateDiffDay(r.EndDate, asOfDate)),
+                "overdue_days" => overdueQuery.OrderByDescending(r => (int)(asOfDate - r.EndDate).TotalDays),
                 "tool" => overdueQuery.OrderBy(r => r.Tool.Name),
                 "renter" => overdueQuery.OrderBy(r => r.Renter.FirstName),
                 _ => overdueQuery.OrderBy(r => r.EndDate)

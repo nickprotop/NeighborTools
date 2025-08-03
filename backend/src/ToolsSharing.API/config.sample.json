@@ -9,7 +9,7 @@
     "RefreshTokenExpiresInDays": 7
   },
   "ConnectionStrings": {
-    "DefaultConnection": "server=localhost;port=3306;database=toolssharing;uid=toolsuser;pwd=YOUR_MYSQL_PASSWORD_HERE",
+    "DefaultConnection": "Host=localhost;Port=5433;Database=toolssharing;Username=toolsuser;Password=YOUR_POSTGRES_PASSWORD_HERE",
     "Redis": "localhost:6379,password=YOUR_REDIS_PASSWORD_HERE"
   },
   "Payment": {

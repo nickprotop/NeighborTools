@@ -16,10 +16,10 @@ echo "=========================="
 cd "$DOCKER_DIR"
 
 echo "🐳 Docker Compose Status:"
-if docker-compose ps --services --filter "status=running" | grep -q "mysql"; then
-    echo "   MySQL: ✅ Running"
+if docker-compose ps --services --filter "status=running" | grep -q "postgresql"; then
+    echo "   PostgreSQL: ✅ Running"
 else
-    echo "   MySQL: ❌ Not running"
+    echo "   PostgreSQL: ❌ Not running"
 fi
 
 if docker-compose ps --services --filter "status=running" | grep -q "redis"; then
@@ -39,7 +39,7 @@ cd "$ORIGINAL_DIR"
 
 echo ""
 echo "🔗 Service URLs (when running):"
-echo "   • MySQL: localhost:3306"
+echo "   • PostgreSQL: localhost:5433"
 echo "   • Redis: localhost:6379"
 echo "   • MinIO API: http://localhost:9000"
 echo "   • MinIO Console: http://localhost:9001"

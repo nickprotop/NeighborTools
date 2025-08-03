@@ -311,7 +311,7 @@ public class PaymentsController : ControllerBase
                 });
             }
 
-            if (startDate < DateTime.Today)
+            if (startDate < DateTime.UtcNow.Date)
             {
                 return BadRequest(new
                 {

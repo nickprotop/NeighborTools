@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -85,7 +86,7 @@ public class PayPalWebhookValidator : IPayPalWebhookValidator
     {
         try
         {
-            if (!DateTime.TryParse(transmissionTime, out var timestamp))
+            if (!DateTime.TryParse(transmissionTime, null, DateTimeStyles.AdjustToUniversal, out var timestamp))
             {
                 _logger.LogWarning("Invalid timestamp format: {TransmissionTime}", transmissionTime);
                 return false;

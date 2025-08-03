@@ -976,7 +976,7 @@ public class PaymentService : IPaymentService
     private static DateTime GetNextMonthlyPayout(DateTime baseTime)
     {
         // Monthly payouts on the 1st of each month at 10 AM UTC
-        var nextMonth = baseTime.Month == 12 ? new DateTime(baseTime.Year + 1, 1, 1) : new DateTime(baseTime.Year, baseTime.Month + 1, 1);
+        var nextMonth = baseTime.Month == 12 ? new DateTime(baseTime.Year + 1, 1, 1, 0, 0, 0, DateTimeKind.Utc) : new DateTime(baseTime.Year, baseTime.Month + 1, 1, 0, 0, 0, DateTimeKind.Utc);
         var nextPayout = nextMonth.AddHours(10);
         
         // If we're on the 1st and it's before 10 AM, use today
