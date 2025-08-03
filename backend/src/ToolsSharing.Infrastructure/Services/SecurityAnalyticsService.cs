@@ -373,13 +373,16 @@ public class SecurityAnalyticsService : ISecurityAnalyticsService
         var end = endDate ?? DateTime.UtcNow;
 
         var events = await _context.SecurityEvents
-            .Where(se => se.CreatedAt >= start && se.CreatedAt <= end && !string.IsNullOrEmpty(se.GeographicLocation))
+            .Where(se => se.CreatedAt >= start && se.CreatedAt <= end && se.GeographicLocation != null)
             .ToListAsync();
+
+        // Filter out empty JSON strings after database retrieval (PostgreSQL JSON compatibility)
+        var validEvents = events.Where(e => !string.IsNullOrEmpty(e.GeographicLocation) && e.GeographicLocation != "null").ToList();
 
         var geographicThreats = new List<GeographicThreat>();
         var countryGroups = new Dictionary<string, List<SecurityEvent>>();
 
-        foreach (var securityEvent in events)
+        foreach (var securityEvent in validEvents)
         {
             try
             {
