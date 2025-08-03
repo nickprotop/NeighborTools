@@ -12,25 +12,48 @@
 
 <PageTitle>Messages</PageTitle>
 
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4">
-    <MudPaper Class="pa-4" Elevation="2">
+<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="mt-4" Style="overflow-x: hidden;">
+    <MudPaper Class="pa-4" Elevation="2" Style="overflow-x: hidden;">
         <MudStack>
             <!-- Header Section -->
-            <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                <MudStack>
-                    <MudText Typo="Typo.h4">Messages</MudText>
-                    <MudText Typo="Typo.body2" Color="Color.Secondary">
-                        Manage your conversations and messages
-                    </MudText>
+            <MudHidden Breakpoint="Breakpoint.SmAndDown">
+                <!-- Desktop Layout - Side by side -->
+                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                    <MudStack>
+                        <MudText Typo="Typo.h4">Messages</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Manage your conversations and messages
+                        </MudText>
+                    </MudStack>
+                    
+                    <MudButton Variant="Variant.Filled" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.Add"
+                              OnClick="OpenNewMessageDialog">
+                        New Message
+                    </MudButton>
                 </MudStack>
-                
-                <MudButton Variant="Variant.Filled" 
-                          Color="Color.Primary" 
-                          StartIcon="@Icons.Material.Filled.Add"
-                          OnClick="OpenNewMessageDialog">
-                    New Message
-                </MudButton>
-            </MudStack>
+            </MudHidden>
+            
+            <MudHidden Breakpoint="Breakpoint.MdAndUp">
+                <!-- Mobile Layout - Stacked -->
+                <MudStack Spacing="3">
+                    <MudStack>
+                        <MudText Typo="Typo.h4">Messages</MudText>
+                        <MudText Typo="Typo.body2" Color="Color.Secondary">
+                            Manage your conversations and messages
+                        </MudText>
+                    </MudStack>
+                    
+                    <MudButton Variant="Variant.Filled" 
+                              Color="Color.Primary" 
+                              StartIcon="@Icons.Material.Filled.Add"
+                              OnClick="OpenNewMessageDialog"
+                              FullWidth="true">
+                        New Message
+                    </MudButton>
+                </MudStack>
+            </MudHidden>
 
             <!-- Statistics Cards -->
             @if (statistics != null)
@@ -102,25 +125,42 @@
                                     <MudListItem T="string" @onclick="() => OpenConversation(conversation.Id.ToString())"
                                                Class="conversation-item"
                                                Style="cursor: pointer; border-radius: 8px; margin-bottom: 4px;">
-                                        <div style="display: flex; align-items: center; width: 100%;">
+                                        <div style="display: flex; align-items: center; width: 100%; overflow: hidden;">
                                             <MudAvatar Style="margin-right: 16px;" Color="Color.Primary">
                                                 @GetOtherParticipantInitials(conversation)
                                             </MudAvatar>
                                             
                                             <div style="flex: 1; min-width: 0;">
-                                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 500;">
+                                                <!-- Desktop Layout -->
+                                                <MudHidden Breakpoint="Breakpoint.SmAndDown">
+                                                    <div style="display: flex; align-items: center; gap: 8px;">
+                                                        <div style="flex: 1; min-width: 0; overflow: hidden;">
+                                                            <MudText Typo="Typo.subtitle1" Style="font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;">
+                                                                @GetOtherParticipantName(conversation)
+                                                            </MudText>
+                                                        </div>
+                                                        <div style="flex-shrink: 0;">
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                @FormatMessageTime(conversation.LastMessageAt)
+                                                            </MudText>
+                                                        </div>
+                                                    </div>
+                                                </MudHidden>
+                                                
+                                                <!-- Mobile Layout -->
+                                                <MudHidden Breakpoint="Breakpoint.MdAndUp">
+                                                    <MudText Typo="Typo.subtitle1" Style="font-weight: 500; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;">
                                                         @GetOtherParticipantName(conversation)
                                                     </MudText>
-                                                    <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-top: 2px;">
                                                         @FormatMessageTime(conversation.LastMessageAt)
                                                     </MudText>
-                                                </div>
+                                                </MudHidden>
                                                 
                                                 @if (!string.IsNullOrEmpty(conversation.LastMessageContent))
                                                 {
                                                     <MudText Typo="Typo.body2" Color="Color.Secondary" 
-                                                           Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                                                           Style="display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;">
                                                         @conversation.LastMessageContent
                                                     </MudText>
                                                 }
@@ -150,30 +190,63 @@
                 <MudTabPanel Text="All Messages" Icon="@Icons.Material.Filled.Message">
                     <div class="mt-4">
                         <!-- Search and Filters -->
-                        <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Class="mb-4">
-                            <MudTextField @bind-Value="searchTerm"
-                                        Placeholder="Search messages..."
-                                        Adornment="Adornment.End"
-                                        AdornmentIcon="@Icons.Material.Filled.Search"
-                                        OnAdornmentClick="SearchMessages"
-                                        OnKeyUp="@(async (e) => { if (e.Key == "Enter") await SearchMessages(); })"
-                                        Style="flex: 1;" />
-                            
-                            <MudSelect T="bool?" @bind-Value="filterRead" 
-                                     Placeholder="Read Status" 
-                                     Clearable="true"
-                                     Style="min-width: 150px;">
-                                <MudSelectItem T="bool?" Value="null">All</MudSelectItem>
-                                <MudSelectItem T="bool?" Value="true">Read</MudSelectItem>
-                                <MudSelectItem T="bool?" Value="false">Unread</MudSelectItem>
-                            </MudSelect>
-                            
-                            <MudButton Variant="Variant.Outlined" 
-                                     StartIcon="@Icons.Material.Filled.FilterList"
-                                     OnClick="LoadMessages">
-                                Apply Filters
-                            </MudButton>
-                        </MudStack>
+                        <MudHidden Breakpoint="Breakpoint.SmAndDown">
+                            <!-- Desktop Layout -->
+                            <MudStack Row Spacing="3" AlignItems="AlignItems.Center" Class="mb-4">
+                                <MudTextField @bind-Value="searchTerm"
+                                            Placeholder="Search messages..."
+                                            Adornment="Adornment.End"
+                                            AdornmentIcon="@Icons.Material.Filled.Search"
+                                            OnAdornmentClick="SearchMessages"
+                                            OnKeyUp="@(async (e) => { if (e.Key == "Enter") await SearchMessages(); })"
+                                            Style="flex: 1;" />
+                                
+                                <MudSelect T="bool?" @bind-Value="filterRead" 
+                                         Placeholder="Read Status" 
+                                         Clearable="true"
+                                         Style="width: 150px; max-width: 150px;">
+                                    <MudSelectItem T="bool?" Value="null">All</MudSelectItem>
+                                    <MudSelectItem T="bool?" Value="true">Read</MudSelectItem>
+                                    <MudSelectItem T="bool?" Value="false">Unread</MudSelectItem>
+                                </MudSelect>
+                                
+                                <MudButton Variant="Variant.Outlined" 
+                                         StartIcon="@Icons.Material.Filled.FilterList"
+                                         OnClick="LoadMessages">
+                                    Apply Filters
+                                </MudButton>
+                            </MudStack>
+                        </MudHidden>
+                        
+                        <MudHidden Breakpoint="Breakpoint.MdAndUp">
+                            <!-- Mobile Layout -->
+                            <MudStack Spacing="3" Class="mb-4">
+                                <MudTextField @bind-Value="searchTerm"
+                                            Placeholder="Search messages..."
+                                            Adornment="Adornment.End"
+                                            AdornmentIcon="@Icons.Material.Filled.Search"
+                                            OnAdornmentClick="SearchMessages"
+                                            OnKeyUp="@(async (e) => { if (e.Key == "Enter") await SearchMessages(); })"
+                                            FullWidth="true" />
+                                
+                                <MudStack Row Spacing="2">
+                                    <MudSelect T="bool?" @bind-Value="filterRead" 
+                                             Placeholder="Read Status" 
+                                             Clearable="true"
+                                             Style="flex: 1;">
+                                        <MudSelectItem T="bool?" Value="null">All</MudSelectItem>
+                                        <MudSelectItem T="bool?" Value="true">Read</MudSelectItem>
+                                        <MudSelectItem T="bool?" Value="false">Unread</MudSelectItem>
+                                    </MudSelect>
+                                    
+                                    <MudButton Variant="Variant.Outlined" 
+                                             StartIcon="@Icons.Material.Filled.FilterList"
+                                             OnClick="LoadMessages">
+                                        Apply
+                                    </MudButton>
+                                </MudStack>
+                            </MudStack>
+                        </MudHidden>
 
                         @if (isLoadingMessages)
                         {
@@ -187,37 +260,66 @@
                                     <MudListItem T="string" @onclick="() => OpenMessage(message.Id.ToString())"
                                                Class="message-item"
                                                Style="@GetMessageItemStyle(message)">
-                                        <div style="display: flex; align-items: center; width: 100%;">
+                                        <div style="display: flex; align-items: center; width: 100%; overflow: hidden;">
                                             <MudAvatar Style="margin-right: 16px;" Color="@GetMessageAvatarColor(message)">
                                                 @GetSenderInitials(message)
                                             </MudAvatar>
                                             
                                             <div style="flex: 1; min-width: 0;">
-                                                <div style="display: flex; justify-content: space-between; align-items: center;">
-                                                    <MudText Typo="Typo.subtitle1" Style="@GetMessageTitleStyle(message)">
-                                                        @message.SenderName
-                                                    </MudText>
+                                                <!-- Desktop Layout -->
+                                                <MudHidden Breakpoint="Breakpoint.SmAndDown">
                                                     <div style="display: flex; align-items: center; gap: 8px;">
-                                                        @if (message.AttachmentCount > 0)
-                                                        {
-                                                            <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" Color="Color.Secondary" />
-                                                        }
-                                                        @if (!message.IsRead)
-                                                        {
-                                                            <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Primary" />
-                                                        }
-                                                        <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                                            @FormatMessageTime(message.CreatedAt)
-                                                        </MudText>
+                                                        <div style="flex: 1; min-width: 0; overflow: hidden;">
+                                                            <MudText Typo="Typo.subtitle1" Style="@($"{GetMessageTitleStyle(message)} display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;")">
+                                                                @message.SenderName
+                                                            </MudText>
+                                                        </div>
+                                                        <div style="flex-shrink: 0; display: flex; align-items: center; gap: 8px;">
+                                                            @if (message.AttachmentCount > 0)
+                                                            {
+                                                                <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" Color="Color.Secondary" />
+                                                            }
+                                                            @if (!message.IsRead)
+                                                            {
+                                                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Primary" />
+                                                            }
+                                                            <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                                                @FormatMessageTime(message.CreatedAt)
+                                                            </MudText>
+                                                        </div>
                                                     </div>
-                                                </div>
+                                                </MudHidden>
                                                 
-                                                <MudText Typo="Typo.body1" Style="@GetMessageSubjectStyle(message)">
+                                                <!-- Mobile Layout -->
+                                                <MudHidden Breakpoint="Breakpoint.MdAndUp">
+                                                    <div style="display: flex; align-items: flex-start; gap: 4px; margin-bottom: 4px;">
+                                                        <div style="flex: 1; min-width: 0; overflow: hidden;">
+                                                            <MudText Typo="Typo.subtitle1" Style="@($"{GetMessageTitleStyle(message)} display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;")">
+                                                                @message.SenderName
+                                                            </MudText>
+                                                        </div>
+                                                        <div style="display: flex; align-items: center; gap: 4px; flex-shrink: 0;">
+                                                            @if (message.AttachmentCount > 0)
+                                                            {
+                                                                <MudIcon Icon="@Icons.Material.Filled.AttachFile" Size="Size.Small" Color="Color.Secondary" />
+                                                            }
+                                                            @if (!message.IsRead)
+                                                            {
+                                                                <MudIcon Icon="@Icons.Material.Filled.Circle" Size="Size.Small" Color="Color.Primary" />
+                                                            }
+                                                        </div>
+                                                    </div>
+                                                    <MudText Typo="Typo.caption" Color="Color.Secondary" Style="margin-bottom: 4px;">
+                                                        @FormatMessageTime(message.CreatedAt)
+                                                    </MudText>
+                                                </MudHidden>
+                                                
+                                                <MudText Typo="Typo.body1" Style="@($"{GetMessageSubjectStyle(message)} display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word;")">
                                                     @message.Subject
                                                 </MudText>
                                                 
                                                 <MudText Typo="Typo.body2" Color="Color.Secondary" 
-                                                       Style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 4px;">
+                                                       Style="display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; word-break: break-word; margin-top: 4px;">
                                                     @message.PreviewContent
                                                 </MudText>
                                             </div>

@@ -1,0 +1,416 @@
+@using frontend.Models.Alerts
+@using frontend.Services.Alerts
+@using MudBlazor
+@inject IGlobalAlertService AlertService
+@inject NavigationManager Navigation
+@inject IDialogService DialogService
+@inject ISnackbar Snackbar
+@implements IDisposable
+
+@if (activeAlerts?.Any() == true)
+{
+    <div class="global-alerts-container">
+        @foreach (var alert in activeAlerts.Take(MaxAlertsToShow))
+        {
+            <MudAlert Severity="@GetMudSeverity(alert.Severity)"
+                      ShowCloseIcon="@alert.IsDismissible"
+                      CloseIconClicked="@(() => DismissAlert(alert.Id))"
+                      Icon="@alert.Icon"
+                      Class="@($"global-alert {alert.CustomClass}")"
+                      Elevation="2">
+                
+                <!-- Desktop Layout -->
+                <MudHidden Breakpoint="Breakpoint.SmAndDown">
+                    <div class="d-flex align-center">
+                        <div class="flex-grow-1">
+                            <MudText Typo="Typo.subtitle1">
+                                <strong>@alert.Title</strong>
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                @alert.Description
+                            </MudText>
+                            
+                            @if (alert.ShowProgress)
+                            {
+                                <div class="mt-2">
+                                    <MudProgressLinear Value="@alert.ProgressValue" 
+                                                     Color="@GetProgressColor(alert.ProgressColor)" 
+                                                     Size="Size.Small" />
+                                </div>
+                            }
+                        </div>
+                        
+                        @if (alert.Actions?.Any() == true)
+                        {
+                            <div class="ml-4">
+                                <MudStack Row Spacing="2">
+                                    @foreach (var action in alert.Actions)
+                                    {
+                                        <MudButton Variant="@(action.IsPrimary ? Variant.Filled : Variant.Outlined)"
+                                                 Color="@(action.IsPrimary ? Color.Primary : Color.Secondary)"
+                                                 StartIcon="@action.Icon"
+                                                 OnClick="@(() => ExecuteAction(alert.Id, action.Id))"
+                                                 Size="Size.Small">
+                                            @action.Label
+                                        </MudButton>
+                                    }
+                                </MudStack>
+                            </div>
+                        }
+                    </div>
+                </MudHidden>
+                
+                <!-- Mobile Layout -->
+                <MudHidden Breakpoint="Breakpoint.MdAndUp">
+                    <div class="d-flex flex-column">
+                        <div class="mb-3">
+                            <MudText Typo="Typo.subtitle1">
+                                <strong>@alert.Title</strong>
+                            </MudText>
+                            <MudText Typo="Typo.body2">
+                                @alert.Description
+                            </MudText>
+                            
+                            @if (alert.ShowProgress)
+                            {
+                                <div class="mt-2">
+                                    <MudProgressLinear Value="@alert.ProgressValue" 
+                                                     Color="@GetProgressColor(alert.ProgressColor)" 
+                                                     Size="Size.Small" />
+                                </div>
+                            }
+                        </div>
+                        
+                        @if (alert.Actions?.Any() == true)
+                        {
+                            <MudStack Spacing="2">
+                                @foreach (var action in alert.Actions)
+                                {
+                                    <MudButton Variant="@(action.IsPrimary ? Variant.Filled : Variant.Outlined)"
+                                             Color="@(action.IsPrimary ? Color.Primary : Color.Secondary)"
+                                             StartIcon="@action.Icon"
+                                             OnClick="@(() => ExecuteAction(alert.Id, action.Id))"
+                                             FullWidth="@action.IsFullWidth"
+                                             Size="Size.Small">
+                                        @action.Label
+                                    </MudButton>
+                                }
+                            </MudStack>
+                        }
+                    </div>
+                </MudHidden>
+            </MudAlert>
+        }
+        
+        @if (activeAlerts.Count > MaxAlertsToShow)
+        {
+            <MudAlert Severity="Severity.Info" Class="global-alert-summary">
+                <MudText Typo="Typo.body2">
+                    @(activeAlerts.Count - MaxAlertsToShow) more alert(s) available. 
+                    <MudLink OnClick="ShowAllAlerts">View all alerts</MudLink>
+                </MudText>
+            </MudAlert>
+        }
+    </div>
+}
+
+<style>
+    .global-alerts-container {
+        margin-bottom: 1rem;
+        z-index: 1000;
+    }
+    
+    .global-alert {
+        margin-bottom: 12px;
+        border-left: 4px solid;
+    }
+    
+    .global-alert.priority-critical {
+        border-left-color: #d32f2f;
+        background-color: rgba(211, 47, 47, 0.04);
+    }
+    
+    .global-alert.priority-urgent {
+        border-left-color: #f57c00;
+        background-color: rgba(245, 124, 0, 0.04);
+    }
+    
+    .global-alert.priority-warning {
+        border-left-color: #ed6c02;
+        background-color: rgba(237, 108, 2, 0.04);
+    }
+    
+    .global-alert.priority-info {
+        border-left-color: #0288d1;
+        background-color: rgba(2, 136, 209, 0.04);
+    }
+    
+    .global-alert-summary {
+        opacity: 0.8;
+    }
+</style>
+
+@code {
+    [Parameter] public int MaxAlertsToShow { get; set; } = 5;
+    [Parameter] public AlertPriority MinimumPriority { get; set; } = AlertPriority.Info;
+    [Parameter] public bool AutoRefresh { get; set; } = true;
+    [Parameter] public EventCallback<AlertStatistics> OnAlertsChanged { get; set; }
+    
+    private List<AlertItem> activeAlerts = new();
+    private bool isProcessing = false;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribe to global alert changes
+        AlertService.GlobalAlertsChanged += OnGlobalAlertsChanged;
+        
+        // Load initial alerts
+        await LoadActiveAlerts();
+    }
+
+    private async void OnGlobalAlertsChanged(object? sender, GlobalAlertsChangedEventArgs e)
+    {
+        try
+        {
+            await InvokeAsync(async () =>
+            {
+                activeAlerts = e.AllAlerts
+                    .Where(a => a.Priority >= MinimumPriority)
+                    .ToList();
+                
+                StateHasChanged();
+                
+                // Notify parent of changes
+                if (OnAlertsChanged.HasDelegate)
+                {
+                    var stats = await AlertService.GetAlertStatisticsAsync();
+                    await OnAlertsChanged.InvokeAsync(stats);
+                }
+            });
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error handling global alerts change: {ex.Message}");
+        }
+    }
+
+    private async Task LoadActiveAlerts()
+    {
+        try
+        {
+            var alerts = await AlertService.GetAlertsAsync(minPriority: MinimumPriority);
+            activeAlerts = alerts;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Error loading active alerts: {ex.Message}");
+        }
+    }
+
+    private async Task DismissAlert(string alertId)
+    {
+        if (isProcessing) return;
+        
+        isProcessing = true;
+        try
+        {
+            var success = await AlertService.DismissAlertAsync(alertId);
+            if (!success)
+            {
+                Snackbar.Add("Failed to dismiss alert", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error dismissing alert: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task ExecuteAction(string alertId, string actionId)
+    {
+        if (isProcessing) return;
+        
+        isProcessing = true;
+        try
+        {
+            var result = await AlertService.ExecuteAlertActionAsync(alertId, actionId);
+            
+            if (result.Success)
+            {
+                if (!string.IsNullOrEmpty(result.Message))
+                {
+                    Snackbar.Add(result.Message, Severity.Success);
+                }
+                
+                // Handle navigation if specified
+                if (result.Data.ContainsKey("navigationUrl"))
+                {
+                    var navigationUrl = result.Data["navigationUrl"]?.ToString();
+                    if (!string.IsNullOrEmpty(navigationUrl))
+                    {
+                        Navigation.NavigateTo(navigationUrl);
+                    }
+                }
+                
+                // Handle special action types
+                if (result.Data.ContainsKey("action"))
+                {
+                    var actionType = result.Data["action"]?.ToString();
+                    await HandleSpecialAction(actionType, result.Data);
+                }
+                
+                if (result.ShouldDismiss)
+                {
+                    await DismissAlert(alertId);
+                }
+            }
+            else
+            {
+                Snackbar.Add(result.Message ?? "Action failed", Severity.Error);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error executing action: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            isProcessing = false;
+        }
+    }
+
+    private async Task HandleSpecialAction(string? actionType, Dictionary<string, object> data)
+    {
+        switch (actionType)
+        {
+            case "open-return-dialog":
+                if (data.ContainsKey("rentalId"))
+                {
+                    var rentalId = data["rentalId"]?.ToString();
+                    await OpenReturnDialog(rentalId);
+                }
+                break;
+            case "contact-renter":
+                Snackbar.Add("Contact functionality coming soon!", Severity.Info);
+                break;
+            case "create-dispute":
+                if (data.ContainsKey("rentalId"))
+                {
+                    var rentalId = data["rentalId"]?.ToString();
+                    await OpenDisputeDialog(rentalId);
+                }
+                break;
+        }
+    }
+
+    private async Task OpenReturnDialog(string? rentalId)
+    {
+        if (string.IsNullOrEmpty(rentalId)) return;
+        
+        try
+        {
+            var parameters = new DialogParameters 
+            { 
+                { "RentalId", Guid.Parse(rentalId) }
+            };
+            
+            var options = new DialogOptions 
+            { 
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.Medium,
+                FullWidth = true
+            };
+            
+            var dialog = DialogService.Show<ReturnConditionDialog>("Confirm Return", parameters, options);
+            var result = await dialog.Result;
+            
+            if (!result.Canceled)
+            {
+                // Refresh alerts after successful return
+                await AlertService.RefreshAllProvidersAsync();
+                Snackbar.Add("Return confirmed successfully!", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error opening return dialog: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task OpenDisputeDialog(string? rentalId)
+    {
+        if (string.IsNullOrEmpty(rentalId)) return;
+        
+        try
+        {
+            var parameters = new DialogParameters 
+            { 
+                { "RentalId", rentalId }
+            };
+            
+            var options = new DialogOptions 
+            { 
+                CloseOnEscapeKey = true,
+                MaxWidth = MaxWidth.Large,
+                FullWidth = true
+            };
+            
+            var dialog = DialogService.Show<CreateDisputeDialog>("Create Dispute", parameters, options);
+            var result = await dialog.Result;
+            
+            if (!result.Canceled)
+            {
+                // Refresh alerts after dispute creation
+                await AlertService.RefreshAllProvidersAsync();
+                Snackbar.Add("Dispute created successfully", Severity.Success);
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"Error creating dispute: {ex.Message}", Severity.Error);
+        }
+    }
+
+    private async Task ShowAllAlerts()
+    {
+        // TODO: Implement dialog or page to show all alerts
+        Snackbar.Add("All alerts view coming soon!", Severity.Info);
+    }
+
+    private Severity GetMudSeverity(GlobalAlertSeverity severity)
+    {
+        return severity switch
+        {
+            GlobalAlertSeverity.Normal => Severity.Normal,
+            GlobalAlertSeverity.Info => Severity.Info,
+            GlobalAlertSeverity.Success => Severity.Success,
+            GlobalAlertSeverity.Warning => Severity.Warning,
+            GlobalAlertSeverity.Error => Severity.Error,
+            _ => Severity.Normal
+        };
+    }
+
+    private Color GetProgressColor(string colorName)
+    {
+        return colorName?.ToLower() switch
+        {
+            "primary" => Color.Primary,
+            "secondary" => Color.Secondary,
+            "success" => Color.Success,
+            "info" => Color.Info,
+            "warning" => Color.Warning,
+            "error" => Color.Error,
+            _ => Color.Primary
+        };
+    }
+
+    public void Dispose()
+    {
+        AlertService.GlobalAlertsChanged -= OnGlobalAlertsChanged;
+    }
+}

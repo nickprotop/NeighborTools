@@ -3,8 +3,10 @@
 @using frontend.Components.Navigation
 @using frontend.Components
 @using frontend.Components.Shared
+@using frontend.Components.Alerts
 @using frontend.Shared
 @using frontend.Models
+@using frontend.Models.Alerts
 @using frontend.Services
 @using ToolsSharing.Frontend.Configuration
 @inherits LayoutComponentBase
@@ -117,10 +119,12 @@
 
         <!-- Main Content -->
         <main class="main-content">
-            <!-- Payment Setup Notification -->
+            <!-- Global Alert System -->
             <AuthorizeView>
                 <Authorized>
-                    <PaymentSetupNotification />
+                    <GlobalAlertManager MaxAlertsToShow="3" 
+                                       MinimumPriority="AlertPriority.Info"
+                                       AutoRefresh="true" />
                 </Authorized>
             </AuthorizeView>
             

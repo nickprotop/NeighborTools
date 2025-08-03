@@ -20,73 +20,148 @@
                       ShowCloseIcon="@Dismissible"
                       CloseIconClicked="@(() => DismissAlert(rental.Id))">
                 
-                <div class="d-flex align-center">
-                    <div class="flex-grow-1">
-                        <MudText Typo="Typo.subtitle2" Class="mb-1">
-                            <strong>@GetAlertTitle(rental)</strong>
-                        </MudText>
-                        
-                        <MudText Typo="Typo.body2" Class="mb-2">
-                            @GetAlertDescription(rental)
-                        </MudText>
-                        
-                        @if (ShowDetails)
-                        {
-                            <MudText Typo="Typo.caption" Color="Color.Secondary">
-                                @GetAlertDetails(rental)
+                <!-- Desktop Layout -->
+                <MudHidden Breakpoint="Breakpoint.SmAndDown">
+                    <div class="d-flex align-center">
+                        <div class="flex-grow-1">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">
+                                <strong>@GetAlertTitle(rental)</strong>
                             </MudText>
-                        }
-                    </div>
-                    
-                    @if (ShowActions)
-                    {
-                        <div class="ml-4">
-                            <MudButton Variant="Variant.Filled" 
-                                       Size="Size.Small" 
-                                       Color="Color.Error"
-                                       StartIcon="@Icons.Material.Filled.Assignment"
-                                       OnClick="@(() => ViewRentalDetails(rental.Id))"
-                                       Class="mr-2">
-                                View Details
-                            </MudButton>
                             
-                            @if (IsUserRenter(rental) || IsUserOwner(rental))
-                            {
-                                <MudButton Variant="Variant.Outlined" 
-                                           Size="Size.Small" 
-                                           Color="Color.Success"
-                                           StartIcon="@Icons.Material.Filled.CheckCircle"
-                                           OnClick="@(() => MarkAsReturned(rental))">
-                                    @(IsUserOwner(rental) ? "Confirm Return" : "Mark as Returned")
-                                </MudButton>
-                            }
+                            <MudText Typo="Typo.body2" Class="mb-2">
+                                @GetAlertDescription(rental)
+                            </MudText>
                             
-                            @if (IsUserOwner(rental))
+                            @if (ShowDetails)
                             {
-                                <MudButton Variant="Variant.Outlined" 
-                                           Size="Size.Small" 
-                                           Color="Color.Info"
-                                           StartIcon="@Icons.Material.Filled.Phone"
-                                           OnClick="@(() => ContactRenter(rental))"
-                                           Class="mr-2">
-                                    Contact Renter
-                                </MudButton>
-                            }
-                            
-                            @if (ShouldShowDisputeButton(rental))
-                            {
-                                <MudButton Variant="Variant.Outlined" 
-                                           Size="Size.Small" 
-                                           Color="Color.Warning"
-                                           StartIcon="@Icons.Material.Filled.Report"
-                                           OnClick="@(() => CreateDispute(rental))"
-                                           Class="mr-2">
-                                    Create Dispute
-                                </MudButton>
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @GetAlertDetails(rental)
+                                </MudText>
                             }
                         </div>
-                    }
-                </div>
+                        
+                        @if (ShowActions)
+                        {
+                            <div class="ml-4">
+                                <MudButton Variant="Variant.Filled" 
+                                           Size="Size.Small" 
+                                           Color="Color.Error"
+                                           StartIcon="@Icons.Material.Filled.Assignment"
+                                           OnClick="@(() => ViewRentalDetails(rental.Id))"
+                                           Class="mr-2">
+                                    View Details
+                                </MudButton>
+                                
+                                @if (IsUserRenter(rental) || IsUserOwner(rental))
+                                {
+                                    <MudButton Variant="Variant.Outlined" 
+                                               Size="Size.Small" 
+                                               Color="Color.Success"
+                                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                                               OnClick="@(() => MarkAsReturned(rental))">
+                                        @(IsUserOwner(rental) ? "Confirm Return" : "Mark as Returned")
+                                    </MudButton>
+                                }
+                                
+                                @if (IsUserOwner(rental))
+                                {
+                                    <MudButton Variant="Variant.Outlined" 
+                                               Size="Size.Small" 
+                                               Color="Color.Info"
+                                               StartIcon="@Icons.Material.Filled.Phone"
+                                               OnClick="@(() => ContactRenter(rental))"
+                                               Class="mr-2">
+                                        Contact Renter
+                                    </MudButton>
+                                }
+                                
+                                @if (ShouldShowDisputeButton(rental))
+                                {
+                                    <MudButton Variant="Variant.Outlined" 
+                                               Size="Size.Small" 
+                                               Color="Color.Warning"
+                                               StartIcon="@Icons.Material.Filled.Report"
+                                               OnClick="@(() => CreateDispute(rental))"
+                                               Class="mr-2">
+                                        Create Dispute
+                                    </MudButton>
+                                }
+                            </div>
+                        }
+                    </div>
+                </MudHidden>
+                
+                <!-- Mobile Layout -->
+                <MudHidden Breakpoint="Breakpoint.MdAndUp">
+                    <div class="d-flex flex-column">
+                        <div class="mb-3">
+                            <MudText Typo="Typo.subtitle2" Class="mb-1">
+                                <strong>@GetAlertTitle(rental)</strong>
+                            </MudText>
+                            
+                            <MudText Typo="Typo.body2" Class="mb-2">
+                                @GetAlertDescription(rental)
+                            </MudText>
+                            
+                            @if (ShowDetails)
+                            {
+                                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                                    @GetAlertDetails(rental)
+                                </MudText>
+                            }
+                        </div>
+                        
+                        @if (ShowActions)
+                        {
+                            <MudStack Spacing="2">
+                                <MudButton Variant="Variant.Filled" 
+                                           Size="Size.Small" 
+                                           Color="Color.Error"
+                                           StartIcon="@Icons.Material.Filled.Assignment"
+                                           OnClick="@(() => ViewRentalDetails(rental.Id))"
+                                           FullWidth="true">
+                                    View Details
+                                </MudButton>
+                                
+                                @if (IsUserRenter(rental) || IsUserOwner(rental))
+                                {
+                                    <MudButton Variant="Variant.Outlined" 
+                                               Size="Size.Small" 
+                                               Color="Color.Success"
+                                               StartIcon="@Icons.Material.Filled.CheckCircle"
+                                               OnClick="@(() => MarkAsReturned(rental))"
+                                               FullWidth="true">
+                                        @(IsUserOwner(rental) ? "Confirm Return" : "Mark as Returned")
+                                    </MudButton>
+                                }
+                                
+                                @if (IsUserOwner(rental))
+                                {
+                                    <MudButton Variant="Variant.Outlined" 
+                                               Size="Size.Small" 
+                                               Color="Color.Info"
+                                               StartIcon="@Icons.Material.Filled.Phone"
+                                               OnClick="@(() => ContactRenter(rental))"
+                                               FullWidth="true">
+                                        Contact Renter
+                                    </MudButton>
+                                }
+                                
+                                @if (ShouldShowDisputeButton(rental))
+                                {
+                                    <MudButton Variant="Variant.Outlined" 
+                                               Size="Size.Small" 
+                                               Color="Color.Warning"
+                                               StartIcon="@Icons.Material.Filled.Report"
+                                               OnClick="@(() => CreateDispute(rental))"
+                                               FullWidth="true">
+                                        Create Dispute
+                                    </MudButton>
+                                }
+                            </MudStack>
+                        }
+                    </div>
+                </MudHidden>
                 
                 @if (ShowOverdueProgress)
                 {

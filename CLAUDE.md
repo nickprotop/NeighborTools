@@ -240,13 +240,17 @@ cd frontend && dotnet run       # Frontend only
 
 ### Backend Development
 ```bash
+# Start API with infrastructure (recommended for development)
+./scripts/api/start-local.sh
+
+# Stop API
+./scripts/api/stop.sh
+
 # Infrastructure only (for manual API debugging)
 ./backend/scripts/start-infrastructure.sh
 
 # Start API manually after infrastructure is running
 cd backend && dotnet run --project src/ToolsSharing.API
-
-# DO NOT USE ./backend/scripts/start-all.sh - requires interactive input
 
 # Database migrations
 dotnet ef migrations add MigrationName --project src/ToolsSharing.Infrastructure --startup-project src/ToolsSharing.API
@@ -258,7 +262,10 @@ dotnet run --project src/ToolsSharing.API --seed-only
 
 ### Service Management
 ```bash
-# Stop API (handles both Docker and dotnet processes)
+# Stop API (recommended)
+./scripts/api/stop.sh
+
+# Legacy: Stop API (handles both Docker and dotnet processes)
 ./backend/scripts/stop-api.sh
 
 # Stop all services, preserve data

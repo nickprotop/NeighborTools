@@ -13,23 +13,45 @@
               CloseIconClicked="DismissNotification"
               Class="ma-4"
               Elevation="2">
-        <div class="d-flex align-center">
-            <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-3" />
-            <div class="flex-grow-1">
-                <MudText Typo="Typo.subtitle1"><strong>Payment Setup Required</strong></MudText>
-                <MudText Typo="Typo.body2">
-                    You have @toolCount tool(s) listed for rent, but haven't configured your PayPal email for receiving payments. 
-                    Without payment settings, you won't receive payouts when someone rents your tools.
-                </MudText>
+        <!-- Desktop Layout -->
+        <MudHidden Breakpoint="Breakpoint.SmAndDown">
+            <div class="d-flex align-center">
+                <div class="flex-grow-1">
+                    <MudText Typo="Typo.subtitle1"><strong>Payment Setup Required</strong></MudText>
+                    <MudText Typo="Typo.body2">
+                        You have @toolCount tool(s) listed for rent, but haven't configured your PayPal email for receiving payments. 
+                        Without payment settings, you won't receive payouts when someone rents your tools.
+                    </MudText>
+                </div>
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Payment"
+                           OnClick="NavigateToPaymentSettings"
+                           Class="ml-3">
+                    Setup Payments
+                </MudButton>
             </div>
-            <MudButton Variant="Variant.Filled" 
-                       Color="Color.Primary" 
-                       StartIcon="@Icons.Material.Filled.Payment"
-                       OnClick="NavigateToPaymentSettings"
-                       Class="ml-3">
-                Setup Payments
-            </MudButton>
-        </div>
+        </MudHidden>
+        
+        <!-- Mobile Layout -->
+        <MudHidden Breakpoint="Breakpoint.MdAndUp">
+            <div class="d-flex flex-column">
+                <div class="mb-3">
+                    <MudText Typo="Typo.subtitle1"><strong>Payment Setup Required</strong></MudText>
+                    <MudText Typo="Typo.body2">
+                        You have @toolCount tool(s) listed for rent, but haven't configured your PayPal email for receiving payments. 
+                        Without payment settings, you won't receive payouts when someone rents your tools.
+                    </MudText>
+                </div>
+                <MudButton Variant="Variant.Filled" 
+                           Color="Color.Primary" 
+                           StartIcon="@Icons.Material.Filled.Payment"
+                           OnClick="NavigateToPaymentSettings"
+                           FullWidth="true">
+                    Setup Payments
+                </MudButton>
+            </div>
+        </MudHidden>
     </MudAlert>
 }
 

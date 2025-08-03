@@ -4,6 +4,8 @@ using Microsoft.AspNetCore.Components.Authorization;
 using MudBlazor.Services;
 using frontend;
 using frontend.Services;
+using frontend.Services.Alerts;
+using frontend.Services.Alerts.Providers;
 using ToolsSharing.Frontend.Services;
 using ToolsSharing.Frontend.Configuration;
 using System.Text.Json;
@@ -98,6 +100,11 @@ builder.Services.AddScoped<ISecurityManagementService, SecurityManagementService
 builder.Services.AddScoped<IDeviceDetectionService, DeviceDetectionService>();
 builder.Services.AddScoped<IBrowserCacheService, BrowserCacheService>();
 
+// Add global alert system
+builder.Services.AddSingleton<IGlobalAlertService, GlobalAlertService>();
+builder.Services.AddScoped<PaymentSetupAlertProvider>();
+builder.Services.AddScoped<OverdueRentalAlertProvider>();
+
 // Add location services
 builder.Services.AddScoped<ToolsSharing.Frontend.Services.Location.ILocationService, ToolsSharing.Frontend.Services.Location.LocationService>();
 
@@ -106,6 +113,14 @@ var app = builder.Build();
 // Restore authentication state on app startup
 var authService = app.Services.GetRequiredService<IAuthService>();
 await authService.RestoreAuthenticationAsync();
+
+// Initialize global alert system
+var alertService = app.Services.GetRequiredService<IGlobalAlertService>();
+var paymentAlertProvider = app.Services.GetRequiredService<PaymentSetupAlertProvider>();
+var overdueAlertProvider = app.Services.GetRequiredService<OverdueRentalAlertProvider>();
+
+await alertService.RegisterProviderAsync(paymentAlertProvider);
+await alertService.RegisterProviderAsync(overdueAlertProvider);
 
 await app.RunAsync();
 
