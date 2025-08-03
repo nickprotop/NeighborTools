@@ -6,7 +6,6 @@ public class SessionSecurityOptions
 
     public bool EnableSessionSecurity { get; set; } = true;
     public int MaxConcurrentSessions { get; set; } = 5;
-    public int SessionTimeoutMinutes { get; set; } = 60;
     public bool EnableDeviceFingerprinting { get; set; } = true;
     public bool TerminateOnDeviceChange { get; set; } = false;
     public bool EnableGeographicValidation { get; set; } = true;

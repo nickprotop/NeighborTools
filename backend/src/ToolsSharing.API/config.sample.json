@@ -312,7 +312,6 @@
     "_Comment": "Phase 3 Security: Enhanced session security with device fingerprinting and geographic validation",
     "EnableSessionSecurity": true,
     "MaxConcurrentSessions": 5,
-    "SessionTimeoutMinutes": 60,
     "EnableDeviceFingerprinting": true,
     "TerminateOnDeviceChange": false,
     "EnableGeographicValidation": true,
