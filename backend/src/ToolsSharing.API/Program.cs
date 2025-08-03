@@ -72,6 +72,9 @@ builder.Services.AddIdentity<ToolsSharing.Core.Entities.User, Microsoft.AspNetCo
 // Add Controllers
 builder.Services.AddControllers();
 
+// Add HTTP Context Accessor for JWT security claims
+builder.Services.AddHttpContextAccessor();
+
 // Add OpenAPI/Swagger
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>

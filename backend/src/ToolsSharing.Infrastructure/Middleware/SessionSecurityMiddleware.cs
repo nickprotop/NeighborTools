@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using ToolsSharing.Core.Interfaces;
 using ToolsSharing.Infrastructure.Configuration;
+using ToolsSharing.Infrastructure.Services;
 
 namespace ToolsSharing.Infrastructure.Middleware;
 
@@ -24,7 +26,7 @@ public class SessionSecurityMiddleware
         _options = options.Value;
     }
 
-    public async Task InvokeAsync(HttpContext context, ITokenBlacklistService tokenBlacklistService, IAuthenticationEventLogger eventLogger)
+    public async Task InvokeAsync(HttpContext context, ITokenBlacklistService tokenBlacklistService, IAuthenticationEventLogger eventLogger, IGeolocationService geolocationService, ILocationService locationService)
     {
         if (!_options.EnableSessionSecurity)
         {
@@ -165,7 +167,7 @@ public class SessionSecurityMiddleware
         // Check geographic validation if enabled
         if (_options.EnableGeographicValidation)
         {
-            var geoValidation = await ValidateGeographicLocation(jwtToken, currentIp, userId, eventLogger);
+            var geoValidation = await ValidateGeographicLocation(context, jwtToken, currentIp, userId, eventLogger);
             if (!geoValidation.IsValid)
             {
                 return geoValidation;
@@ -214,12 +216,13 @@ public class SessionSecurityMiddleware
         return new SessionSecurityValidation { IsValid = true };
     }
 
-    private async Task<SessionSecurityValidation> ValidateGeographicLocation(JwtSecurityToken jwtToken, string currentIp, string? userId, IAuthenticationEventLogger eventLogger)
+    private async Task<SessionSecurityValidation> ValidateGeographicLocation(HttpContext context, JwtSecurityToken jwtToken, string currentIp, string? userId, IAuthenticationEventLogger eventLogger)
     {
-        var tokenLocation = jwtToken.Claims.FirstOrDefault(c => c.Type == "geo_location")?.Value;
+        var tokenLatClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "geo_lat")?.Value;
+        var tokenLngClaim = jwtToken.Claims.FirstOrDefault(c => c.Type == "geo_lng")?.Value;
         var tokenLoginTime = jwtToken.Claims.FirstOrDefault(c => c.Type == JwtRegisteredClaimNames.Iat)?.Value;
 
-        if (string.IsNullOrEmpty(tokenLocation) || string.IsNullOrEmpty(tokenLoginTime))
+        if (string.IsNullOrEmpty(tokenLatClaim) || string.IsNullOrEmpty(tokenLngClaim) || string.IsNullOrEmpty(tokenLoginTime))
         {
             return new SessionSecurityValidation { IsValid = true }; // No location data, skip validation
         }
@@ -230,38 +233,91 @@ public class SessionSecurityMiddleware
             return new SessionSecurityValidation { IsValid = true };
         }
 
-        // Simple geographic validation (in a real implementation, you'd use a geolocation service)
         var loginTime = DateTimeOffset.FromUnixTimeSeconds(long.Parse(tokenLoginTime)).DateTime;
         var timeSinceLogin = DateTime.UtcNow - loginTime;
 
-        // If login was recent and from same IP, allow
+        // If login was recent, allow some tolerance
         if (timeSinceLogin.TotalMinutes < _options.MinLocationChangeIntervalMinutes)
         {
             return new SessionSecurityValidation { IsValid = true };
         }
 
-        // For demo purposes, we'll check if it's obviously a different location
-        // In production, you'd use proper geolocation comparison
-        if (IsObviouslyDifferentLocation(tokenLocation, currentIp))
+        try
         {
-            if (_options.TerminateOnImpossibleTravel)
+            // Get services from DI container
+            var geolocationService = context.RequestServices.GetRequiredService<IGeolocationService>();
+            var locationService = context.RequestServices.GetRequiredService<ILocationService>();
+            
+            // Get current location from IP
+            var currentLocation = await geolocationService.GetLocationAsync(currentIp);
+            
+            if (currentLocation?.Latitude == null || currentLocation?.Longitude == null)
             {
-                await eventLogger.LogGeographicAnomalyAsync(
-                    userId,
-                    null,
-                    currentIp,
-                    "Current location",
-                    tokenLocation,
-                    1000, // distance placeholder
-                    2000  // speed placeholder
-                );
-
-                return new SessionSecurityValidation
-                {
-                    IsValid = false,
-                    Reason = "Impossible travel detected"
-                };
+                _logger.LogWarning("Could not determine location for IP {IP}, skipping geographic validation", currentIp);
+                return new SessionSecurityValidation { IsValid = true };
             }
+
+            // Parse token coordinates
+            if (!decimal.TryParse(tokenLatClaim, out var tokenLat) || !decimal.TryParse(tokenLngClaim, out var tokenLng))
+            {
+                _logger.LogWarning("Invalid coordinates in token for user {UserId}", userId);
+                return new SessionSecurityValidation { IsValid = true };
+            }
+
+            // Calculate distance between login location and current location
+            var distance = locationService.CalculateDistance(
+                tokenLat, tokenLng,
+                (decimal)currentLocation.Latitude.Value, (decimal)currentLocation.Longitude.Value
+            );
+
+            // Calculate travel speed (distance / time)
+            var travelTimeHours = timeSinceLogin.TotalHours;
+            var travelSpeedKmh = travelTimeHours > 0 ? distance / (decimal)travelTimeHours : 0;
+
+            _logger.LogInformation("Geographic validation: Distance={Distance}km, Time={Time}h, Speed={Speed}km/h, MaxSpeed={MaxSpeed}km/h", 
+                distance, travelTimeHours, travelSpeedKmh, _options.MaxTravelSpeedKmh);
+
+            // Check if travel speed exceeds maximum possible speed
+            if (travelSpeedKmh > (decimal)_options.MaxTravelSpeedKmh)
+            {
+                if (_options.TerminateOnImpossibleTravel)
+                {
+                    await eventLogger.LogGeographicAnomalyAsync(
+                        userId,
+                        null,
+                        currentIp,
+                        $"{currentLocation.City}, {currentLocation.CountryName}",
+                        $"Token location: {tokenLat}, {tokenLng}",
+                        (int)distance,
+                        (int)travelSpeedKmh
+                    );
+
+                    return new SessionSecurityValidation
+                    {
+                        IsValid = false,
+                        Reason = $"Impossible travel detected: {travelSpeedKmh:F1} km/h over {distance:F1} km in {travelTimeHours:F1} hours"
+                    };
+                }
+                else
+                {
+                    // Just log the suspicious activity but don't terminate
+                    await eventLogger.LogSuspiciousActivityAsync(
+                        "SuspiciousTravel",
+                        userId,
+                        null,
+                        currentIp,
+                        75m, // High risk score for suspicious travel
+                        $"Fast travel detected: {travelSpeedKmh:F1} km/h over {distance:F1} km",
+                        context.Request.Headers["User-Agent"].ToString()
+                    );
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error during geographic validation for user {UserId} from IP {IP}", userId, currentIp);
+            // On error, allow access but log the issue
+            return new SessionSecurityValidation { IsValid = true };
         }
 
         return new SessionSecurityValidation { IsValid = true };
@@ -291,7 +347,7 @@ public class SessionSecurityMiddleware
 
         // Check for too many IP changes (would require session storage)
         // This is a simplified version
-        if (riskScore >= 50m)
+        if (riskScore >= _options.SuspiciousSessionThreshold)
         {
             await eventLogger.LogSuspiciousActivityAsync(
                 "SessionHijackingAttempt",
@@ -303,7 +359,7 @@ public class SessionSecurityMiddleware
                 userAgent
             );
 
-            if (_options.TerminateOnSuspectedHijacking && riskScore >= 70m)
+            if (_options.TerminateOnSuspectedHijacking && riskScore >= _options.TerminateSessionThreshold)
             {
                 return new SessionSecurityValidation
                 {
@@ -358,12 +414,6 @@ public class SessionSecurityMiddleware
                ipAddress.StartsWith("10.");
     }
 
-    private static bool IsObviouslyDifferentLocation(string tokenLocation, string currentIp)
-    {
-        // Simplified location comparison
-        // In production, use proper geolocation services
-        return false; // Placeholder implementation
-    }
 
     private static string GenerateDeviceFingerprint(HttpContext context)
     {
