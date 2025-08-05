@@ -138,9 +138,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 - **Admin Account Migration Conflict** (2025-01-20)
   - Resolved duplicate admin account creation in database migrations
   - Removed redundant `AddEssentialAdminUser.cs` migration that was causing silent failures
-  - Updated `InitializeEssentialSystemData.cs` migration with known password hash for `Admin123!`
+  - Updated `InitializeEssentialSystemData.cs` migration with known password hash for `Password123!`
   - Fixed authentication issue where admin password was unknown due to conflicting migrations
-  - Admin account now correctly uses `admin@neighbortools.com` with password `Admin123!`
+  - Admin account now correctly uses `admin@neighbortools.com` with password `Password123!`
 
 ## Guidelines
 

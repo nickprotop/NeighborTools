@@ -385,7 +385,7 @@ else
 fi
 echo ""
 echo "Admin Access:"
-echo "  • Essential admin user created: admin@neighbortools.com / Admin123!"
+echo "  • Essential admin user created: admin@neighbortools.com / Password123!"
 echo "  • Essential data (roles, tool categories) installed automatically"
 echo "  • Use Admin Panel → Sample Data Management to add/remove test data"
 echo "  • Optional: Add sample users (john.doe@email.com, jane.smith@email.com) via admin panel"

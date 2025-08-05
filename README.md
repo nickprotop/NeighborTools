@@ -174,7 +174,7 @@ cd backend && ./scripts/storage/start.sh
 
 ### Admin Account
 - **Email**: admin@neighbortools.com
-- **Password**: Admin123!
+- **Password**: Password123!
 
 ### Test Accounts
 Test accounts available through admin panel sample data management.
