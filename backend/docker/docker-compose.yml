@@ -25,6 +25,8 @@ services:
       - ENABLE_REDIS_PASSWORD=${ENABLE_REDIS_PASSWORD:-true}
     ports:
       - "6379:6379"
+    volumes:
+      - ts_redis_data:/data
     restart: unless-stopped
     command: >
       sh -c "
@@ -85,3 +87,5 @@ services:
 volumes:
   ts_postgres_data:
   ts_minio_data:
+  ts_redis_data:
+
