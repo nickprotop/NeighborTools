@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Components.Authorization;
 using System.Text.Json;
 using frontend.Models;
 using Microsoft.AspNetCore.Components;
+using ToolsSharing.Frontend.Configuration;
 
 namespace frontend.Services;
 
@@ -13,16 +14,19 @@ public class AuthenticatedHttpClientHandler : DelegatingHandler
     private readonly AuthenticationStateProvider _authStateProvider;
     private readonly HttpClient _httpClient;
     private readonly IServiceProvider _serviceProvider;
+    private readonly AppSettings _appSettings;
     private readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
 
     public AuthenticatedHttpClientHandler(
         ILocalStorageService localStorage, 
         AuthenticationStateProvider authStateProvider,
-        IServiceProvider serviceProvider)
+        IServiceProvider serviceProvider,
+        AppSettings appSettings)
     {
         _localStorage = localStorage;
         _authStateProvider = authStateProvider;
         _serviceProvider = serviceProvider;
+        _appSettings = appSettings;
         _httpClient = new HttpClient();
     }
 
@@ -121,9 +125,8 @@ public class AuthenticatedHttpClientHandler : DelegatingHandler
                 return false;
             }
 
-            // Get base URL from configuration
-            var configuration = _serviceProvider.GetRequiredService<IConfiguration>();
-            var baseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5002";
+            // Get base URL from AppSettings
+            var baseUrl = _appSettings.ApiSettings.BaseUrl;
             
             var refreshRequest = new
             {
