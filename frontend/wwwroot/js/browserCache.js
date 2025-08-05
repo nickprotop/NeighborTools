@@ -248,4 +248,4 @@ document.addEventListener('DOMContentLoaded', () => {
     }, 5 * 60 * 1000);
 });
 
-export { browserCache };
+// Export removed - browserCache is already available on window object

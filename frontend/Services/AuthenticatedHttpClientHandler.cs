@@ -13,6 +13,7 @@ public class AuthenticatedHttpClientHandler : DelegatingHandler
     private readonly AuthenticationStateProvider _authStateProvider;
     private readonly HttpClient _httpClient;
     private readonly IServiceProvider _serviceProvider;
+    private readonly SemaphoreSlim _refreshSemaphore = new(1, 1);
 
     public AuthenticatedHttpClientHandler(
         ILocalStorageService localStorage, 
@@ -40,27 +41,55 @@ public class AuthenticatedHttpClientHandler : DelegatingHandler
         var response = await base.SendAsync(request, cancellationToken);
 
         // Handle 401 Unauthorized - try refresh token first
-        if (response.StatusCode == HttpStatusCode.Unauthorized && !request.RequestUri?.AbsolutePath.Contains("/auth/refresh") == true)
+        if (response.StatusCode == HttpStatusCode.Unauthorized && 
+            !request.RequestUri?.AbsolutePath.Contains("/auth/refresh") == true &&
+            !request.RequestUri?.AbsolutePath.Contains("/auth/login") == true)
         {
-            // Try to refresh the token
-            var refreshSucceeded = await TryRefreshTokenAsync();
-            
-            if (refreshSucceeded)
+            // Use semaphore to prevent multiple concurrent refresh attempts
+            await _refreshSemaphore.WaitAsync();
+            try
             {
-                // Retry the original request with new token
-                var newToken = await _localStorage.GetItemAsync<string>("authToken") ?? 
-                              await _localStorage.GetSessionItemAsync<string>("authToken");
+                // Double-check if token was already refreshed by another request
+                var currentToken = await _localStorage.GetItemAsync<string>("authToken") ?? 
+                                  await _localStorage.GetSessionItemAsync<string>("authToken");
                 
-                if (!string.IsNullOrEmpty(newToken))
+                if (!string.IsNullOrEmpty(currentToken) && IsValidJwtFormat(currentToken) && currentToken != token)
                 {
-                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", newToken);
+                    // Token was already refreshed by another request
+                    Console.WriteLine("AuthenticatedHttpClientHandler: Token already refreshed by concurrent request");
+                    request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", currentToken);
                     response = await base.SendAsync(request, cancellationToken);
+                    return response;
+                }
+                
+                // Try to refresh the token
+                var refreshSucceeded = await TryRefreshTokenAsync();
+            
+                if (refreshSucceeded)
+                {
+                    // Retry the original request with new token
+                    var newToken = await _localStorage.GetItemAsync<string>("authToken") ?? 
+                                  await _localStorage.GetSessionItemAsync<string>("authToken");
+                    
+                    if (!string.IsNullOrEmpty(newToken))
+                    {
+                        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", newToken);
+                        response = await base.SendAsync(request, cancellationToken);
+                    }
+                }
+                else
+                {
+                    // Refresh failed - but don't immediately clear tokens in case there are concurrent refresh attempts
+                    // Only clear tokens if we can confirm the refresh token itself is invalid
+                    Console.WriteLine("AuthenticatedHttpClientHandler: Token refresh failed, but not clearing tokens immediately to avoid race conditions");
+                    
+                    // Still need to handle the session expiry, but more gracefully
+                    await HandleSessionExpiredGracefullyAsync();
                 }
             }
-            else
+            finally
             {
-                // Refresh failed - redirect to session expired page
-                await HandleSessionExpiredAsync();
+                _refreshSemaphore.Release();
             }
         }
 
@@ -87,7 +116,10 @@ public class AuthenticatedHttpClientHandler : DelegatingHandler
                               await _localStorage.GetSessionItemAsync<string>("refreshToken");
             
             if (string.IsNullOrEmpty(refreshToken))
+            {
+                Console.WriteLine("AuthenticatedHttpClientHandler: No refresh token found in storage");
                 return false;
+            }
 
             // Get base URL from configuration
             var configuration = _serviceProvider.GetRequiredService<IConfiguration>();
@@ -129,19 +161,29 @@ public class AuthenticatedHttpClientHandler : DelegatingHandler
                         await _localStorage.SetSessionItemAsync("refreshToken", result.Data.RefreshToken);
                     }
 
+                    Console.WriteLine("AuthenticatedHttpClientHandler: Token refresh successful");
                     return true;
                 }
+                else
+                {
+                    Console.WriteLine($"AuthenticatedHttpClientHandler: Token refresh failed - API returned success=false: {result?.Message}");
+                }
+            }
+            else
+            {
+                Console.WriteLine($"AuthenticatedHttpClientHandler: Token refresh failed - HTTP {response.StatusCode}: {await response.Content.ReadAsStringAsync()}");
             }
 
             return false;
         }
-        catch
+        catch (Exception ex)
         {
+            Console.WriteLine($"AuthenticatedHttpClientHandler: Token refresh exception: {ex.Message}");
             return false;
         }
     }
 
-    private async Task HandleSessionExpiredAsync()
+    private async Task HandleSessionExpiredGracefullyAsync()
     {
         // Check if this is a first visit (no auth data ever existed)
         var hadPreviousSession = await _localStorage.ContainsKeyAsync("authToken") ||
@@ -151,7 +193,22 @@ public class AuthenticatedHttpClientHandler : DelegatingHandler
                                 await _localStorage.ContainsSessionKeyAsync("refreshToken") ||
                                 await _localStorage.ContainsSessionKeyAsync("user");
 
-        // Clear authentication data
+        // Only clear authentication data after a delay to avoid race conditions with concurrent refresh attempts
+        // This gives other concurrent requests a chance to complete their refresh attempts
+        await Task.Delay(1000); // 1 second delay
+        
+        // Double-check if refresh tokens still exist (another request might have successfully refreshed)
+        var stillHasRefreshToken = await _localStorage.GetItemAsync<string>("refreshToken") != null ||
+                                  await _localStorage.GetSessionItemAsync<string>("refreshToken") != null;
+        
+        if (stillHasRefreshToken)
+        {
+            // Another concurrent request successfully refreshed - don't clear tokens
+            Console.WriteLine("AuthenticatedHttpClientHandler: Refresh token still exists, another request may have succeeded");
+            return;
+        }
+
+        // Clear authentication data only if no successful refresh happened
         await ClearAuthenticationDataAsync();
         
         // Notify authentication state change
@@ -170,6 +227,21 @@ public class AuthenticatedHttpClientHandler : DelegatingHandler
         // Otherwise, for first-time visitors, don't redirect anywhere
     }
 
+    private async Task HandleSessionExpiredAsync()
+    {
+        // Immediate session expiry for cases where we're certain (like explicit logout)
+        await ClearAuthenticationDataAsync();
+        
+        // Notify authentication state change
+        if (_authStateProvider is CustomAuthenticationStateProvider customProvider)
+        {
+            customProvider.MarkUserAsLoggedOut();
+        }
+
+        var navigationManager = _serviceProvider.GetRequiredService<NavigationManager>();
+        navigationManager.NavigateTo("/session-expired", forceLoad: true);
+    }
+
     private async Task ClearAuthenticationDataAsync()
     {
         await _localStorage.RemoveItemAsync("authToken");
@@ -178,5 +250,15 @@ public class AuthenticatedHttpClientHandler : DelegatingHandler
         await _localStorage.RemoveSessionItemAsync("authToken");
         await _localStorage.RemoveSessionItemAsync("refreshToken");
         await _localStorage.RemoveSessionItemAsync("user");
+    }
+
+    protected override void Dispose(bool disposing)
+    {
+        if (disposing)
+        {
+            _refreshSemaphore?.Dispose();
+            _httpClient?.Dispose();
+        }
+        base.Dispose(disposing);
     }
 }
