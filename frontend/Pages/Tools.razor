@@ -339,7 +339,7 @@
             {
                 @foreach (var tool in pagedResult.Items)
                 {
-                    <MudItem xs="12" sm="6" md="4" lg="3">
+                    <MudItem xs="12" sm="6" md="4" lg="4">
                         <MudCard Elevation="4" Style="height: 100%; border-radius: 12px; transition: transform 0.2s; cursor: pointer;" Class="hover-card" @onclick="() => ViewTool(tool.Id)">
                             @{
                                 var toolImageUrl = tool.ImageUrls.Any() ? UrlService.GetFileUrl(tool.ImageUrls.First()) : string.Empty;
