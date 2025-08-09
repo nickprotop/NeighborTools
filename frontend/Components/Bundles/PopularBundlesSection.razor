@@ -1,0 +1,133 @@
+@using frontend.Models
+@using frontend.Services
+@using ToolsSharing.Frontend.Models
+@using MudBlazor
+@using frontend.Components.Bundles
+@inject BundleService BundleService
+@inject NavigationManager Navigation
+@inject IUrlService UrlService
+
+<MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
+    <MudStack Spacing="3" Class="mb-4">
+        <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+            <MudText Typo="Typo.h5" Color="Color.Secondary">
+                <MudIcon Icon="@Icons.Material.Filled.Star" Class="mr-2" />
+                @(GetSectionTitle())
+            </MudText>
+            @if (ShowViewAllButton)
+            {
+                <MudButton Variant="Variant.Text" 
+                         Color="Color.Secondary" 
+                         OnClick="@(() => Navigation.NavigateTo("/bundles"))"
+                         EndIcon="@Icons.Material.Filled.ArrowForward">
+                    View All Bundles
+                </MudButton>
+            }
+        </MudStack>
+        
+        @if (IsLoading)
+        {
+            <MudGrid>
+                @for (int i = 0; i < MaxItems; i++)
+                {
+                    <MudItem xs="12" sm="6" md="@(MaxItems <= 4 ? 3 : 4)" lg="@(MaxItems <= 4 ? 3 : 4)">
+                        <MudCard Class="marketplace-card" Elevation="4" Style="border-radius: 12px;">
+                            <MudSkeleton Height="180px" />
+                            <MudCardContent Class="pa-3">
+                                <MudSkeleton Height="24px" Class="mb-2" />
+                                <MudSkeleton Height="40px" Class="mb-2" />
+                                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
+                                    <MudSkeleton Width="80px" Height="24px" />
+                                    <MudSkeleton Width="60px" Height="20px" />
+                                </MudStack>
+                            </MudCardContent>
+                        </MudCard>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        else if (GetDisplayBundles().Any())
+        {
+            <MudGrid>
+                @foreach (var bundle in GetDisplayBundles())
+                {
+                    <MudItem xs="12" sm="6" md="@(MaxItems <= 4 ? 3 : 4)" lg="@(MaxItems <= 4 ? 3 : 4)">
+                        <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+        else
+        {
+            <MudAlert Severity="Severity.Info" Icon="@Icons.Material.Filled.Inventory">
+                <MudText>No bundles are currently available. Create the first bundle to offer complete project solutions!</MudText>
+            </MudAlert>
+        }
+    </MudStack>
+</MudPaper>
+
+<style>
+    .marketplace-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .marketplace-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+</style>
+
+@code {
+    [Parameter] public int MaxItems { get; set; } = 6;
+    [Parameter] public bool ShowViewAllButton { get; set; } = true;
+    [Parameter] public bool IsLoading { get; set; } = false;
+    [Parameter] public List<BundleModel>? FeaturedBundles { get; set; }
+    [Parameter] public List<BundleModel>? RecentBundles { get; set; }
+
+    private void ViewBundle(Guid bundleId)
+    {
+        Navigation.NavigateTo($"/bundles/{bundleId}");
+    }
+
+    private List<BundleModel> GetDisplayBundles()
+    {
+        var displayList = new List<BundleModel>();
+        
+        // Add featured bundles first (30% of total, minimum 1 if any exist)
+        if (FeaturedBundles?.Any() == true)
+        {
+            var featuredCount = Math.Max(1, (int)(MaxItems * 0.3));
+            displayList.AddRange(FeaturedBundles.Take(featuredCount));
+        }
+        
+        // Fill remaining slots with recent bundles (excluding already added featured)
+        if (RecentBundles?.Any() == true)
+        {
+            var remainingSlots = MaxItems - displayList.Count;
+            var availableRecent = RecentBundles.Where(r => !displayList.Any(d => d.Id == r.Id));
+            displayList.AddRange(availableRecent.Take(remainingSlots));
+        }
+        
+        return displayList;
+    }
+    
+    private string GetSectionTitle()
+    {
+        var hasFeatured = FeaturedBundles?.Any() == true;
+        var hasRecent = RecentBundles?.Any() == true;
+        
+        if (hasFeatured && hasRecent)
+            return "Popular Bundles";
+        else if (hasFeatured)
+            return "Featured Bundles";
+        else if (hasRecent)
+            return "Recent Bundles";
+        else
+            return "Available Bundles";
+    }
+    
+    private bool IsFeaturedBundle(Guid bundleId)
+    {
+        return FeaturedBundles?.Any(f => f.Id == bundleId) == true;
+    }
+}

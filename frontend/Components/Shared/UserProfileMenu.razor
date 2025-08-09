@@ -1,0 +1,137 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@using frontend.Services
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<AuthorizeView>
+    <Authorized>
+        <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
+            <ActivatorContent>
+                @if (UseAvatar)
+                {
+                    <MudTooltip Text="@GetUserDisplayName(context)">
+                        <MudAvatar Color="Color.Primary" 
+                                  Size="Size.Medium"
+                                  Class="profile-avatar">
+                            @GetUserInitials(context)
+                        </MudAvatar>
+                    </MudTooltip>
+                }
+                else
+                {
+                    <MudButton Variant="Variant.Text" 
+                               StartIcon="@Icons.Material.Filled.AccountCircle"
+                               Class="profile-menu-button"
+                               Color="Color.Primary">
+                        <MudText Typo="Typo.body1" Class="user-name d-none d-sm-block">
+                            @GetUserDisplayName(context)
+                        </MudText>
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Size="Size.Small" Class="ml-1" />
+                    </MudButton>
+                }
+            </ActivatorContent>
+            <ChildContent>
+                <MudMenuItem Icon="@Icons.Material.Filled.Person" Href="/profile">
+                    Profile
+                </MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="/settings">
+                    Settings
+                </MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.Payment" Href="/settings/payments">
+                    Payment Settings
+                </MudMenuItem>
+                <MudMenuItem Icon="@Icons.Material.Filled.PrivacyTip" Href="/privacy-dashboard">
+                    Privacy Dashboard
+                </MudMenuItem>
+                <MudDivider />
+                <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
+                    Logout
+                </MudMenuItem>
+            </ChildContent>
+        </MudMenu>
+    </Authorized>
+</AuthorizeView>
+
+<style>
+    .profile-avatar {
+        cursor: pointer;
+        transition: all 0.2s ease-in-out;
+        border: 2px solid transparent;
+        font-weight: 600;
+        font-size: 0.875rem;
+    }
+    
+    .profile-avatar:hover {
+        transform: scale(1.05);
+        border-color: var(--mud-palette-primary);
+        box-shadow: 0 4px 8px rgba(0,0,0,0.12);
+    }
+
+    .profile-menu-button {
+        border-radius: var(--mud-radius-full);
+        transition: all 0.2s ease;
+    }
+    
+    .profile-menu-button:hover {
+        background: var(--mud-palette-action-hover);
+    }
+
+    @@media (max-width: 480px) {
+        .profile-avatar {
+            width: 36px !important;
+            height: 36px !important;
+            font-size: 0.75rem;
+        }
+    }
+</style>
+
+@code {
+    [Parameter] public bool UseAvatar { get; set; } = true;
+
+    private string GetUserDisplayName(AuthenticationState authState)
+    {
+        var name = authState.User.Identity?.Name;
+        if (string.IsNullOrEmpty(name))
+            return "User";
+        
+        if (name.Contains("@"))
+            return name.Split('@')[0];
+        
+        var parts = name.Split(' ');
+        return parts.Length > 0 ? parts[0] : name;
+    }
+
+    private string GetUserInitials(AuthenticationState authState)
+    {
+        var name = authState.User.Identity?.Name;
+        if (string.IsNullOrEmpty(name))
+            return "U";
+        
+        if (name.Contains("@"))
+        {
+            // Extract from email: john.doe@example.com -> JD
+            var emailPart = name.Split('@')[0];
+            var emailParts = emailPart.Split('.', '-', '_');
+            if (emailParts.Length > 1)
+            {
+                return $"{emailParts[0][0]}{emailParts[1][0]}".ToUpper();
+            }
+            return emailPart.Length > 1 ? $"{emailPart[0]}{emailPart[1]}".ToUpper() : emailPart[0].ToString().ToUpper();
+        }
+        
+        var parts = name.Split(' ');
+        if (parts.Length > 1)
+        {
+            return $"{parts[0][0]}{parts[1][0]}".ToUpper();
+        }
+        
+        return name.Length > 1 ? $"{name[0]}{name[1]}".ToUpper() : name[0].ToString().ToUpper();
+    }
+
+    private async Task LogoutAsync()
+    {
+        await AuthService.LogoutAsync();
+        Navigation.NavigateTo("/");
+    }
+}

@@ -1,0 +1,924 @@
+@page "/"
+@layout HomeLayout
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@using frontend.Models
+@using frontend.Services
+@using ToolsSharing.Frontend.Models
+@using ToolsSharing.Frontend.Services
+@using frontend.Components
+@using frontend.Components.Bundles
+@using frontend.Components.Tools
+@using frontend.Components.Location
+@inject IToolService ToolService
+@inject BundleService BundleService
+@inject NavigationManager Navigation
+@inject IUrlService UrlService
+@inject AuthenticationStateProvider AuthStateProvider
+@inject IJSRuntime JSRuntime
+@attribute [AllowAnonymous]
+
+<PageTitle>NeighborTools - Share and Borrow Tools</PageTitle>
+
+<AuthorizeView>
+    <NotAuthorized>
+        @* Professional landing page for non-authenticated users with marketplace preview *@
+        
+        <!-- Professional Hero Section from www/index.html -->
+        <section class="hero-section">
+            <div class="hero-background">
+                <svg class="hero-graphic" viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="grad1" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#f8fafc;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#e2e8f0;stop-opacity:1" />
+                        </linearGradient>
+                        <linearGradient id="grad2" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#64748b;stop-opacity:0.1" />
+                            <stop offset="100%" style="stop-color:#475569;stop-opacity:0.05" />
+                        </linearGradient>
+                    </defs>
+                    <circle cx="200" cy="150" r="80" fill="url(#grad2)" opacity="0.3"/>
+                    <rect x="800" y="100" width="120" height="120" rx="20" fill="url(#grad2)" opacity="0.2"/>
+                    <path d="M600 200 L700 250 L650 350 L550 300 Z" fill="url(#grad2)" opacity="0.15"/>
+                    <g stroke="#64748b" stroke-width="2" fill="none" opacity="0.4">
+                        <path d="M150 300 L200 250 L250 300 M200 250 L200 200"/>
+                        <circle cx="900" cy="300" r="30"/>
+                        <rect x="400" y="400" width="60" height="20" rx="10"/>
+                        <path d="M700 500 L750 450 L800 500"/>
+                    </g>
+                    <g stroke="#94a3b8" stroke-width="1" opacity="0.3">
+                        <path d="M200 300 Q400 200 600 300"/>
+                        <path d="M600 300 Q800 400 900 300"/>
+                        <path d="M200 300 Q300 500 500 450"/>
+                    </g>
+                </svg>
+            </div>
+            
+            <div class="hero-content">
+                <MudText Typo="Typo.h1" Class="hero-title">
+                    Building Communities<br>
+                    <span class="title-accent">Through Sharing</span>
+                </MudText>
+                <MudText Typo="Typo.h6" Class="hero-description">
+                    Transform how we use resources. Share tools with neighbors, reduce waste, 
+                    strengthen communities, and create a sustainable future together.
+                </MudText>
+                <div class="hero-actions">
+                    <MudButton Variant="Variant.Filled" 
+                               Color="Color.Primary" 
+                               Size="Size.Large"
+                               Href="/register" 
+                               Class="btn-primary">
+                        Start Sharing
+                    </MudButton>
+                    <MudButton Variant="Variant.Outlined" 
+                               Size="Size.Large"
+                               OnClick="@ScrollToAppFeatures"
+                               Class="btn-secondary">
+                        Learn More
+                    </MudButton>
+                </div>
+            </div>
+        </section>
+
+        <!-- Features Section -->
+        <section id="features" class="features-section py-8">
+            <MudContainer MaxWidth="MaxWidth.Large">
+                <div class="section-header text-center">
+                    <MudText Typo="Typo.h4" Style="font-weight: 700; margin-bottom: 1rem;">
+                        The Future of Resource Sharing
+                    </MudText>
+                    <MudText Typo="Typo.h6" Color="Color.Secondary" Style="margin-bottom: 3rem;">
+                        Join a movement that's reshaping how communities interact with resources
+                    </MudText>
+                </div>
+                
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="3">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <svg width="48" height="48" viewBox="0 0 48 48">
+                                    <circle cx="24" cy="24" r="20" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M24 8v32M8 24h32" stroke="currentColor" stroke-width="2"/>
+                                    <circle cx="24" cy="16" r="2" fill="currentColor"/>
+                                    <circle cx="24" cy="32" r="2" fill="currentColor"/>
+                                    <circle cx="16" cy="24" r="2" fill="currentColor"/>
+                                    <circle cx="32" cy="24" r="2" fill="currentColor"/>
+                                </svg>
+                            </div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 1rem;">Circular Economy</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Transform linear consumption into circular resource flows. Every shared tool extends product lifecycles and reduces manufacturing demand.
+                            </MudText>
+                        </div>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="3">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <svg width="48" height="48" viewBox="0 0 48 48">
+                                    <path d="M24 4L28 16H40L30 24L34 36L24 28L14 36L18 24L8 16H20L24 4Z" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <circle cx="24" cy="24" r="4" fill="currentColor" opacity="0.3"/>
+                                </svg>
+                            </div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 1rem;">Environmental Impact</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Reduce carbon footprints through shared ownership. Fewer tools manufactured means less resource extraction and waste generation.
+                            </MudText>
+                        </div>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="3">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <svg width="48" height="48" viewBox="0 0 48 48">
+                                    <circle cx="16" cy="16" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <circle cx="32" cy="16" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <circle cx="24" cy="32" r="8" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M20 20L28 20M20 28L28 28" stroke="currentColor" stroke-width="2"/>
+                                </svg>
+                            </div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 1rem;">Community Building</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Forge meaningful connections with neighbors. Sharing creates trust, cooperation, and resilient local networks that strengthen communities.
+                            </MudText>
+                        </div>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="3">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <svg width="48" height="48" viewBox="0 0 48 48">
+                                    <rect x="8" y="12" width="32" height="24" rx="4" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <path d="M16 12V8C16 6.9 16.9 6 18 6H30C31.1 6 32 6.9 32 8V12" fill="none" stroke="currentColor" stroke-width="2"/>
+                                    <circle cx="24" cy="24" r="3" fill="currentColor"/>
+                                    <path d="M12 20H36M12 28H36" stroke="currentColor" stroke-width="1" opacity="0.5"/>
+                                </svg>
+                            </div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 1rem;">Economic Efficiency</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Maximize resource utilization while minimizing individual costs. Access quality tools without the burden of ownership and storage.
+                            </MudText>
+                        </div>
+                    </MudItem>
+                </MudGrid>
+            </MudContainer>
+        </section>
+
+        <!-- Browse Tools Section - Using Sophisticated Component -->
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-8">
+            <div class="section-header text-center">
+                <MudText Typo="Typo.h4" Style="font-weight: 600; margin-bottom: 1rem;">
+                    Discover Available Tools
+                </MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Style="margin-bottom: 3rem;">
+                    Browse our marketplace and see what tools your neighbors are sharing
+                </MudText>
+            </div>
+            
+            <PopularToolsSection MaxItems="8"
+                               ShowViewAllButton="true"
+                               IsLoading="@isLoadingPublicContent"
+                               FeaturedTools="@publicFeaturedTools"
+                               RecentTools="@publicRecentTools" />
+        </MudContainer>
+
+        <!-- Impact Section -->
+        <section class="impact-section py-8" Style="background: var(--mud-palette-background-grey); border-radius: 16px; margin: 2rem auto;">
+            <MudContainer MaxWidth="MaxWidth.Large">
+                <MudGrid>
+                    <MudItem xs="12" md="6">
+                        <div class="impact-text">
+                            <MudText Typo="Typo.h4" Style="font-weight: 700; margin-bottom: 1rem;">
+                                Creating Lasting Change
+                            </MudText>
+                            <MudText Typo="Typo.h6" Color="Color.Secondary" Style="margin-bottom: 2rem; line-height: 1.7;">
+                                When we share resources, we're not just saving money or space—we're participating in a fundamental shift toward sustainability and community resilience.
+                            </MudText>
+                            
+                            <MudGrid Class="impact-stats">
+                                <MudItem xs="4">
+                                    <div class="stat text-center">
+                                        <MudText Typo="Typo.h3" Color="Color.Primary" Style="font-weight: 700; margin-bottom: 0.5rem;">
+                                            75%
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Style="font-weight: 500;">
+                                            Less tool manufacturing needed
+                                        </MudText>
+                                    </div>
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <div class="stat text-center">
+                                        <MudText Typo="Typo.h3" Color="Color.Primary" Style="font-weight: 700; margin-bottom: 0.5rem;">
+                                            3x
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Style="font-weight: 500;">
+                                            More community connections
+                                        </MudText>
+                                    </div>
+                                </MudItem>
+                                <MudItem xs="4">
+                                    <div class="stat text-center">
+                                        <MudText Typo="Typo.h3" Color="Color.Primary" Style="font-weight: 700; margin-bottom: 0.5rem;">
+                                            60%
+                                        </MudText>
+                                        <MudText Typo="Typo.body2" Color="Color.Secondary" Style="font-weight: 500;">
+                                            Reduction in individual costs
+                                        </MudText>
+                                    </div>
+                                </MudItem>
+                            </MudGrid>
+                        </div>
+                    </MudItem>
+                    
+                    <MudItem xs="12" md="6" Class="d-flex justify-center align-center">
+                        <div class="impact-visual">
+                            <svg viewBox="0 0 400 300" xmlns="http://www.w3.org/2000/svg" style="max-width: 100%; height: auto;">
+                                <!-- Interconnected circles representing community network -->
+                                <defs>
+                                    <radialGradient id="nodeGrad2" cx="50%" cy="50%" r="50%">
+                                        <stop offset="0%" style="stop-color:#64748b;stop-opacity:0.2" />
+                                        <stop offset="100%" style="stop-color:#64748b;stop-opacity:0.05" />
+                                    </radialGradient>
+                                </defs>
+                                
+                                <!-- Connection lines -->
+                                <g stroke="#94a3b8" stroke-width="1" opacity="0.4">
+                                    <path d="M80 80 L200 150"/>
+                                    <path d="M200 150 L320 80"/>
+                                    <path d="M200 150 L320 220"/>
+                                    <path d="M200 150 L80 220"/>
+                                    <path d="M80 80 L320 80"/>
+                                    <path d="M80 220 L320 220"/>
+                                    <path d="M200 150 L200 50"/>
+                                    <path d="M200 150 L200 250"/>
+                                </g>
+                                
+                                <!-- Nodes -->
+                                <circle cx="80" cy="80" r="20" fill="url(#nodeGrad2)" stroke="#64748b" stroke-width="2"/>
+                                <circle cx="320" cy="80" r="20" fill="url(#nodeGrad2)" stroke="#64748b" stroke-width="2"/>
+                                <circle cx="80" cy="220" r="20" fill="url(#nodeGrad2)" stroke="#64748b" stroke-width="2"/>
+                                <circle cx="320" cy="220" r="20" fill="url(#nodeGrad2)" stroke="#64748b" stroke-width="2"/>
+                                <circle cx="200" cy="50" r="15" fill="url(#nodeGrad2)" stroke="#64748b" stroke-width="2"/>
+                                <circle cx="200" cy="250" r="15" fill="url(#nodeGrad2)" stroke="#64748b" stroke-width="2"/>
+                                <circle cx="200" cy="150" r="25" fill="#64748b" fill-opacity="0.3" stroke="#64748b" stroke-width="3"/>
+                                
+                                <!-- Tool icons in nodes -->
+                                <g fill="#64748b" opacity="0.6">
+                                    <rect x="195" y="145" width="10" height="3" rx="1"/>
+                                    <rect x="195" y="149" width="10" height="3" rx="1"/>
+                                    <rect x="195" y="153" width="10" height="3" rx="1"/>
+                                </g>
+                            </svg>
+                        </div>
+                    </MudItem>
+                </MudGrid>
+            </MudContainer>
+        </section>
+
+        <!-- Browse Bundles Section - Using Sophisticated Component -->
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-8" Style="background: var(--mud-palette-background-grey); border-radius: 16px; margin: 2rem auto;">
+            <div class="section-header text-center">
+                <MudText Typo="Typo.h4" Style="font-weight: 600; margin-bottom: 1rem;">
+                    Tool Bundles for Complete Projects
+                </MudText>
+                <MudText Typo="Typo.body1" Color="Color.Secondary" Style="margin-bottom: 3rem;">
+                    Curated tool collections to tackle any project from start to finish
+                </MudText>
+            </div>
+            
+            <PopularBundlesSection MaxItems="6"
+                                 ShowViewAllButton="true"
+                                 IsLoading="@isLoadingPublicContent"
+                                 FeaturedBundles="@publicFeaturedBundles"
+                                 RecentBundles="@publicRecentBundles" />
+        </MudContainer>
+
+        <!-- App Features Section -->
+        <section id="app-features" class="app-features-section py-8">
+            <MudContainer MaxWidth="MaxWidth.Large">
+                <div class="section-header text-center">
+                    <MudText Typo="Typo.h4" Style="font-weight: 700; margin-bottom: 1rem;">
+                        Everything You Need to Share Tools
+                    </MudText>
+                    <MudText Typo="Typo.h6" Color="Color.Secondary" Style="margin-bottom: 3rem;">
+                        A complete platform designed to make tool sharing safe, simple, and rewarding
+                    </MudText>
+                </div>
+                
+                <MudGrid>
+                    <MudItem xs="12" sm="6" md="4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <MudIcon Icon="@Icons.Material.Filled.Search" Size="Size.Large" />
+                            </div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 1rem;">Smart Discovery</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Find exactly what you need with intelligent search, filters by location, availability, and tool type. Browse by category or search for specific brands and models.
+                            </MudText>
+                        </div>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <MudIcon Icon="@Icons.Material.Filled.CalendarToday" Size="Size.Large" />
+                            </div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 1rem;">Easy Booking</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Simple rental process with calendar booking, automatic conflict detection, and flexible rental periods. Request tools with just a few clicks.
+                            </MudText>
+                        </div>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <MudIcon Icon="@Icons.Material.Filled.Payment" Size="Size.Large" />
+                            </div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 1rem;">Secure Payments</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Integrated PayPal payments with security deposits, automatic processing, and owner payouts. Complete transparency with detailed receipts.
+                            </MudText>
+                        </div>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <MudIcon Icon="@Icons.Material.Filled.LocalShipping" Size="Size.Large" />
+                            </div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 1rem;">Pickup & Return</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Streamlined pickup and return process with confirmation tracking, automated reminders, and extension options for longer projects.
+                            </MudText>
+                        </div>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <MudIcon Icon="@Icons.Material.Filled.Security" Size="Size.Large" />
+                            </div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 1rem;">Trust & Safety</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Built-in dispute resolution, fraud detection, user verification, and comprehensive insurance coverage for peace of mind.
+                            </MudText>
+                        </div>
+                    </MudItem>
+                    
+                    <MudItem xs="12" sm="6" md="4">
+                        <div class="feature-card">
+                            <div class="feature-icon">
+                                <MudIcon Icon="@Icons.Material.Filled.StarRate" Size="Size.Large" />
+                            </div>
+                            <MudText Typo="Typo.h6" Style="font-weight: 600; margin-bottom: 1rem;">Community Reviews</MudText>
+                            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                                Rate and review tools and owners to build trust in your community. Help others make informed decisions with honest feedback.
+                            </MudText>
+                        </div>
+                    </MudItem>
+                </MudGrid>
+            </MudContainer>
+        </section>
+
+        <!-- Final CTA -->
+
+        <!-- Final CTA -->
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-8 text-center">
+            <MudText Typo="Typo.h4" Style="font-weight: 600; margin-bottom: 1rem;">
+                Ready to Transform Your Community?
+            </MudText>
+            <MudText Typo="Typo.h6" Color="Color.Secondary" Style="margin-bottom: 2rem;">
+                Join thousands of neighbors who are already building stronger, more sustainable communities through tool sharing.
+            </MudText>
+            <MudButton Variant="Variant.Filled" 
+                       Color="Color.Primary" 
+                       Size="Size.Large"
+                       Href="/register"
+                       StartIcon="@Icons.Material.Filled.PersonAdd"
+                       Style="padding: 1rem 2rem; font-size: 1.125rem;">
+                Start Your Journey
+            </MudButton>
+        </MudContainer>
+    </NotAuthorized>
+    <Authorized>
+        @* Dashboard content for authenticated users *@
+        <MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+            <!-- Welcome Section with Integrated Search -->
+            <MudPaper Class="pa-6 mb-6" Elevation="2" Style="background: var(--mud-gradient-hero); border-radius: 16px;">
+                <MudText Typo="Typo.h4" Style="color: white; font-weight: 600; margin-bottom: 1rem;">
+                    Welcome back! 👋
+                </MudText>
+                <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.9); margin-bottom: 2rem;">
+                    Ready to share or find tools in your community?
+                </MudText>
+                
+                <!-- Integrated Quick Search -->
+                <NearbySearch Title="Quick Search" 
+                              Subtitle="Find tools and bundles near you"
+                              RequiredLocation="false"
+                              AutoSearchOnLocationChange="false"
+                              DefaultRadius="15"
+                              MaxResultsPerType="3"
+                              ShowResultsCount="true"
+                              ShowSearchTerm="true"
+                              Elevation="2"
+                              Style="border-radius: 12px;" />
+            </MudPaper>
+
+            <!-- Quick Actions Cards -->
+            <QuickActionsCards ToolsCount="@toolsCount" BundlesCount="@bundlesCount" />
+
+            <!-- Popular Tools Section -->
+            <PopularToolsSection MaxItems="6" 
+                               ShowViewAllButton="true"
+                               IsLoading="@isLoadingContent"
+                               FeaturedTools="@featuredTools"
+                               RecentTools="@recentTools" />
+
+            <!-- Popular Bundles Section -->
+            <PopularBundlesSection MaxItems="6"
+                                 ShowViewAllButton="true"
+                                 IsLoading="@isLoadingContent"
+                                 FeaturedBundles="@featuredBundles"
+                                 RecentBundles="@recentBundles" />
+        </MudContainer>
+    </Authorized>
+</AuthorizeView>
+
+<style>
+    /* Professional Hero Section - from www/styles.css */
+    .hero-section {
+        position: relative;
+        min-height: 60vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        background: linear-gradient(135deg, var(--mud-palette-background) 0%, var(--mud-palette-background-grey) 100%);
+        padding: 1rem 0;
+    }
+
+    .hero-background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        z-index: 1;
+    }
+
+    .hero-graphic {
+        width: 100%;
+        height: 100%;
+        opacity: 0.4;
+    }
+
+    .hero-content {
+        position: relative;
+        z-index: 2;
+        text-align: center;
+        max-width: 800px;
+        padding: 0 1.5rem;
+    }
+
+    .hero-title {
+        font-size: clamp(2.5rem, 5vw, 4rem) !important;
+        font-weight: 700 !important;
+        line-height: 1.1 !important;
+        margin-bottom: 1.5rem !important;
+        color: var(--mud-palette-text-primary) !important;
+    }
+
+    .title-accent {
+        background: linear-gradient(135deg, #3b82f6 0%, #8b5cf6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+    }
+
+    .hero-description {
+        font-size: 1.25rem !important;
+        color: var(--mud-palette-text-secondary) !important;
+        margin-bottom: 3rem !important;
+        max-width: 600px;
+        margin-left: auto;
+        margin-right: auto;
+    }
+
+    .hero-actions {
+        display: flex;
+        gap: 1.5rem;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .btn-primary {
+        border-radius: 0.75rem !important;
+        font-weight: 500 !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease !important;
+        padding: 1rem 2rem !important;
+    }
+
+    .btn-primary:hover {
+        transform: translateY(-2px) !important;
+        box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3) !important;
+    }
+
+    .btn-secondary {
+        border-radius: 0.75rem !important;
+        font-weight: 500 !important;
+        font-size: 1rem !important;
+        transition: all 0.3s ease !important;
+        padding: 1rem 2rem !important;
+        color: var(--mud-palette-text-primary) !important;
+        border-color: var(--mud-palette-divider) !important;
+    }
+
+    .btn-secondary:hover {
+        background: var(--mud-palette-background-grey) !important;
+        border-color: var(--mud-palette-text-secondary) !important;
+    }
+
+
+    .quick-action-card {
+        transition: all 0.3s ease;
+        border-radius: 16px !important;
+    }
+    
+    .quick-action-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.12) !important;
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .hero-actions {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .btn-primary, .btn-secondary {
+            width: 100%;
+            max-width: 280px;
+            justify-content: center;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .hero-content {
+            padding: 0 1rem;
+        }
+    }
+
+    /* Features Section Styles */
+    .features-section {
+        background: var(--mud-palette-background);
+    }
+
+    .feature-card {
+        background: var(--mud-palette-surface);
+        border: 1px solid var(--mud-palette-divider);
+        border-radius: 16px !important;
+        padding: 2rem;
+        text-align: center;
+        transition: all 0.3s ease;
+        position: relative;
+        overflow: hidden;
+        height: 100%;
+    }
+
+    .feature-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 2px;
+        background: linear-gradient(90deg, var(--mud-palette-primary), var(--mud-palette-secondary));
+        transform: scaleX(0);
+        transition: transform 0.3s ease;
+    }
+
+    .feature-card:hover::before {
+        transform: scaleX(1);
+    }
+
+    .feature-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+        border-color: var(--mud-palette-primary);
+    }
+
+    .feature-icon {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 80px;
+        height: 80px;
+        background: var(--mud-palette-background-grey);
+        border-radius: 50%;
+        margin-bottom: 1.5rem;
+        color: var(--mud-palette-primary);
+    }
+
+    /* Impact Section Styles */
+    .impact-section {
+        margin: 2rem 0;
+    }
+
+    .impact-text {
+        padding-right: 2rem;
+    }
+
+    .impact-stats .stat {
+        padding: 1rem;
+    }
+
+    .impact-visual {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+    }
+
+    .impact-visual svg {
+        max-width: 100%;
+        height: auto;
+        filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+    }
+
+    /* App Features Section */
+    .app-features-section .feature-card {
+        padding: 2rem 1.5rem;
+    }
+
+    .app-features-section .feature-icon {
+        background: linear-gradient(135deg, var(--mud-palette-primary-lighten), var(--mud-palette-primary));
+        color: white;
+    }
+
+    /* Animations for feature cards */
+    .feature-card {
+        animation: fadeInUp 0.6s ease forwards;
+        opacity: 0;
+        transform: translateY(30px);
+    }
+
+    .feature-card:nth-child(1) { animation-delay: 0.1s; }
+    .feature-card:nth-child(2) { animation-delay: 0.2s; }
+    .feature-card:nth-child(3) { animation-delay: 0.3s; }
+    .feature-card:nth-child(4) { animation-delay: 0.4s; }
+    .feature-card:nth-child(5) { animation-delay: 0.5s; }
+    .feature-card:nth-child(6) { animation-delay: 0.6s; }
+
+    @@keyframes fadeInUp {
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+
+    /* Responsive design for new sections */
+    @@media (max-width: 768px) {
+        .impact-text {
+            padding-right: 0;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .impact-stats .stat {
+            margin-bottom: 1rem;
+        }
+
+        .feature-card {
+            padding: 1.5rem;
+        }
+
+        .feature-icon {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 1rem;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .feature-card {
+            padding: 1rem;
+        }
+
+        .impact-section {
+            margin: 1rem 0;
+        }
+    }
+</style>
+
+@code {
+    private List<BundleModel>? featuredBundles;
+    private List<BundleModel>? recentBundles;
+    private List<Tool>? featuredTools;
+    private List<Tool>? recentTools;
+    
+    // For non-authenticated users - sophisticated content
+    private List<Tool>? publicFeaturedTools;
+    private List<Tool>? publicRecentTools;
+    private List<BundleModel>? publicFeaturedBundles;
+    private List<BundleModel>? publicRecentBundles;
+    private bool isLoadingBundles = true;
+    private bool isLoadingPublicContent = true;
+    private bool isLoadingContent = true;
+    
+    // Statistics for QuickActionsCards
+    private int toolsCount = 0;
+    private int bundlesCount = 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthStateProvider.GetAuthenticationStateAsync();
+        if (authState.User.Identity?.IsAuthenticated == true)
+        {
+            await Task.WhenAll(
+                LoadFeaturedContent(),
+                LoadStatistics()
+            );
+        }
+        else
+        {
+            // Load public marketplace content for non-authenticated users
+            await Task.WhenAll(
+                LoadPublicMarketplaceContent(),
+                LoadStatistics()
+            );
+        }
+    }
+
+    private async Task LoadFeaturedContent()
+    {
+        isLoadingContent = true;
+
+        try
+        {
+            // Load featured tools
+            var featuredToolsTask = ToolService.GetFeaturedToolsAsync();
+            
+            // Load featured bundles
+            var featuredBundlesTask = BundleService.GetFeaturedBundlesAsync(6);
+            
+            // Load recent tools for fallback
+            var recentToolsTask = ToolService.GetToolsAsync();
+            
+            // Load recent bundles for fallback
+            var recentBundlesTask = BundleService.GetBundlesAsync(page: 1, pageSize: 10);
+
+            await Task.WhenAll(featuredToolsTask, featuredBundlesTask, recentToolsTask, recentBundlesTask);
+
+            // Process featured tools
+            var featuredToolsResult = await featuredToolsTask;
+            if (featuredToolsResult.Success && featuredToolsResult.Data != null)
+            {
+                featuredTools = featuredToolsResult.Data.ToList();
+            }
+
+            // Process featured bundles
+            var featuredBundlesResult = await featuredBundlesTask;
+            if (featuredBundlesResult.Success && featuredBundlesResult.Data != null)
+            {
+                featuredBundles = featuredBundlesResult.Data.ToList();
+            }
+
+            // Process recent tools
+            var recentToolsResult = await recentToolsTask;
+            if (recentToolsResult.Success && recentToolsResult.Data != null)
+            {
+                recentTools = recentToolsResult.Data
+                    .OrderByDescending(t => t.CreatedAt)
+                    .Take(8)
+                    .ToList();
+            }
+
+            // Process recent bundles
+            var recentBundlesResult = await recentBundlesTask;
+            if (recentBundlesResult.Success && recentBundlesResult.Data?.Items != null)
+            {
+                recentBundles = recentBundlesResult.Data.Items
+                    .OrderByDescending(b => b.CreatedAt)
+                    .Take(8)
+                    .ToList();
+            }
+        }
+        catch (Exception)
+        {
+            // Silently handle errors for featured content
+        }
+        finally
+        {
+            isLoadingContent = false;
+        }
+    }
+
+    private async Task LoadPublicMarketplaceContent()
+    {
+        isLoadingPublicContent = true;
+
+        try
+        {
+            // Load featured tools
+            var featuredToolsTask = ToolService.GetFeaturedToolsAsync();
+            
+            // Load featured bundles
+            var featuredBundlesTask = BundleService.GetFeaturedBundlesAsync(6);
+            
+            // Load recent tools for fallback
+            var recentToolsTask = ToolService.GetToolsAsync();
+            
+            // Load recent bundles for fallback
+            var recentBundlesTask = BundleService.GetBundlesAsync(page: 1, pageSize: 10);
+
+            await Task.WhenAll(featuredToolsTask, featuredBundlesTask, recentToolsTask, recentBundlesTask);
+
+            // Process featured tools
+            var featuredToolsResult = await featuredToolsTask;
+            if (featuredToolsResult.Success && featuredToolsResult.Data != null)
+            {
+                publicFeaturedTools = featuredToolsResult.Data.ToList();
+            }
+
+            // Process featured bundles
+            var featuredBundlesResult = await featuredBundlesTask;
+            if (featuredBundlesResult.Success && featuredBundlesResult.Data != null)
+            {
+                publicFeaturedBundles = featuredBundlesResult.Data.ToList();
+            }
+
+            // Process recent tools
+            var recentToolsResult = await recentToolsTask;
+            if (recentToolsResult.Success && recentToolsResult.Data != null)
+            {
+                publicRecentTools = recentToolsResult.Data
+                    .OrderByDescending(t => t.CreatedAt)
+                    .Take(8)
+                    .ToList();
+            }
+
+            // Process recent bundles
+            var recentBundlesResult = await recentBundlesTask;
+            if (recentBundlesResult.Success && recentBundlesResult.Data?.Items != null)
+            {
+                publicRecentBundles = recentBundlesResult.Data.Items
+                    .OrderByDescending(b => b.CreatedAt)
+                    .Take(8)
+                    .ToList();
+            }
+        }
+        catch (Exception)
+        {
+            // Silently handle errors for public content
+        }
+        finally
+        {
+            isLoadingPublicContent = false;
+        }
+    }
+
+    private async Task LoadStatistics()
+    {
+        try
+        {
+            // Load tools count
+            var toolsResult = await ToolService.GetToolsAsync();
+            if (toolsResult.Success && toolsResult.Data != null)
+            {
+                toolsCount = toolsResult.Data.Count;
+            }
+
+            // Load bundles count
+            var bundlesResult = await BundleService.GetBundlesAsync(page: 1, pageSize: 1);
+            if (bundlesResult.Success && bundlesResult.Data != null)
+            {
+                bundlesCount = bundlesResult.Data.TotalCount;
+            }
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to load statistics: {ex.Message}");
+            // Use default values if loading fails
+            toolsCount = 50;
+            bundlesCount = 20;
+        }
+    }
+
+    private void ShowAuthPrompt(string action)
+    {
+        // For now, simply redirect to register page with a message
+        // This could be enhanced with a dialog in the future
+        Navigation.NavigateTo("/register");
+    }
+
+    private async Task ScrollToAppFeatures()
+    {
+        await JSRuntime.InvokeVoidAsync("eval", "document.getElementById('app-features').scrollIntoView({ behavior: 'smooth' });");
+    }
+}

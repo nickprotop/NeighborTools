@@ -1,0 +1,74 @@
+@using MudBlazor
+@inject NavigationManager Navigation
+
+<MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
+    <MudStack Spacing="4">
+        <MudText Typo="Typo.h4" Color="Color.Primary" Align="Align.Center" Class="mb-4">
+            What are you looking for?
+        </MudText>
+        
+        <MudGrid Justify="Justify.Center">
+        <MudItem xs="12" sm="6" md="5">
+            <MudCard Class="marketplace-card" Elevation="6" Style="border-radius: 16px;">
+                <MudCardContent Class="pa-6 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
+                    <MudText Typo="Typo.h5" Class="mb-3" Color="Color.Primary">Individual Tools</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                        Browse @ToolsCount+ quality tools from power tools to hand tools
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-6">
+                        Popular: Power Tools, Hand Tools, Garden Tools, Automotive
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                             Color="Color.Primary" 
+                             Size="Size.Large"
+                             FullWidth="true"
+                             OnClick="@(() => Navigation.NavigateTo("/tools"))"
+                             StartIcon="@Icons.Material.Filled.ArrowForward">
+                        Browse All Tools
+                    </MudButton>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="5">
+            <MudCard Class="marketplace-card" Elevation="6" Style="border-radius: 16px;">
+                <MudCardContent Class="pa-6 text-center">
+                    <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" Class="mb-4" Style="font-size: 4rem;" />
+                    <MudText Typo="Typo.h5" Class="mb-3" Color="Color.Secondary">Tool Bundles</MudText>
+                    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
+                        Discover @BundlesCount+ curated tool collections for complete projects
+                    </MudText>
+                    <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-6">
+                        Popular: Construction, Garden, Workshop, Home Improvement
+                    </MudText>
+                    <MudButton Variant="Variant.Filled" 
+                             Color="Color.Secondary" 
+                             Size="Size.Large"
+                             FullWidth="true"
+                             OnClick="@(() => Navigation.NavigateTo("/bundles"))"
+                             StartIcon="@Icons.Material.Filled.ArrowForward">
+                        Browse All Bundles
+                    </MudButton>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+        </MudGrid>
+    </MudStack>
+</MudPaper>
+
+<style>
+    .marketplace-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .marketplace-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+    }
+</style>
+
+@code {
+    [Parameter] public int ToolsCount { get; set; } = 0;
+    [Parameter] public int BundlesCount { get; set; } = 0;
+}

@@ -1,4 +1,3 @@
-@page "/"
 @page "/marketplace"
 @using Microsoft.AspNetCore.Authorization
 @using Microsoft.AspNetCore.Components.Authorization
@@ -25,413 +24,25 @@
 
 <PageTitle>Marketplace - NeighborTools</PageTitle>
 
-<!-- Modern Login/Register Banner for Non-Logged-In Users -->
-@if (showHero)
-{
-<AuthorizeView>
-    <NotAuthorized>
-        <MudPaper Elevation="0" Class="pa-8 mb-8 animate-fade-in-up" Style="background: var(--mud-gradient-hero); border-radius: var(--mud-radius-2xl); box-shadow: var(--mud-shadow-lg);">
-            <div class="d-flex flex-column align-center text-center">
-                <MudIcon Icon="@Icons.Material.Filled.Handyman" Size="Size.Large" Class="animate-float" Style="font-size: 4rem; color: white; margin-bottom: var(--mud-spacing-lg);" />
-                <MudText Typo="Typo.h3" Style="color: white; font-weight: var(--mud-font-weight-bold); font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-tight);" GutterBottom="true">
-                    Join NeighborTools Today
-                </MudText>
-                <MudText Typo="Typo.h6" Style="color: rgba(255,255,255,0.9); max-width: 700px; margin-bottom: var(--mud-spacing-xl); font-family: var(--mud-font-family-sans); line-height: var(--mud-line-height-relaxed);">
-                    Start sharing and borrowing tools with your neighbors. Build stronger communities while saving money.
-                </MudText>
-                
-                <!-- Benefits Grid -->
-                <MudGrid Class="mb-6" Style="max-width: 800px;">
-                    <MudItem xs="12" sm="4">
-                        <div class="d-flex flex-column align-center">
-                            <MudIcon Icon="@Icons.Material.Filled.AttachMoney" Style="color: rgba(255,255,255,0.9); font-size: 2rem; margin-bottom: var(--mud-spacing-sm);" />
-                            <MudText Typo="Typo.subtitle1" Style="color: white; font-weight: var(--mud-font-weight-semibold); font-family: var(--mud-font-family-sans);">Save Money</MudText>
-                            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); font-family: var(--mud-font-family-sans); text-align: center;">
-                                Rent tools instead of buying them
-                            </MudText>
-                        </div>
-                    </MudItem>
-                    <MudItem xs="12" sm="4">
-                        <div class="d-flex flex-column align-center">
-                            <MudIcon Icon="@Icons.Material.Filled.People" Style="color: rgba(255,255,255,0.9); font-size: 2rem; margin-bottom: var(--mud-spacing-sm);" />
-                            <MudText Typo="Typo.subtitle1" Style="color: white; font-weight: var(--mud-font-weight-semibold); font-family: var(--mud-font-family-sans);">Build Community</MudText>
-                            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); font-family: var(--mud-font-family-sans); text-align: center;">
-                                Connect with your neighbors
-                            </MudText>
-                        </div>
-                    </MudItem>
-                    <MudItem xs="12" sm="4">
-                        <div class="d-flex flex-column align-center">
-                            <MudIcon Icon="@Icons.Material.Filled.Recycling" Style="color: rgba(255,255,255,0.9); font-size: 2rem; margin-bottom: var(--mud-spacing-sm);" />
-                            <MudText Typo="Typo.subtitle1" Style="color: white; font-weight: var(--mud-font-weight-semibold); font-family: var(--mud-font-family-sans);">Go Green</MudText>
-                            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8); font-family: var(--mud-font-family-sans); text-align: center;">
-                                Reduce waste through sharing
-                            </MudText>
-                        </div>
-                    </MudItem>
-                </MudGrid>
+<!-- Search Tools & Bundles Section -->
+<MudContainer MaxWidth="MaxWidth.Large" Class="py-6">
+    <NearbySearch Title="Search Tools & Bundles"
+                  Subtitle="Find the perfect tools and bundles for your project"
+                  RequiredLocation="false"
+                  AutoSearchOnLocationChange="false"
+                  DefaultRadius="25"
+                  MaxResultsPerType="4"
+                  ShowResultsCount="true"
+                  ShowSearchTerm="true"
+                  Elevation="2"
+                  Style="border-radius: 16px;"
+                  LocationChanged="OnHeroLocationChanged"
+                  ToolResultsChanged="OnHeroToolResultsChanged"
+                  BundleResultsChanged="OnHeroBundleResultsChanged"
+                  SearchStateChanged="OnHeroSearchStateChanged" />
+</MudContainer>
 
-                <!-- Action Buttons -->
-                <div class="d-flex gap-4 flex-wrap justify-center">
-                    <MudButton Variant="Variant.Filled"
-                               Color="Color.Warning"
-                               Size="Size.Large"
-                               Href="/login"
-                               StartIcon="@Icons.Material.Filled.Login"
-                               Class="animate-glow"
-                               Style="background: white; color: var(--mud-palette-primary); font-weight: var(--mud-font-weight-bold); font-family: var(--mud-font-family-sans); border-radius: var(--mud-radius-full); padding: var(--mud-spacing-lg) var(--mud-spacing-2xl); box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                        Sign In
-                    </MudButton>
-                    <MudButton Variant="Variant.Outlined"
-                               Color="Color.Surface"
-                               Size="Size.Large"
-                               Href="/register"
-                               StartIcon="@Icons.Material.Filled.PersonAdd"
-                               Style="color: white; border-color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); font-weight: var(--mud-font-weight-bold); font-family: var(--mud-font-family-sans); border-radius: var(--mud-radius-full); padding: var(--mud-spacing-lg) var(--mud-spacing-2xl);">
-                        Get Started
-                    </MudButton>
-                </div>
-            </div>
-        </MudPaper>
-    </NotAuthorized>
-    <Authorized>
-        <!-- User Dashboard Section for Logged-In Users -->
-        <MudPaper Class="pa-6 mb-6" Elevation="2" Style="border-radius: 16px; background: var(--mud-gradient-hero); color: white;">
-            <MudStack Spacing="4">
-                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                    <div>
-                        <MudText Typo="Typo.h5" Style="font-weight: 600;">
-                            <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" />
-                            Welcome back to your marketplace!
-                        </MudText>
-                        <MudText Typo="Typo.body1" Style="opacity: 0.9;">
-                            Here's a quick overview of your tool sharing activity
-                        </MudText>
-                    </div>
-                </MudStack>
-                
-                <!-- Quick Stats Grid -->
-                <MudGrid>
-                    <MudItem xs="6" sm="3">
-                        <MudButton Variant="Variant.Text" 
-                                 FullWidth="true"
-                                 Href="/favorites"
-                                 Style="height: auto; padding: 0; border-radius: 12px;">
-                            <MudPaper Class="pa-4 text-center" Style="background: rgba(255,255,255,0.15); border-radius: 12px; backdrop-filter: blur(10px); width: 100%; cursor: pointer;">
-                                <MudIcon Icon="@Icons.Material.Filled.Favorite" Size="Size.Large" Style="color: white; margin-bottom: 8px;" />
-                                <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">@favoritesCount</MudText>
-                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">Favorites</MudText>
-                            </MudPaper>
-                        </MudButton>
-                    </MudItem>
-                    
-                    <MudItem xs="6" sm="3">
-                        <MudButton Variant="Variant.Text" 
-                                 FullWidth="true"
-                                 Href="/messages"
-                                 Style="height: auto; padding: 0; border-radius: 12px;">
-                            <MudPaper Class="pa-4 text-center" Style="background: rgba(255,255,255,0.15); border-radius: 12px; backdrop-filter: blur(10px); width: 100%; cursor: pointer;">
-                                <MudIcon Icon="@Icons.Material.Filled.Message" Size="Size.Large" Style="color: white; margin-bottom: 8px;" />
-                                <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">@unreadMessagesCount/@totalMessagesCount</MudText>
-                                <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">Unread/Total</MudText>
-                            </MudPaper>
-                        </MudButton>
-                    </MudItem>
-                    
-                    <MudItem xs="6" sm="3">
-                        <MudPaper Class="pa-4 text-center" Style="background: rgba(255,255,255,0.15); border-radius: 12px; backdrop-filter: blur(10px);">
-                            <MudIcon Icon="@Icons.Material.Filled.Schedule" Size="Size.Large" Style="color: white; margin-bottom: 8px;" />
-                            <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">@activeRentalsCount</MudText>
-                            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">Active Rentals</MudText>
-                        </MudPaper>
-                    </MudItem>
-                    
-                    <MudItem xs="6" sm="3">
-                        <MudPaper Class="pa-4 text-center" Style="background: rgba(255,255,255,0.15); border-radius: 12px; backdrop-filter: blur(10px);">
-                            <MudIcon Icon="@Icons.Material.Filled.Pending" Size="Size.Large" Style="color: white; margin-bottom: 8px;" />
-                            <MudText Typo="Typo.h6" Style="color: white; font-weight: 600;">@pendingRequestsCount</MudText>
-                            <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.8);">Pending Requests</MudText>
-                        </MudPaper>
-                    </MudItem>
-                </MudGrid>
-                
-                <!-- Total Items Summary -->
-                <MudPaper Class="pa-4 mt-4 text-center" Style="background: rgba(255,255,255,0.1); border-radius: 12px; backdrop-filter: blur(10px);">
-                    <MudIcon Icon="@Icons.Material.Filled.TrendingUp" Size="Size.Large" Style="color: white; margin-bottom: 8px;" />
-                    <MudText Typo="Typo.h5" Style="color: white; font-weight: 600;">@(userToolsCount + userBundlesCount)</MudText>
-                    <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9);">@userToolsCount tools / @userBundlesCount bundles</MudText>
-                </MudPaper>
-                
-                <!-- Quick Actions -->
-                <MudStack Row Spacing="2" Wrap="Wrap.Wrap" Justify="Justify.Center">
-                    <MudButton Variant="Variant.Outlined" 
-                             Color="Color.Surface" 
-                             StartIcon="@Icons.Material.Filled.Build"
-                             Href="/my-tools"
-                             Style="color: white; border-color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 25px;">
-                        My Tools
-                    </MudButton>
-                    
-                    <MudButton Variant="Variant.Outlined" 
-                             Color="Color.Surface" 
-                             StartIcon="@Icons.Material.Filled.History"
-                             Href="/my-rentals"
-                             Style="color: white; border-color: rgba(255,255,255,0.8); background: rgba(255,255,255,0.1); backdrop-filter: blur(10px); border-radius: 25px;">
-                        My Rentals
-                    </MudButton>
-                    
-                    @if (pendingRequestsCount > 0)
-                    {
-                        <MudButton Variant="Variant.Filled" 
-                                 Color="Color.Error" 
-                                 StartIcon="@Icons.Material.Filled.Notifications"
-                                 Href="/rental-requests"
-                                 Style="background: #EF4444; color: white; border-radius: 25px; box-shadow: 0 2px 8px rgba(239,68,68,0.3);">
-                            @pendingRequestsCount Pending
-                        </MudButton>
-                    }
-                </MudStack>
-                
-                <!-- Recent Activity -->
-                @if (recentUserActivity?.Any() == true)
-                {
-                    <MudPaper Class="pa-4" Style="background: rgba(255,255,255,0.1); border-radius: 12px; backdrop-filter: blur(10px);">
-                        <MudText Typo="Typo.subtitle1" Style="color: white; font-weight: 600; margin-bottom: 12px;">
-                            <MudIcon Icon="@Icons.Material.Filled.Timeline" Class="mr-2" />
-                            Recent Activity
-                        </MudText>
-                        <MudStack Spacing="2">
-                            @foreach (var activity in recentUserActivity.Take(3))
-                            {
-                                <MudStack Row AlignItems="AlignItems.Center" Spacing="2">
-                                    <MudIcon Icon="@GetActivityIcon(activity)" Size="Size.Small" Style="color: rgba(255,255,255,0.8);" />
-                                    <MudText Typo="Typo.body2" Style="color: rgba(255,255,255,0.9); flex: 1;">
-                                        @GetActivityDescription(activity)
-                                    </MudText>
-                                    <MudText Typo="Typo.caption" Style="color: rgba(255,255,255,0.7);">
-                                        @GetRelativeTime(activity.CreatedAt)
-                                    </MudText>
-                                </MudStack>
-                            }
-                        </MudStack>
-                    </MudPaper>
-                }
-            </MudStack>
-        </MudPaper>
-    </Authorized>
-</AuthorizeView>
-}
-
-<style>
-    .marketplace-hero {
-        background: linear-gradient(135deg, var(--mud-palette-primary-lighten) 0%, var(--mud-palette-primary) 100%);
-        color: white;
-        padding: 4rem 0;
-        margin-bottom: 2rem;
-    }
-    
-    .marketplace-card {
-        transition: transform 0.3s ease, box-shadow 0.3s ease;
-        height: 100%;
-    }
-    
-    .marketplace-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 12px 24px rgba(0,0,0,0.15);
-    }
-    
-    .category-card {
-        transition: all 0.3s ease;
-        cursor: pointer;
-        height: 100%;
-    }
-    
-    .category-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 16px rgba(0,0,0,0.1);
-    }
-    
-    .featured-carousel {
-        margin-bottom: 3rem;
-    }
-    
-</style>
-
-<!-- Hero Section -->
-<div class="marketplace-hero">
-    <MudContainer MaxWidth="MaxWidth.Large">
-        <MudStack AlignItems="AlignItems.Center" Spacing="4">
-            <MudIcon Icon="@Icons.Material.Filled.Store" Size="Size.Large" Style="font-size: 4rem;" />
-            <MudText Typo="Typo.h3" Align="Align.Center" Style="font-weight: 600;">
-                Find the perfect tools and bundles for your project
-            </MudText>
-            <MudText Typo="Typo.h6" Align="Align.Center" Style="opacity: 0.9; max-width: 600px;">
-                Discover thousands of quality tools and curated bundles from your neighbors
-            </MudText>
-            
-            <!-- Enhanced Unified Search with NearbySearch Component -->
-            <MudPaper Class="pa-4" Style="max-width: 900px; width: 100%; border-radius: 20px;">
-                <NearbySearch Title="Search Tools & Bundles"
-                              Subtitle="Find the perfect tools and bundles for your project"
-                              RequiredLocation="false"
-                              AutoSearchOnLocationChange="false"
-                              DefaultRadius="25"
-                              MaxResultsPerType="4"
-                              ShowResultsCount="true"
-                              Elevation="0"
-                              Class="pa-0"
-                              LocationChanged="OnHeroLocationChanged"
-                              ToolResultsChanged="OnHeroToolResultsChanged"
-                              BundleResultsChanged="OnHeroBundleResultsChanged"
-                              SearchStateChanged="OnHeroSearchStateChanged" />
-            </MudPaper>
-        </MudStack>
-    </MudContainer>
-</div>
-
-<MudContainer MaxWidth="MaxWidth.ExtraLarge" Class="py-6">
-    <!-- Quick Access Cards -->
-    <MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
-        <MudStack Spacing="4">
-            <MudText Typo="Typo.h4" Color="Color.Primary" Align="Align.Center" Class="mb-4">
-                What are you looking for?
-            </MudText>
-            
-            <MudGrid Justify="Justify.Center">
-            <MudItem xs="12" sm="6" md="5">
-                <MudCard Class="marketplace-card" Elevation="6" Style="border-radius: 16px;">
-                    <MudCardContent Class="pa-6 text-center">
-                        <MudIcon Icon="@Icons.Material.Filled.Build" Size="Size.Large" Color="Color.Primary" Class="mb-4" Style="font-size: 4rem;" />
-                        <MudText Typo="Typo.h5" Class="mb-3" Color="Color.Primary">Individual Tools</MudText>
-                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                            Browse @toolsCount+ quality tools from power tools to hand tools
-                        </MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
-                            Popular: Power Tools, Hand Tools, Garden Tools, Automotive
-                        </MudText>
-                        <MudButton Variant="Variant.Filled" 
-                                 Color="Color.Primary" 
-                                 Size="Size.Large"
-                                 FullWidth="true"
-                                 OnClick="@(() => Navigation.NavigateTo("/tools"))"
-                                 StartIcon="@Icons.Material.Filled.ArrowForward">
-                            Browse All Tools
-                        </MudButton>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-            
-            <MudItem xs="12" sm="6" md="5">
-                <MudCard Class="marketplace-card" Elevation="6" Style="border-radius: 16px;">
-                    <MudCardContent Class="pa-6 text-center">
-                        <MudIcon Icon="@Icons.Material.Filled.Inventory" Size="Size.Large" Color="Color.Secondary" Class="mb-4" Style="font-size: 4rem;" />
-                        <MudText Typo="Typo.h5" Class="mb-3" Color="Color.Secondary">Tool Bundles</MudText>
-                        <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mb-4">
-                            Discover @bundlesCount+ curated tool collections for complete projects
-                        </MudText>
-                        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="mb-4">
-                            Popular: Construction, Garden, Workshop, Home Improvement
-                        </MudText>
-                        <MudButton Variant="Variant.Filled" 
-                                 Color="Color.Secondary" 
-                                 Size="Size.Large"
-                                 FullWidth="true"
-                                 OnClick="@(() => Navigation.NavigateTo("/bundles"))"
-                                 StartIcon="@Icons.Material.Filled.ArrowForward">
-                            Browse All Bundles
-                        </MudButton>
-                    </MudCardContent>
-                </MudCard>
-            </MudItem>
-            </MudGrid>
-        </MudStack>
-    </MudPaper>
-
-    <!-- Featured Tools Section -->
-    @if (featuredTools?.Any() == true)
-    {
-        <MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
-            <MudStack Spacing="3" Class="mb-4">
-                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                    <MudText Typo="Typo.h5" Color="Color.Primary">
-                        <MudIcon Icon="@Icons.Material.Filled.Star" Class="mr-2" />
-                        Featured Tools
-                    </MudText>
-                    <MudButton Variant="Variant.Text" 
-                             Color="Color.Primary" 
-                             OnClick="@(() => Navigation.NavigateTo("/tools"))"
-                             EndIcon="@Icons.Material.Filled.ArrowForward">
-                        View All Tools
-                    </MudButton>
-                </MudStack>
-                
-                <MudGrid>
-                    @foreach (var tool in featuredTools.Take(4))
-                    {
-                        <MudItem xs="12" sm="6" md="3">
-                            <MudCard Class="marketplace-card" Elevation="4" Style="border-radius: 12px; cursor: pointer;" @onclick="() => ViewTool(tool.Id)">
-                                @if (tool.ImageUrls.Any())
-                                {
-                                    <MudCardMedia Image="@UrlService.GetFileUrl(tool.ImageUrls.First())" Height="180" />
-                                }
-                                else
-                                {
-                                    <ThemeAwarePlaceholder Height="180px" 
-                                                          Icon="@Icons.Material.Filled.Build" 
-                                                          IconSize="Size.Large"
-                                                          IconFontSize="3rem" />
-                                }
-                                
-                                <MudCardContent Class="pa-3">
-                                    <MudText Typo="Typo.subtitle1" Class="mb-2" Style="font-weight: 600;">@tool.Name</MudText>
-                                    <MudText Typo="Typo.body2" Color="Color.Secondary" Class="mb-2" Style="height: 2.5em; overflow: hidden;">
-                                        @(tool.Description.Length > 60 ? tool.Description.Substring(0, 60) + "..." : tool.Description)
-                                    </MudText>
-                                    <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                                        <MudChip Size="Size.Small" Color="Color.Primary" Text="@tool.Category" T="string" />
-                                        <MudText Typo="Typo.subtitle2" Color="Color.Primary" Style="font-weight: 600;">
-                                            $@tool.DailyRate.ToString("F2")/day
-                                        </MudText>
-                                    </MudStack>
-                                </MudCardContent>
-                            </MudCard>
-                        </MudItem>
-                    }
-                </MudGrid>
-            </MudStack>
-        </MudPaper>
-    }
-
-    <!-- Featured Bundles Section -->
-    @if (featuredBundles?.Any() == true)
-    {
-        <MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
-            <MudStack Spacing="3" Class="mb-4">
-                <MudStack Row Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center">
-                    <MudText Typo="Typo.h5" Color="Color.Secondary">
-                        <MudIcon Icon="@Icons.Material.Filled.Star" Class="mr-2" />
-                        Featured Bundles
-                    </MudText>
-                    <MudButton Variant="Variant.Text" 
-                             Color="Color.Secondary" 
-                             OnClick="@(() => Navigation.NavigateTo("/bundles"))"
-                             EndIcon="@Icons.Material.Filled.ArrowForward">
-                        View All Bundles
-                    </MudButton>
-                </MudStack>
-                
-                <MudGrid>
-                    @foreach (var bundle in featuredBundles.Take(3))
-                    {
-                        <MudItem xs="12" sm="6" md="4">
-                            <BundleCard Bundle="bundle" OnClick="() => ViewBundle(bundle.Id)" />
-                        </MudItem>
-                    }
-                </MudGrid>
-            </MudStack>
-        </MudPaper>
-    }
-
+<MudContainer MaxWidth="MaxWidth.ExtraLarge">
     <!-- Statistics Section -->
     <MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
         <MudStack Row Justify="Justify.SpaceAround" AlignItems="AlignItems.Center" Wrap="Wrap.Wrap" Spacing="4">
@@ -460,6 +71,9 @@
             </MudStack>
         </MudStack>
     </MudPaper>
+
+    <!-- Quick Access Cards -->
+    <QuickActionsCards ToolsCount="@toolsCount" BundlesCount="@bundlesCount" />
 
     <!-- Popular Categories Section -->
     <MudPaper Class="pa-6 mb-6" Elevation="0" Style="border-radius: 16px;">
@@ -515,6 +129,20 @@
         }
         </MudStack>
     </MudPaper>
+
+    <!-- Popular Tools Section (Featured + Popular/Recent) -->
+    <PopularToolsSection MaxItems="8"
+                       ShowViewAllButton="true"
+                       IsLoading="false"
+                       FeaturedTools="@featuredTools"
+                       RecentTools="@recentTools" />
+
+    <!-- Popular Bundles Section (Featured + Popular/Recent) -->
+    <PopularBundlesSection MaxItems="6"
+                         ShowViewAllButton="true"
+                         IsLoading="false"
+                         FeaturedBundles="@featuredBundles"
+                         RecentBundles="@recentBundles" />
 
     <!-- Recent Activity Section -->
     @if (recentTools?.Any() == true || recentBundles?.Any() == true)
@@ -947,6 +575,17 @@
             "workshop" => Icons.Material.Filled.Build,
             _ => Icons.Material.Filled.Category
         };
+    }
+
+    // Helper methods for other functionality
+    private bool IsFeaturedTool(string toolId)
+    {
+        return featuredTools?.Any(f => f.Id == toolId) == true;
+    }
+    
+    private bool IsFeaturedBundle(Guid bundleId)
+    {
+        return featuredBundles?.Any(f => f.Id == bundleId) == true;
     }
 
     public void Dispose()

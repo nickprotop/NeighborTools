@@ -1,0 +1,262 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using MudBlazor
+@using frontend.Components.Shared
+@using frontend.Components.Alerts
+@using frontend.Services
+@using ToolsSharing.Frontend.Configuration
+@inherits LayoutComponentBase
+@implements IDisposable
+
+<MudThemeProvider IsDarkMode="@isDarkMode" Theme="@currentTheme" />
+<MudSnackbarProvider />
+
+<div class="home-layout">
+    <!-- Top Header with Marketplace Link -->
+    <header class="home-header">
+        <div class="home-header-content">
+            <!-- Logo/Brand -->
+            <div class="home-brand">
+                <MudIcon Icon="@Icons.Material.Filled.Handyman" Size="Size.Medium" Color="Color.Primary" />
+                <MudText Typo="Typo.h6" Class="ml-2" Style="font-weight: 600;">NeighborTools</MudText>
+            </div>
+
+            <!-- Header Actions -->
+            <div class="home-header-actions">
+                <AuthorizeView>
+                    <Authorized>
+                        <!-- Marketplace Link for Authenticated Users -->
+                        <MudButton Variant="Variant.Filled" 
+                                   Color="Color.Primary" 
+                                   StartIcon="@Icons.Material.Filled.Dashboard"
+                                   Href="/marketplace"
+                                   Class="marketplace-btn">
+                            Go to Marketplace
+                        </MudButton>
+                        
+                        <!-- Theme Toggle -->
+                        <ThemeToggle />
+                        
+                        <!-- User Profile Menu -->
+                        <UserProfileMenu UseAvatar="false" />
+                    </Authorized>
+                    <NotAuthorized>
+                        <!-- Login/Register for Non-Authenticated Users -->
+                        <MudButton Variant="Variant.Text" 
+                                   Href="/login" 
+                                   StartIcon="@Icons.Material.Filled.Login"
+                                   Class="mr-2">
+                            Login
+                        </MudButton>
+                        <MudButton Variant="Variant.Filled" 
+                                   Href="/register" 
+                                   StartIcon="@Icons.Material.Filled.PersonAdd"
+                                   Color="Color.Primary">
+                            Sign Up
+                        </MudButton>
+                    </NotAuthorized>
+                </AuthorizeView>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content (No Sidebar) -->
+    <main class="home-main">
+        @Body
+    </main>
+
+    <!-- Footer -->
+    <footer class="home-footer">
+        <MudContainer MaxWidth="MaxWidth.ExtraLarge">
+            <div class="footer-content">
+                <MudText Typo="Typo.caption" Color="Color.Secondary">
+                    © 2024 NeighborTools. Building communities through sharing.
+                </MudText>
+                <div class="footer-links">
+                    <MudLink Href="/privacy-policy" Class="footer-link">Privacy</MudLink>
+                    <MudLink Href="/terms-of-service" Class="footer-link">Terms</MudLink>
+                    <MudLink Href="/help" Class="footer-link">Help</MudLink>
+                </div>
+            </div>
+        </MudContainer>
+    </footer>
+</div>
+
+<style>
+    .home-layout {
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+        background: var(--mud-palette-background);
+    }
+
+    /* Header Styles */
+    .home-header {
+        background: var(--mud-palette-surface);
+        border-bottom: 1px solid var(--mud-palette-divider);
+        position: sticky;
+        top: 0;
+        z-index: 1050;
+        box-shadow: var(--mud-shadow-sm);
+        height: 64px;
+        flex-shrink: 0;
+    }
+
+    .home-header-content {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 24px;
+        height: 100%;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .home-brand {
+        display: flex;
+        align-items: center;
+    }
+
+    .home-header-actions {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .marketplace-btn {
+        font-weight: 600;
+        border-radius: var(--mud-radius-full);
+        box-shadow: var(--mud-shadow-sm);
+        transition: all 0.2s ease;
+    }
+
+    .marketplace-btn:hover {
+        transform: translateY(-1px);
+        box-shadow: var(--mud-shadow-md);
+    }
+
+
+    /* Main Content */
+    .home-main {
+        flex: 1;
+        padding: 0;
+    }
+
+    /* Footer */
+    .home-footer {
+        background: var(--mud-palette-surface);
+        border-top: 1px solid var(--mud-palette-divider);
+        padding: 24px 0;
+        margin-top: auto;
+    }
+
+    .footer-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 16px;
+    }
+
+    .footer-links {
+        display: flex;
+        gap: 24px;
+    }
+
+    .footer-link {
+        color: var(--mud-text-secondary) !important;
+        text-decoration: none;
+        font-size: 0.875rem;
+        transition: color 0.2s ease;
+    }
+
+    .footer-link:hover {
+        color: var(--mud-palette-primary) !important;
+    }
+
+    /* Responsive */
+    @@media (max-width: 768px) {
+        .home-header-content {
+            padding: 0 16px;
+        }
+        
+        .home-brand {
+            font-size: 1rem;
+        }
+        
+        .marketplace-btn {
+            font-size: 0.875rem;
+            padding: 6px 12px;
+        }
+        
+        .footer-content {
+            flex-direction: column;
+            text-align: center;
+            gap: 12px;
+        }
+        
+        .footer-links {
+            justify-content: center;
+            gap: 16px;
+        }
+    }
+
+    @@media (max-width: 480px) {
+        .home-header-actions {
+            gap: 8px;
+        }
+        
+        .marketplace-btn {
+            font-size: 0.75rem;
+            padding: 6px 10px;
+        }
+    }
+</style>
+
+@code {
+    [Inject] private IAuthService AuthService { get; set; } = default!;
+    [Inject] private NavigationManager Navigation { get; set; } = default!;
+    [Inject] private IThemeService ThemeService { get; set; } = default!;
+    
+    // Theme-related fields
+    private bool isDarkMode = false;
+    private MudTheme currentTheme = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Initialize theme system
+        await InitializeThemeAsync();
+    }
+
+    private async Task InitializeThemeAsync()
+    {
+        try
+        {
+            await ThemeService.InitializeAsync();
+            isDarkMode = await ThemeService.GetThemePreferenceAsync();
+            currentTheme = ThemeService.GetCurrentTheme();
+            
+            // Subscribe to theme changes
+            ThemeService.ThemeChanged += OnThemeChanged;
+        }
+        catch
+        {
+            // Default to light theme if initialization fails
+            isDarkMode = false;
+            currentTheme = ThemeService.GetCurrentTheme();
+        }
+    }
+
+    private void OnThemeChanged(object? sender, bool isDark)
+    {
+        isDarkMode = isDark;
+        InvokeAsync(StateHasChanged);
+    }
+
+
+
+    public void Dispose()
+    {
+        if (ThemeService != null)
+            ThemeService.ThemeChanged -= OnThemeChanged;
+    }
+}

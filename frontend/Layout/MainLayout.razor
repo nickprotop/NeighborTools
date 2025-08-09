@@ -62,37 +62,7 @@
                             
                             <!-- User Profile Menu -->
                             <div class="user-info">
-                                <MudMenu AnchorOrigin="Origin.BottomRight" TransformOrigin="Origin.TopRight">
-                                    <ActivatorContent>
-                                        <MudButton Variant="Variant.Text" 
-                                                   StartIcon="@Icons.Material.Filled.AccountCircle"
-                                                   Class="profile-menu-button"
-                                                   Color="Color.Primary">
-                                            <MudText Typo="Typo.body1" Class="user-name d-none d-sm-block">
-                                                @GetUserDisplayName(context)
-                                            </MudText>
-                                            <MudIcon Icon="@Icons.Material.Filled.ArrowDropDown" Size="Size.Small" Class="ml-1" />
-                                        </MudButton>
-                                    </ActivatorContent>
-                                    <ChildContent>
-                                        <MudMenuItem Icon="@Icons.Material.Filled.Person" Href="/profile">
-                                            Profile
-                                        </MudMenuItem>
-                                        <MudMenuItem Icon="@Icons.Material.Filled.Settings" Href="/settings">
-                                            Settings
-                                        </MudMenuItem>
-                                        <MudMenuItem Icon="@Icons.Material.Filled.Payment" Href="/settings/payments">
-                                            Payment Settings
-                                        </MudMenuItem>
-                                        <MudMenuItem Icon="@Icons.Material.Filled.PrivacyTip" Href="/privacy-dashboard">
-                                            Privacy Dashboard
-                                        </MudMenuItem>
-                                        <MudDivider />
-                                        <MudMenuItem Icon="@Icons.Material.Filled.Logout" OnClick="LogoutAsync">
-                                            Logout
-                                        </MudMenuItem>
-                                    </ChildContent>
-                                </MudMenu>
+                                <UserProfileMenu UseAvatar="false" />
                             </div>
                         </Authorized>
                         <NotAuthorized>
@@ -420,6 +390,7 @@
             gap: 24px;
             padding: 32px 0 16px 0;
         }
+        
     }
 </style>
 
@@ -601,18 +572,7 @@
         StateHasChanged();
     }
 
-    private string GetUserDisplayName(AuthenticationState authState)
-    {
-        var name = authState.User.Identity?.Name;
-        if (string.IsNullOrEmpty(name))
-            return "User";
-        
-        if (name.Contains("@"))
-            return name.Split('@')[0];
-        
-        var parts = name.Split(' ');
-        return parts.Length > 0 ? parts[0] : name;
-    }
+
 
     private async Task OnTermsAcceptedHandler()
     {
